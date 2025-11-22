@@ -152,6 +152,7 @@ const MonumentObjetItem = ({ popObjet, images }: { popObjet: PopObjet; images: P
       border="1px solid"
       borderColor={fr.colors.decisions.border.default.grey.default}
       gap="8px"
+      maxWidth={{ xs: "100%", lg: "50%" }}
       sx={{
         "::after": {
           display: "none",

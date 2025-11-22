@@ -152,7 +152,7 @@ const ConstatPdf = () => {
   );
 };
 
-type PageMode = "view" | "edit" | "send" | "sent";
+type PageMode = "view" | "send" | "sent";
 
 const BannerAndContent = ({ mode }: { mode: PageMode }) => {
   const { bannerProps, Component } = contentMap[mode];
@@ -174,18 +174,6 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
         return (
           <Flex gap="8px">
             <Button
-              priority="secondary"
-              sx={{ bgcolor: "white" }}
-              type="button"
-              iconId="ri-pencil-line"
-              nativeButtonProps={{
-                onClick: () =>
-                  navigate({ to: "/constat/$constatId/pdf", params: { constatId }, search: { mode: "edit" } }),
-              }}
-            >
-              Modifier
-            </Button>
-            <Button
               type="button"
               onClick={() =>
                 navigate({
@@ -202,43 +190,6 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
       },
     },
     Component: ViewConstatPdf,
-  },
-  edit: {
-    bannerProps: {
-      content: () => "Modification du constat",
-      buttons: () => {
-        const { setLocalHtmlString } = useConstatPdfContext()!;
-        const { editor } = useContext(TextEditorContext);
-        const navigate = useNavigate();
-        const { constatId } = Route.useParams();
-
-        const onClick = () => {
-          if (!editor) return;
-          const htmlString = editor.getHTML();
-          setLocalHtmlString(htmlString);
-          console.log(htmlString);
-          navigate({ to: "/constat/$constatId/pdf", params: { constatId }, search: { mode: "view" } });
-        };
-
-        return (
-          <Flex gap="8px">
-            <TextEditorToolbar />
-            <Button
-              type="button"
-              sx={{
-                display: { xs: "none", lg: "inline-flex" },
-              }}
-              iconId="ri-save-line"
-              size="medium"
-              onClick={onClick}
-            >
-              Enregistrer
-            </Button>
-          </Flex>
-        );
-      },
-    },
-    Component: EditConstatPdf,
   },
   send: {
     bannerProps: {
