@@ -14,10 +14,11 @@ import { useLiveUser } from "../../../contexts/AuthContext";
 import { UploadImageWithEditModal } from "../../upload/UploadImageButton";
 import { Flex } from "#components/ui/Flex.tsx";
 import { StateReport } from "../../../db/AppSchema";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
+import { deserializePreconisations, serializePreconisations } from "@cr-vif/pdf/constat";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -37,7 +38,6 @@ export const ConstatGeneral = () => {
       <EtatGeneralImages />
       <Divider my={{ xs: "24px", lg: "32px" }} />
       <Preconisations />
-      <StateReportTextAreaWithSpeechToText label="Commentaire" name="preconisations_commentaires" />
     </Stack>
   );
 };
@@ -316,9 +316,16 @@ const ProportionsRadioButtons = () => {
 
 const Preconisations = () => {
   const form = useStateReportFormContext();
-  const value = useWatch({ control: form.control, name: "preconisations" });
+  const rawValue = useWatch({ control: form.control, name: "preconisations" });
 
-  const selected = value ? value.split(",") : [];
+  const commentairesCache = useRef<Record<string, string>>({});
+
+  const value = deserializePreconisations(rawValue);
+  const setValue = (formValue: { preconisation: string; commentaire?: string }[]) => {
+    form.setValue("preconisations", serializePreconisations(formValue));
+  };
+
+  const selectedNames: string[] = value.map((item) => item.preconisation);
 
   const options = [
     "Étude diagnostique",
@@ -329,19 +336,54 @@ const Preconisations = () => {
   ].map((label) => ({
     label,
     nativeInputProps: {
-      checked: selected.includes(label),
+      checked: selectedNames.includes(label),
       onChange: () => {
-        if (selected.includes(label)) {
-          form.setValue("preconisations", selected.filter((item) => item !== label).join(","));
+        if (selectedNames.includes(label)) {
+          setValue(value.filter((item) => item.preconisation !== label));
         } else {
-          form.setValue("preconisations", [...selected, label].join(","));
+          setValue([...value, { preconisation: label, commentaire: commentairesCache.current[label] }]);
         }
       },
     },
   }));
   return (
-    <Stack>
-      <Checkbox legend={"Préconisation(s)"} options={options} />
+    <Stack
+      sx={{
+        ".fr-checkbox-group > label": { p: "0.75rem 0 0px 0" },
+        ".fr-fieldset": { marginBottom: 0 },
+      }}
+    >
+      <Box mb="0">Préconisations</Box>
+      {options.map((option) => (
+        <>
+          <Checkbox legend={null} options={[option]} />
+          {selectedNames.includes(option.label)
+            ? (() => {
+                const currentCommentaire = value.find((item) => item.preconisation === option.label)?.commentaire || "";
+                return (
+                  <Box mb="24px" mt="16px">
+                    <Input
+                      label="Commentaire"
+                      textArea
+                      nativeTextAreaProps={{
+                        rows: 4,
+                        value: currentCommentaire,
+                        onChange: (e) => {
+                          const newCommentaire = e.target.value;
+                          commentairesCache.current[option.label] = newCommentaire;
+                          const newValue = value.map((item) =>
+                            item.preconisation === option.label ? { ...item, commentaire: newCommentaire } : item,
+                          );
+                          setValue(newValue);
+                        },
+                      }}
+                    />
+                  </Box>
+                );
+              })()
+            : null}
+        </>
+      ))}
     </Stack>
   );
 };

@@ -227,6 +227,8 @@ export const getStateReportHtmlString = ({
   const planEdificeAttachment = stateReport.attachments.find((att) => stateReport.plan_edifice === att.id);
   const vueGenerale = stateReport.attachments.find((att) => stateReport.vue_generale === att.id);
 
+  const preconisationsHtml = generatePreconisations(stateReport.preconisations);
+
   return minifyHtml(`
     <p>  
       <span style="font-size: 20pt">Constat d'état du monument historique</span><br/><br/>
@@ -327,15 +329,19 @@ export const getStateReportHtmlString = ({
 
       <hr />
 
-      <div id="preconisations">
+      ${
+        preconisationsHtml
+          ? `<div id="preconisations">
         <h2>Préconisations générales</h2>
         <b>
-          Suite à la visite, il est préconisé d'entreprendre ${preconisationsMap[stateReport.preconisations as keyof typeof preconisationsMap] || "N/A"}.
+          Suite à la visite, il est préconisé d'entreprendre les travaux suivants sur l'édifice :
         </b>
         <br/>
         <div>
-          <u>Commentaires :</u> ${stateReport.preconisations_commentaires || "Aucun"}.
-        </div>
+          ${preconisationsHtml}
+        </div>`
+          : ""
+      }
       </div>
 
       <br/><br/><br/><br/><br/>
@@ -349,6 +355,23 @@ export const getStateReportHtmlString = ({
       </b>
 
   `);
+};
+
+const generatePreconisations = (rawValue: string | null) => {
+  if (!rawValue) return null;
+  const preconisations = deserializePreconisations(rawValue);
+  if (preconisations.length === 0) return null;
+
+  return `<ul>
+      ${preconisations
+        .map(
+          (item) =>
+            `<li>
+              <b>${item.preconisation}</b>${item.commentaire ? ` : ${item.commentaire}` : ""}</li>`,
+        )
+        .join("<br/>")}
+    
+    </ul>`;
 };
 
 const footerText = `Ce constat d'état est effectué dans le cadre du contrôle scientifique et technique défini au livre VI, titre II, chapitre Ier du Code du patrimoine (partie législative et réglementaire et notamment l'article R621-63), et dans la circulaire du 1er décembre 2009 relative au contrôle scientifique et technique des services de l'État sur la conservation des monuments historiques classés ou inscrits. Les termes utilisés se fondent sur le glossaire des termes relatifs aux interventions sur les monuments historiques (déduit de la norme EN 15898).
@@ -376,7 +399,7 @@ export const defaultSections = [
 
 const preconisationsMap = {
   "Étude diagnostique": "la réalisation d'une étude diagnostique approfondie",
-  "Mesure d'urgence": "des mesures d'urgence",
+  "Mesures d'urgence": "des mesures d'urgence",
   "Travaux d'entretien": "des travaux d'entretien",
   "Travaux de restauration": "des travaux de restauration",
   "Travaux de réparation": "des travaux de réparation",
@@ -421,6 +444,32 @@ const generateImageCell = (image: Image | undefined) => {
         </div>
       </div>
   </div>`;
+};
+
+// format: option[:commentaire]/option[:commentaire]/...
+export const deserializePreconisations = (
+  rawValue: string | null,
+): { preconisation: string; commentaire?: string }[] => {
+  if (!rawValue) return [];
+
+  return rawValue.split("/").map((part) => {
+    const [preconisation, commentaire] = part.split(":");
+    return {
+      preconisation: decodeURIComponent(preconisation),
+      commentaire: commentaire ? decodeURIComponent(commentaire) : undefined,
+    };
+  });
+};
+
+export const serializePreconisations = (value: { preconisation: string; commentaire?: string }[]): string | null => {
+  if (value.length === 0) return null;
+  return value
+    .map((item) =>
+      item.commentaire
+        ? `${encodeURIComponent(item.preconisation)}:${encodeURIComponent(item.commentaire)}`
+        : encodeURIComponent(item.preconisation),
+    )
+    .join("/");
 };
 
 export const stateReportExtraCss = {
