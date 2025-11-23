@@ -12,8 +12,10 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiceRouteImport } from './routes/service'
+import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ConnectionRouteImport } from './routes/connection'
+import { Route as CguRouteImport } from './routes/cgu'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$link'
@@ -29,6 +31,11 @@ const ServiceRoute = ServiceRouteImport.update({
   path: '/service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MentionsLegalesRoute = MentionsLegalesRouteImport.update({
+  id: '/mentions-legales',
+  path: '/mentions-legales',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InscriptionRoute = InscriptionRouteImport.update({
   id: '/inscription',
   path: '/inscription',
@@ -37,6 +44,11 @@ const InscriptionRoute = InscriptionRouteImport.update({
 const ConnectionRoute = ConnectionRouteImport.update({
   id: '/connection',
   path: '/connection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CguRoute = CguRouteImport.update({
+  id: '/cgu',
+  path: '/cgu',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRoute = AccountRouteImport.update({
@@ -85,8 +97,10 @@ const ConstatConstatIdPdfRoute = ConstatConstatIdPdfRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/cgu': typeof CguRoute
   '/connection': typeof ConnectionRoute
   '/inscription': typeof InscriptionRoute
+  '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
@@ -98,8 +112,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/cgu': typeof CguRoute
   '/connection': typeof ConnectionRoute
   '/inscription': typeof InscriptionRoute
+  '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
@@ -112,8 +128,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/cgu': typeof CguRoute
   '/connection': typeof ConnectionRoute
   '/inscription': typeof InscriptionRoute
+  '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
@@ -127,8 +145,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/cgu'
     | '/connection'
     | '/inscription'
+    | '/mentions-legales'
     | '/service'
     | '/constat/$constatId'
     | '/edit/$reportId'
@@ -140,8 +160,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/cgu'
     | '/connection'
     | '/inscription'
+    | '/mentions-legales'
     | '/service'
     | '/constat/$constatId'
     | '/edit/$reportId'
@@ -153,8 +175,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/cgu'
     | '/connection'
     | '/inscription'
+    | '/mentions-legales'
     | '/service'
     | '/constat/$constatId'
     | '/edit/$reportId'
@@ -167,8 +191,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  CguRoute: typeof CguRoute
   ConnectionRoute: typeof ConnectionRoute
   InscriptionRoute: typeof InscriptionRoute
+  MentionsLegalesRoute: typeof MentionsLegalesRoute
   ServiceRoute: typeof ServiceRoute
   ConstatConstatIdRoute: typeof ConstatConstatIdRoute
   EditReportIdRoute: typeof EditReportIdRoute
@@ -187,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mentions-legales': {
+      id: '/mentions-legales'
+      path: '/mentions-legales'
+      fullPath: '/mentions-legales'
+      preLoaderRoute: typeof MentionsLegalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inscription': {
       id: '/inscription'
       path: '/inscription'
@@ -199,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/connection'
       fullPath: '/connection'
       preLoaderRoute: typeof ConnectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cgu': {
+      id: '/cgu'
+      path: '/cgu'
+      fullPath: '/cgu'
+      preLoaderRoute: typeof CguRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -263,8 +303,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  CguRoute: CguRoute,
   ConnectionRoute: ConnectionRoute,
   InscriptionRoute: InscriptionRoute,
+  MentionsLegalesRoute: MentionsLegalesRoute,
   ServiceRoute: ServiceRoute,
   ConstatConstatIdRoute: ConstatConstatIdRoute,
   EditReportIdRoute: EditReportIdRoute,
