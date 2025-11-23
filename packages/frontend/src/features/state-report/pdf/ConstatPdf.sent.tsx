@@ -21,9 +21,10 @@ export const SentConstatPdf = () => {
   const navigate = routeApi.useNavigate();
 
   const { constatId } = routeApi.useParams();
-  const savePdfMutation = useMutation({
-    mutationFn: async () => {
-      return api.post("/api/pdf/state-report", {
+  const savePdfQuery = useQuery({
+    queryKey: ["constat-pdf", constatId, localHtmlString, recipients],
+    queryFn: async () => {
+      return await api.post("/api/pdf/state-report", {
         body: {
           stateReportId: constatId,
           htmlString: localHtmlString!,
@@ -31,29 +32,21 @@ export const SentConstatPdf = () => {
         },
       });
     },
+    enabled: !!localHtmlString && recipients.length > 0 && !!constatId,
+    refetchOnWindowFocus: false,
+    retry: 3,
   });
-
-  const hasSentRef = useRef(false);
-
-  useEffect(() => {
-    if (hasSentRef.current) return;
-    if (!localHtmlString) return;
-    savePdfMutation.mutate();
-    hasSentRef.current = true;
-  }, [localHtmlString, recipients]);
-
-  console.log(savePdfMutation);
 
   return (
     <Center height="100%">
-      {savePdfMutation.isPending ? <Spinner /> : null}
-      {savePdfMutation.isError ? (
+      {savePdfQuery.isLoading ? <Spinner /> : null}
+      {savePdfQuery.isError ? (
         <Center flexDirection="column" gap="16px">
-          <div>Erreur: {(savePdfMutation.error as Error).message}</div>{" "}
-          <Button onClick={() => savePdfMutation.mutate()}>Réessayer</Button>
+          <div>Erreur: {(savePdfQuery.error as Error).message}</div>{" "}
+          <Button onClick={() => savePdfQuery.refetch()}>Réessayer</Button>
         </Center>
       ) : null}
-      {savePdfMutation.isSuccess ? (
+      {savePdfQuery.isSuccess ? (
         <Center flexDirection="column" width="100%" mt="24px">
           <Box component="img" src={sentImage} alt="Courriel envoyé" width={{ xs: "80px", lg: "120px" }} />
           <Box mt="16px" color="text-title-blue-france" textAlign="center" fontSize={{ xs: "18px", lg: "24px" }}>

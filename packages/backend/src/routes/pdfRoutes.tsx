@@ -145,15 +145,17 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .where("state_report_id", "=", stateReportId)
       .execute();
 
-    const visitedSectionAttachments = await db
-      .selectFrom("visited_section_attachment")
-      .selectAll()
-      .where(
-        "visited_section_id",
-        "in",
-        visitedSections.map((vs) => vs.id),
-      )
-      .execute();
+    const visitedSectionAttachments = visitedSections?.length
+      ? await db
+          .selectFrom("visited_section_attachment")
+          .selectAll()
+          .where(
+            "visited_section_id",
+            "in",
+            visitedSections.map((vs) => vs.id),
+          )
+          .execute()
+      : [];
 
     const attachments = await Promise.all(
       visitedSectionAttachments.map(async (attachment) => {
