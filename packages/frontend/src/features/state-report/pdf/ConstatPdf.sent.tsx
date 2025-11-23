@@ -34,6 +34,9 @@ export const SentConstatPdf = () => {
     },
     enabled: !!localHtmlString && recipients.length > 0 && !!constatId,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    refetchInterval: false,
     retry: 3,
   });
 
