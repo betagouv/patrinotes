@@ -44,7 +44,7 @@ export const StateReportListItem = ({
         onClick={onClick}
         to={"/constat/$constatId"}
         params={{ constatId: report.id }}
-        search={{ step: "informations" }}
+        search={{ step: "constat-general" }}
       >
         <Box
           component="article"
