@@ -83,7 +83,15 @@ export namespace Endpoints {
     method: "POST";
     path: "/api/create-user";
     parameters: {
-      body: { password: string; name: string; email: string; job: string; service_id: string };
+      body: {
+        password: string;
+        name: string;
+        email: string;
+        job: string;
+        service_id: string;
+        newsletter: boolean;
+        cgu: boolean;
+      };
     };
     response: {
       user: {

@@ -196,6 +196,7 @@ export class AuthService {
             id: keycloakUser!.id,
             userId: keycloakUser!.id,
             email: userData.email,
+            newsletter: userData.newsletter,
             role: "user",
           })
           .execute();

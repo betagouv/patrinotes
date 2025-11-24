@@ -1,0 +1,1 @@
+ALTER TABLE "internal_user" ADD COLUMN "newsletter" boolean DEFAULT false;

@@ -2,14 +2,14 @@ import { type UseFormReturn, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Flex } from "#components/ui/Flex.tsx";
 import { getErrorMessage, RouterInputs, unauthenticatedApi } from "../../api";
-import { Alert, Input, Select } from "#components/MUIDsfr.tsx";
+import { Alert, Checkbox, Input, Select } from "#components/MUIDsfr.tsx";
 import { Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { useAuthContext } from "../../contexts/AuthContext";
 import { InputGroup } from "#components/InputGroup.tsx";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
 import { PasswordInput } from "#components/PasswordInput.tsx";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -18,6 +18,8 @@ export const SignupForm = () => {
       email: "",
       password: "",
       service_id: "",
+      newsletter: false,
+      job: "",
     },
   });
 
@@ -45,7 +47,7 @@ export const SignupForm = () => {
   const { error: mutationError } = mutation;
 
   return (
-    <Flex flexDirection="column">
+    <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }}>
       <Typography variant="h4" mb="24px">
         Inscription à Patrimoine Embarqué
       </Typography>
@@ -60,14 +62,6 @@ export const SignupForm = () => {
           />
         ) : null}
         <InputGroup state={mutationError ? "error" : undefined}>
-          <Input
-            label="Prénom Nom"
-            nativeInputProps={{
-              ...form.register("name", { required: "Le nom est requis" }),
-            }}
-            state={formErrors.name ? "error" : undefined}
-            stateRelatedMessage={formErrors.name?.message}
-          />
           <Input
             label="Courriel"
             hintText="prenom.nom@culture.gouv.fr"
@@ -85,9 +79,22 @@ export const SignupForm = () => {
             state={formErrors.email ? "error" : undefined}
             stateRelatedMessage={formErrors.email?.message}
           />
-
           <SignupPasswordInput form={form} />
+          <Input
+            label="Prénom Nom"
+            nativeInputProps={{
+              ...form.register("name", { required: "Le nom est requis" }),
+            }}
+            state={formErrors.name ? "error" : undefined}
+            stateRelatedMessage={formErrors.name?.message}
+          />
 
+          <Input
+            label="Fonction"
+            nativeInputProps={{ ...form.register("job", { required: "La fonction est requise" }) }}
+            state={formErrors.job ? "error" : undefined}
+            stateRelatedMessage={formErrors.job?.message}
+          />
           <Select
             label="Service"
             nativeSelectProps={form.register("service_id", { required: "Le service est requis" })}
@@ -104,11 +111,41 @@ export const SignupForm = () => {
             ))}
           </Select>
 
-          <Input
-            label="Fonction"
-            nativeInputProps={{ ...form.register("job", { required: "La fonction est requise" }) }}
-            state={formErrors.job ? "error" : undefined}
-            stateRelatedMessage={formErrors.job?.message}
+          <Checkbox
+            className={formErrors.cgu ? "fr-checkbox-group--error" : ""}
+            options={[
+              {
+                label: (
+                  <span>
+                    J’accepte les{" "}
+                    <Link className="fr-link" target="_blank" to="/cgu">
+                      conditions générales d’utilisation (CGU)
+                    </Link>{" "}
+                    du service Patrimoine Embarqué et consens à ce que mes données soient collectées, afin de garantir
+                    la bonne utilisation des services offerts.
+                  </span>
+                ),
+                nativeInputProps: {
+                  ...form.register("cgu", { required: true }),
+                },
+              },
+            ]}
+          />
+          <Checkbox
+            sx={{ mt: "16px" }}
+            options={[
+              {
+                label: (
+                  <span>
+                    J’accepte de recevoir des actualités et conseils du service Patrimoine Embarqué. Vous pourrez vous
+                    désabonner à tout moment.
+                  </span>
+                ),
+                nativeInputProps: {
+                  ...form.register("newsletter"),
+                },
+              },
+            ]}
           />
         </InputGroup>
 

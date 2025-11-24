@@ -38,6 +38,7 @@ export const internalUser = pgTable(
     temporaryLink: text(),
     temporaryLinkExpiresAt: text(),
     userId: text().notNull(),
+    newsletter: boolean().default(false),
   },
   (table) => [
     foreignKey({

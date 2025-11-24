@@ -41,6 +41,8 @@ export const createUserTSchema = {
     email: Type.String(),
     job: Type.String(),
     service_id: Type.String(),
+    newsletter: Type.Boolean(),
+    cgu: Type.Boolean(),
   }),
   response: { 200: authTSchema },
 };
