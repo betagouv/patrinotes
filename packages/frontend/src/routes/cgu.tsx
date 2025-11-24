@@ -147,6 +147,12 @@ const CGU = () => {
         case lors de l’envoi de vos documents, vous renoncez à vos droits sur ceux-ci et prenez connaissance qu’ils
         seront placés sous licence ouverte.
       </Typography>
+
+      <Typography variant="h2">Prise de contact</Typography>
+      <Typography variant="body1">
+        Tout utilisateur peut contacter Patrimoine via l’adresse mail suivante :{" "}
+        <b>contact@patrimoine-embarque.beta.gouv.fr</b>
+      </Typography>
     </Stack>
   );
 };
