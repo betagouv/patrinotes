@@ -229,6 +229,11 @@ export const getStateReportHtmlString = ({
 
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 
+  // accessibilité
+  // h1 pour les deux premières lignes
+  // h2 pour les titres de sections
+  // alt text sur les images
+  // constat détaillé : le commentaire doit être juste après ce qu'il commente
   return minifyHtml(`
     <p>  
       <span style="font-size: 20pt">Constat d'état du monument historique</span><br/><br/>
@@ -236,7 +241,7 @@ export const getStateReportHtmlString = ({
     </p>
     <p>
       Constat dressé par <b>${stateReport.createdByName}</b> suite à la visite  ${isPartielle ? "partielle" : ""}
-      ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}.` : ""}.
+      ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}.
 
       <br/>
       <br/>

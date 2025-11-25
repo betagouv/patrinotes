@@ -47,7 +47,7 @@ export const SignupForm = () => {
   const { error: mutationError } = mutation;
 
   return (
-    <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }}>
+    <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }} width={{ xs: "100%", lg: "600px" }} mx="auto" mt="32px">
       <Typography variant="h4" mb="24px">
         Inscription à Patrimoine Embarqué
       </Typography>
