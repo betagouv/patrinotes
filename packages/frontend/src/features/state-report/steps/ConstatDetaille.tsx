@@ -13,10 +13,11 @@ import { useLiveUser, useUser } from "../../../contexts/AuthContext";
 import { VisitedSection } from "../../../db/AppSchema";
 import { attachmentQueue, db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
-import { UploadImageWithEditModal } from "../../upload/UploadImageButton";
+import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
 import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
 import { defaultSections } from "@cr-vif/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { useIsStateReportDisabled } from "../utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -43,6 +44,8 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
   const [selectedSectionId, setSelectedSectionId] = useState<VisitedSection["id"] | null>(null);
   const user = useUser();
   const constatId = routeApi.useParams().constatId;
+
+  const isDisabled = useIsStateReportDisabled();
 
   const selectSectionMutation = useMutation({
     mutationFn: async (section: string) => {
@@ -73,7 +76,11 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
 
   return (
     <Stack gap="8px" flexWrap="wrap" flexDirection="row">
-      <SectionModal selectedSection={selectedSection} onClose={() => setSelectedSectionId(null)} />
+      <SectionModal
+        isDisabled={isDisabled}
+        selectedSection={selectedSection}
+        onClose={() => setSelectedSectionId(null)}
+      />
       {defaultSections.map((section) => {
         const visited = visitedSections?.find((vs) => vs.section === section);
         const isVisited = visited && (visited.etat_general || visited.commentaires || visited.proportion_dans_cet_etat);
@@ -128,9 +135,11 @@ const SectionItem = ({
 const SectionModal = ({
   selectedSection,
   onClose,
+  isDisabled,
 }: {
   selectedSection: VisitedSection | null;
   onClose: () => void;
+  isDisabled: boolean;
 }) => {
   return (
     <Dialog
@@ -163,8 +172,10 @@ const SectionModal = ({
 
         {selectedSection ? (
           <Stack gap="16px" px={{ xs: "0", lg: "16px" }}>
-            <SectionForm visitedSection={selectedSection} />
-            <FullWidthButton onClick={() => onClose()}>Enregistrer</FullWidthButton>
+            <SectionForm visitedSection={selectedSection} isDisabled={isDisabled} />
+            <FullWidthButton disabled={isDisabled} onClick={() => onClose()}>
+              Enregistrer
+            </FullWidthButton>
           </Stack>
         ) : null}
       </Box>
@@ -172,7 +183,7 @@ const SectionModal = ({
   );
 };
 
-const SectionForm = ({ visitedSection }: { visitedSection: VisitedSection }) => {
+const SectionForm = ({ visitedSection, isDisabled }: { visitedSection: VisitedSection; isDisabled: boolean }) => {
   const [values, setValues] = useState(visitedSection);
 
   const { isRecording, transcript, toggle } = useSpeechToTextV2({
@@ -223,40 +234,44 @@ const SectionForm = ({ visitedSection }: { visitedSection: VisitedSection }) => 
       <SectionEtatGeneralRadioButtons
         section={values}
         onChange={(label) => setValues({ ...values, etat_general: label })}
+        disabled={isDisabled}
       />
       <SectionProportionsRadioButtons
         section={values}
         onChange={(label) => setValues({ ...values, proportion_dans_cet_etat: label })}
+        disabled={isDisabled}
       />
 
-      <SectionImageUpload section={visitedSection} />
+      <SectionImageUpload section={visitedSection} disabled={isDisabled} />
 
       <Flex flexDirection="column" mt="24px">
         <Input
           sx={{ mb: "16px !important" }}
           textArea
-          disabled={isRecording}
+          disabled={isDisabled || isRecording}
           label="Commentaires"
           nativeTextAreaProps={{
             rows: 6,
             ...textAreaProps,
           }}
         />
-        <Button
-          type="button"
-          priority={isRecording ? "primary" : "tertiary"}
-          iconId="ri-mic-fill"
-          onClick={() => toggle()}
-        >
-          {isRecording ? <>En cours</> : <>Dicter</>}
-        </Button>
+        {isDisabled ? null : (
+          <Button
+            type="button"
+            priority={isRecording ? "primary" : "tertiary"}
+            iconId="ri-mic-fill"
+            onClick={() => toggle()}
+          >
+            {isRecording ? <>En cours</> : <>Dicter</>}
+          </Button>
+        )}
       </Flex>
     </Stack>
   );
 };
 
-const SectionImageUpload = ({ section }: { section: VisitedSection }) => {
-  const [selectedImage, setSelectedImage] = useState<{ id: string; url: string } | null>(null);
+const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
+  const [selectedAttachment, setSelectedAttachment] = useState<{ id: string; url: string } | null>(null);
   const { constatId } = routeApi.useParams();
   const user = useLiveUser()!;
 
@@ -271,46 +286,27 @@ const SectionImageUpload = ({ section }: { section: VisitedSection }) => {
 
   const sectionAttachments = sectionAttachmentQuery.data || [];
 
-  const addMutation = useMutation(async ({ files }: { files: File[] }) => {
-    for (const file of files) {
-      const attachmentId = `${constatId}/images/${v7()}.jpg`;
-      const buffer = await processImage(file);
-
-      await attachmentQueue.saveAttachment({
-        attachmentId: attachmentId,
-        buffer,
-        mediaType: "image/jpeg",
-      });
-
-      await db
-        .insertInto("visited_section_attachment")
-        .values({
-          id: attachmentId,
-          attachment_id: attachmentId,
-          visited_section_id: section.id,
-          created_at: new Date().toISOString(),
-          service_id: user.service_id,
-          is_deprecated: 0,
-        })
-        .execute();
-    }
-  });
-
-  const onClose = () => setSelectedImage(null);
-  const onEdit = (image: { id: string; url: string }) => setSelectedImage(image);
+  const onClose = () => setSelectedAttachment(null);
+  const onEdit = (image: { id: string; url: string }) => setSelectedAttachment(image);
   const onDelete = async ({ id }: { id: string }) => {
     await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", id).execute();
   };
 
+  const onLabelChange = async (attachmentId: string, newLabel: string) => {
+    await db
+      .updateTable("visited_section_attachment")
+      .set({ label: newLabel })
+      .where("id", "=", attachmentId)
+      .execute();
+  };
+
   return (
     <Box width="100%">
-      <UploadImageWithEditModal
-        hideButton={false}
-        multiple
-        addImage={addMutation.mutateAsync}
-        selectedImage={selectedImage}
+      <UploadImageModal
+        selectedAttachment={selectedAttachment}
         onClose={onClose}
         imageTable="visited_section_attachment"
+        onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
       <Grid
         display="grid"
@@ -322,8 +318,9 @@ const SectionImageUpload = ({ section }: { section: VisitedSection }) => {
             key={attachment.id}
             picture={{ id: attachment.attachment_id! }}
             onEdit={onEdit}
-            label=""
+            label={attachment.label || ""}
             onDelete={(props: { id: string }) => onDelete({ id: props.id })}
+            isDisabled={isDisabled}
           />
         ))}
       </Grid>
@@ -334,9 +331,11 @@ const SectionImageUpload = ({ section }: { section: VisitedSection }) => {
 const SectionEtatGeneralRadioButtons = ({
   section,
   onChange,
+  disabled,
 }: {
   section: VisitedSection;
   onChange: (label: string) => void;
+  disabled: boolean;
 }) => {
   const options = ["Bon", "Moyen", "Mauvais", "Péril"].map((label) => ({
     label,
@@ -346,15 +345,17 @@ const SectionEtatGeneralRadioButtons = ({
     },
   }));
 
-  return <RadioButtons legend="État général" options={options} />;
+  return <RadioButtons legend="État général" options={options} disabled={disabled} />;
 };
 
 const SectionProportionsRadioButtons = ({
   section,
   onChange,
+  disabled,
 }: {
   section: VisitedSection;
   onChange: (label: string) => void;
+  disabled: boolean;
 }) => {
   const options = ["50%", "60%", "70%", "80%", "90%", "100%"].map((label) => ({
     label,
@@ -364,5 +365,5 @@ const SectionProportionsRadioButtons = ({
     },
   }));
 
-  return <RadioButtons legend="Proportion dans cet état" options={options} />;
+  return <RadioButtons legend="Proportion dans cet état" options={options} disabled={disabled} />;
 };

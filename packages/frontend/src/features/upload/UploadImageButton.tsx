@@ -10,9 +10,10 @@ import { MinimalAttachment } from "./UploadImage";
 type UploadImageButtonProps = {
   addImage: ({ files }: { files: File[] }) => Promise<void>;
   multiple?: boolean;
+  isDisabled?: boolean;
 };
 
-export const UploadImageButton = ({ addImage, multiple }: UploadImageButtonProps) => {
+export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImageButtonProps) => {
   const uploadImageMutation = useMutation(async ({ files }: { files: File[] }) => {
     await addImage({ files });
     ref.current!.value = "";
@@ -35,11 +36,13 @@ export const UploadImageButton = ({ addImage, multiple }: UploadImageButtonProps
         nativeButtonProps={{
           type: "button",
           onClick: () => ref.current?.click(),
+          disabled: isDisabled,
         }}
       >
         Ajouter photo
       </Button>
       <input
+        disabled={isDisabled}
         ref={ref as any}
         type="file"
         accept="image/*"

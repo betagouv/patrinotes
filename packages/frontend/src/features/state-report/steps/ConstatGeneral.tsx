@@ -1,5 +1,5 @@
 import { Box, BoxProps, Stack, Typography } from "@mui/material";
-import { StateReportFormType, useStateReportFormContext } from "../utils";
+import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { UseFormReturn, useWatch } from "react-hook-form";
 import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
 import Checkbox from "@codegouvfr/react-dsfr/Checkbox";
@@ -25,6 +25,7 @@ const routeApi = getRouteApi("/constat/$constatId");
 
 export const ConstatGeneral = () => {
   const form = useStateReportFormContext();
+  const isDisabled = useIsStateReportDisabled();
 
   return (
     <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "44px" }} mb="16px">
@@ -32,13 +33,18 @@ export const ConstatGeneral = () => {
         Constat général
       </Typography>
       <MandatoryFieldReminder />
-      <EtatGeneralRadioButtons />
-      <ProportionsRadioButtons />
-      <StateReportTextAreaWithSpeechToText label="Commentaire" name="etat_commentaires" mb="40px" />
+      <EtatGeneralRadioButtons isDisabled={isDisabled} />
+      <ProportionsRadioButtons isDisabled={isDisabled} />
+      <StateReportTextAreaWithSpeechToText
+        label="Commentaire"
+        name="etat_commentaires"
+        mb="40px"
+        isDisabled={isDisabled}
+      />
       <Divider mb={{ xs: "24px", lg: "32px" }} />
-      <EtatGeneralImages />
+      <EtatGeneralImages isDisabled={isDisabled} />
       <Divider my={{ xs: "24px", lg: "32px" }} />
-      <Preconisations />
+      <Preconisations isDisabled={isDisabled} />
     </Stack>
   );
 };
@@ -54,8 +60,9 @@ export const MandatoryFieldReminder = () => {
 const StateReportTextAreaWithSpeechToText = ({
   label,
   name,
+  isDisabled,
   ...props
-}: { label: string; name: keyof StateReportFormType } & BoxProps) => {
+}: { label: string; name: keyof StateReportFormType; isDisabled: boolean } & BoxProps) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: name }) ?? "";
   const setValue = (val: string) => form.setValue(name, val);
@@ -79,7 +86,7 @@ const StateReportTextAreaWithSpeechToText = ({
     <Flex flexDirection="column" {...props}>
       <Input
         sx={{ mb: "16px !important", "& > textarea": { mt: "0 !important" } }}
-        disabled={isRecording}
+        disabled={isDisabled || isRecording}
         label={<Box mb="8px">{label}</Box>}
         textArea
         nativeTextAreaProps={{
@@ -87,22 +94,26 @@ const StateReportTextAreaWithSpeechToText = ({
           rows: 5,
         }}
       />
-      <Button
-        type="button"
-        priority={isRecording ? "primary" : "tertiary"}
-        iconId="ri-mic-fill"
-        onClick={() => toggle()}
-      >
-        {isRecording ? <>En cours</> : <>Dicter</>}
-      </Button>
+      {isDisabled ? null : (
+        <Button
+          type="button"
+          priority={isDisabled || isRecording ? "primary" : "tertiary"}
+          iconId="ri-mic-fill"
+          onClick={() => toggle()}
+        >
+          {isRecording ? <>En cours</> : <>Dicter</>}
+        </Button>
+      )}
     </Flex>
   );
 };
 
 const PlanSituation = ({
   setSelectedAttachment,
+  isDisabled,
 }: {
   setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  isDisabled: boolean;
 }) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: "plan_situation" });
@@ -122,6 +133,7 @@ const PlanSituation = ({
         multiple={false}
         onClick={() => setSelectedAttachment(attachment!)}
         onDelete={() => deletePlanSituationFileMutation.mutate(attachment!.id)}
+        isDisabled={isDisabled}
       />
     </Box>
   );
@@ -143,8 +155,10 @@ const useDeleteAttachmentMutation = (property: keyof StateReport) => {
 
 const PlanEdifice = ({
   setSelectedAttachment,
+  isDisabled,
 }: {
   setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  isDisabled: boolean;
 }) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: "plan_edifice" });
@@ -164,6 +178,7 @@ const PlanEdifice = ({
         multiple={false}
         onClick={() => setSelectedAttachment(attachment!)}
         onDelete={() => deletePlanEdificeFileMutation.mutate(attachment!.id)}
+        isDisabled={isDisabled}
       />
     </Box>
   );
@@ -171,8 +186,10 @@ const PlanEdifice = ({
 
 const VuesGenerales = ({
   setSelectedAttachment,
+  isDisabled,
 }: {
   setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  isDisabled: boolean;
 }) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: "vue_generale" });
@@ -192,6 +209,7 @@ const VuesGenerales = ({
         multiple={false}
         onClick={() => setSelectedAttachment(attachment!)}
         onDelete={() => deleteVueGeneraleFileMutation.mutate(attachment!.id)}
+        isDisabled={isDisabled}
       />
     </Box>
   );
@@ -221,9 +239,7 @@ const useAddStateReportFileMutation = (property: keyof StateReport) => {
   });
 };
 
-const EtatGeneralImages = () => {
-  const form = useStateReportFormContext();
-  const { constatId } = routeApi.useParams();
+const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
 
   const queryClient = useQueryClient();
@@ -236,18 +252,7 @@ const EtatGeneralImages = () => {
     setSelectedAttachment(null);
   };
 
-  const onDelete = async (props: { id: string; property: string }) => {
-    const { id, property } = props;
-    await attachmentStorage.deleteFile(id);
-    await db
-      .updateTable("state_report")
-      .set({ [property]: null })
-      .where("id", "=", constatId)
-      .execute();
-  };
-
   const onLabelChange = async (attachmentId: string, newLabel: string) => {
-    console.log("new label", newLabel);
     await db.updateTable("state_report_attachment").set({ label: newLabel }).where("id", "=", attachmentId).execute();
     await queryClient.invalidateQueries({ queryKey: ["attachment", attachmentId] });
   };
@@ -260,9 +265,9 @@ const EtatGeneralImages = () => {
         imageTable="state_report_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
-      <PlanSituation setSelectedAttachment={setSelectedAttachment} />
-      <PlanEdifice setSelectedAttachment={setSelectedAttachment} />
-      <VuesGenerales setSelectedAttachment={setSelectedAttachment} />
+      <PlanSituation setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
+      <PlanEdifice setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
+      <VuesGenerales setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
     </Flex>
   );
 };
@@ -330,7 +335,7 @@ const uploadFile = async ({ constatId, serviceId, file }: { constatId: string; s
   return attachmentId;
 };
 
-export const EtatGeneralRadioButtons = () => {
+export const EtatGeneralRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
   const form = useStateReportFormContext();
 
   const isDesktop = useIsDesktop();
@@ -349,11 +354,12 @@ export const EtatGeneralRadioButtons = () => {
       orientation={isDesktop ? "horizontal" : "vertical"}
       legend={<Box className="mandatory-field">État général de l'édifice</Box>}
       options={options}
+      disabled={isDisabled}
     />
   );
 };
 
-const ProportionsRadioButtons = () => {
+const ProportionsRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: "proportion_dans_cet_etat" });
 
@@ -372,11 +378,12 @@ const ProportionsRadioButtons = () => {
       orientation={isDesktop ? "horizontal" : "vertical"}
       legend={<Box className="mandatory-field">Proportion dans cet état</Box>}
       options={options}
+      disabled={isDisabled}
     />
   );
 };
 
-const Preconisations = () => {
+const Preconisations = ({ isDisabled }: { isDisabled: boolean }) => {
   const form = useStateReportFormContext();
   const rawValue = useWatch({ control: form.control, name: "preconisations" });
 
@@ -418,7 +425,7 @@ const Preconisations = () => {
       <Box mb="0">Préconisations</Box>
       {options.map((option) => (
         <>
-          <Checkbox legend={null} options={[option]} />
+          <Checkbox legend={null} options={[option]} disabled={isDisabled} />
           {selectedNames.includes(option.label)
             ? (() => {
                 const currentCommentaire = value.find((item) => item.preconisation === option.label)?.commentaire || "";
@@ -426,6 +433,7 @@ const Preconisations = () => {
                   <Box mb="24px" mt="16px">
                     <Input
                       label="Commentaire"
+                      disabled={isDisabled}
                       textArea
                       nativeTextAreaProps={{
                         rows: 4,

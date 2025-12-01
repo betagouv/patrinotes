@@ -86,6 +86,7 @@ const ConstatPdf = () => {
         .selectFrom("visited_section")
         .selectAll()
         .where("state_report_id", "=", constatId)
+
         .execute();
 
       const visitedSectionAttachments = await db
@@ -96,6 +97,7 @@ const ConstatPdf = () => {
           "in",
           visitedSections.map((vs) => vs.id),
         )
+        .where("is_deprecated", "=", 0)
         .execute();
 
       const attachments = await Promise.all(

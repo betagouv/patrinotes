@@ -1,4 +1,4 @@
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { StateReport } from "../../db/AppSchema";
 import z from "zod";
 
@@ -18,3 +18,9 @@ export const stateReportStepSchema = z.enum([
 ]);
 
 export type StateReportStep = z.infer<typeof stateReportStepSchema>;
+
+export const useIsStateReportDisabled = () => {
+  const form = useStateReportFormContext();
+  const hasAttachment = useWatch({ control: form.control, name: "attachment_id" });
+  return !!hasAttachment;
+};

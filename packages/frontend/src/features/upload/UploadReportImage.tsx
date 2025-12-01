@@ -80,9 +80,9 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         onFile={async (file: File) => addImageFileMutation.mutateAsync(file)}
         multiple
         attachments={pictures}
+        onDelete={({ id }) => deletePictureMutation.mutate({ id })}
         onClick={(attachment) => setSelectedAttachment(attachment)}
       />
-      {/* <ReportPictures pictures={pictures} onEdit={setSelectedAttachment} onDelete={deletePictureMutation.mutate} /> */}
     </Box>
   );
 };
@@ -135,11 +135,13 @@ export const PictureThumbnail = ({
   label,
   onEdit,
   onDelete,
+  isDisabled,
 }: {
   picture: { id: string };
   label: string;
   onEdit: (props: { id: string; url: string }) => void;
   onDelete: (props: { id: string }) => void;
+  isDisabled?: boolean;
 }) => {
   const idbStatusQuery = useDbQuery(db.selectFrom("attachments").where("id", "=", picture.id).select("state"));
   const status = idbStatusQuery.data?.[0]?.state;
@@ -232,28 +234,30 @@ export const PictureThumbnail = ({
           borderColor={fr.colors.decisions.border.default.grey.default}
           height="40px"
         >
-          <Box
-            onClick={() => {
-              onEdit({ id: picture.id, url: bgUrlQuery.data! });
-            }}
-            borderRight="1px solid"
-            borderColor={fr.colors.decisions.border.default.grey.default}
-          >
-            <Button
-              type="button"
-              iconId="ri-pencil-fill"
-              priority="tertiary no outline"
-              sx={{
-                "::before": {
-                  marginRight: "0 !important",
-                  width: "24px",
-                  height: "24px",
-                },
+          {isDisabled ? null : (
+            <Box
+              onClick={() => {
+                onEdit({ id: picture.id, url: bgUrlQuery.data! });
               }}
+              borderRight="1px solid"
+              borderColor={fr.colors.decisions.border.default.grey.default}
             >
-              {null}
-            </Button>
-          </Box>
+              <Button
+                type="button"
+                iconId="ri-pencil-fill"
+                priority="tertiary no outline"
+                sx={{
+                  "::before": {
+                    marginRight: "0 !important",
+                    width: "24px",
+                    height: "24px",
+                  },
+                }}
+              >
+                {null}
+              </Button>
+            </Box>
+          )}
           <Box flex="1" px="12px">
             <Typography
               mt="4px"
@@ -266,25 +270,27 @@ export const PictureThumbnail = ({
               {label}
             </Typography>
           </Box>
-          <Box borderLeft="1px solid" borderColor={fr.colors.decisions.border.default.grey.default}>
-            <Button
-              type="button"
-              iconId="fr-icon-delete-bin-fill"
-              priority="tertiary no outline"
-              sx={{
-                "::before": {
-                  marginRight: "0 !important",
-                  width: "24px",
-                  height: "24px",
-                },
-              }}
-              nativeButtonProps={{
-                onClick: () => onDelete({ id: picture.id }),
-              }}
-            >
-              {null}
-            </Button>
-          </Box>
+          {isDisabled ? null : (
+            <Box borderLeft="1px solid" borderColor={fr.colors.decisions.border.default.grey.default}>
+              <Button
+                type="button"
+                iconId="fr-icon-delete-bin-fill"
+                priority="tertiary no outline"
+                sx={{
+                  "::before": {
+                    marginRight: "0 !important",
+                    width: "24px",
+                    height: "24px",
+                  },
+                }}
+                nativeButtonProps={{
+                  onClick: () => onDelete({ id: picture.id }),
+                }}
+              >
+                {null}
+              </Button>
+            </Box>
+          )}
         </Flex>
       </Flex>
     </Stack>

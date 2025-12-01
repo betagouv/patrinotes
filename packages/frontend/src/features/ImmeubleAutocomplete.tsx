@@ -5,7 +5,7 @@ import { useStyles } from "tss-react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { PopImmeuble } from "../db/AppSchema";
 import { useFormContext, useWatch } from "react-hook-form";
-import { StateReportFormType, useStateReportFormContext } from "./state-report/utils";
+import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "./state-report/utils";
 import { Spinner } from "#components/Spinner.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import Highlighter from "react-highlight-words";
@@ -45,6 +45,8 @@ export const ImmeubleAutocomplete = () => {
   const [value] = useWatch({ control: form.control, name: ["reference_pop"] });
   const { cx } = useStyles();
 
+  const isDisabled = useIsStateReportDisabled();
+
   const immeubleQuery = useDbQuery(
     db
       .selectFrom("pop_immeubles")
@@ -54,6 +56,7 @@ export const ImmeubleAutocomplete = () => {
   const searchEngine = new Fuse(rawItems, fuseOptions);
 
   const setValue = async (item: FilterablePopImmeubles | null) => {
+    if (isDisabled) return;
     form.setValue("reference_pop", item ? item.id : null);
     setIsChanging(false);
     if (!item) return;
@@ -73,6 +76,7 @@ export const ImmeubleAutocomplete = () => {
   const hasValue = !!value;
 
   const handleChanging = (changing: boolean) => {
+    if (isDisabled) return;
     setIsChanging(changing);
     if (changing) {
       setIsWarningOpen(false);
