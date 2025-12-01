@@ -1,4 +1,3 @@
-import Button from "@codegouvfr/react-dsfr/Button";
 import { MenuTitle } from "./MenuTitle";
 import { clearDb } from "../../db/db";
 import { menuActor } from "./menuMachine";
@@ -7,6 +6,8 @@ import { useState } from "react";
 import { TitleH3 } from "../../routes/account";
 import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
+import { Button } from "#components/MUIDsfr.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
 
 export const HelpMenu = () => {
   const [showClipboardSuccess, setShowClipboardSuccess] = useState(false);
@@ -38,7 +39,12 @@ export const HelpMenu = () => {
             À qui s’adresse compte rendu VIF ? Comment créer un nouveau compte-rendu ? Comment ajouter des photos...
             Découvrez toutes les réponses sur la FAQ.
           </Box>
-          <Button linkProps={{ href: "https://compte-rendu-vif.beta.gouv.fr/faq" }}>Consulter FAQ</Button>
+          <Button
+            sx={{ mt: "16px", bgcolor: fr.colors.decisions.text.actionHigh.blueFrance.default + " !important" }}
+            linkProps={{ target: "_blank", href: "https://compte-rendu-vif.beta.gouv.fr/faq" }}
+          >
+            Consulter FAQ
+          </Button>
         </Stack>
         <Box px="16px">
           <Divider height="2px" mt={{ xs: "27px", lg: "32px" }} mb={{ xs: 0, lg: "24px" }} color="#C1C1FB" />
@@ -48,7 +54,14 @@ export const HelpMenu = () => {
           <Box>
             Vous ne voyez pas vos dernières informations enregistrées ? Essayez de réinitialiser les données locales.
           </Box>
-          <Button onClick={() => deleteLocalData()}>Réinitialiser</Button>
+          <Button
+            sx={{
+              mt: "16px",
+            }}
+            onClick={() => deleteLocalData()}
+          >
+            Réinitialiser
+          </Button>
         </Stack>
 
         <Box px="16px">
