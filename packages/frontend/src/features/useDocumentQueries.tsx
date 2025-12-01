@@ -22,15 +22,15 @@ export const getReportQueries = (
   page: number,
   user: { id: string; service_id: string | null },
 ): ReportQueries => {
-  const baseQuery = reportQueries.base.offset(page * 20).limit(20);
-  const countQuery = reportQueries.count;
+  let baseQuery = reportQueries.base.offset(page * 20).limit(20);
+  let countQuery = reportQueries.count;
 
   if (scope === "my") {
-    baseQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
-    countQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
+    baseQuery = baseQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
+    countQuery = countQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
   } else {
-    baseQuery.where("report.service_id", "=", user.service_id);
-    countQuery.where("report.service_id", "=", user.service_id);
+    baseQuery = baseQuery.where("report.service_id", "=", user.service_id);
+    countQuery = countQuery.where("report.service_id", "=", user.service_id);
   }
 
   return { baseQuery, countQuery };
