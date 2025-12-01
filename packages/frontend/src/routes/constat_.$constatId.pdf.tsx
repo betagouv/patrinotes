@@ -55,6 +55,8 @@ const ConstatPdf = () => {
         return null;
       }
 
+      const stateReport = stateReportQuery[0];
+
       const attachmentQuery = await db
         .selectFrom("state_report_attachment")
         .selectAll()
@@ -70,6 +72,19 @@ const ConstatPdf = () => {
           };
         }),
       );
+
+      const newRecipients = [];
+      if (stateReport.proprietaire_email) {
+        newRecipients.push(stateReport.proprietaire_email);
+      }
+      if (
+        stateReport.proprietaire_representant_email &&
+        stateReport.proprietaire_representant_email !== stateReport.proprietaire_email
+      ) {
+        newRecipients.push(stateReport.proprietaire_representant_email);
+      }
+
+      setRecipients(newRecipients);
 
       return {
         ...stateReportQuery[0],
