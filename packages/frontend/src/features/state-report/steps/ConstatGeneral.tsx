@@ -5,13 +5,13 @@ import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
 import Checkbox from "@codegouvfr/react-dsfr/Checkbox";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { v7 } from "uuid";
 import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
 import { attachmentQueue, attachmentStorage, db } from "../../../db/db";
 import { useLiveUser } from "../../../contexts/AuthContext";
-import { UploadImageWithEditModal } from "../../upload/UploadImageButton";
+import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
 import { Flex } from "#components/ui/Flex.tsx";
 import { StateReport } from "../../../db/AppSchema";
 import { useRef, useState } from "react";
@@ -19,6 +19,7 @@ import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { deserializePreconisations, serializePreconisations } from "@cr-vif/pdf/constat";
+import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -97,17 +98,142 @@ const StateReportTextAreaWithSpeechToText = ({
     </Flex>
   );
 };
+
+const PlanSituation = ({
+  setSelectedAttachment,
+}: {
+  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+}) => {
+  const form = useStateReportFormContext();
+  const value = useWatch({ control: form.control, name: "plan_situation" });
+
+  const attachmentQuery = useStateReportAttachmentQuery(value);
+  const attachment = attachmentQuery.data;
+
+  const addPlanSituationFileMutation = useAddStateReportFileMutation("plan_situation");
+  const deletePlanSituationFileMutation = useDeleteAttachmentMutation("plan_situation");
+
+  return (
+    <Box flex="1">
+      <Typography mb="8px">Plan de situation</Typography>
+      <UploadImage
+        onFile={async (file: File) => addPlanSituationFileMutation.mutateAsync({ file })}
+        attachments={attachment ? [attachment] : []}
+        multiple={false}
+        onClick={() => setSelectedAttachment(attachment!)}
+        onDelete={() => deletePlanSituationFileMutation.mutate(attachment!.id)}
+      />
+    </Box>
+  );
+};
+
+const useDeleteAttachmentMutation = (property: keyof StateReport) => {
+  const { constatId } = routeApi.useParams();
+  return useMutation({
+    mutationFn: async (attachmentId: string) => {
+      await attachmentStorage.deleteFile(attachmentId);
+      await db
+        .updateTable("state_report")
+        .set({ [property]: null })
+        .where("id", "=", constatId)
+        .execute();
+    },
+  });
+};
+
+const PlanEdifice = ({
+  setSelectedAttachment,
+}: {
+  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+}) => {
+  const form = useStateReportFormContext();
+  const value = useWatch({ control: form.control, name: "plan_edifice" });
+
+  const attachmentQuery = useStateReportAttachmentQuery(value);
+  const attachment = attachmentQuery.data;
+
+  const addPlanEdificeFileMutation = useAddStateReportFileMutation("plan_edifice");
+  const deletePlanEdificeFileMutation = useDeleteAttachmentMutation("plan_edifice");
+
+  return (
+    <Box flex="1">
+      <Typography mb="8px">Plan de l'édifice</Typography>
+      <UploadImage
+        onFile={async (file: File) => addPlanEdificeFileMutation.mutateAsync({ file })}
+        attachments={attachment ? [attachment] : []}
+        multiple={false}
+        onClick={() => setSelectedAttachment(attachment!)}
+        onDelete={() => deletePlanEdificeFileMutation.mutate(attachment!.id)}
+      />
+    </Box>
+  );
+};
+
+const VuesGenerales = ({
+  setSelectedAttachment,
+}: {
+  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+}) => {
+  const form = useStateReportFormContext();
+  const value = useWatch({ control: form.control, name: "vue_generale" });
+
+  const attachmentQuery = useStateReportAttachmentQuery(value);
+  const attachment = attachmentQuery.data;
+
+  const addVueGeneraleFileMutation = useAddStateReportFileMutation("vue_generale");
+  const deleteVueGeneraleFileMutation = useDeleteAttachmentMutation("vue_generale");
+
+  return (
+    <Box flex="1">
+      <Typography mb="8px">Vues générales de l'édifice</Typography>
+      <UploadImage
+        onFile={async (file: File) => addVueGeneraleFileMutation.mutateAsync({ file })}
+        attachments={attachment ? [attachment] : []}
+        multiple={false}
+        onClick={() => setSelectedAttachment(attachment!)}
+        onDelete={() => deleteVueGeneraleFileMutation.mutate(attachment!.id)}
+      />
+    </Box>
+  );
+};
+
+const useStateReportAttachmentQuery = (attachmentId: string | null) => {
+  return useQuery({
+    queryKey: ["attachment", attachmentId],
+    queryFn: async () => {
+      return db.selectFrom("state_report_attachment").where("id", "=", attachmentId).selectAll().executeTakeFirst();
+    },
+    enabled: !!attachmentId,
+  });
+};
+
+const useAddStateReportFileMutation = (property: keyof StateReport) => {
+  const { constatId } = routeApi.useParams();
+  const form = useStateReportFormContext();
+  const user = useLiveUser()!;
+
+  return useMutation({
+    mutationFn: async ({ file }: { file: File }) => {
+      const attachmentId = await uploadFile({ constatId, serviceId: user.service_id!, file });
+      form.setValue(property, attachmentId);
+      return attachmentId;
+    },
+  });
+};
+
 const EtatGeneralImages = () => {
   const form = useStateReportFormContext();
   const { constatId } = routeApi.useParams();
-  const [selectedPicture, setSelectedPicture] = useState<{ id: string; url: string } | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
+
+  const queryClient = useQueryClient();
 
   const onEdit = (props: { id: string; url: string }) => {
-    setSelectedPicture(props);
+    setSelectedAttachment(props);
   };
 
   const onClose = () => {
-    setSelectedPicture(null);
+    setSelectedAttachment(null);
   };
 
   const onDelete = async (props: { id: string; property: string }) => {
@@ -120,113 +246,24 @@ const EtatGeneralImages = () => {
       .execute();
   };
 
+  const onLabelChange = async (attachmentId: string, newLabel: string) => {
+    console.log("new label", newLabel);
+    await db.updateTable("state_report_attachment").set({ label: newLabel }).where("id", "=", attachmentId).execute();
+    await queryClient.invalidateQueries({ queryKey: ["attachment", attachmentId] });
+  };
+
   return (
     <Flex width="100%" flexWrap="wrap" gap={{ xs: "20px", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }}>
-      <Box flex="1">
-        <Typography mb="8px">Plan de situation</Typography>
-
-        <SingleUploadImageWithPreview
-          constatId={constatId}
-          label=""
-          property="plan_situation"
-          form={form}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          selectedImage={selectedPicture}
-          onClose={onClose}
-        />
-      </Box>
-      <Box flex="1">
-        <Typography mb="8px">Plan de l'édifice</Typography>
-
-        <SingleUploadImageWithPreview
-          constatId={constatId}
-          label=""
-          property="plan_edifice"
-          form={form}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          selectedImage={selectedPicture}
-          onClose={onClose}
-        />
-      </Box>
-      <Box flex="1">
-        <Typography mb="8px">Vues générales de l'édifice</Typography>
-
-        <SingleUploadImageWithPreview
-          constatId={constatId}
-          label=""
-          property="vue_generale"
-          form={form}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          selectedImage={selectedPicture}
-          onClose={onClose}
-        />
-      </Box>
-    </Flex>
-  );
-};
-
-const SingleUploadImageWithPreview = ({
-  constatId,
-  label,
-  property,
-  form,
-  selectedImage,
-  onClose,
-  onEdit,
-  onDelete,
-}: {
-  constatId: string;
-  label: string;
-  property: keyof StateReport;
-  form: UseFormReturn<StateReportFormType>;
-  selectedImage: { id: string; url: string } | null;
-  onClose: () => void;
-  onEdit: (props: { id: string; url: string }) => void;
-  onDelete: (props: { id: string; property: string }) => void;
-}) => {
-  const [value] = useWatch({ control: form.control, name: [property] });
-  const addMutation = useUpdateImageMutation({
-    constatId,
-    onSuccess: async (attachmentId: string) => {
-      await db
-        .updateTable("state_report")
-        .set({ [property]: attachmentId })
-        .where("id", "=", constatId)
-        .execute();
-    },
-  });
-
-  return (
-    <Box
-      width="100%"
-      sx={{
-        button: {
-          width: { xs: "100% !important", lg: "fit-content" },
-          justifyContent: { xs: "center !important", lg: "unset" },
-        },
-      }}
-    >
-      <UploadImageWithEditModal
-        hideButton={!!value}
-        addImage={addMutation.mutateAsync}
-        selectedImage={selectedImage}
+      <UploadImageModal
+        selectedAttachment={selectedAttachment}
         onClose={onClose}
         imageTable="state_report_attachment"
+        onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
-      {value ? (
-        <Box mt="8px" width="100%">
-          <PictureThumbnail
-            label={"label"}
-            picture={{ id: value as string }}
-            onEdit={onEdit}
-            onDelete={(props: { id: string }) => onDelete({ id: props.id, property })}
-          />
-        </Box>
-      ) : null}
-    </Box>
+      <PlanSituation setSelectedAttachment={setSelectedAttachment} />
+      <PlanEdifice setSelectedAttachment={setSelectedAttachment} />
+      <VuesGenerales setSelectedAttachment={setSelectedAttachment} />
+    </Flex>
   );
 };
 
@@ -266,6 +303,31 @@ const useUpdateImageMutation = ({
       }
     },
   });
+};
+
+const uploadFile = async ({ constatId, serviceId, file }: { constatId: string; serviceId: string; file: File }) => {
+  const attachmentId = `${constatId}/images/${v7()}.jpg`;
+  const buffer = await processImage(file);
+
+  await attachmentQueue.saveAttachment({
+    attachmentId: attachmentId,
+    buffer,
+    mediaType: "image/jpeg",
+  });
+
+  await db
+    .insertInto("state_report_attachment")
+    .values({
+      id: attachmentId,
+      attachment_id: attachmentId,
+      state_report_id: constatId,
+      created_at: new Date().toISOString(),
+      is_deprecated: 0,
+      service_id: serviceId,
+    })
+    .execute();
+
+  return attachmentId;
 };
 
 export const EtatGeneralRadioButtons = () => {

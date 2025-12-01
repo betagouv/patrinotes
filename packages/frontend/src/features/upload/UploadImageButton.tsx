@@ -3,8 +3,9 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChangeEvent, ComponentProps, RefObject, useRef, useState } from "react";
-import { db } from "../../db/db";
+import { db, getAttachmentUrl } from "../../db/db";
 import { ImageCanvas } from "./DrawingCanvas";
+import { MinimalAttachment } from "./UploadImage";
 
 type UploadImageButtonProps = {
   addImage: ({ files }: { files: File[] }) => Promise<void>;
@@ -52,21 +53,21 @@ export const UploadImageButton = ({ addImage, multiple }: UploadImageButtonProps
 
 export const UploadImageWithEditModal = ({
   addImage,
-  selectedImage,
+  selectedAttachment,
   onClose,
   hideButton,
   imageTable,
   multiple,
 }: UploadImageButtonProps & {
-  selectedImage: { id: string; url: string } | null;
+  selectedAttachment: MinimalAttachment | null;
   onClose: () => void;
   hideButton?: boolean;
   imageTable: string;
 }) => {
   return (
     <Flex>
-      {selectedImage ? (
-        <UploadImageModal selectedImage={selectedImage} onClose={onClose} imageTable={imageTable} />
+      {selectedAttachment ? (
+        <UploadImageModal selectedAttachment={selectedAttachment} onClose={onClose} imageTable={imageTable} />
       ) : null}
       {!hideButton ? <UploadImageButton addImage={addImage} multiple={multiple} /> : null}
     </Flex>
@@ -74,32 +75,45 @@ export const UploadImageWithEditModal = ({
 };
 
 export const UploadImageModal = ({
-  selectedImage,
+  selectedAttachment,
   onClose,
+  onSave,
   imageTable,
+  hideLabelInput,
 }: {
-  selectedImage: { id: string; url: string };
+  selectedAttachment: MinimalAttachment | null;
   onClose: () => void;
+  onSave?: (props: MinimalAttachment & { url: string }) => void;
   imageTable?: string;
+  hideLabelInput?: boolean;
 }) => {
+  const urlQuery = useQuery({
+    queryKey: ["attachment-url", selectedAttachment?.id],
+    queryFn: async () => {
+      const url = await getAttachmentUrl(selectedAttachment!.id);
+      return url;
+    },
+    enabled: !!selectedAttachment,
+  });
+
   const linesQuery = useQuery({
-    queryKey: ["lines", selectedImage?.id],
+    queryKey: ["lines", selectedAttachment?.id],
     queryFn: async () => {
       const linesQuery = await db
         .selectFrom("picture_lines")
-        .where("attachmentId", "=", selectedImage!.id)
+        .where("attachmentId", "=", selectedAttachment!.id)
         .selectAll()
         .execute();
 
       return JSON.parse(linesQuery?.[0]?.lines ?? "[]");
     },
-    enabled: !!selectedImage,
+    enabled: !!selectedAttachment,
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
   return (
     <Box
-      display={selectedImage ? "initial" : "none"}
+      display={selectedAttachment ? "initial" : "none"}
       zIndex="1000"
       position="fixed"
       top="0"
@@ -116,17 +130,19 @@ export const UploadImageModal = ({
           bgcolor="white"
           position="relative"
           width={{ xs: "100%", lg: "634px" }}
-          height={{ xs: "100vh", lg: "792px" }}
+          height={{ xs: "auto", lg: "792px" }}
           maxHeight={{ xs: "100vh", lg: "100vh" }}
         >
-          {selectedImage ? (
+          {urlQuery.data && selectedAttachment ? (
             <ImageCanvas
               imageTable={imageTable}
+              attachment={selectedAttachment}
               closeModal={() => onClose()}
-              pictureId={selectedImage.id}
-              url={selectedImage.url}
+              onSave={onSave}
+              url={urlQuery.data!}
               containerRef={containerRef}
               lines={linesQuery.data}
+              hideLabelInput={hideLabelInput}
             />
           ) : null}
         </Box>

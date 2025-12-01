@@ -4,27 +4,33 @@ import { v4, v7 } from "uuid";
 import { db } from "../../db/db";
 import { Box, Stack } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Button } from "#components/MUIDsfr.tsx";
+import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useUser } from "../../contexts/AuthContext";
+import { MinimalAttachment } from "./UploadImage";
 
 type DrawEvent = React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>;
 export type Line = { points: Array<{ x: number; y: number }>; color: string };
 export const ImageCanvas = ({
   url,
-  pictureId,
+  attachment,
   lines: dbLines,
   containerRef,
   imageTable,
+  onSave,
   closeModal,
+  hideLabelInput,
 }: {
-  url: string;
+  attachment: MinimalAttachment;
   containerRef: any;
-  pictureId: string;
+  url: string;
   lines: Array<Line>;
   imageTable?: string;
-
+  onSave?: (props: MinimalAttachment & { url: string }) => void;
   closeModal: () => void;
+  hideLabelInput?: boolean;
 }) => {
+  const { id: pictureId } = attachment;
+  const [internalLabel, setInternalLabel] = useState<string>(attachment.label ?? "");
   const user = useUser()!;
   const [tool, setTool] = useState("draw");
   const [lines, setLines] = useState<Array<{ points: Array<{ x: number; y: number }>; color: string }>>([]);
@@ -64,7 +70,7 @@ export const ImageCanvas = ({
     context.scale(dpr, dpr);
     context.strokeStyle = activeColor;
     canvas.style.width = "100%";
-    canvas.style.height = "100%";
+    canvas.style.height = "auto";
 
     contextRef.current = context;
 
@@ -148,6 +154,7 @@ export const ImageCanvas = ({
 
     return { x, y };
   };
+
   const handleMouseDown = (e: any) => {
     const clientX = "clientX" in e ? e.clientX : e.touches[0].clientX;
     const clientY = "clientY" in e ? e.clientY : e.touches[0].clientY;
@@ -242,6 +249,7 @@ export const ImageCanvas = ({
         })
         .execute();
     }
+    onSave?.({ ...attachment, label: internalLabel, url });
     closeModal();
   };
 
@@ -280,7 +288,19 @@ export const ImageCanvas = ({
           }}
         />
       </Box>
-      <Flex justifyContent="center" alignItems="center">
+      <Flex justifyContent="center" alignItems="center" flexDirection="column" mt="16px">
+        {hideLabelInput ? null : (
+          <Flex px="16px" width="100%">
+            <Input
+              sx={{ width: "100%" }}
+              label="Légende"
+              nativeInputProps={{
+                value: internalLabel,
+                onChange: (e) => setInternalLabel(e.target.value),
+              }}
+            />
+          </Flex>
+        )}
         <Stack gap="14px" flexDirection="row" justifyContent="center" alignItems="center" p="18px">
           {colors.map((color) => (
             <Button

@@ -45,7 +45,7 @@ sync_rules:
 
 
       dept_bucket:
-        priority: 3
+        priority: 1
         parameters: SELECT dept_number FROM "user_dept" WHERE user_id = request.user_id()
         data:
           - SELECT * FROM pop_immeubles WHERE departement_format_numerique = bucket.dept_number

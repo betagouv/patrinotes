@@ -16,36 +16,38 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Badge, Button, Center } from "#components/MUIDsfr.tsx";
 import { useLiveUser } from "../../contexts/AuthContext";
 import { AttachmentState } from "@powersync/attachments";
-import { UploadImageButton, UploadImageWithEditModal } from "./UploadImageButton";
+import { UploadImageButton, UploadImageModal, UploadImageWithEditModal } from "./UploadImageButton";
 import { fr } from "@codegouvfr/react-dsfr";
+import { MinimalAttachment, UploadImage } from "./UploadImage";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
-  const [selectedPicture, setSelectedPicture] = useState<{ id: string; url: string } | null>(null);
+  const form = useFormContext<Report>();
+  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
   const user = useLiveUser();
 
-  const uploadImageMutation = useMutation(async ({ files }: { files: File[] }) => {
-    for (const file of files) {
-      const picId = `${reportId}/images/${v7()}.jpg`;
-      const buffer = await processImage(file);
+  const addImageFileMutation = useMutation(async (file: File) => {
+    const attachmentId = `${reportId}/images/${v7()}.jpg`;
+    const buffer = await processImage(file);
 
-      await attachmentQueue.saveAttachment({
-        attachmentId: picId,
-        buffer,
-        mediaType: "image/jpeg",
-      });
+    await attachmentQueue.saveAttachment({
+      attachmentId,
+      buffer,
+      mediaType: "image/jpeg",
+    });
 
-      await db
-        .insertInto("report_attachment")
-        .values({
-          id: picId,
-          attachment_id: picId,
-          report_id: reportId,
-          service_id: user!.service_id,
-          created_at: new Date().toISOString(),
-          is_deprecated: 0,
-        })
-        .execute();
-    }
+    await db
+      .insertInto("report_attachment")
+      .values({
+        id: attachmentId,
+        attachment_id: attachmentId,
+        report_id: reportId,
+        service_id: user!.service_id,
+        created_at: new Date().toISOString(),
+        is_deprecated: 0,
+      })
+      .execute();
+
+    return attachmentId;
   });
 
   const picturesQuery = useDbQuery(
@@ -66,19 +68,34 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   });
 
   return (
-    <>
-      <UploadImageWithEditModal
-        multiple
-        addImage={uploadImageMutation.mutateAsync}
-        selectedImage={selectedPicture}
-        onClose={() => setSelectedPicture(null)}
+    <Box flex="1">
+      <UploadImageModal
+        selectedAttachment={selectedAttachment}
+        onClose={() => setSelectedAttachment(null)}
         imageTable="report_attachment"
+        onSave={() => {}}
+        hideLabelInput
       />
-      <ReportPictures pictures={pictures} onEdit={setSelectedPicture} onDelete={deletePictureMutation.mutate} />
-    </>
+      <UploadImage
+        onFile={async (file: File) => addImageFileMutation.mutateAsync(file)}
+        multiple
+        attachments={pictures}
+        onClick={(attachment) => setSelectedAttachment(attachment)}
+      />
+      {/* <ReportPictures pictures={pictures} onEdit={setSelectedAttachment} onDelete={deletePictureMutation.mutate} /> */}
+    </Box>
   );
 };
 
+const useReportAttachmentQuery = (attachmentId: string | null) => {
+  return useQuery({
+    queryKey: ["report-attachment", attachmentId],
+    queryFn: async () => {
+      return db.selectFrom("report_attachment").where("id", "=", attachmentId).selectAll().executeTakeFirst();
+    },
+    enabled: !!attachmentId,
+  });
+};
 const ReportPictures = ({
   onEdit,
   onDelete,
@@ -198,7 +215,13 @@ export const PictureThumbnail = ({
 
   const finalStatus = idbStatusQuery.data?.[0]?.state ?? AttachmentState.QUEUED_UPLOAD;
   return (
-    <Stack minWidth="150px" maxWidth={{ xs: "unset", lg: "250px" }} width={{ xs: "100%", lg: "unset" }} gap="4px">
+    <Stack
+      minWidth="150px"
+      maxWidth={{ xs: "unset", lg: "250px" }}
+      width={{ xs: "100%", lg: "unset" }}
+      gap="4px"
+      maxHeight={{ xs: "300px", lg: "unset" }}
+    >
       <ReportStatus status={finalStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%">
         <Box ref={canvasRef} component="canvas" flex="1"></Box>
@@ -238,6 +261,7 @@ export const PictureThumbnail = ({
               fontWeight="500"
               color={fr.colors.decisions.text.actionHigh.blueFrance.default}
               noWrap
+              width={{ xs: "100%", lg: "100px" }}
             >
               {label}
             </Typography>
