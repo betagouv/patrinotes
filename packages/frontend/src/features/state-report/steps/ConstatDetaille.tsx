@@ -242,7 +242,7 @@ const SectionForm = ({ visitedSection, isDisabled }: { visitedSection: VisitedSe
         disabled={isDisabled}
       />
 
-      <SectionImageUpload section={visitedSection} disabled={isDisabled} />
+      <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
 
       <Flex flexDirection="column" mt="24px">
         <Input

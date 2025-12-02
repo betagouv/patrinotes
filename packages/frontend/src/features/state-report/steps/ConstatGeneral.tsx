@@ -430,30 +430,75 @@ const Preconisations = ({ isDisabled }: { isDisabled: boolean }) => {
             ? (() => {
                 const currentCommentaire = value.find((item) => item.preconisation === option.label)?.commentaire || "";
                 return (
-                  <Box mb="24px" mt="16px">
-                    <Input
-                      label="Commentaire"
-                      disabled={isDisabled}
-                      textArea
-                      nativeTextAreaProps={{
-                        rows: 4,
-                        value: currentCommentaire,
-                        onChange: (e) => {
-                          const newCommentaire = e.target.value;
-                          commentairesCache.current[option.label] = newCommentaire;
-                          const newValue = value.map((item) =>
-                            item.preconisation === option.label ? { ...item, commentaire: newCommentaire } : item,
-                          );
-                          setValue(newValue);
-                        },
-                      }}
-                    />
-                  </Box>
+                  <SectionCommentaire
+                    isDisabled={isDisabled}
+                    commentaire={currentCommentaire}
+                    onChange={(newCommentaire) => {
+                      commentairesCache.current[option.label] = newCommentaire;
+                      const newValue = value.map((item) =>
+                        item.preconisation === option.label ? { ...item, commentaire: newCommentaire } : item,
+                      );
+                      setValue(newValue);
+                    }}
+                  />
                 );
               })()
             : null}
         </>
       ))}
     </Stack>
+  );
+};
+
+const SectionCommentaire = ({
+  isDisabled,
+  commentaire,
+  onChange,
+}: {
+  isDisabled: boolean;
+  commentaire: string;
+  onChange: (newCommentaire: string) => void;
+}) => {
+  const { isRecording, transcript, toggle } = useSpeechToTextV2({
+    onEnd: (text) => {
+      onChange(commentaire + " " + text);
+    },
+  });
+
+  const inputProps = isRecording
+    ? {
+        value: commentaire + " " + transcript,
+        onChange: () => {},
+      }
+    : {
+        value: commentaire,
+        onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+          onChange(e.target.value);
+        },
+      };
+
+  return (
+    <Box mb="24px" mt="16px">
+      <Input
+        label="Commentaire"
+        disabled={isDisabled}
+        textArea
+        nativeTextAreaProps={{
+          rows: 4,
+          ...inputProps,
+        }}
+      />
+
+      {isDisabled ? null : (
+        <Button
+          type="button"
+          priority={isRecording ? "primary" : "tertiary"}
+          iconId="ri-mic-fill"
+          onClick={() => toggle()}
+        >
+          {isRecording ? <>En cours</> : <>Dicter</>}
+        </Button>
+      )}
+    </Box>
   );
 };
