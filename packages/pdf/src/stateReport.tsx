@@ -298,7 +298,7 @@ export const getStateReportHtmlString = ({
                 <b>${section}</b> : ${
                   !sectionData
                     ? "partie non visitée"
-                    : `${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "N/A"}.`
+                    : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "N/A"}.`
                 }
               </li>
             `;
@@ -318,7 +318,7 @@ export const getStateReportHtmlString = ({
                 </li>
               </ul>
               <br/>
-                <b>Commentaires :</b> ${section.commentaires ? `${section.commentaires}` : "Aucun"}
+                <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires}` : "Aucun"}
 
               ${generateImagesTable(
                 section.attachments.map((attachment) => ({
