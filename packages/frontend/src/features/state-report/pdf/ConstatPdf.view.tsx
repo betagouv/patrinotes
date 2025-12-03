@@ -9,9 +9,6 @@ import { useUser } from "../../../contexts/AuthContext";
 export const ViewConstatPdf = () => {
   const { localHtmlString } = useConstatPdfContext()!;
   const user = useUser()!;
-  console.log(localHtmlString);
-  // const htmlString =
-  //   stateReport && sections ? getStateReportHtmlString({ stateReport, visitedSections: sections }) : "";
 
   return (
     <Center>

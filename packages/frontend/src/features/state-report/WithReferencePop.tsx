@@ -151,6 +151,7 @@ export const ButtonsSwitch = () => {
         >
           Constat détaillé
         </Button>
+        <CreateButton />
       </Stack>
     ),
     "constat-detaille": (
@@ -171,28 +172,7 @@ export const ButtonsSwitch = () => {
         >
           Constat général
         </Button>
-        <Button
-          iconPosition="left"
-          iconId="fr-icon-article-fill"
-          size="large"
-          nativeButtonProps={{
-            onClick: () =>
-              navigate({
-                to: "/constat/$constatId/pdf",
-                params: {
-                  constatId,
-                },
-                search: { mode: "view" },
-              }),
-          }}
-          sx={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Créer le constat
-        </Button>
+        <CreateButton />
       </Stack>
     ),
     documents: null,
@@ -202,6 +182,39 @@ export const ButtonsSwitch = () => {
     <Center mt={{ xs: "16px", lg: "24px" }} mb={{ xs: "16px", lg: "0" }}>
       {buttons[step]}
     </Center>
+  );
+};
+
+const CreateButton = () => {
+  const { constatId } = routeApi.useParams();
+  const navigate = routeApi.useNavigate();
+
+  const form = useStateReportFormContext();
+  const attachmentId = useWatch({ control: form.control, name: "attachment_id" });
+
+  return (
+    <Button
+      iconPosition="left"
+      iconId="fr-icon-article-fill"
+      size="large"
+      nativeButtonProps={{
+        onClick: () =>
+          navigate({
+            to: "/constat/$constatId/pdf",
+            params: {
+              constatId,
+            },
+            search: { mode: "view" },
+          }),
+      }}
+      sx={{
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {attachmentId ? "Voir le constat" : "Créer le constat"}
+    </Button>
   );
 };
 
