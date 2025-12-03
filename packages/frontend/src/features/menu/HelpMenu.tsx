@@ -1,12 +1,12 @@
 import { MenuTitle } from "./MenuTitle";
 import { clearDb } from "../../db/db";
 import { menuActor } from "./menuMachine";
-import Alert from "@codegouvfr/react-dsfr/Alert";
+
 import { useState } from "react";
 import { TitleH3 } from "../../routes/account";
 import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
-import { Button } from "#components/MUIDsfr.tsx";
+import { Button, Alert } from "#components/MUIDsfr.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 
 export const HelpMenu = () => {
@@ -73,12 +73,13 @@ export const HelpMenu = () => {
 
           {showClipboardSuccess ? (
             // @ts-ignore
-            <Alert severity="info" title={undefined} description="Ajouté au presse-papier" />
+            <Alert severity="info" sx={{ mb: "16px" }} title={undefined} description="Ajouté au presse-papier" />
           ) : null}
           <Box>
             Vous pouvez contacter l'équipe à{" "}
             <Typography
               component="span"
+              className="fr-link"
               onClick={() => {
                 navigator.clipboard.writeText("contact@patrimoine-embarque.beta.gouv.fr");
                 setShowClipboardSuccess(true);

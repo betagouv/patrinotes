@@ -23,7 +23,7 @@ const fuseOptions: IFuseOptions<FilterablePopImmeubles> = {
   shouldSort: true,
 };
 
-const mapping: Partial<Record<keyof PopImmeuble, keyof StateReportFormType>> = {
+export const immeubleMapping: Partial<Record<keyof PopImmeuble, keyof StateReportFormType>> = {
   reference: "reference_pop",
   denomination_de_l_edifice: "nature_edifice",
   adresse_forme_editoriale: "adresse",
@@ -67,7 +67,7 @@ export const ImmeubleAutocomplete = () => {
       .executeTakeFirst();
     if (!immeubleDetails) return;
 
-    for (const [key, formField] of Object.entries(mapping)) {
+    for (const [key, formField] of Object.entries(immeubleMapping)) {
       const value = immeubleDetails[key as keyof PopImmeuble] || null;
       form.setValue(formField as keyof StateReportFormType, value);
     }
@@ -80,7 +80,7 @@ export const ImmeubleAutocomplete = () => {
     setIsChanging(changing);
     if (changing) {
       setIsWarningOpen(false);
-      for (const formField of Object.values(mapping)) {
+      for (const formField of Object.values(immeubleMapping)) {
         form.setValue(formField as keyof StateReportFormType, null);
       }
     }
@@ -121,7 +121,12 @@ export const ImmeubleAutocomplete = () => {
         ) : null}
         <Typography fontSize="20px">{form.watch("titre_edifice")}</Typography>
         <Box mt="8px">
-          <IconLink icon="fr-icon-edit-fill" sx={{ fontSize: "14px" }} onClick={() => setIsWarningOpen(true)}>
+          <IconLink
+            icon="fr-icon-edit-fill"
+            disabled={isDisabled}
+            sx={{ fontSize: "14px" }}
+            onClick={() => (isDisabled ? null : setIsWarningOpen(true))}
+          >
             Changer de monument
           </IconLink>
         </Box>

@@ -8,11 +8,13 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { db, useDbQuery } from "../db/db";
 import { StateReportForm } from "../features/state-report/StateReportForm";
 import { stateReportStepSchema } from "../features/state-report/utils";
+import z from "zod";
 
 export const Route = createFileRoute("/constat/$constatId")({
   component: RouteComponent,
-  validateSearch: (search: { step?: string }) => ({
-    step: stateReportStepSchema.optional().default("informations").parse(search.step),
+  validateSearch: (search: { step?: string; mode?: "view" | "edit" }) => ({
+    step: stateReportStepSchema.optional().default("informations").safeParse(search.step)?.data ?? "informations",
+    mode: z.enum(["view", "edit"]).optional().default("view").safeParse(search.mode)?.data ?? "view",
   }),
 });
 

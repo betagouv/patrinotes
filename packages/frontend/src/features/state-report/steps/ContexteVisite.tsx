@@ -36,8 +36,14 @@ export const ContexteVisite = () => {
       <BilanQuinquennalRadioButtons isDisabled={isDisabled} />
       <Divider mb="16px" />
 
-      <DateInput form={form} name="date_visite" label={<Box className="mandatory-field">Date de la visite</Box>} />
+      <DateInput
+        isDisabled={isDisabled}
+        form={form}
+        name="date_visite"
+        label={<Box className="mandatory-field">Date de la visite</Box>}
+      />
       <Input
+        disabled={isDisabled}
         label={<Box className="mandatory-field">Rédacteur du constat</Box>}
         nativeInputProps={{
           ...form.register("redacted_by"),
@@ -47,6 +53,7 @@ export const ContexteVisite = () => {
       <Flex flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "16px" }}>
         <Input
           sx={{ width: "100%" }}
+          disabled={isDisabled}
           label={<Box className="mandatory-field">Propriétaire</Box>}
           nativeInputProps={{
             ...form.register("proprietaire"),
@@ -54,6 +61,7 @@ export const ContexteVisite = () => {
         />
         <Input
           sx={{ width: "100%" }}
+          disabled={isDisabled}
           label={<Box className="mandatory-field">Courriel du propriétaire</Box>}
           nativeInputProps={{
             ...form.register("proprietaire_email"),
@@ -63,6 +71,7 @@ export const ContexteVisite = () => {
       <Flex flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "16px" }} mt={{ xs: "16px", lg: "0" }}>
         <Input
           sx={{ width: "100%" }}
+          disabled={isDisabled}
           label="Représentant"
           nativeInputProps={{
             ...form.register("proprietaire_representant"),
@@ -70,6 +79,7 @@ export const ContexteVisite = () => {
         />
         <Input
           sx={{ width: "100%" }}
+          disabled={isDisabled}
           label="Courriel du représentant"
           nativeInputProps={{
             ...form.register("proprietaire_representant_email"),
@@ -133,13 +143,14 @@ const NatureVisiteRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
   return (
     <Stack gap={0} mb="16px">
       <RadioButtons
+        disabled={isDisabled}
         orientation={isDesktop ? "horizontal" : "vertical"}
         legend={<Box className="mandatory-field">Nature de la visite</Box>}
         options={options}
         style={{ marginBottom: 0 }}
       />
       {value === "partielle (préciser)" ? (
-        <Input label={null} nativeInputProps={{ ...form.register("visite_partielle_details") }} />
+        <Input disabled={isDisabled} label={null} nativeInputProps={{ ...form.register("visite_partielle_details") }} />
       ) : null}
     </Stack>
   );
@@ -164,6 +175,7 @@ const BilanQuinquennalRadioButtons = ({ isDisabled }: { isDisabled: boolean }) =
 
   return (
     <RadioButtons
+      disabled={isDisabled}
       legend="Ce constat doit-il être pris en compte pour le bilan quinquennal de l'édifice ?"
       options={options}
     />

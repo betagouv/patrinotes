@@ -1,9 +1,9 @@
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps, LinkBaseProps, LinkProps, styled, Typography } from "@mui/material";
 import { StateReportFormType, useStateReportFormContext } from "../utils";
-import { useWatch } from "react-hook-form";
+import { UseFormRegisterReturn, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
-import { Button } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Input } from "#components/MUIDsfr.tsx";
 import { PropsWithChildren, useState } from "react";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ButtonsSwitch } from "../WithReferencePop";
@@ -12,38 +12,80 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api";
 import { db, useDbQuery } from "../../../db/db";
 import { PopImage, PopObjet } from "../../../db/AppSchema";
+import { getRouteApi } from "@tanstack/react-router";
+import { Divider } from "#components/ui/Divider.tsx";
+
+const routeApi = getRouteApi("/constat/$constatId");
 
 export const MonumentHistorique = () => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: "reference_pop" });
   const isDesktop = useIsDesktop();
 
+  const { mode } = routeApi.useSearch();
+  const isEditing = mode === "edit";
+
   return (
     <Flex flexDirection="column" height="100%">
       <Flex
         flexDirection="column"
-        gap={{ xs: "8px", lg: "16px" }}
         px={{ xs: "16px", lg: "64px" }}
-        pt={{ xs: "0", lg: "32px" }}
+        pt={{ xs: "24px", lg: "32px" }}
+        gap={{ xs: "16px", lg: "16px" }}
+        sx={{
+          ".fr-input-group": { width: "100%" },
+        }}
         width="100%"
         flex="1"
       >
-        <ContentBlock mt={{ xs: "16px", lg: "0" }}>
-          <EditableField label="Nature de l'édifice" field="nature_edifice" />
-          <EditableField label="Référence pop" field="reference_pop" />
-        </ContentBlock>
-        <ContentBlock>
-          <EditableField label="Adresse" field="adresse" />
-          <EditableField label="Commune" field="commune" />
-          <EditableField label="Commune historique" field="commune_historique" />
-          <EditableField label="Référence cadastrale" field="reference_cadastrale" />
-        </ContentBlock>
-        <ContentBlock>
-          <EditableField label="Nature de la protection" field="nature_protection" />
-          <EditableField label="Période de construction" field="periode_construction" />
-          <EditableField label="Parties protégées" field="parties_protegees" />
-          <EditableField label="Description de l'édifice" field="description" />
-        </ContentBlock>
+        {isEditing ? (
+          //@ts-ignore
+          <Alert
+            severity="info"
+            title={undefined}
+            description="Les informations modifiées ne seront pas reportées sur sa fiche POP."
+            sx={{ mb: "16px" }}
+          />
+        ) : null}
+
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+          <EditableField label="Nature de l'édifice" field="nature_edifice" isEditing={isEditing} isDisabled />
+          <EditableField label="Référence pop" field="reference_pop" isEditing={isEditing} isDisabled />
+        </Flex>
+
+        <Divider />
+
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+          <EditableField label="Adresse" field="adresse" isEditing={isEditing} />
+          <EditableField label="Commune" field="commune" isEditing={isEditing} />
+        </Flex>
+
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+          <EditableField label="Commune historique" field="commune_historique" isEditing={isEditing} />
+          <EditableField label="Référence cadastrale" field="reference_cadastrale" isEditing={isEditing} />
+        </Flex>
+
+        <Divider />
+
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+          <EditableField label="Nature de la protection" field="nature_protection" isEditing={isEditing} />
+          <EditableField label="Période de construction" field="periode_construction" isEditing={isEditing} />
+        </Flex>
+
+        <Flex width="100%" flexDirection={{ xs: "column", lg: isEditing ? "column" : "row" }} gap="16px">
+          <EditableField
+            renderInput={renderTextAreaInput}
+            label="Parties protégées"
+            field="parties_protegees"
+            isEditing={isEditing}
+          />
+          <EditableField
+            renderInput={renderTextAreaInput}
+            label="Description de l'édifice"
+            field="description"
+            isEditing={isEditing}
+          />
+        </Flex>
       </Flex>
 
       <Box mt="24px" px={{ xs: "16px", lg: "64px" }}>
@@ -193,8 +235,6 @@ export const ContentBlock = (props: PropsWithChildren<BoxProps>) => {
       gap={{ xs: "8px", lg: "0" }}
       pb="16px"
       borderColor={fr.colors.decisions.border.default.grey.default + " !important"}
-      sx={{ "> div": { width: { xs: "auto", lg: "50%" } }, "> div:nth-child(n+3)": { mt: { xs: "0", lg: "16px" } } }}
-      flexWrap={{ lg: "wrap" }}
       {...props}
     >
       {props.children}
@@ -202,18 +242,44 @@ export const ContentBlock = (props: PropsWithChildren<BoxProps>) => {
   );
 };
 
-const EditableField = ({ label, field }: { label: string; field: keyof StateReportFormType }) => {
-  const isEditable = false;
-
+const EditableField = ({
+  label,
+  field,
+  isEditing,
+  isDisabled,
+  renderInput = renderBasicInput,
+}: {
+  label: string;
+  field: keyof StateReportFormType;
+  isEditing: boolean;
+  isDisabled?: boolean;
+  renderInput?: (props: { inputProps: UseFormRegisterReturn; label: string }) => React.ReactNode;
+}) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: field });
 
+  if (isEditing) {
+    const props = {
+      inputProps: { ...form.register(field), disabled: isDisabled },
+      label,
+    };
+    return renderInput(props);
+  }
+
   return (
-    <Flex flexDirection="column">
+    <Flex flexDirection="column" width="50%">
       <Typography variant="subtitle1" fontWeight="bold">
         {label}
       </Typography>
       <Typography mt="4px">{value ?? "Non renseigné"}</Typography>
     </Flex>
   );
+};
+
+const renderBasicInput = ({ inputProps, label }: { inputProps: UseFormRegisterReturn; label: string }) => {
+  return <Input label={label} nativeInputProps={{ ...inputProps }} />;
+};
+
+const renderTextAreaInput = ({ inputProps, label }: { inputProps: UseFormRegisterReturn; label: string }) => {
+  return <Input label={label} sx={{ width: "100%" }} textArea nativeTextAreaProps={{ rows: 5, ...inputProps }} />;
 };
