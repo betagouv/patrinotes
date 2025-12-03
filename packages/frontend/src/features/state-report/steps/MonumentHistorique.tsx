@@ -25,6 +25,9 @@ export const MonumentHistorique = () => {
   const { mode } = routeApi.useSearch();
   const isEditing = mode === "edit";
 
+  const referencePop = useWatch({ control: form.control, name: "reference_pop" });
+  const isCustom = referencePop === "CUSTOM";
+
   return (
     <Flex flexDirection="column" height="100%">
       <Flex
@@ -50,7 +53,32 @@ export const MonumentHistorique = () => {
 
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
           <EditableField label="Nature de l'édifice" field="nature_edifice" isEditing={isEditing} isDisabled />
-          <EditableField label="Référence pop" field="reference_pop" isEditing={isEditing} isDisabled />
+          <EditableField
+            label="Référence POP"
+            field="reference_pop"
+            isEditing={isEditing}
+            isDisabled
+            renderInput={
+              isCustom
+                ? ({ label, disabled }) => renderBasicInput({ inputProps: {}, label: "Référence POP", disabled })
+                : undefined
+            }
+            renderValue={({ value }) => {
+              if (value === "CUSTOM") return null;
+              return (
+                <Typography
+                  mt="4px"
+                  className="fr-link"
+                  component="a"
+                  href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
+                  target="_blank"
+                  rel="noopener external"
+                >
+                  {value ?? "Non renseigné"}
+                </Typography>
+              );
+            }}
+          />
         </Flex>
 
         <Divider />
@@ -248,20 +276,23 @@ const EditableField = ({
   isEditing,
   isDisabled,
   renderInput = renderBasicInput,
+  renderValue = renderBasicValue,
 }: {
   label: string;
   field: keyof StateReportFormType;
   isEditing: boolean;
   isDisabled?: boolean;
-  renderInput?: (props: { inputProps: UseFormRegisterReturn; label: string }) => React.ReactNode;
+  renderInput?: (props: { inputProps: UseFormRegisterReturn; label: string; disabled?: boolean }) => React.ReactNode;
+  renderValue?: (props: { value: string | number | null | undefined }) => React.ReactNode;
 }) => {
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: field });
 
   if (isEditing) {
     const props = {
-      inputProps: { ...form.register(field), disabled: isDisabled },
+      inputProps: { ...form.register(field) },
       label,
+      disabled: isDisabled,
     };
     return renderInput(props);
   }
@@ -271,13 +302,26 @@ const EditableField = ({
       <Typography variant="subtitle1" fontWeight="bold">
         {label}
       </Typography>
-      <Typography mt="4px">{value ?? "Non renseigné"}</Typography>
+      {renderValue({ value })}
     </Flex>
   );
 };
 
-const renderBasicInput = ({ inputProps, label }: { inputProps: UseFormRegisterReturn; label: string }) => {
-  return <Input label={label} nativeInputProps={{ ...inputProps }} />;
+const renderBasicValue = ({ value }: { value: string | number | null | undefined }) => {
+  return <Typography mt="4px">{value ?? "Non renseigné"}</Typography>;
+};
+
+const renderBasicInput = ({
+  inputProps,
+  label,
+  disabled,
+}: {
+  inputProps: UseFormRegisterReturn;
+  label: string;
+  disabled?: boolean;
+}) => {
+  if (label === "Référence POP") console.log(inputProps);
+  return <Input label={label} nativeInputProps={{ ...inputProps }} disabled={disabled} />;
 };
 
 const renderTextAreaInput = ({ inputProps, label }: { inputProps: UseFormRegisterReturn; label: string }) => {

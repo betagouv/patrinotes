@@ -60,14 +60,18 @@ export const ImmeubleAutocomplete = () => {
     form.setValue("reference_pop", item ? item.id : null);
     setIsChanging(false);
     if (!item) return;
-    const immeubleDetails = await db
-      .selectFrom("pop_immeubles")
-      .selectAll()
-      .where("id", "=", item ? item.id : "")
-      .executeTakeFirst();
+    const immeubleDetails =
+      item.id === "CUSTOM"
+        ? item
+        : await db
+            .selectFrom("pop_immeubles")
+            .selectAll()
+            .where("id", "=", item ? item.id : "")
+            .executeTakeFirst();
     if (!immeubleDetails) return;
 
     for (const [key, formField] of Object.entries(immeubleMapping)) {
+      // @ts-ignore mismatch between PopImmeuble and StateReportFormType keys
       const value = immeubleDetails[key as keyof PopImmeuble] || null;
       form.setValue(formField as keyof StateReportFormType, value);
     }
@@ -154,9 +158,23 @@ export const ImmeubleAutocomplete = () => {
         getOptionKey={(item) => item.reference!}
         value={value ? rawItems.find((item) => item.id == value) : null}
         // TODO: use coordinates to sort results
-        filterOptions={(x, state) =>
-          state.inputValue ? searchEngine.search(state.inputValue).map((result) => result.item) : []
-        }
+        filterOptions={(x, state) => {
+          if (!state.inputValue) return [];
+          const searchResults = searchEngine
+            .search(state.inputValue)
+            .map((result) => result.item)
+            .slice(0, 15);
+
+          return [
+            {
+              commune_forme_editoriale: "",
+              id: "CUSTOM",
+              reference: "CUSTOM",
+              titre_editorial_de_la_notice: state.inputValue,
+            },
+            ...searchResults,
+          ];
+        }}
         onChange={(_e, item) => {
           setValue(item);
         }}
@@ -179,6 +197,11 @@ export const ImmeubleAutocomplete = () => {
               textAlign="left"
               color={fr.colors.decisions.text.actionHigh.blueFrance.default}
             >
+              {option.id === "CUSTOM" ? (
+                <Box fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
+                  Nouveau titre :
+                </Box>
+              ) : null}
               <Box component="span" fontSize="16px">
                 <Highlighter
                   searchWords={state.inputValue.split(" ")}
