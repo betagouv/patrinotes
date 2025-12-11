@@ -213,7 +213,7 @@ const CreateButton = () => {
         justifyContent: "center",
       }}
     >
-      {attachmentId ? "Voir le constat" : "Créer le constat"}
+      {attachmentId ? "Voir le constat" : "Finaliser le constat"}
     </Button>
   );
 };

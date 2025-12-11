@@ -228,6 +228,7 @@ export const PictureThumbnail = ({
       <Flex flexDirection="column" justifyContent="flex-end" width="100%">
         <Box ref={canvasRef} component="canvas" flex="1"></Box>
         <Flex
+          display={isDisabled ? "none" : "flex"}
           bgcolor="white"
           alignItems="center"
           border="1px solid"
