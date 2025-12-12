@@ -216,7 +216,7 @@ const link =
 
 export const getStateReportHtmlString = ({
   stateReport,
-  visitedSections,
+  visitedSections: sections,
 }: {
   stateReport: StateReportWithUserAndAttachments;
   visitedSections: SectionWithAttachments[];
@@ -228,6 +228,10 @@ export const getStateReportHtmlString = ({
   const vueGenerale = stateReport.attachments.find((att) => stateReport.vue_generale === att.id);
 
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
+
+  const visitedSections = sections.filter((s) => {
+    return !!s.etat_general || !!s.proportion_dans_cet_etat;
+  });
 
   // accessibilité
   // h1 pour les deux premières lignes
@@ -317,7 +321,6 @@ export const getStateReportHtmlString = ({
                   <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "N/A"}.
                 </li>
               </ul>
-              <br/>
                 <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires}` : "Aucun"}
 
               ${generateImagesTable(
@@ -331,6 +334,8 @@ export const getStateReportHtmlString = ({
           `,
           )
           .join("")}
+              <br/>
+
 
       <hr />
 

@@ -11,13 +11,14 @@ import useDebounce from "react-use/lib/useDebounce";
 import { v4, v7 } from "uuid";
 import { useLiveUser, useUser } from "../../../contexts/AuthContext";
 import { VisitedSection } from "../../../db/AppSchema";
-import { attachmentQueue, db, useDbQuery } from "../../../db/db";
+import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
 import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
 import { defaultSections } from "@cr-vif/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
+import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -271,7 +272,7 @@ const SectionForm = ({ visitedSection, isDisabled }: { visitedSection: VisitedSe
 };
 
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<{ id: string; url: string } | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
   const { constatId } = routeApi.useParams();
   const user = useLiveUser()!;
 
@@ -288,9 +289,37 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
 
   const onClose = () => setSelectedAttachment(null);
   const onEdit = (image: { id: string; url: string }) => setSelectedAttachment(image);
-  const onDelete = async ({ id }: { id: string }) => {
-    await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", id).execute();
+  const onDelete = async (section: { id: string }) => {
+    await attachmentStorage.deleteFile(section.id);
+    await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", section.id).execute();
   };
+
+  const addSectionAttachmentMutation = useMutation({
+    mutationFn: async ({ file }: { file: File }) => {
+      const processedFile = await processImage(file);
+      const attachmentId = `${constatId}/images/${v7()}.jpg`;
+      await attachmentQueue.saveAttachment({
+        attachmentId,
+        buffer: processedFile,
+        mediaType: "image/jpeg",
+      });
+
+      await db
+        .insertInto("visited_section_attachment")
+        .values({
+          id: attachmentId,
+          visited_section_id: section.id,
+          attachment_id: attachmentId,
+          label: "",
+          service_id: user.service_id,
+          created_at: new Date().toISOString(),
+          is_deprecated: 0,
+        })
+        .execute();
+
+      return attachmentId;
+    },
+  });
 
   const onLabelChange = async (attachmentId: string, newLabel: string) => {
     await db
@@ -308,22 +337,15 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         imageTable="visited_section_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
-      <Grid
-        display="grid"
-        gap="16px"
-        gridTemplateColumns={{ xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" }}
-      >
-        {sectionAttachments.map((attachment) => (
-          <PictureThumbnail
-            key={attachment.id}
-            picture={{ id: attachment.attachment_id! }}
-            onEdit={onEdit}
-            label={attachment.label || ""}
-            onDelete={(props: { id: string }) => onDelete({ id: props.id })}
-            isDisabled={isDisabled}
-          />
-        ))}
-      </Grid>
+
+      <UploadImage
+        onFile={async (file: File) => addSectionAttachmentMutation.mutateAsync({ file })}
+        multiple
+        attachments={sectionAttachments}
+        onClick={(a) => setSelectedAttachment(a!)}
+        onDelete={(section) => onDelete(section)}
+        isDisabled={isDisabled}
+      />
     </Box>
   );
 };
