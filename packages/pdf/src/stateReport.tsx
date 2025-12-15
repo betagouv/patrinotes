@@ -570,3 +570,19 @@ type Images = {
   marianne: string;
   marianneFooter: string;
 };
+
+export const getStateReportMailName = (stateReport: { titre_edifice?: string | null }) => {
+  return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
+};
+
+function cleanString(str: string): string {
+  return str
+    .normalize("NFD") // Decompose accented characters
+    .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
+    .toLowerCase() // Convert to lowercase
+    .trim() // Remove leading/trailing spaces
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/[^\w-]/g, "") // Remove special characters (keep letters, numbers, hyphens)
+    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+}

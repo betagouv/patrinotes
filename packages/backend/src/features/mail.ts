@@ -5,6 +5,7 @@ import { sentry } from "./sentry";
 import { getPDFInMailName } from "@cr-vif/pdf";
 import { Database } from "../db/db";
 import { Selectable } from "kysely";
+import { getStateReportMailName } from "@cr-vif/pdf/constat";
 
 const transporter = createTransport({
   host: ENV.EMAIL_HOST,
@@ -85,19 +86,3 @@ export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string;
     text: `Voici le lien de réinitialisation de votre mot de passe : ${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`,
   });
 };
-
-const getStateReportMailName = (stateReport: Selectable<Database["state_report"]>) => {
-  return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
-};
-
-function cleanString(str: string): string {
-  return str
-    .normalize("NFD") // Decompose accented characters
-    .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
-    .toLowerCase() // Convert to lowercase
-    .trim() // Remove leading/trailing spaces
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/[^\w-]/g, "") // Remove special characters (keep letters, numbers, hyphens)
-    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
-}

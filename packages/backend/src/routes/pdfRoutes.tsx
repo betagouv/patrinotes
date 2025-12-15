@@ -105,6 +105,31 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
   );
 
+  fastify.get(
+    "/state-report",
+    {
+      schema: {
+        querystring: Type.Object({ stateReportId: Type.String() }),
+        response: { 200: Type.Any() },
+      },
+    },
+    async (request) => {
+      const { stateReportId } = request.query;
+      const stateReport = await db
+        .selectFrom("state_report")
+        .where("id", "=", stateReportId)
+        .selectAll()
+        .executeTakeFirst();
+      if (!stateReport || !stateReport.attachment_id) {
+        throw new Error("State report or attachment not found");
+      }
+
+      const buffer = await request.services.upload.getAttachment({ filePath: stateReport.attachment_id });
+
+      return buffer.toString("base64");
+    },
+  );
+
   fastify.post("/state-report", { schema: stateReportPdfTSchema }, async (request) => {
     const user = request.user!;
     const { stateReportId: stateReportId, htmlString } = request.body;

@@ -236,6 +236,14 @@ export namespace Endpoints {
     };
     response: Partial<{}>;
   };
+  export type get_ApipdfstateReport = {
+    method: "GET";
+    path: "/api/pdf/state-report";
+    parameters: {
+      query: { stateReportId: string };
+    };
+    response: Partial<{}>;
+  };
   export type post_ApipdfstateReport = {
     method: "POST";
     path: "/api/pdf/state-report";
@@ -298,6 +306,7 @@ export type EndpointByMethod = {
     "/api/services": Endpoints.get_Apiservices;
     "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
     "/api/pdf/report": Endpoints.get_Apipdfreport;
+    "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
     "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
   };
 };

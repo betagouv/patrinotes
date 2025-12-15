@@ -24,6 +24,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Accordion, Button, Center, Input, Select } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
+import { getStateReportMailName } from "@cr-vif/pdf/constat";
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -86,6 +87,8 @@ const AccountPage = () => {
         <Share />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DownloadCRs />
+        <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
+        <DownloadCEs />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <ChangeService onSuccess={onSuccess} />
       </Center>
@@ -345,7 +348,7 @@ const DownloadCRs = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="download">3. Télécharger mes CR</Title>
+      <Title anchor="download-cr">3. Télécharger mes CR</Title>
       <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
       <Box mb="16px">
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
@@ -356,7 +359,74 @@ const DownloadCRs = () => {
           <Download
             label={getZipFilename(startDate, endDate)}
             details={`ZIP - ${reports.length} compte${reports.length > 1 ? "s" : ""} rendu${reports.length > 1 ? "s" : ""}`}
-            linkProps={{ onClick: () => downloadMutation.mutate(reports) }}
+            linkProps={{
+              onClick: () => downloadMutation.mutate(reports),
+              disabled: downloadMutation.isPending || reports.length === 0,
+            }}
+          />
+        ) : (
+          <Box pb="14px">Aucun CR disponible sur la période sélectionnée.</Box>
+        )}
+      </Box>
+    </Flex>
+  );
+};
+
+const DownloadCEs = () => {
+  const [startDate, setStartDate] = useState(datePresets[0].startDate);
+  const [endDate, setEndDate] = useState(datePresets[0].endDate);
+
+  const user = useUser()!;
+
+  const downloadMutation = useMutation(async (reports: { id: string; name: string }[]) => {
+    if (!reports?.length) {
+      return;
+    }
+    const zip = new JSZip();
+
+    for (const report of reports) {
+      // TODO: use local attachments since they are already downloaded
+      const pdf = await api.get("/api/pdf/state-report", { query: { stateReportId: report.id } });
+      zip.file(report.name, pdf as string, { base64: true });
+    }
+
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    downloadFile(url, getZipFilename(startDate, endDate));
+    URL.revokeObjectURL(url);
+  });
+
+  const crs = useDbQuery(
+    db
+      .selectFrom("state_report")
+      .where("created_by", "=", user.id)
+      .where("service_id", "=", user.service_id)
+      .where((eb) => eb.or([eb("attachment_id", "is not", null), eb("attachment_id", "is not", null)]))
+      .where("disabled", "!=", 1)
+      .where("created_at", ">=", startDate.toISOString())
+      .where("created_at", "<=", endDate.toISOString())
+      .selectAll(),
+  );
+
+  const reports = crs.data?.map((cr) => ({ id: cr.id, name: getStateReportMailName(cr) })) ?? [];
+
+  return (
+    <Flex gap="0px" flexDirection="column" width="100%">
+      <Title anchor="download-ce">4. Télécharger mes CE</Title>
+      <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
+      <Box mb="16px">
+        Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
+        vos comptes-rendus dont le poids peut être important.
+      </Box>
+      <Box bgcolor="background-alt-blue-france" px="24px" pt="18px" pb="4px">
+        {reports.length ? (
+          <Download
+            label={getZipFilename(startDate, endDate)}
+            details={`ZIP - ${reports.length} constat${reports.length > 1 ? "s" : ""} d'état`}
+            linkProps={{
+              onClick: () => downloadMutation.mutate(reports),
+              disabled: downloadMutation.isPending || reports.length === 0,
+            }}
           />
         ) : (
           <Box pb="14px">Aucun CR disponible sur la période sélectionnée.</Box>
