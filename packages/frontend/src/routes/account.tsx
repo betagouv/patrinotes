@@ -25,6 +25,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Accordion, Button, Center, Input, Select } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
+import { fr } from "@codegouvfr/react-dsfr";
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -354,7 +355,7 @@ const DownloadCRs = () => {
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
         vos comptes-rendus dont le poids peut être important.
       </Box>
-      <Box bgcolor="background-alt-blue-france" px="24px" pt="18px" pb="4px">
+      <Box bgcolor={fr.colors.decisions.background.alt.blueFrance.default + " !important"} px="24px" pt="18px" pb="4px">
         {reports.length ? (
           <Download
             label={getZipFilename(startDate, endDate)}
@@ -418,7 +419,7 @@ const DownloadCEs = () => {
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
         vos comptes-rendus dont le poids peut être important.
       </Box>
-      <Box bgcolor="background-alt-blue-france" px="24px" pt="18px" pb="4px">
+      <Box bgcolor={fr.colors.decisions.background.alt.blueFrance.default + " !important"} px="24px" pt="18px" pb="4px">
         {reports.length ? (
           <Download
             label={getZipFilename(startDate, endDate)}
