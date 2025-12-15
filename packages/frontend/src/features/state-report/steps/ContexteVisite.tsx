@@ -7,11 +7,12 @@ import { UseFormReturn, useWatch } from "react-hook-form";
 import { Checkbox } from "@codegouvfr/react-dsfr/Checkbox";
 import { ContentBlock } from "./MonumentHistorique";
 import { Divider } from "#components/ui/Divider.tsx";
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { format, parse } from "date-fns";
 import { Flex } from "#components/ui/Flex.tsx";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { MandatoryFieldReminder } from "./ConstatGeneral";
+import { IconLink } from "#components/ui/IconLink.tsx";
 
 export const ContexteVisite = () => {
   const form = useStateReportFormContext();
@@ -49,6 +50,7 @@ export const ContexteVisite = () => {
           ...form.register("redacted_by"),
         }}
       />
+      <PeopleList />
       <Divider mb="16px" />
       <Flex flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "16px" }}>
         <Input
@@ -86,6 +88,65 @@ export const ContexteVisite = () => {
           }}
         />
       </Flex>
+    </Stack>
+  );
+};
+
+const PeopleList = () => {
+  const form = useStateReportFormContext();
+
+  const personnesPresentesRaw = useWatch({ control: form.control, name: "personnes_presentes" });
+
+  // the format of the field is "person1\nperson2\nperson3"
+  // the shouldShowEmptyInput is only used when the field is empty since the input must be hidden before the user clicks on "add"
+  const [showNewInput, setShowNewInput] = useState(false);
+  const shouldShowEmptyInput = !personnesPresentesRaw && showNewInput;
+  const personnesPresentes = shouldShowEmptyInput
+    ? [""]
+    : personnesPresentesRaw
+      ? personnesPresentesRaw.split("\n")
+      : [];
+
+  const isDisabled = useIsStateReportDisabled();
+
+  const onChange = (index: number, value: string) => {
+    const newPeople = [...personnesPresentes];
+    newPeople[index] = value;
+    form.setValue("personnes_presentes", newPeople.join("\n"));
+  };
+
+  return (
+    <Stack mb="16px">
+      {personnesPresentes.map((person, index) => (
+        <Input
+          key={index}
+          disabled={isDisabled}
+          label={index === 0 ? "Personnes présentes" : null}
+          nativeInputProps={{
+            value: person,
+            onChange: (e) => {
+              onChange(index, e.target.value);
+            },
+          }}
+        />
+      ))}
+
+      <Box>
+        <IconLink
+          icon="ri-add-line"
+          onClick={(e) => {
+            e.preventDefault();
+            if (!personnesPresentes?.length) {
+              setShowNewInput(true);
+              return;
+            }
+            form.setValue("personnes_presentes", [...personnesPresentes, ""].join("\n"));
+          }}
+          type="button"
+        >
+          Ajouter une personne présente
+        </IconLink>
+      </Box>
     </Stack>
   );
 };
