@@ -48,8 +48,9 @@ const ServicePage = () => {
             }}
             links={[
               { linkProps: { href: "#service-informations" }, text: "Informations service" },
-              { linkProps: { href: "#services-instructeurs" }, text: "Services instructeurs" },
-              { linkProps: { href: "#clauses-departementales" }, text: "Clauses départementales" },
+              { linkProps: { href: "#services-instructeurs" }, text: "Services instructeurs pour les CR" },
+              { linkProps: { href: "#clauses-departementales" }, text: "Clauses départementales pour les CR" },
+              { linkProps: { href: "#alertes-mh" }, text: "Alertes visites Monuments Historiques" },
               { linkProps: { href: "#rapport-activite" }, text: "Rapport d'activité" },
             ]}
           />
@@ -134,10 +135,10 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="udap-informations">1. Informations UDAP</Title>
+      <Title anchor="service-informations">1. Informations du service</Title>
       <Input
         sx={{ width: "100%", mt: "16px" }}
-        label="Intitulé marianne préfet"
+        label="Intitulé du préfet (bloc Marianne)"
         hintText="Ex : Préfet de la région Nouvelle-Aquitaine"
         nativeInputProps={{
           value: serviceData.marianne_text ?? "",
@@ -155,7 +156,7 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
       />
       <Input
         sx={{ width: "100%" }}
-        label="Intitulé UDAP"
+        label="Intitulé service"
         hintText="Ex : Unité départementale de l'architecture et du patrimoine des Deux-Sèvres"
         nativeInputProps={{
           value: serviceData.service_text ?? "",
@@ -166,7 +167,7 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
       <Flex gap={{ xs: 0, lg: "24px" }} flexDirection={{ xs: "column", lg: "row" }} width="100%">
         <Input
           sx={{ width: "100%" }}
-          label="Téléphone UDAP"
+          label="Téléphone"
           nativeInputProps={{
             value: serviceData.phone ?? "",
             onChange: (e) => setServiceData({ ...serviceData, phone: e.target.value }),
@@ -174,7 +175,7 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
         />
         <Input
           sx={{ width: "100%" }}
-          label="Courriel UDAP"
+          label="Courriel"
           nativeInputProps={{
             value: serviceData.email ?? "",
             onChange: (e) => setServiceData({ ...serviceData, email: e.target.value }),
@@ -566,6 +567,7 @@ const ClauseForm = ({
   );
 };
 
+// TODO: ajouter l'activité de CE
 const Activity = () => {
   const user = useUser()!;
   const [startDate, setStartDate] = useState(datePresets[0].startDate);
@@ -735,5 +737,20 @@ export const SuccessAlert = () => {
       small={false}
       description={"Vos modifications ont bien été prises en compte."}
     />
+  );
+};
+
+const AlertesMH = () => {
+  return (
+    <Stack>
+      <Input label="Courriel CRMH" />
+      <Input label="Courriel CAOA" />
+      <Input label="Courriel DREAL" />
+      <Input label="Courriel SRA" />
+      <Input label="Courriel UDAP" />
+      <Input label="Courriel OFB" />
+
+      {/* TODO: ajouter courriel mairies */}
+    </Stack>
   );
 };

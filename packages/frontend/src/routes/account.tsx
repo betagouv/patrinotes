@@ -56,9 +56,12 @@ const AccountPage = () => {
               backgroundColor: "transparent",
             }}
             links={[
-              { linkProps: { href: "#default-recipient" }, text: "Destinataire par défaut" },
+              { linkProps: { href: "#profile" }, text: "Mon profil" },
+              { linkProps: { href: "#default-recipient" }, text: "Destinataires par défaut" },
               { linkProps: { href: "#share" }, text: "Droit d'édition partagé" },
-              { linkProps: { href: "#download" }, text: "Télécharger mes CR" },
+              { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
+              { linkProps: { href: "#download-ce" }, text: "Télécharger mes constats" },
+              { linkProps: { href: "#download-cr" }, text: "Télécharger mes CR" },
               { linkProps: { href: "#change-service" }, text: "Changer de service" },
             ]}
           />
