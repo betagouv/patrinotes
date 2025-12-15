@@ -9,9 +9,8 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { unauthenticatedApi, getErrorMessage, RouterInputs, AuthUser } from "../../api";
 import { useAuthContext } from "../../contexts/AuthContext";
 import { Alert, Input } from "#components/MUIDsfr.tsx";
-import { Box, Typography } from "@mui/material";
+import { Box, Divider, Stack, Typography } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
-import { Divider } from "#components/ui/Divider.tsx";
 
 export const LoginForm = () => {
   const { auth, setAuth } = useAuthContext();
@@ -34,8 +33,8 @@ export const LoginForm = () => {
   const { errors: formErrors } = form.formState;
 
   return (
-    <Flex flexDirection="column">
-      <form onSubmit={form.handleSubmit(login)}>
+    <Flex flexDirection={{ xs: "column", lg: "row" }} gap="16px">
+      <form onSubmit={form.handleSubmit(login)} style={{ flex: 1 }}>
         {mutationError ? (
           <Alert
             sx={{ mb: "1.5rem" }}
@@ -78,7 +77,13 @@ export const LoginForm = () => {
         </InputGroup>
 
         <Box color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
-          <Link to="/reset-password">Mot de passe oublié</Link>
+          <Link
+            className="fr-link"
+            style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}
+            to="/reset-password"
+          >
+            Mot de passe oublié
+          </Link>
         </Box>
 
         <FullWidthButton
@@ -93,13 +98,50 @@ export const LoginForm = () => {
         </FullWidthButton>
       </form>
 
-      <Divider my="20px" />
+      <Divider
+        orientation="vertical"
+        sx={{ height: "316px", alignSelf: "center", mx: "40px", display: { xs: "none", lg: "block" } }}
+      />
 
-      <h5>Vous n'avez pas de compte ?</h5>
+      <Stack
+        mt={{ xs: "46px", lg: "0px" }}
+        bgcolor={fr.colors.decisions.background.default.grey.hover}
+        p={{ xs: "32px 16px", lg: "40px" }}
+        gap="24px"
+        width={{ xs: "calc(100% + 32px)", lg: "429px" }}
+        mx={{ xs: "-16px", lg: "0px" }}
+      >
+        <Typography component="h5" fontWeight="bold" fontSize="22px">
+          Première connexion ?
+        </Typography>
 
-      <FullWidthButton linkProps={{ to: "/inscription" }} priority="secondary">
-        Créer un compte
-      </FullWidthButton>
+        <Typography fontSize="14px">
+          Pour accéder au service, vous devez d'abord vous inscrire en renseignant vos informations :
+        </Typography>
+
+        <FullWidthButton linkProps={{ to: "/inscription" }} priority="secondary">
+          Créer un compte
+        </FullWidthButton>
+
+        <Typography fontSize="14px">
+          Besoin d'aide ? Contactez l'équipe à{" "}
+          <Typography
+            component="span"
+            className="fr-link"
+            onClick={() => {
+              navigator.clipboard.writeText("contact@patrimoine-embarque.beta.gouv.fr");
+            }}
+            fontSize="14px"
+            sx={{
+              cursor: "pointer",
+              ":hover": { textDecoration: "underline" },
+            }}
+            color="text-active-blue-france"
+          >
+            contact@patrimoine-embarque.beta.gouv.fr
+          </Typography>
+        </Typography>
+      </Stack>
     </Flex>
   );
 };

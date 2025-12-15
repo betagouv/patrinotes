@@ -7,10 +7,10 @@ import { LoginForm } from "../features/auth/LoginForm";
 
 const LoginPage = () => {
   return (
-    <Center mt="20px" mb="80px">
-      <Flex flexDirection="column" width="484px" p="16px">
+    <Center mt="20px">
+      <Flex flexDirection="column" width="996px" p="16px" pb="0">
         <Typography variant="h4" mb="1.5rem">
-          Connexion à Patrimoine embarqué
+          Connexion
         </Typography>
         <LoginForm />
       </Flex>
