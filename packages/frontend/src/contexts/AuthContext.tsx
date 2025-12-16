@@ -7,6 +7,7 @@ import { menuActor } from "../features/menu/menuMachine";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { Service } from "../db/AppSchema";
+import { useNavigate } from "@tanstack/react-router";
 
 const emptyAuth = {
   accessToken: null,
@@ -87,10 +88,12 @@ export const useIsLoggedIn = () => {
 
 export const useLogout = () => {
   const { auth, setAuth } = useAuthContext();
+  const navigate = useNavigate();
 
   return () => {
     menuActor.send({ type: "CLOSE" });
     setAuth({ ...auth, accessToken: null, user: null, refreshToken: null, expiresAt: null });
+    navigate({ to: "/connection" });
   };
 };
 

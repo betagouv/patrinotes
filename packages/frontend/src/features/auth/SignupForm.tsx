@@ -10,6 +10,7 @@ import { InputGroup } from "#components/InputGroup.tsx";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
 import { PasswordInput } from "#components/PasswordInput.tsx";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { omit } from "pastable";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -20,13 +21,17 @@ export const SignupForm = () => {
       service_id: "",
       newsletter: false,
       job: "",
+      nom: "",
+      prenom: "",
     },
   });
 
   const { setAuth } = useAuthContext();
   const navigate = useNavigate();
 
-  const mutation = useMutation((body: SignupFormProps) => unauthenticatedApi.post("/api/create-user", { body }));
+  const mutation = useMutation((body: RouterInputs<"/api/create-user">["body"]) =>
+    unauthenticatedApi.post("/api/create-user", { body }),
+  );
 
   const servicesQuery = useQuery({
     queryKey: ["udaps"],
@@ -38,7 +43,9 @@ export const SignupForm = () => {
   });
 
   const signup = async (values: SignupFormProps) => {
-    const response = await mutation.mutateAsync(values);
+    const name = `${values.prenom} ${values.nom}`;
+    const valuesWithName = { ...omit(values, ["nom", "prenom"]), name };
+    const response = await mutation.mutateAsync(valuesWithName);
     setAuth(response as any);
     navigate({ to: "/", search: { document: "constats" } });
   };
@@ -49,7 +56,7 @@ export const SignupForm = () => {
   return (
     <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }} width={{ xs: "100%", lg: "600px" }} mx="auto" mt="32px">
       <Typography variant="h4" mb="24px">
-        Inscription à Patrimoine Embarqué
+        Inscription
       </Typography>
       <form onSubmit={form.handleSubmit(signup)}>
         {mutationError ? (
@@ -81,12 +88,21 @@ export const SignupForm = () => {
           />
           <SignupPasswordInput form={form} />
           <Input
-            label="Prénom Nom"
+            label="Nom"
             nativeInputProps={{
-              ...form.register("name", { required: "Le nom est requis" }),
+              ...form.register("nom", { required: "Le nom est requis" }),
             }}
-            state={formErrors.name ? "error" : undefined}
-            stateRelatedMessage={formErrors.name?.message}
+            state={formErrors.nom ? "error" : undefined}
+            stateRelatedMessage={formErrors.nom?.message}
+          />
+
+          <Input
+            label="Prénom"
+            nativeInputProps={{
+              ...form.register("prenom", { required: "Le prénom est requis" }),
+            }}
+            state={formErrors.prenom ? "error" : undefined}
+            stateRelatedMessage={formErrors.prenom?.message}
           />
 
           <Input
@@ -118,7 +134,12 @@ export const SignupForm = () => {
                 label: (
                   <span>
                     J’accepte les{" "}
-                    <Link className="fr-link" target="_blank" to="/cgu">
+                    <Link
+                      className="fr-link"
+                      target="_blank"
+                      to="/cgu"
+                      style={{ textDecoration: "underline", textUnderlineOffset: 2 }}
+                    >
                       conditions générales d’utilisation (CGU)
                     </Link>{" "}
                     du service Patrimoine Embarqué et consens à ce que mes données soient collectées, afin de garantir
@@ -222,4 +243,4 @@ export const SignupPasswordInput = ({ form }: { form: UseFormReturn<SignupFormPr
   );
 };
 
-type SignupFormProps = RouterInputs<"/api/create-user">["body"];
+type SignupFormProps = RouterInputs<"/api/create-user">["body"] & { nom: string; prenom: string };

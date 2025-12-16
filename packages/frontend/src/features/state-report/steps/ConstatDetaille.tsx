@@ -19,6 +19,7 @@ import { defaultSections } from "@cr-vif/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
+import { useIsDesktop } from "../../../hooks/useIsDesktop";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -149,7 +150,7 @@ const SectionModal = ({
         ".MuiPaper-root": {
           overflowY: "auto",
           maxHeight: { xs: "unset", lg: "calc(100% - 64px)" },
-          maxWidth: { xs: "unset", lg: "576px" },
+          maxWidth: { xs: "unset", lg: "750px" },
           width: { xs: "100%", lg: "926px" },
           height: { xs: "100%", lg: "unset" },
           margin: { xs: "0", lg: undefined },
@@ -164,9 +165,7 @@ const SectionModal = ({
           sx={{
             paddingLeft: { xs: "0", lg: "16px" },
           }}
-          textOverflow="ellipsis"
-          overflow="hidden"
-          whiteSpace="nowrap"
+          whiteSpace="wrap"
         >
           {selectedSection?.section}
         </DialogTitle>
@@ -366,8 +365,15 @@ const SectionEtatGeneralRadioButtons = ({
       onChange: () => onChange(label),
     },
   }));
-
-  return <RadioButtons legend="État général" options={options} disabled={disabled} />;
+  const isDesktop = useIsDesktop();
+  return (
+    <RadioButtons
+      orientation={isDesktop ? "horizontal" : "vertical"}
+      legend="État général"
+      options={options}
+      disabled={disabled}
+    />
+  );
 };
 
 const SectionProportionsRadioButtons = ({
@@ -386,6 +392,13 @@ const SectionProportionsRadioButtons = ({
       onChange: () => onChange(label),
     },
   }));
-
-  return <RadioButtons legend="Proportion dans cet état" options={options} disabled={disabled} />;
+  const isDesktop = useIsDesktop();
+  return (
+    <RadioButtons
+      orientation={isDesktop ? "horizontal" : "vertical"}
+      legend="Proportion dans cet état"
+      options={options}
+      disabled={disabled}
+    />
+  );
 };
