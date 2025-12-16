@@ -128,7 +128,7 @@ const PlanSituation = ({
     <Box flex="1">
       <Typography mb="8px">Plan de situation</Typography>
       <UploadImage
-        onFile={async (file: File) => addPlanSituationFileMutation.mutateAsync({ file })}
+        onFiles={async (files) => addPlanSituationFileMutation.mutateAsync({ file: files[0] })}
         attachments={attachment ? [attachment] : []}
         multiple={false}
         onClick={() => setSelectedAttachment(attachment!)}
@@ -173,7 +173,7 @@ const PlanEdifice = ({
     <Box flex="1">
       <Typography mb="8px">Plan de l'édifice</Typography>
       <UploadImage
-        onFile={async (file: File) => addPlanEdificeFileMutation.mutateAsync({ file })}
+        onFiles={async (files) => addPlanEdificeFileMutation.mutateAsync({ file: files[0] })}
         attachments={attachment ? [attachment] : []}
         multiple={false}
         onClick={() => setSelectedAttachment(attachment!)}
@@ -191,24 +191,56 @@ const VuesGenerales = ({
   setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
   isDisabled: boolean;
 }) => {
+  const { constatId } = routeApi.useParams();
+  const user = useLiveUser()!;
+
   const form = useStateReportFormContext();
   const value = useWatch({ control: form.control, name: "vue_generale" });
 
-  const attachmentQuery = useStateReportAttachmentQuery(value);
-  const attachment = attachmentQuery.data;
+  const attachmentsQuery = useQuery({
+    queryKey: ["attachments", value],
+    queryFn: async () => {
+      if (!value) return [];
+      const ids = value.split(";");
+      return db.selectFrom("state_report_attachment").where("id", "in", ids).selectAll().execute();
+    },
+  });
 
-  const addVueGeneraleFileMutation = useAddStateReportFileMutation("vue_generale");
-  const deleteVueGeneraleFileMutation = useDeleteAttachmentMutation("vue_generale");
+  const attachments = attachmentsQuery.data;
+
+  const addVueGeneraleFilesMutation = useMutation({
+    mutationFn: async ({ files }: { files: File[] }) => {
+      let newValue = value || "";
+      for (const file of files) {
+        const attachmentId = await uploadFile({ constatId, serviceId: user.service_id!, file });
+        newValue = newValue ? `${newValue};${attachmentId}` : attachmentId;
+      }
+      form.setValue("vue_generale", newValue);
+      return newValue;
+    },
+  });
+
+  const deleteVueGeneraleFileMutation = useMutation({
+    mutationFn: async (attachmentId: string) => {
+      await attachmentStorage.deleteFile(attachmentId);
+      const newValue = value
+        ?.split(";")
+        .filter((id) => id !== attachmentId)
+        .join(";");
+
+      form.setValue("vue_generale", newValue || null);
+    },
+  });
 
   return (
     <Box flex="1">
       <Typography mb="8px">Vues générales de l'édifice</Typography>
       <UploadImage
-        onFile={async (file: File) => addVueGeneraleFileMutation.mutateAsync({ file })}
-        attachments={attachment ? [attachment] : []}
-        multiple={false}
-        onClick={() => setSelectedAttachment(attachment!)}
-        onDelete={() => deleteVueGeneraleFileMutation.mutate(attachment!.id)}
+        onFiles={async (files) => addVueGeneraleFilesMutation.mutateAsync({ files: Array.from(files) })}
+        attachments={attachments ?? []}
+        multiple
+        onClick={(attachment) => setSelectedAttachment(attachment!)}
+        onDelete={(attachment) => deleteVueGeneraleFileMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
       />
     </Box>
@@ -227,8 +259,8 @@ const useStateReportAttachmentQuery = (attachmentId: string | null) => {
 
 const useAddStateReportFileMutation = (property: keyof StateReport) => {
   const { constatId } = routeApi.useParams();
-  const form = useStateReportFormContext();
   const user = useLiveUser()!;
+  const form = useStateReportFormContext();
 
   return useMutation({
     mutationFn: async ({ file }: { file: File }) => {
@@ -258,7 +290,7 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
   };
 
   return (
-    <Flex width="100%" flexWrap="wrap" gap={{ xs: "20px", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }}>
+    <Flex width="100%" flexWrap="wrap" gap={{ xs: "20px", lg: "16px" }} flexDirection={{ xs: "column", lg: "column" }}>
       <UploadImageModal
         selectedAttachment={selectedAttachment}
         onClose={onClose}

@@ -77,7 +77,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         hideLabelInput
       />
       <UploadImage
-        onFile={async (file: File) => addImageFileMutation.mutateAsync(file)}
+        onFiles={async (files) => addImageFileMutation.mutateAsync(files[0])}
         multiple
         attachments={pictures}
         onDelete={({ id }) => deletePictureMutation.mutate({ id })}
@@ -162,7 +162,6 @@ export const PictureThumbnail = ({
   useEffect(() => {
     drawCanvas();
   }, [pictureLines.data, bgUrlQuery.data]);
-
   const drawCanvas = () => {
     if (!canvasRef.current) return;
     if (!bgUrlQuery.data) return;
@@ -171,21 +170,27 @@ export const PictureThumbnail = ({
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d")!;
 
+    // Get the actual displayed size from CSS
+    const rect = canvas.getBoundingClientRect();
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
     const image = new Image();
     image.src = bgUrlQuery.data!;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = 180 * dpr;
-    canvas.height = 130 * dpr;
+
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
 
     ctx.scale(dpr, dpr);
 
     image.onload = () => {
-      const scaleX = 180 / image.width;
-      const scaleY = 130 / image.height;
+      const scaleX = displayWidth / image.width;
+      const scaleY = displayHeight / image.height;
       const initialScale = Math.min(scaleX, scaleY) * 1.5;
 
-      const xOffset = (180 - image.width * initialScale) / 2;
-      const yOffset = (130 - image.height * initialScale) / 2;
+      const xOffset = (displayWidth - image.width * initialScale) / 2;
+      const yOffset = (displayHeight - image.height * initialScale) / 2;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
@@ -214,16 +219,9 @@ export const PictureThumbnail = ({
       });
     };
   };
-
   const finalStatus = idbStatusQuery.data?.[0]?.state ?? AttachmentState.QUEUED_UPLOAD;
   return (
-    <Stack
-      minWidth="150px"
-      maxWidth={{ xs: "unset", lg: "250px" }}
-      width={{ xs: "100%", lg: "unset" }}
-      gap="4px"
-      maxHeight={{ xs: "300px", lg: "unset" }}
-    >
+    <Stack gap="4px">
       <ReportStatus status={finalStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%">
         <Box ref={canvasRef} component="canvas" flex="1"></Box>
