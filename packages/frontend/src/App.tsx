@@ -9,6 +9,8 @@ export const App = () => {
 
 const router = createRouter({
   routeTree,
+  scrollToTopSelectors: [".MuiBox-root"],
+  scrollRestoration: true,
 });
 
 declare module "@tanstack/react-router" {

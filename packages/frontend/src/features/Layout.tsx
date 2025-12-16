@@ -80,14 +80,14 @@ const AppFooter = () => {
         <div className="fr-footer__bottom">
           <ul className="fr-footer__bottom-list">
             <li className="fr-footer__bottom-item">
-              <a href="/mentions-legales" className="fr-footer__bottom-link">
+              <Link to="/mentions-legales" className="fr-footer__bottom-link">
                 Mentions légales
-              </a>
+              </Link>
             </li>
             <li className="fr-footer__bottom-item">
-              <a href="/cgu" className="fr-footer__bottom-link">
+              <Link to="/cgu" className="fr-footer__bottom-link">
                 Conditions générales d'utilisation
-              </a>
+              </Link>
             </li>
             <li className="fr-footer__bottom-item">
               <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
