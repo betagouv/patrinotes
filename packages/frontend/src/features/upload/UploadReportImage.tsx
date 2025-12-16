@@ -170,7 +170,6 @@ export const PictureThumbnail = ({
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d")!;
 
-    // Get the actual displayed size from CSS
     const rect = canvas.getBoundingClientRect();
     const displayWidth = rect.width;
     const displayHeight = rect.height;
@@ -220,8 +219,9 @@ export const PictureThumbnail = ({
     };
   };
   const finalStatus = idbStatusQuery.data?.[0]?.state ?? AttachmentState.QUEUED_UPLOAD;
+
   return (
-    <Stack gap="4px">
+    <Stack gap="4px" width={{ xs: "100%", sm: "180px", md: "240px" }}>
       <ReportStatus status={finalStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%">
         <Box ref={canvasRef} component="canvas" flex="1"></Box>
@@ -264,7 +264,7 @@ export const PictureThumbnail = ({
               fontWeight="500"
               color={fr.colors.decisions.text.actionHigh.blueFrance.default}
               noWrap
-              width={{ xs: "100%", lg: "100px" }}
+              width={{ xs: "100%" }}
             >
               {label}
             </Typography>

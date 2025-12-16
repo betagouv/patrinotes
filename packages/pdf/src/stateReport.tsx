@@ -225,7 +225,8 @@ export const getStateReportHtmlString = ({
 
   const planSituationAttachment = stateReport.attachments.find((att) => stateReport.plan_situation === att.id);
   const planEdificeAttachment = stateReport.attachments.find((att) => stateReport.plan_edifice === att.id);
-  const vueGenerale = stateReport.attachments.find((att) => stateReport.vue_generale === att.id);
+  const vuesGeneralesIds = stateReport.vue_generale ? stateReport.vue_generale.split(";") : [];
+  const vuesGeneralesAttachments = stateReport.attachments.filter((att) => vuesGeneralesIds.includes(att.id));
 
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 
@@ -279,15 +280,16 @@ export const getStateReportHtmlString = ({
               label: planEdificeAttachment.label ?? undefined,
             }
           : undefined,
-        vueGenerale
-          ? {
-              title: "Vue générale de l'édifice",
-              url: vueGenerale.file!,
-              attachmentId: vueGenerale.id,
-              label: vueGenerale.label ?? undefined,
-            }
-          : undefined,
       ])}
+
+      ${generateImagesTable(
+        vuesGeneralesAttachments.map((attachment, index) => ({
+          title: index === 0 ? "Vue générale de l'édifice" : "",
+          url: attachment.file!,
+          label: attachment.label ?? undefined,
+          attachmentId: attachment.id,
+        })),
+      )}
 
             <hr />
         <p><span style="font-size: 16pt"><b>État général</b></span></p>

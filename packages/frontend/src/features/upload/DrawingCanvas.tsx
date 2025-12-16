@@ -68,10 +68,11 @@ export const ImageCanvas = ({
     canvas.width = boundingRect.width * dpr;
     canvas.height = boundingRect.height * dpr;
     context.scale(dpr, dpr);
+
     context.strokeStyle = activeColor;
+
     canvas.style.width = "100%";
     canvas.style.height = "auto";
-
     contextRef.current = context;
 
     const image = new Image();
@@ -149,6 +150,7 @@ export const ImageCanvas = ({
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
+    console.log({ clientX, clientY });
     const x = ((clientX - rect.left) * (canvas.width / rect.width / dpr) - offset.x) / scale;
     const y = ((clientY - rect.top) * (canvas.height / rect.height / dpr) - offset.y) / scale;
 
@@ -258,7 +260,7 @@ export const ImageCanvas = ({
       <Stack position="absolute" top="26px" right={{ xs: "16px" }} gap="18px" flexDirection="row" alignItems="center">
         {/* @ts-ignore */}
         <Button
-          sx={{ bgColor: "white" }}
+          sx={{ bgcolor: "white" }}
           type="button"
           priority="secondary"
           iconId="ri-arrow-go-back-line"
