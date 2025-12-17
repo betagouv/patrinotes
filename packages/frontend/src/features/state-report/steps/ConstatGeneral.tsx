@@ -429,7 +429,7 @@ const Preconisations = ({ isDisabled }: { isDisabled: boolean }) => {
   const selectedNames: string[] = value.map((item) => item.preconisation);
 
   const options = [
-    "Étude diagnostique",
+    "Études",
     "Travaux d'entretien",
     "Travaux de réparation",
     "Travaux de restauration",
