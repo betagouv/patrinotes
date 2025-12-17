@@ -68,7 +68,7 @@ export const SignupForm = () => {
             title={<Typography fontWeight="regular">{getErrorMessage(mutationError)}</Typography>}
           />
         ) : null}
-        <InputGroup state={mutationError ? "error" : undefined}>
+        <InputGroup>
           <Input
             label="Courriel"
             hintText="prenom.nom@culture.gouv.fr"
