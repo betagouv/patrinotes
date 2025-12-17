@@ -291,6 +291,9 @@ const assertEmailInWhitelist = async (email: string) => {
   const whitelist = whitelistResults[0];
 
   if (!whitelist) {
-    throw new AppError(403, "Votre courriel n'est pas autorisée à accéder à cette application");
+    throw new AppError(
+      403,
+      "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrimoine-embarque.beta.gouv.fr.",
+    );
   }
 };
