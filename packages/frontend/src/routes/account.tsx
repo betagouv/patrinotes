@@ -1,5 +1,5 @@
 import { EnsureUser } from "#components/EnsureUser.tsx";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import Summary from "@codegouvfr/react-dsfr/Summary";
 import Download from "@codegouvfr/react-dsfr/Download";
 import { useUserSettings } from "../hooks/useUserSettings";
@@ -46,7 +46,9 @@ const AccountPage = () => {
       mb="40px"
     >
       <Stack width={{ xs: "100%", lg: "auto" }}>
-        <BreadcrumbNav label="Mon compte" />
+        <Box mt="32px" mb={{ xs: "16px", lg: "32px" }} px={{ xs: "16px", lg: "0" }}>
+          <GoHomeButton />
+        </Box>
         <Typography variant="h1" display={{ lg: "none" }} mt="16px" mb="32px" px={{ xs: "16px" }}>
           Mon compte
         </Typography>
@@ -61,7 +63,7 @@ const AccountPage = () => {
               { linkProps: { href: "#profile" }, text: "Mon profil" },
               { linkProps: { href: "#default-recipient" }, text: "Destinataires par défaut" },
               { linkProps: { href: "#share" }, text: "Droit d'édition partagé" },
-              { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
+              // { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
               { linkProps: { href: "#download-ce" }, text: "Télécharger mes constats" },
               { linkProps: { href: "#download-cr" }, text: "Télécharger mes CR" },
               { linkProps: { href: "#change-service" }, text: "Changer de service" },
@@ -393,7 +395,7 @@ const DownloadCEs = () => {
 
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
-    downloadFile(url, getZipFilename(startDate, endDate));
+    downloadFile(url, getCEZipFilename(startDate, endDate));
     URL.revokeObjectURL(url);
   });
 
@@ -422,7 +424,7 @@ const DownloadCEs = () => {
       <Box bgcolor={fr.colors.decisions.background.alt.blueFrance.default + " !important"} px="24px" pt="18px" pb="4px">
         {reports.length ? (
           <Download
-            label={getZipFilename(startDate, endDate)}
+            label={getCEZipFilename(startDate, endDate)}
             details={`ZIP - ${reports.length} constat${reports.length > 1 ? "s" : ""} d'état`}
             linkProps={{
               onClick: () => downloadMutation.mutate(reports),
@@ -470,7 +472,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="change-service">4. Changer de service</Title>
+      <Title anchor="change-service">5. Changer de service</Title>
       {/* @ts-ignore */}
       <Alert
         style={{
@@ -552,11 +554,50 @@ const getZipFilename = (startDate: Date, endDate: Date) => {
   return `mes-CR-${start}-${end}.zip`;
 };
 
+const getCEZipFilename = (startDate: Date, endDate: Date) => {
+  const formatDate = (date: Date) => format(date, "ddMMyy");
+
+  const start = formatDate(startDate);
+  const end = formatDate(endDate);
+
+  return `mes-CE-${start}-${end}.zip`;
+};
+
 const Title = ({ children, anchor }: { children: React.ReactNode; anchor?: string }) => {
   return (
     <Typography variant="h3" id={anchor} mb="24px" fontSize="26px">
       {children}
     </Typography>
+  );
+};
+
+export const GoHomeButton = () => {
+  const navigate = useNavigate();
+  const goBack = () => {
+    navigate({ to: "/", search: { document: "compte-rendus" } });
+  };
+
+  return (
+    <Box
+      component="a"
+      href={""}
+      onClick={(e) => {
+        e.preventDefault();
+        goBack();
+      }}
+      sx={{
+        "::before": {
+          width: "16px !important",
+          mr: "4px",
+        },
+        px: { lg: "16px", xs: 0 },
+      }}
+      whiteSpace="nowrap"
+    >
+      <Typography component="span" fontSize="12px" sx={{ textDecoration: "underline" }}>
+        Retour à l'accueil
+      </Typography>
+    </Box>
   );
 };
 

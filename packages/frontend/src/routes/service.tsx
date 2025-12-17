@@ -16,7 +16,7 @@ import { v4 } from "uuid";
 import { useRefreshUser, useUser } from "../contexts/AuthContext";
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
-import { AccordionIfMobile, BreadcrumbNav } from "./account";
+import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
 
 const ServicePage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -36,15 +36,18 @@ const ServicePage = () => {
       mb="40px"
     >
       <Stack width={{ xs: "100%", lg: "auto" }}>
-        <BreadcrumbNav label="Service" />
+        <Box mt="32px" mb={{ xs: "16px", lg: "32px" }} px={{ xs: "16px", lg: "0" }}>
+          <GoHomeButton />
+        </Box>
         <Typography variant="h1" display={{ lg: "none" }} mt="16px" mb="32px" px={{ xs: "16px" }}>
           Service
         </Typography>
         <AccordionIfMobile>
           <Summary
             style={{
-              paddingTop: "0",
-              backgroundColor: "transparent !important",
+              paddingLeft: "16px",
+              paddingRight: "16px",
+              backgroundColor: "transparent",
             }}
             links={[
               { linkProps: { href: "#service-informations" }, text: "Informations service" },
@@ -61,6 +64,7 @@ const ServicePage = () => {
         flexDirection="column"
         alignItems="flex-start"
         maxWidth="900px"
+        width={{ lg: "100%", xs: "100%" }}
         mt="32px"
         px={{ xs: "16px", lg: "0" }}
         textAlign="left"

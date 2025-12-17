@@ -298,7 +298,7 @@ const GoBackButton = () => {
   const { constatId } = Route.useParams();
   const navigate = useNavigate();
   const goBack = () => {
-    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step: "constat-detaille" } });
+    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step: "constat-detaille", mode: "view" } });
   };
 
   return (
