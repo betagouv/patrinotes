@@ -57,7 +57,7 @@ export const SmartAddressInput = () => {
 
         {isOpen ? (
           <Box
-            bgcolor="background-contrast-grey"
+            bgcolor={"white"}
             zIndex="10"
             position="absolute"
             borderRadius="5px"
@@ -83,7 +83,7 @@ export const SmartAddressInput = () => {
                     sx={{
                       cursor: "pointer",
                       ":hover": {
-                        bgcolor: "white",
+                        bgcolor: fr.colors.decisions.background.contrast.grey.default,
                       },
                     }}
                     p="8px"
