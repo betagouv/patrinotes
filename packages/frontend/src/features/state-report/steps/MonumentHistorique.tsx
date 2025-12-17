@@ -189,22 +189,27 @@ const MonumentObjets = () => {
 
   const { objets } = objetsQuery.data ?? { objets: [] };
   const { images } = imagesQuery.data ?? { images: [] };
-  if (!objets?.length) return null;
 
   return (
     <>
       <Typography variant="subtitle1" fontWeight="bold" mb="16px">
         Objets mobiliers conservés
       </Typography>
-      <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }}>
-        {objets.map((obj) => (
-          <MonumentObjetItem
-            key={obj.id}
-            popObjet={obj}
-            images={images.filter((img) => img.reference === obj.reference)}
-          />
-        ))}
-      </Flex>
+      {objets?.length ? (
+        <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }}>
+          {objets.map((obj) => (
+            <MonumentObjetItem
+              key={obj.id}
+              popObjet={obj}
+              images={images.filter((img) => img.reference === obj.reference)}
+            />
+          ))}
+        </Flex>
+      ) : (
+        <Flex>
+          <Typography>Ce monument ne contient pas d’objets mobiliers.</Typography>
+        </Flex>
+      )}
     </>
   );
 };
