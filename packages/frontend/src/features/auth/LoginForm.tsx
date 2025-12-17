@@ -93,6 +93,7 @@ export const LoginForm = () => {
           type="submit"
           nativeButtonProps={{ type: "submit" }}
           onClick={form.handleSubmit(login)}
+          disabled={mutation.isPending}
         >
           Se connecter
         </FullWidthButton>

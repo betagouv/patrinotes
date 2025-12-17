@@ -70,7 +70,12 @@ const Index = () => {
       return id;
     },
     onSuccess: (id) => {
-      id && navigate({ to: "/constat/$constatId", params: { constatId: id }, search: { step: "informations" } });
+      id &&
+        navigate({
+          to: "/constat/$constatId",
+          params: { constatId: id },
+          search: { step: "informations", mode: "view" },
+        });
     },
   });
 
@@ -78,17 +83,12 @@ const Index = () => {
     <Flex flexDirection="column" color="text-label-grey">
       <SimpleBanner pt={{ xs: "15px", lg: "82px" }} pb={{ xs: "49px", lg: "82px" }} alignItems="flex-start">
         <Flex width={{ xs: "100%", lg: "926px" }} flexDirection="column">
-          <Typography
-            variant="h2"
-            px="16px"
-            fontSize="32px"
-            color={fr.colors.decisions.text.actionHigh.blueFrance.default}
-          >
+          <Typography variant="h2" fontSize="32px" color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
             Les outils du patrimoine en mobilité
           </Typography>
 
           <Flex alignItems="center" width="100%" flexDirection={{ xs: "column-reverse", lg: "row" }}>
-            <Flex width={{ xs: "100%", lg: "588px" }} mt="48px" flexDirection="column" p="16px">
+            <Flex width={{ xs: "100%", lg: "588px" }} mt="48px" flexDirection="column" py="16px">
               <Typography variant="body1" px="16px" fontSize="20px">
                 Que souhaitez-vous faire ?
               </Typography>
@@ -130,7 +130,7 @@ const MainContentTabs = () => {
       label: "Mes documents",
       props: {
         position: "absolute" as const,
-        left: { xs: "24px", lg: "calc((100vw - 400px * 2 - 126px) / 2)" },
+        left: { xs: "24px", lg: "calc((100vw - 400px * 2 - 134px) / 2)" },
       },
       component: (
         <>
@@ -143,7 +143,7 @@ const MainContentTabs = () => {
       label: "Service",
       props: {
         position: "absolute" as const,
-        left: "16px",
+        left: { xs: "16px", lg: "58px" },
       },
       component: (
         <>

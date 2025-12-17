@@ -176,6 +176,7 @@ export const SignupForm = () => {
           }}
           type="submit"
           nativeButtonProps={{ type: "submit" }}
+          disabled={mutation.isPending}
         >
           Valider
         </FullWidthButton>
