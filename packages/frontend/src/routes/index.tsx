@@ -83,12 +83,23 @@ const Index = () => {
     <Flex flexDirection="column" color="text-label-grey">
       <SimpleBanner pt={{ xs: "15px", lg: "82px" }} pb={{ xs: "49px", lg: "82px" }} alignItems="flex-start">
         <Flex width={{ xs: "100%", lg: "926px" }} flexDirection="column">
-          <Typography variant="h2" fontSize="32px" color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
+          <Typography
+            variant="h2"
+            fontSize="32px"
+            color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+            px={{ lg: 0, xs: "16px" }}
+          >
             Les outils du patrimoine en mobilité
           </Typography>
 
           <Flex alignItems="center" width="100%" flexDirection={{ xs: "column-reverse", lg: "row" }}>
-            <Flex width={{ xs: "100%", lg: "588px" }} mt="48px" flexDirection="column" py="16px">
+            <Flex
+              width={{ xs: "100%", lg: "588px" }}
+              mt="48px"
+              flexDirection="column"
+              py="16px"
+              px={{ lg: 0, xs: "16px" }}
+            >
               <Typography variant="body1" px="16px" fontSize="20px">
                 Que souhaitez-vous faire ?
               </Typography>
