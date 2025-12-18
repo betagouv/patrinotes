@@ -28,7 +28,7 @@ export const ConstatGeneral = () => {
   const isDisabled = useIsStateReportDisabled();
 
   return (
-    <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "44px" }} mb="16px">
+    <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "44px" }} mb="60px">
       <Typography variant="h6" mb="32px" display={{ xs: "none", lg: "block" }}>
         Constat général
       </Typography>
