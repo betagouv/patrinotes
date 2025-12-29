@@ -314,7 +314,7 @@ export const getStateReportHtmlString = ({
 
       <hr />
 
-        <p><span style="font-size: 16pt"><b>Constat détaillé</b></span></p>
+        ${visitedSections?.length ? `<p><span style="font-size: 16pt"><b>Constat détaillé</b></span></p>` : ""}
         ${visitedSections
           ?.map(
             (section) => `

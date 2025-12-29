@@ -257,18 +257,18 @@ export const PictureThumbnail = ({
               </Button>
             </Box>
           )}
-          <Box flex="1" px="12px">
-            <Typography
-              mt="4px"
-              fontSize="14px"
-              fontWeight="500"
-              color={fr.colors.decisions.text.actionHigh.blueFrance.default}
-              noWrap
-              width={{ xs: "100%" }}
-            >
-              {label}
-            </Typography>
-          </Box>
+          <Typography
+            mt="4px"
+            flex="1"
+            px="12px"
+            fontSize="14px"
+            fontWeight="500"
+            color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+            noWrap
+            width={{ xs: "100%", lg: "100%" }}
+          >
+            {label}
+          </Typography>
           {isDisabled ? null : (
             <Box borderLeft="1px solid" borderColor={fr.colors.decisions.border.default.grey.default}>
               <Button
