@@ -1,13 +1,13 @@
 import { useWatch } from "react-hook-form";
 import { db, useDbQuery } from "../../db/db";
 import { StateReportFormType, StateReportStep, useIsStateReportDisabled, useStateReportFormContext } from "./utils";
-import { Box, Stack } from "@mui/material";
+import { Box, Dialog, DialogTitle, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { scrollToTop, StateReportSummary } from "./StateReportSummary";
 import { Tabs } from "#components/Tabs.tsx";
 import { MonumentHistorique } from "./steps/MonumentHistorique";
 import { fr } from "@codegouvfr/react-dsfr";
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, UseNavigateResult } from "@tanstack/react-router";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { ContexteVisite } from "./steps/ContexteVisite";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
@@ -16,6 +16,7 @@ import { ConstatGeneral } from "./steps/ConstatGeneral";
 import { ConstatDetaille } from "./steps/ConstatDetaille";
 import { pick } from "pastable";
 import { immeubleMapping } from "../ImmeubleAutocomplete";
+import { ModalCloseButton } from "../menu/MenuTitle";
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
@@ -185,39 +186,189 @@ export const ButtonsSwitch = () => {
   );
 };
 
+const formValuesChecker: Partial<Record<keyof StateReportFormType, (val: any) => boolean>> = {
+  nature_visite: (val) => !!val,
+  date_visite: (val) => !!val,
+  redacted_by: (val) => !!val,
+  proprietaire: (val) => !!val,
+  proprietaire_email: (val) => !!val,
+  etat_general: (val) => !!val,
+  proportion_dans_cet_etat: (val) => val !== null && val !== undefined,
+};
+
+const formErrorsNavigate: Partial<
+  Record<keyof StateReportFormType, (args: { navigate: ReturnType<typeof routeApi.useNavigate> }) => void>
+> = {
+  nature_visite: ({ navigate }) =>
+    navigate({ search: { step: "contexte-visite", mode: "edit" }, hash: "nature-visite" }),
+  date_visite: ({ navigate }) => navigate({ search: { step: "contexte-visite", mode: "edit" }, hash: "date-visite" }),
+  redacted_by: ({ navigate }) => navigate({ search: { step: "contexte-visite", mode: "edit" }, hash: "redacted-by" }),
+  proprietaire: ({ navigate }) => navigate({ search: { step: "contexte-visite", mode: "edit" }, hash: "proprietaire" }),
+  proprietaire_email: ({ navigate }) =>
+    navigate({ search: { step: "contexte-visite", mode: "edit" }, hash: "proprietaire-email" }),
+
+  etat_general: ({ navigate }) => navigate({ search: { step: "constat-general", mode: "edit" }, hash: "etat-general" }),
+  proportion_dans_cet_etat: ({ navigate }) =>
+    navigate({ search: { step: "constat-general", mode: "edit" }, hash: "proportion-dans-cet-etat" }),
+};
+
 const CreateButton = () => {
+  const [formErrors, setFormErrors] = useState<string[] | null>(null);
   const { constatId } = routeApi.useParams();
   const navigate = routeApi.useNavigate();
 
   const form = useStateReportFormContext();
   const attachmentId = useWatch({ control: form.control, name: "attachment_id" });
 
+  const onSubmit = () => {
+    const values = form.getValues();
+    const missingFields = Object.entries(formValuesChecker)
+      .filter(([key, checker]) => {
+        return !checker(values[key as keyof StateReportFormType]);
+      })
+      .map(([key]) => key);
+
+    if (!missingFields.length) {
+      navigate({
+        to: "/constat/$constatId/pdf",
+        params: {
+          constatId,
+        },
+        search: { mode: "view" },
+      });
+      return;
+    }
+
+    setFormErrors(missingFields);
+
+    // navigate({
+    //   to: "/constat/$constatId/pdf",
+    //   params: {
+    //     constatId,
+    //   },
+    //   search: { mode: "view" },
+    // })
+  };
+
   return (
-    <Button
-      iconPosition="left"
-      iconId="fr-icon-article-fill"
-      size="large"
-      nativeButtonProps={{
-        onClick: () =>
-          navigate({
-            to: "/constat/$constatId/pdf",
-            params: {
-              constatId,
-            },
-            search: { mode: "view" },
-          }),
-      }}
-      sx={{
-        width: "100%",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {attachmentId ? "Voir le constat" : "Finaliser le constat"}
-    </Button>
+    <>
+      <FormErrorModal formErrors={formErrors} onClose={() => setFormErrors(null)} />
+      <Button
+        iconPosition="left"
+        iconId="fr-icon-article-fill"
+        size="large"
+        nativeButtonProps={{
+          onClick: () => onSubmit(),
+        }}
+        sx={{
+          width: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {attachmentId ? "Voir le constat" : "Finaliser le constat"}
+      </Button>
+    </>
   );
 };
 
+const contextFields = ["proprietaire", "proprietaire_email", "redacted_by", "date_visite", "nature_visite"];
+const generalFields = ["etat_general", "proportion_dans_cet_etat"];
+const labelsByField: Record<string, string> = {
+  proprietaire: "Propriétaire",
+  proprietaire_email: "Courriel du propriétaire",
+  redacted_by: "Rédacteur du constat",
+  date_visite: "Date de la visite",
+  nature_visite: "Nature de la visite",
+  etat_general: "État général",
+  proportion_dans_cet_etat: "Proportion dans cet état",
+};
+
+const FormErrorModal = ({ formErrors, onClose }: { formErrors: string[] | null; onClose: () => void }) => {
+  const contextErrors = formErrors?.filter((field) => contextFields.includes(field));
+  const generalErrors = formErrors?.filter((field) => generalFields.includes(field));
+
+  const navigate = routeApi.useNavigate();
+  const navigateToField = (field: string) => {
+    (formErrorsNavigate as any)[field]?.({ navigate });
+    onClose();
+  };
+  return (
+    <Dialog
+      open={!!formErrors?.length}
+      sx={{
+        ".MuiPaper-root": {
+          maxWidth: { xs: "100%", sm: "800px" },
+          margin: { xs: 0, lg: "auto" },
+        },
+      }}
+    >
+      <Box p="16px" mb="16px">
+        <ModalCloseButton onClose={() => onClose()} />
+        <DialogTitle
+          color="red"
+          sx={{
+            "::before": {
+              marginRight: "8px",
+            },
+          }}
+          className="fr-icon fr-icon-error-warning-fill"
+        >
+          Saisie en erreur
+        </DialogTitle>
+
+        <Box px="24px">
+          <Typography>
+            Les champs suivants présentent des erreurs, veuillez les corriger avant de créer le PDF :
+          </Typography>
+
+          <Stack>
+            {contextErrors && contextErrors.length ? (
+              <>
+                <Typography mt="16px" fontWeight="600">
+                  Contexte de la visite
+                </Typography>
+                <ul style={{ listStyleType: "none" }}>
+                  {contextErrors.map((field) => (
+                    <li key={field}>
+                      <Typography
+                        onClick={() => navigateToField(field)}
+                        sx={{ cursor: "pointer", textDecoration: "underline", "::before": { color: "red" } }}
+                        className="fr-link fr-link--icon-left fr-icon-error-fill"
+                      >
+                        {labelsByField[field]}
+                      </Typography>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {generalErrors && generalErrors.length ? (
+              <>
+                <Typography mt="16px" fontWeight="600">
+                  Constat général
+                </Typography>
+                <ul style={{ listStyleType: "none" }}>
+                  {generalErrors.map((field) => (
+                    <li key={field}>
+                      <Typography
+                        onClick={() => navigateToField(field)}
+                        sx={{ cursor: "pointer", textDecoration: "underline", "::before": { color: "red" } }}
+                        className="fr-link fr-link--icon-left fr-icon-error-fill"
+                      >
+                        {labelsByField[field]}
+                      </Typography>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </Stack>
+        </Box>
+      </Box>
+    </Dialog>
+  );
+};
 const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateReportStep) => void }) => {
   const [internalValues, setInternalValues] = useState<Partial<StateReportFormType>>({});
 

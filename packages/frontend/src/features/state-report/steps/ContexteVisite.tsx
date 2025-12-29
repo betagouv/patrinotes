@@ -44,6 +44,7 @@ export const ContexteVisite = () => {
         label={<Box className="mandatory-field">Date de la visite</Box>}
       />
       <Input
+        id="redacted-by"
         disabled={isDisabled}
         label={<Box className="mandatory-field">Rédacteur du constat</Box>}
         nativeInputProps={{
@@ -56,6 +57,7 @@ export const ContexteVisite = () => {
         <Input
           sx={{ width: "100%" }}
           disabled={isDisabled}
+          id="proprietaire"
           label={<Box className="mandatory-field">Propriétaire</Box>}
           nativeInputProps={{
             ...form.register("proprietaire"),
@@ -64,6 +66,7 @@ export const ContexteVisite = () => {
         <Input
           sx={{ width: "100%" }}
           disabled={isDisabled}
+          id="proprietaire-email"
           label={<Box className="mandatory-field">Courriel du propriétaire</Box>}
           nativeInputProps={{
             ...form.register("proprietaire_email"),
@@ -156,11 +159,13 @@ const DateInput = ({
   name,
   label,
   isDisabled,
+  id,
 }: {
   form: UseFormReturn<any>;
   name: string;
   label: ReactNode;
   isDisabled?: boolean;
+  id?: string;
 }) => {
   const rawValue = useWatch({ control: form.control, name });
   const dateString = rawValue ? format(new Date(rawValue), "yyyy-MM-dd") : null;
@@ -169,6 +174,7 @@ const DateInput = ({
   return (
     <Input
       label={label}
+      id={id}
       disabled={isDisabled}
       nativeInputProps={{
         type: "date",
@@ -207,6 +213,7 @@ const NatureVisiteRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
         disabled={isDisabled}
         orientation={isDesktop ? "horizontal" : "vertical"}
         legend={<Box className="mandatory-field">Nature de la visite</Box>}
+        id="nature-visite"
         options={options}
         style={{ marginBottom: 0 }}
       />
