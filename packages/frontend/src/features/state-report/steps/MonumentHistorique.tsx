@@ -1,5 +1,5 @@
 import { Flex } from "#components/ui/Flex.tsx";
-import { Box, BoxProps, LinkBaseProps, LinkProps, styled, Typography } from "@mui/material";
+import { Box, BoxProps, LinkBaseProps, LinkProps, Stack, styled, Typography } from "@mui/material";
 import { StateReportFormType, useStateReportFormContext } from "../utils";
 import { UseFormRegisterReturn, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -155,7 +155,7 @@ export const MonumentHistorique = () => {
 
 const getNbToShow = (page: number) => {
   let baseNb = 2;
-  return baseNb * (page - 1) * 6;
+  return baseNb + (page - 1) * 6;
 };
 
 const MonumentObjets = () => {
@@ -163,6 +163,15 @@ const MonumentObjets = () => {
   const monumentReference = useWatch({ control: form.control, name: "reference_pop" });
   const [page, setPage] = useState(0);
   const nbToShow = getNbToShow(page + 1);
+
+  const totalCountQuery = useDbQuery(
+    db
+      .selectFrom("pop_objets")
+      .select(db.fn.countAll().as("count"))
+      .where("reference_a_une_notice_merimee_mh", "like", "%" + monumentReference?.trim()),
+    [monumentReference],
+    { throttleMs: 10000 },
+  );
 
   // TODO: useInfiniteQuery
   const objetsQuery = useQuery({
@@ -172,10 +181,9 @@ const MonumentObjets = () => {
       const objetsResponse = await db
         .selectFrom("pop_objets")
         .selectAll()
-        .where("reference_a_une_notice_merimee_mh", "like", "%" + monumentReference)
+        .where("reference_a_une_notice_merimee_mh", "like", "%" + monumentReference.trim())
         .limit(nbToShow)
         .execute();
-
       return { objets: objetsResponse };
     },
     enabled: !!monumentReference,
@@ -197,21 +205,31 @@ const MonumentObjets = () => {
   const { objets } = objetsQuery.data ?? { objets: [] };
   const { images } = imagesQuery.data ?? { images: [] };
 
+  const total = totalCountQuery.data?.[0]?.count ?? 0;
+  const shouldShowLoadMore = (objets.length || 0) < (total as number);
+
   return (
     <>
       <Typography variant="subtitle1" fontWeight="bold" mb="16px">
         Objets mobiliers conservés
       </Typography>
       {objets?.length ? (
-        <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }}>
-          {objets.map((obj) => (
-            <MonumentObjetItem
-              key={obj.id}
-              popObjet={obj}
-              images={images.filter((img) => img.reference === obj.reference)}
-            />
-          ))}
-        </Flex>
+        <Stack width="100%" gap="16px">
+          <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }} flexWrap="wrap">
+            {objets.map((obj) => (
+              <MonumentObjetItem
+                key={obj.id}
+                popObjet={obj}
+                images={images.filter((img) => img.reference === obj.reference)}
+              />
+            ))}
+          </Flex>
+          {shouldShowLoadMore ? (
+            <Button priority="tertiary" sx={{ px: "32px" }} onClick={() => setPage((p) => p + 1)}>
+              Voir plus de mobiliers
+            </Button>
+          ) : null}
+        </Stack>
       ) : (
         <Flex>
           <Typography>Ce monument ne contient pas d’objets mobiliers.</Typography>
@@ -234,7 +252,8 @@ const MonumentObjetItem = ({ popObjet, images }: { popObjet: PopObjet; images: P
       border="1px solid"
       borderColor={fr.colors.decisions.border.default.grey.default}
       gap="8px"
-      maxWidth={{ xs: "100%", lg: "50%" }}
+      minWidth={{ xs: "100%", lg: "calc(50% - 8px)" }}
+      maxWidth={{ xs: "100%", lg: "calc(50% - 8px)" }}
       sx={{
         "::after": {
           display: "none",

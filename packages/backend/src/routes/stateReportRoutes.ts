@@ -10,7 +10,7 @@ export const stateReportPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =
 
   fastify.get("/objets-images", { schema: objetsImagesPdfSchema }, async (request, reply) => {
     const { references } = request.query;
-    const images = await request.services.stateReport.getImagesForObjets(references);
+    const images = await request.services.stateReport.getImagesForObjets(references.split(","));
     return images;
   });
 };
@@ -26,7 +26,7 @@ const imageTSchema = Type.Object({
 
 export const objetsImagesPdfSchema = {
   querystring: Type.Object({
-    references: Type.Array(Type.String()),
+    references: Type.String(),
   }),
   response: { 200: Type.Array(imageTSchema) },
 };
