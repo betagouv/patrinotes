@@ -153,11 +153,18 @@ export const MonumentHistorique = () => {
   );
 };
 
+const getNbToShow = (page: number) => {
+  let baseNb = 2;
+  return baseNb * (page - 1) * 6;
+};
+
 const MonumentObjets = () => {
   const form = useStateReportFormContext();
   const monumentReference = useWatch({ control: form.control, name: "reference_pop" });
-  const [nbToShow, setNbToShow] = useState(2);
+  const [page, setPage] = useState(0);
+  const nbToShow = getNbToShow(page + 1);
 
+  // TODO: useInfiniteQuery
   const objetsQuery = useQuery({
     queryKey: ["pop-objets", monumentReference, nbToShow],
     queryFn: async () => {
