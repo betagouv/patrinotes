@@ -256,7 +256,7 @@ export namespace Endpoints {
     method: "GET";
     path: "/api/state-report/objets-images";
     parameters: {
-      query: { references: Array<string> };
+      query: { references: string };
     };
     response: Array<{
       id: string;
