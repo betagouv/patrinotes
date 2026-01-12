@@ -1,29 +1,38 @@
 import { Selectable } from "kysely";
 import { Database } from "../db/db";
+import { deserializePreconisations } from "@cr-vif/pdf/constat";
 
-export const createBordereauMailContent = ({ stateReport }: { stateReport: Selectable<Database["state_report"]> }) => {
+const map = {
+  Études: () => "",
+  "Travaux d'entretien": () => "",
+  "Travaux de réparation": () => "",
+  "Travaux de restauration": () => "",
+  "Mesures d'urgence": () => "",
+};
+
+export const createBordereauMailContent = ({
+  stateReport,
+  user,
+}: {
+  stateReport: Selectable<Database["state_report"]>;
+  user: Selectable<Database["user"]>;
+}) => {
+  const preconisations = deserializePreconisations(stateReport.preconisations || "");
   return `
-  **Madame, Monsieur,**
+  Madame, Monsieur,
 
-*Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée, en date du ##etat_dresse_le1##.*
+Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée, en date du ${stateReport.date_visite ? new Date(stateReport.date_visite).toLocaleDateString() : ""}.
 
-*Le constat réalisé lors de cette visite, accompagné de la couverture photographique établie à cette occasion, n'est que visuel. Il rend compte de l'état apparent du bien protégé, sans mise en œuvre d'aucune technologie. Cette visite s’inscrit dans le cadre de la vérification périodique de l’état des monuments historiques et des conditions de leur conservation de façon que leur pérennité soit assurée, en application du contrôle scientifique et technique des services chargés des monuments historiques.*
+Le constat réalisé lors de cette visite, accompagné de la couverture photographique établie à cette occasion, n'est que visuel. Il rend compte de l'état apparent du bien protégé, sans mise en œuvre d'aucune technologie. Cette visite s’inscrit dans le cadre de la vérification périodique de l’état des monuments historiques et des conditions de leur conservation de façon que leur pérennité soit assurée, en application du contrôle scientifique et technique des services chargés des monuments historiques.
+Outre l’établissement de l’état de conservation, cette visite permet d’identifier et de prévenir les risques. Les données sont enregistrées dans les applications du ministère de la Culture afin de réaliser les synthèses territoriales et la comparaison dans le temps et de mettre à jour les données existantes et, le cas échéant, la protection juridique.
 
-*Outre l’établissement de l’état de conservation, cette visite permet d’identifier et de prévenir les risques. Les données sont enregistrées dans les applications du ministère de la Culture afin de réaliser les synthèses territoriales et la comparaison dans le temps et de mettre à jour les données existantes et, le cas échéant, la protection juridique.*
+Le constat joint permet de préconiser des interventions suivantes :
 
-*Le constat joint permet de préconiser des interventions suivantes :*
+${preconisations.map(({ preconisation, commentaire }) => {
+  return `- ${preconisation}${commentaire ? ` : ${commentaire}` : ""}`;
+})}
 
-*[conditionnalité selon cases cochées]*
-
-*Travaux d’entretien : les travaux à prévoir ne nécessitent pas de disposer d’une maîtrise d’œuvre spécifique et sont dispensés des autorisations prévues par le code de l’urbanisme ou par le code du patrimoine.*
-
-*Travaux de réparation ou de restauration : les travaux à prévoir nécessitent de disposer d’une maîtrise d’œuvre appropriée et de solliciter les autorisations indispensables.*
-
-*Par ailleurs, je vous rappelle qu’en cas de travaux de réparation ou de restauration, le contrôle scientifique et technique des services de l'Etat chargés des monuments historiques s'exerce tout au long des travaux autorisés jusqu'à leur achèvement (MH classés [R.621-20](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000024241971/) et MH inscrits : [R. 621-65](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029694949) du code du patrimoine).*
-
-*Vous remerciant pour votre accueil, et me tenant à votre disposition pour tout complément,*
-
-*##par## »*
+${user.name}
 
 **Pour aller plus loin, consultez le site du ministère de la Culture :**
 

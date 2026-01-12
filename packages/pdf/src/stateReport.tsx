@@ -467,7 +467,7 @@ export const deserializePreconisations = (
   return rawValue.split("/").map((part) => {
     const [preconisation, commentaire] = part.split(":");
     return {
-      preconisation: decodeURIComponent(preconisation),
+      preconisation: decodeURIComponent(preconisation ?? ""),
       commentaire: commentaire ? decodeURIComponent(commentaire) : undefined,
     };
   });
