@@ -1,7 +1,7 @@
 ################################
 # BASE IMAGE FOR EVERY SERVICE #
 ################################
-FROM --platform=linux/amd64 node:20.11-alpine AS with-pnpm
+FROM node:20.11-alpine AS with-pnpm
 RUN apk add --no-cache \
 build-base \
 g++ \
