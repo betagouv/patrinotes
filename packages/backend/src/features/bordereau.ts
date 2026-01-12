@@ -2,14 +2,6 @@ import { Selectable } from "kysely";
 import { Database } from "../db/db";
 import { deserializePreconisations } from "@cr-vif/pdf/constat";
 
-const map = {
-  Études: () => "",
-  "Travaux d'entretien": () => "",
-  "Travaux de réparation": () => "",
-  "Travaux de restauration": () => "",
-  "Mesures d'urgence": () => "",
-};
-
 export const createBordereauMailContent = ({
   stateReport,
   user,
