@@ -23,6 +23,12 @@ export const serviceTSchema = Type.Object({
   drac_text: Nullable(Type.String()),
   dept_numbers: Nullable(Type.String()),
   service_text: Nullable(Type.String()),
+  courriel_crmh: Nullable(Type.String()),
+  courriel_caoa: Nullable(Type.String()),
+  courriel_dreal: Nullable(Type.String()),
+  courriel_sra: Nullable(Type.String()),
+  courriel_udap: Nullable(Type.String()),
+  courriel_ofb: Nullable(Type.String()),
 });
 
 export const getServiceTSchema = {

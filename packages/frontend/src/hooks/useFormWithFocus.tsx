@@ -8,7 +8,7 @@ import {
   type RegisterOptions,
   UseFormReturn,
 } from "react-hook-form";
-import { Report, StateReport } from "../db/AppSchema";
+import { Report, Service, StateReport } from "../db/AppSchema";
 
 export function useFormWithFocus<TFieldValues extends FieldValues = FieldValues>(
   props: UseFormProps<TFieldValues, any>,
@@ -47,7 +47,7 @@ export function useFormWithFocus<TFieldValues extends FieldValues = FieldValues>
   return [form, () => focusedRef.current] as const;
 }
 
-export const useRefreshForm = <FormType extends Report | StateReport>({
+export const useRefreshForm = <FormType extends Report | StateReport | Service>({
   values,
   getFocused,
   form,

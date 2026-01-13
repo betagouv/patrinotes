@@ -40,6 +40,13 @@ const service = new Table({
   marianne_text: column.text,
   drac_text: column.text,
   service_text: column.text,
+
+  courriel_crmh: column.text,
+  courriel_caoa: column.text,
+  courriel_dreal: column.text,
+  courriel_sra: column.text,
+  courriel_udap: column.text,
+  courriel_ofb: column.text,
 });
 
 const user = new Table({

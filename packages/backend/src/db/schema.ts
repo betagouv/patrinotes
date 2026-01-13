@@ -93,7 +93,13 @@ export const service = pgTable("service", {
   serviceText: text("service_text"),
   deptNumbers: text("dept_numbers"), // comma separated
 
-  // TODO: make sure those are useful
+  courriel_crmh: text("courriel_crmh"),
+  courriel_caoa: text("courriel_caoa"),
+  courriel_dreal: text("courriel_dreal"),
+  courriel_sra: text("courriel_sra"),
+  courriel_udap: text("courriel_udap"),
+  courriel_ofb: text("courriel_ofb"),
+
   department: text().notNull(),
   completeCoords: text(),
   address: text(),

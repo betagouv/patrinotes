@@ -11,12 +11,15 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { endOfYear, startOfYear } from "date-fns";
 import { omit } from "pastable";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { v4 } from "uuid";
 import { useRefreshUser, useUser } from "../contexts/AuthContext";
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
+import { useForm } from "react-hook-form";
+import { useFormWithFocus, useRefreshForm } from "../hooks/useFormWithFocus";
+import { useSyncForm } from "#components/SyncForm.tsx";
 
 const ServicePage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -745,16 +748,37 @@ export const SuccessAlert = () => {
 };
 
 const AlertesMH = () => {
+  const service = useUser()!.service;
+  if (!service) return null;
+  return <AlertesForm service={service} />;
+};
+
+const AlertesForm = ({ service }: { service: Service }) => {
+  const [form, getFocused] = useFormWithFocus<Service>({ defaultValues: service });
+
+  useRefreshForm({
+    form,
+    values: service,
+    getFocused,
+  });
+
+  useSyncForm({
+    form,
+    baseObject: service,
+    syncObject: async (id, diff) => {
+      console.log("saving", id, diff);
+      await db.updateTable("service").where("id", "=", id).set(diff).execute();
+    },
+  });
+
   return (
     <Stack>
-      <Input label="Courriel CRMH" />
-      <Input label="Courriel CAOA" />
-      <Input label="Courriel DREAL" />
-      <Input label="Courriel SRA" />
-      <Input label="Courriel UDAP" />
-      <Input label="Courriel OFB" />
-
-      {/* TODO: ajouter courriel mairies */}
+      <Input label="Courriel CRMH" {...form.register("courriel_crmh")} />
+      <Input label="Courriel CAOA" {...form.register("courriel_caoa")} />
+      <Input label="Courriel DREAL" {...form.register("courriel_dreal")} />
+      <Input label="Courriel SRA" {...form.register("courriel_sra")} />
+      <Input label="Courriel UDAP" {...form.register("courriel_udap")} />
+      <Input label="Courriel OFB" {...form.register("courriel_ofb")} />
     </Stack>
   );
 };

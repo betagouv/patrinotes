@@ -7,14 +7,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { fr } from "@codegouvfr/react-dsfr";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
 import { useIsFormDisabled } from "../features/DisabledContext";
-import { Report, StateReport } from "../db/AppSchema";
+import { Report, Service, StateReport } from "../db/AppSchema";
 import { useAppStatus } from "../hooks/useAppStatus";
 import { Box, BoxProps, styled, Typography } from "@mui/material";
 import { Flex } from "./ui/Flex";
 import { Button, Center, Input } from "./MUIDsfr";
 import { useRef } from "react";
 
-export const useSyncForm = <T extends Report | StateReport>({
+export const useSyncForm = <T extends Report | StateReport | Service>({
   form,
   baseObject,
   disabled,
