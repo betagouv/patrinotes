@@ -30,6 +30,9 @@ const View = (props: StateReportPDFDocumentProps) => {
       return blob;
     },
     refetchOnWindowFocus: false,
+    staleTime: 0,
+    cacheTime: 0,
+
     enabled: !!props.htmlString,
   });
 

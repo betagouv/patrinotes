@@ -228,7 +228,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     if (!recipients.includes(userMail)) recipients.push(userMail);
 
     const stateReport = stateReportQuery[0]! as Selectable<Database["state_report"]>;
-    await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport! });
+    await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
 
     for (const recipient of recipients) {
       const id = v4();

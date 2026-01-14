@@ -6,6 +6,7 @@ import { getPDFInMailName } from "@cr-vif/pdf";
 import { Database } from "../db/db";
 import { Selectable } from "kysely";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
+import { createBordereauMailContent } from "./bordereau";
 
 const transporter = createTransport({
   host: ENV.EMAIL_HOST,
@@ -20,26 +21,22 @@ export const sendStateReportMail = ({
   recipients,
   pdfBuffer,
   stateReport,
+  user,
 }: {
   recipients: string;
   pdfBuffer: Buffer;
   stateReport: Selectable<Database["state_report"]>;
+  user: Selectable<Database["user"]>;
 }) => {
   sentry?.captureMessage("Sending state report mail", { extra: { recipients, stateReport } });
+
+  const content = createBordereauMailContent({ stateReport, user });
 
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: recipients,
     subject: "Constat d'état " + (stateReport?.titre_edifice ? ` : ${stateReport.titre_edifice}` : ""),
-    text: `Bonjour,
-Vous trouverez ci-joint le constat d'état suite à la visite du ${new Date(
-      stateReport?.date_visite ?? "",
-    ).toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })}.
-Cordialement`,
+    html: content,
     attachments: [
       {
         filename: getStateReportMailName(stateReport),

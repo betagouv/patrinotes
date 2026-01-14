@@ -291,7 +291,7 @@ export const getStateReportHtmlString = ({
         })),
       )}
 
-            <hr />
+        ${planSituationAttachment || planEdificeAttachment || vuesGeneralesAttachments?.length ? "<hr />" : ""}
         <p><span style="font-size: 16pt"><b>État général</b></span></p>
         <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "N/A"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
         <ul>
@@ -339,7 +339,7 @@ export const getStateReportHtmlString = ({
               <br/>
 
 
-      <hr />
+        ${visitedSections?.length ? "<hr />" : ""}
 
       ${
         preconisationsHtml
