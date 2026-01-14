@@ -26,7 +26,7 @@ ${preconisations.map(({ preconisation, commentaire }) => {
 
 ${user.name}
 
-**Pour aller plus loin, consultez le site du ministère de la Culture :**
+Pour aller plus loin, consultez le site du ministère de la Culture :
 
 - Informations sur les procédures de travaux
 
@@ -48,7 +48,7 @@ https://www.culture.gouv.fr/catalogue-des-demarches-et-subventions/subvention/et
 
 https://www.culture.gouv.fr/thematiques/monuments-sites/interventions-demarches/le-controle-scientifique-et-technique-sur-les-monuments-historiques
 
-**Références réglementaires et ressources :**
+Références réglementaires et ressources :
 
 - Code du patrimoine, livre VI, R621-18 (MH classés) et R621-63 (MH inscrits)
 - [Circulaire n° 2009-024 du 1er décembre 2009 relative au contrôle scientifique et technique des services de l'État sur la conservation des monuments historiques classés et inscrits](https://www.legifrance.gouv.fr/download/pdf/circ?id=30077)
