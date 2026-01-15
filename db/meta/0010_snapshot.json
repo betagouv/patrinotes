@@ -1,0 +1,3476 @@
+{
+  "id": "e08fe1c8-b9e9-4426-b58a-5a127ea5aa89",
+  "prevId": "c9656349-8ee7-4b6f-9292-63f3a26d0ac1",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.clause_v2": {
+      "name": "clause_v2",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.delegation": {
+      "name": "delegation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delegatedTo": {
+          "name": "delegatedTo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "delegation_createdBy_fkey": {
+          "name": "delegation_createdBy_fkey",
+          "tableFrom": "delegation",
+          "tableTo": "user",
+          "columnsFrom": [
+            "createdBy"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "delegation_delegatedTo_fkey": {
+          "name": "delegation_delegatedTo_fkey",
+          "tableFrom": "delegation",
+          "tableTo": "user",
+          "columnsFrom": [
+            "delegatedTo"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.internal_user": {
+      "name": "internal_user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "temporaryLink": {
+          "name": "temporaryLink",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "temporaryLinkExpiresAt": {
+          "name": "temporaryLinkExpiresAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "newsletter": {
+          "name": "newsletter",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "internal_user_userId_fkey": {
+          "name": "internal_user_userId_fkey",
+          "tableFrom": "internal_user",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.merimee": {
+      "name": "merimee",
+      "schema": "",
+      "columns": {
+        "rowid": {
+          "name": "rowid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ACMH": {
+          "name": "ACMH",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ACTU": {
+          "name": "ACTU",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ACURL": {
+          "name": "ACURL",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ADRS": {
+          "name": "ADRS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "AFFE": {
+          "name": "AFFE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "AIRE": {
+          "name": "AIRE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "APPL": {
+          "name": "APPL",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "APRO": {
+          "name": "APRO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ARCHEO": {
+          "name": "ARCHEO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "AUTP": {
+          "name": "AUTP",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "AUTR": {
+          "name": "AUTR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "BASE": {
+          "name": "BASE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "CADA": {
+          "name": "CADA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "CANT": {
+          "name": "CANT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "COLL": {
+          "name": "COLL",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "COM": {
+          "name": "COM",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "CONTACT": {
+          "name": "CONTACT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "CONTIENT_IMAGE": {
+          "name": "CONTIENT_IMAGE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "COOR": {
+          "name": "COOR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "COORM": {
+          "name": "COORM",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "COPY": {
+          "name": "COPY",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "COUV": {
+          "name": "COUV",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DATE": {
+          "name": "DATE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DBOR": {
+          "name": "DBOR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DENO": {
+          "name": "DENO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DENQ": {
+          "name": "DENQ",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DEPL": {
+          "name": "DEPL",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DESC": {
+          "name": "DESC",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DIMS": {
+          "name": "DIMS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DLAB": {
+          "name": "DLAB",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DMAJ(DATE)": {
+          "name": "DMAJ(DATE)",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DMIS(DATE)": {
+          "name": "DMIS(DATE)",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DOMN": {
+          "name": "DOMN",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DOSADRS": {
+          "name": "DOSADRS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DOSS": {
+          "name": "DOSS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DOSURL": {
+          "name": "DOSURL",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DOSURLPDF": {
+          "name": "DOSURLPDF",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DPRO": {
+          "name": "DPRO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DPT": {
+          "name": "DPT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "DPT_LETTRE": {
+          "name": "DPT_LETTRE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "EDIF": {
+          "name": "EDIF",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ELEV": {
+          "name": "ELEV",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ENER": {
+          "name": "ENER",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ESCA": {
+          "name": "ESCA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ETAG": {
+          "name": "ETAG",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ETAT": {
+          "name": "ETAT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ETUD": {
+          "name": "ETUD",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "GENR": {
+          "name": "GENR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "HIST": {
+          "name": "HIST",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "HYDR": {
+          "name": "HYDR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "IDAGR": {
+          "name": "IDAGR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "IMAGE": {
+          "name": "IMAGE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "IMG": {
+          "name": "IMG",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "IMPL": {
+          "name": "IMPL",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "INSEE": {
+          "name": "INSEE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "INTE": {
+          "name": "INTE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "JATT": {
+          "name": "JATT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "JDAT": {
+          "name": "JDAT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "LIENS": {
+          "name": "LIENS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "LIEU": {
+          "name": "LIEU",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "LINHA": {
+          "name": "LINHA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "LMDP": {
+          "name": "LMDP",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "LOCA": {
+          "name": "LOCA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "LREG": {
+          "name": "LREG",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "MFICH": {
+          "name": "MFICH",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "MHPP": {
+          "name": "MHPP",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "MICR": {
+          "name": "MICR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "MOSA": {
+          "name": "MOSA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "MURS": {
+          "name": "MURS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "NBOR": {
+          "name": "NBOR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "NOMS": {
+          "name": "NOMS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "OBS": {
+          "name": "OBS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PAFF": {
+          "name": "PAFF",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PARN": {
+          "name": "PARN",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PART": {
+          "name": "PART",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PDEN": {
+          "name": "PDEN",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PERS": {
+          "name": "PERS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PINT": {
+          "name": "PINT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PLAN": {
+          "name": "PLAN",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PLOC": {
+          "name": "PLOC",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_ARRETE_PROTECTION": {
+          "name": "POP_ARRETE_PROTECTION",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_CONTIENT_GEOLOCALISATION": {
+          "name": "POP_CONTIENT_GEOLOCALISATION",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_COORDINATES_POINT": {
+          "name": "POP_COORDINATES_POINT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_COORDINATES_POLYGON": {
+          "name": "POP_COORDINATES_POLYGON",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_COORDONNEES": {
+          "name": "POP_COORDONNEES",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_DATE": {
+          "name": "POP_DATE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_DOSSIER_PROTECTION": {
+          "name": "POP_DOSSIER_PROTECTION",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_DOSSIER_VERT": {
+          "name": "POP_DOSSIER_VERT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_FLAGS": {
+          "name": "POP_FLAGS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_HAS_LOCATION": {
+          "name": "POP_HAS_LOCATION",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "POP_IMPORT": {
+          "name": "POP_IMPORT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PPRO": {
+          "name": "PPRO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PREP": {
+          "name": "PREP",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PRODUCTEUR": {
+          "name": "PRODUCTEUR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PROT": {
+          "name": "PROT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "PSTA": {
+          "name": "PSTA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REF": {
+          "name": "REF",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "REFE": {
+          "name": "REFE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REFIM": {
+          "name": "REFIM",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REFJOC": {
+          "name": "REFJOC",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REFM": {
+          "name": "REFM",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REFMUS": {
+          "name": "REFMUS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REFO": {
+          "name": "REFO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REFP": {
+          "name": "REFP",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REG": {
+          "name": "REG",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REMA": {
+          "name": "REMA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REMP": {
+          "name": "REMP",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "RENV": {
+          "name": "RENV",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "REPR": {
+          "name": "REPR",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "RFPA": {
+          "name": "RFPA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "SCLD": {
+          "name": "SCLD",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "SCLE": {
+          "name": "SCLE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "SCLX": {
+          "name": "SCLX",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "SITE": {
+          "name": "SITE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "STAT": {
+          "name": "STAT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "TECH": {
+          "name": "TECH",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "THEM": {
+          "name": "THEM",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "TICO": {
+          "name": "TICO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "TOIT": {
+          "name": "TOIT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "TOUT": {
+          "name": "TOUT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "TYPO": {
+          "name": "TYPO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "VERT": {
+          "name": "VERT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "VIDEO": {
+          "name": "VIDEO",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "VISI": {
+          "name": "VISI",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "VOCA": {
+          "name": "VOCA",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "VOUT": {
+          "name": "VOUT",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "WADRS": {
+          "name": "WADRS",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "WCOM": {
+          "name": "WCOM",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "WEB": {
+          "name": "WEB",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "WRENV": {
+          "name": "WRENV",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ZONE": {
+          "name": "ZONE",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "merimee_dpt": {
+          "name": "merimee_dpt",
+          "columns": [
+            {
+              "expression": "DPT",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "merimee_insee": {
+          "name": "merimee_insee",
+          "columns": [
+            {
+              "expression": "INSEE",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "merimee_producteur": {
+          "name": "merimee_producteur",
+          "columns": [
+            {
+              "expression": "PRODUCTEUR",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pdf_snapshot": {
+      "name": "pdf_snapshot",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "report_id": {
+          "name": "report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "html": {
+          "name": "html",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "report": {
+          "name": "report",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.picture_lines": {
+      "name": "picture_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "attachmentId": {
+          "name": "attachmentId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lines": {
+          "name": "lines",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "table": {
+          "name": "table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pictures": {
+      "name": "pictures",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reportId": {
+          "name": "reportId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finalUrl": {
+          "name": "finalUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pictures_reportId_fkey": {
+          "name": "pictures_reportId_fkey",
+          "tableFrom": "pictures",
+          "tableTo": "report",
+          "columnsFrom": [
+            "reportId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pop_images": {
+      "name": "pop_images",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "copyright": {
+          "name": "copyright",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dept_number": {
+          "name": "dept_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pop_immeubles": {
+      "name": "pop_immeubles",
+      "schema": "",
+      "columns": {
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "destination_actuelle_de_l_edifice": {
+          "name": "destination_actuelle_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adresse_forme_index": {
+          "name": "adresse_forme_index",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etablissement_affectataire_de_l_edifice": {
+          "name": "etablissement_affectataire_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "autre_appellation_de_l_edifice": {
+          "name": "autre_appellation_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nature_de_la_protection": {
+          "name": "nature_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auteur_de_l_edifice": {
+          "name": "auteur_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cadastre": {
+          "name": "cadastre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commune_forme_index": {
+          "name": "commune_forme_index",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "copyright": {
+          "name": "copyright",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type_de_couverture": {
+          "name": "type_de_couverture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "datation_de_l_edifice": {
+          "name": "datation_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "denomination_de_l_edifice": {
+          "name": "denomination_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lieu_de_conservation_d_un_element_architectural_deplace": {
+          "name": "lieu_de_conservation_d_un_element_architectural_deplace",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description_de_l_edifice": {
+          "name": "description_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dimensions_normalisees_des_edicules_uniquement": {
+          "name": "dimensions_normalisees_des_edicules_uniquement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_de_label": {
+          "name": "date_de_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_de_la_derniere_mise_a_jour": {
+          "name": "date_de_la_derniere_mise_a_jour",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_de_creation_de_la_notice": {
+          "name": "date_de_creation_de_la_notice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "domaine": {
+          "name": "domaine",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_du_dossier": {
+          "name": "typologie_du_dossier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_et_typologie_de_la_protection": {
+          "name": "date_et_typologie_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "departement_format_numerique": {
+          "name": "departement_format_numerique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partie_d_elevation_exterieure": {
+          "name": "partie_d_elevation_exterieure",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_de_l_energie_utilisee_par_l_edifice": {
+          "name": "source_de_l_energie_utilisee_par_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "emplacement__forme_et_structure_de_l_escalier": {
+          "name": "emplacement__forme_et_structure_de_l_escalier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description_de_l_elevation_interieure": {
+          "name": "description_de_l_elevation_interieure",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etat_de_conservation": {
+          "name": "etat_de_conservation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cadre_de_l_etude": {
+          "name": "cadre_de_l_etude",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "genre_du_destinataire": {
+          "name": "genre_du_destinataire",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "historique": {
+          "name": "historique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nom_du_cours_d_eau_traversant_ou_bordant_l_edifice": {
+          "name": "nom_du_cours_d_eau_traversant_ou_bordant_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identifiant_agregee": {
+          "name": "identifiant_agregee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cog_insee_lors_de_la_protection": {
+          "name": "cog_insee_lors_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "justification_attribution": {
+          "name": "justification_attribution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "justification_de_la_datation": {
+          "name": "justification_de_la_datation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "liens_externes": {
+          "name": "liens_externes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lieudit": {
+          "name": "lieudit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_archiv_mh": {
+          "name": "lien_vers_la_base_archiv_mh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "materiaux_du_gros_oeuvre": {
+          "name": "materiaux_du_gros_oeuvre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observations": {
+          "name": "observations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_affectataire": {
+          "name": "precision_affectataire",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partie_constituante_non_etudiee": {
+          "name": "partie_constituante_non_etudiee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partie_constituante": {
+          "name": "partie_constituante",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_la_denomination": {
+          "name": "precision_sur_la_denomination",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personnes_liees_a_l_edifice": {
+          "name": "personnes_liees_a_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_de_plan": {
+          "name": "typologie_de_plan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_de_la_localisation": {
+          "name": "precision_de_la_localisation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_de_la_protection": {
+          "name": "precision_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description_de_l_iconographie": {
+          "name": "description_de_l_iconographie",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_de_la_protection": {
+          "name": "typologie_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_le_statut_de_l_edifice": {
+          "name": "precision_sur_le_statut_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_a_un_ensemble": {
+          "name": "reference_a_un_ensemble",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_joconde": {
+          "name": "lien_vers_la_base_joconde",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_palissy": {
+          "name": "lien_vers_la_base_palissy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "references_des_parties_constituantes_etudiees": {
+          "name": "references_des_parties_constituantes_etudiees",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "région": {
+          "name": "région",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "département": {
+          "name": "département",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "elements_remarquables_dans_l_edifice": {
+          "name": "elements_remarquables_dans_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "remploi": {
+          "name": "remploi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "renvoi_vers_une_notice_de_la_base_merimee_ou_palissy": {
+          "name": "renvoi_vers_une_notice_de_la_base_merimee_ou_palissy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "indexation_iconographique_normalisee": {
+          "name": "indexation_iconographique_normalisee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "siecle_de_campagne_secondaire_de_construction": {
+          "name": "siecle_de_campagne_secondaire_de_construction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "siecle_de_la_campagne_principale_de_construction": {
+          "name": "siecle_de_la_campagne_principale_de_construction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "format_abrege_du_siecle_de_construction": {
+          "name": "format_abrege_du_siecle_de_construction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_de_la_zone_de_protection": {
+          "name": "typologie_de_la_zone_de_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut_juridique_de_l_edifice": {
+          "name": "statut_juridique_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "technique_du_decor_porte_de_l_edifice": {
+          "name": "technique_du_decor_porte_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titre_editorial_de_la_notice": {
+          "name": "titre_editorial_de_la_notice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "materiaux_de_la_couverture": {
+          "name": "materiaux_de_la_couverture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "couverts_ou_decouverts_du_jardin_de_l_edifice": {
+          "name": "couverts_ou_decouverts_du_jardin_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vocable___pour_les_edifices_cultuels": {
+          "name": "vocable___pour_les_edifices_cultuels",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_du_couvrement": {
+          "name": "typologie_du_couvrement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adresse_forme_editoriale": {
+          "name": "adresse_forme_editoriale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commune_forme_editoriale": {
+          "name": "commune_forme_editoriale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coordonnees_au_format_wgs84": {
+          "name": "coordonnees_au_format_wgs84",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_image_check_at": {
+          "name": "last_image_check_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pop_objets": {
+      "name": "pop_objets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "contexte_d_acquisition": {
+          "name": "contexte_d_acquisition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adresse_forme_index": {
+          "name": "adresse_forme_index",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auteur_du_projet": {
+          "name": "auteur_du_projet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "appellation_d_usage": {
+          "name": "appellation_d_usage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personne_morale_creatrice_de_l_objet": {
+          "name": "personne_morale_creatrice_de_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auteur_de_l_oeuvre_ou_createur_de_l_objet": {
+          "name": "auteur_de_l_oeuvre_ou_createur_de_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "references_de_publications": {
+          "name": "references_de_publications",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categorie_technique": {
+          "name": "categorie_technique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commune_forme_index": {
+          "name": "commune_forme_index",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "copyright": {
+          "name": "copyright",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "annee_de_creation": {
+          "name": "annee_de_creation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "denomination": {
+          "name": "denomination",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_du_recolement": {
+          "name": "date_du_recolement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lieu_de_deplacement_de_l_objet": {
+          "name": "lieu_de_deplacement_de_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dimensions": {
+          "name": "dimensions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_de_la_derniere_mise_a_jour": {
+          "name": "date_de_la_derniere_mise_a_jour",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_de_creation_de_la_notice": {
+          "name": "date_de_creation_de_la_notice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "domaine": {
+          "name": "domaine",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_et_typologie_de_la_protection": {
+          "name": "date_et_typologie_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "departement_format_numerique": {
+          "name": "departement_format_numerique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "departement_en_lettres": {
+          "name": "departement_en_lettres",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nom_de_l_edifice": {
+          "name": "nom_de_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "emplacement_de_l_oeuvre_dans_l_edifice": {
+          "name": "emplacement_de_l_oeuvre_dans_l_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etat": {
+          "name": "etat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cadre_de_l_etude": {
+          "name": "cadre_de_l_etude",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lieu_de_creation": {
+          "name": "lieu_de_creation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "references_d_expositions": {
+          "name": "references_d_expositions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "historique": {
+          "name": "historique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identifiant_agregee": {
+          "name": "identifiant_agregee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inscription": {
+          "name": "inscription",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cog_insee": {
+          "name": "cog_insee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "justification_de_la_datation": {
+          "name": "justification_de_la_datation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_arcade": {
+          "name": "lien_vers_la_base_arcade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "liens_externes": {
+          "name": "liens_externes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lieudit": {
+          "name": "lieudit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_inha": {
+          "name": "lien_vers_la_base_inha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_archiv_mh": {
+          "name": "lien_vers_la_base_archiv_mh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut_juridique_de_l_objet": {
+          "name": "statut_juridique_de_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "materiaux": {
+          "name": "materiaux",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "numero_artificiel_de_differenciation_de_l_objet": {
+          "name": "numero_artificiel_de_differenciation_de_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "numero_d_inventaire_affecte_a_l_objet": {
+          "name": "numero_d_inventaire_affecte_a_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nom_du_redacteur": {
+          "name": "nom_du_redacteur",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "numero_de_l_arrete_de_protection": {
+          "name": "numero_de_l_arrete_de_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observations": {
+          "name": "observations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lieu_de_provenance": {
+          "name": "lieu_de_provenance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "intitule_de_l_ensemble": {
+          "name": "intitule_de_l_ensemble",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partie_constituante_non_etudiee": {
+          "name": "partie_constituante_non_etudiee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partie_constituante": {
+          "name": "partie_constituante",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_la_denomination": {
+          "name": "precision_sur_la_denomination",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_les_dimensions": {
+          "name": "precision_sur_les_dimensions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personnes_liees_a_l_objet": {
+          "name": "personnes_liees_a_l_objet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_l_etat": {
+          "name": "precision_sur_l_etat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_l_inscription": {
+          "name": "precision_sur_l_inscription",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_la_localisation": {
+          "name": "precision_sur_la_localisation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_la_protection": {
+          "name": "precision_sur_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision_sur_la_representation": {
+          "name": "precision_sur_la_representation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_de_la_protection": {
+          "name": "typologie_de_la_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_a_une_notice_merimee_mh": {
+          "name": "reference_a_une_notice_merimee_mh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_a_un_ensemble": {
+          "name": "reference_a_un_ensemble",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_joconde": {
+          "name": "lien_vers_la_base_joconde",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lien_vers_la_base_museofile": {
+          "name": "lien_vers_la_base_museofile",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_a_une_partie_constituante": {
+          "name": "reference_a_une_partie_constituante",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "renvoi_vers_une_notice_palissy_mh_ou_merimee_mh": {
+          "name": "renvoi_vers_une_notice_palissy_mh_ou_merimee_mh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "indexation_iconographique_normalisee": {
+          "name": "indexation_iconographique_normalisee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "siecle_de_creation": {
+          "name": "siecle_de_creation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "format_abrege_du_siecle_de_creation": {
+          "name": "format_abrege_du_siecle_de_creation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sources_d_archives_et_bases_de_donnees_de_reference": {
+          "name": "sources_d_archives_et_bases_de_donnees_de_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etape_de_creation": {
+          "name": "etape_de_creation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut_juridique_du_proprietaire": {
+          "name": "statut_juridique_du_proprietaire",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "structure_et_typologie": {
+          "name": "structure_et_typologie",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "theme_de_l_etude": {
+          "name": "theme_de_l_etude",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titre_editorial": {
+          "name": "titre_editorial",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titre_iconographique": {
+          "name": "titre_iconographique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "informations_relatives_aux_vols": {
+          "name": "informations_relatives_aux_vols",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adresse_forme_editoriale": {
+          "name": "adresse_forme_editoriale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commune_forme_editoriale": {
+          "name": "commune_forme_editoriale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "typologie_du_dossier": {
+          "name": "typologie_du_dossier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "code_insee_commune_actuelle": {
+          "name": "code_insee_commune_actuelle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "edifice_actuel": {
+          "name": "edifice_actuel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_image_check_at": {
+          "name": "last_image_check_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.report": {
+      "name": "report",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "projectDescription": {
+          "name": "projectDescription",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "redactedBy": {
+          "name": "redactedBy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "meetDate": {
+          "name": "meetDate",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "applicantName": {
+          "name": "applicantName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "applicantAddress": {
+          "name": "applicantAddress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "projectCadastralRef": {
+          "name": "projectCadastralRef",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "projectSpaceType": {
+          "name": "projectSpaceType",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precisions": {
+          "name": "precisions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contacts": {
+          "name": "contacts",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "furtherInformation": {
+          "name": "furtherInformation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "serviceInstructeur": {
+          "name": "serviceInstructeur",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pdf": {
+          "name": "pdf",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "redactedById": {
+          "name": "redactedById",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "applicantEmail": {
+          "name": "applicantEmail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "zipCode": {
+          "name": "zipCode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "report_createdBy_fkey": {
+          "name": "report_createdBy_fkey",
+          "tableFrom": "report",
+          "tableTo": "user",
+          "columnsFrom": [
+            "createdBy"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.report_attachment": {
+      "name": "report_attachment",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "is_deprecated": {
+          "name": "is_deprecated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "report_id": {
+          "name": "report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sent_email": {
+      "name": "sent_email",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "report_id": {
+          "name": "report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_to": {
+          "name": "sent_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sent_email_report_id_fkey": {
+          "name": "sent_email_report_id_fkey",
+          "tableFrom": "sent_email",
+          "tableTo": "report",
+          "columnsFrom": [
+            "report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.service": {
+      "name": "service",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "visible": {
+          "name": "visible",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marianne_text": {
+          "name": "marianne_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "drac_text": {
+          "name": "drac_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_text": {
+          "name": "service_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dept_numbers": {
+          "name": "dept_numbers",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "courriel_crmh": {
+          "name": "courriel_crmh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "courriel_caoa": {
+          "name": "courriel_caoa",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "courriel_dreal": {
+          "name": "courriel_dreal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "courriel_sra": {
+          "name": "courriel_sra",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "courriel_udap": {
+          "name": "courriel_udap",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "courriel_ofb": {
+          "name": "courriel_ofb",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "department": {
+          "name": "department",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completeCoords": {
+          "name": "completeCoords",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "zipCode": {
+          "name": "zipCode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.service_instructeurs": {
+      "name": "service_instructeurs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "short_name": {
+          "name": "short_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tel": {
+          "name": "tel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.state_report": {
+      "name": "state_report",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nature_edifice": {
+          "name": "nature_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "redacted_by_name": {
+          "name": "redacted_by_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "redacted_by_id": {
+          "name": "redacted_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_pop": {
+          "name": "reference_pop",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adresse": {
+          "name": "adresse",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commune": {
+          "name": "commune",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "code_postal": {
+          "name": "code_postal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commune_historique": {
+          "name": "commune_historique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_cadastrale": {
+          "name": "reference_cadastrale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "periode_construction": {
+          "name": "periode_construction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nature_protection": {
+          "name": "nature_protection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parties_protegees": {
+          "name": "parties_protegees",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observations": {
+          "name": "observations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titre_edifice": {
+          "name": "titre_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nature_visite": {
+          "name": "nature_visite",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visite_partielle_details": {
+          "name": "visite_partielle_details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bilan_quinquennal": {
+          "name": "bilan_quinquennal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_visite": {
+          "name": "date_visite",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "redacted_by": {
+          "name": "redacted_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personnes_presentes": {
+          "name": "personnes_presentes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proprietaire": {
+          "name": "proprietaire",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proprietaire_email": {
+          "name": "proprietaire_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proprietaire_representant": {
+          "name": "proprietaire_representant",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proprietaire_representant_email": {
+          "name": "proprietaire_representant_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etat_general": {
+          "name": "etat_general",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proportion_dans_cet_etat": {
+          "name": "proportion_dans_cet_etat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etat_commentaires": {
+          "name": "etat_commentaires",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plan_situation": {
+          "name": "plan_situation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plan_edifice": {
+          "name": "plan_edifice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vue_generale": {
+          "name": "vue_generale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preconisations": {
+          "name": "preconisations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preconisations_commentaires": {
+          "name": "preconisations_commentaires",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "state_report_created_by_fkey": {
+          "name": "state_report_created_by_fkey",
+          "tableFrom": "state_report",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.state_report_attachment": {
+      "name": "state_report_attachment",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "is_deprecated": {
+          "name": "is_deprecated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_report_id": {
+          "name": "state_report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.state_report_sent_email": {
+      "name": "state_report_sent_email",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "state_report_id": {
+          "name": "state_report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_to": {
+          "name": "sent_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "state_report_sent_email_state_report_id_fkey": {
+          "name": "state_report_sent_email_state_report_id_fkey",
+          "tableFrom": "state_report_sent_email",
+          "tableTo": "state_report",
+          "columnsFrom": [
+            "state_report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.suggested_email": {
+      "name": "suggested_email",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "suggested_email_email_key": {
+          "name": "suggested_email_email_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transactions": {
+      "name": "transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "op_id": {
+          "name": "op_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tx_id": {
+          "name": "tx_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "op": {
+          "name": "op",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_service_id_fkey": {
+          "name": "user_service_id_fkey",
+          "tableFrom": "user",
+          "tableTo": "service",
+          "columnsFrom": [
+            "service_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_email_key": {
+          "name": "user_email_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_dept": {
+      "name": "user_dept",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dept_number": {
+          "name": "dept_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_dept_user_id_fkey": {
+          "name": "user_dept_user_id_fkey",
+          "tableFrom": "user_dept",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "user_dept_pkey": {
+          "name": "user_dept_pkey",
+          "columns": [
+            "user_id",
+            "dept_number"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_settings": {
+      "name": "user_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_emails": {
+          "name": "default_emails",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.visited_section": {
+      "name": "visited_section",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "state_report_id": {
+          "name": "state_report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "section": {
+          "name": "section",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "etat_general": {
+          "name": "etat_general",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proportion_dans_cet_etat": {
+          "name": "proportion_dans_cet_etat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commentaires": {
+          "name": "commentaires",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "visited_section_state_report_id_fkey": {
+          "name": "visited_section_state_report_id_fkey",
+          "tableFrom": "visited_section",
+          "tableTo": "state_report",
+          "columnsFrom": [
+            "state_report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.visited_section_attachment": {
+      "name": "visited_section_attachment",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "is_deprecated": {
+          "name": "is_deprecated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "visited_section_id": {
+          "name": "visited_section_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.whitelist": {
+      "name": "whitelist",
+      "schema": "",
+      "columns": {
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
