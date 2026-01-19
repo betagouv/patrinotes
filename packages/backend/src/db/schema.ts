@@ -173,6 +173,25 @@ export const stateReportAttachment = pgTable("state_report_attachment", {
   service_id: text("service_id"),
 });
 
+export const stateReportAlert = pgTable("state_report_alert", {
+  id: text().primaryKey().notNull(),
+  stateReportId: text("state_report_id").notNull(),
+  alert: text("alert").notNull(),
+  commentaires: text(),
+  showInReport: boolean("show_in_report"),
+  service_id: text("service_id"),
+});
+
+export const stateReportAlertAttachment = pgTable("state_report_alert_attachment", {
+  id: text().primaryKey().notNull(),
+  isDeprecated: boolean("is_deprecated"),
+  attachmentId: text("attachment_id").notNull(),
+  stateReportAlertId: text("state_report_alert_id").notNull(),
+  label: text(),
+  createdAt: timestamp("created_at", { mode: "string" }),
+  service_id: text("service_id"),
+});
+
 export const pdfSnapshot = pgTable("pdf_snapshot", {
   id: text().primaryKey().notNull(),
   reportId: text("report_id"),

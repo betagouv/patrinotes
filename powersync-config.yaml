@@ -42,6 +42,8 @@ sync_rules:
           - SELECT * FROM report_attachment WHERE service_id = bucket.service_id
           - SELECT * FROM state_report_attachment WHERE service_id = bucket.service_id
           - SELECT * FROM picture_lines WHERE service_id = bucket.service_id
+          - SELECT * FROM state_report_alert WHERE service_id = bucket.service_id
+          - SELECT * FROM state_report_alert_attachment WHERE service_id = bucket.service_id
 
 
       dept_bucket:

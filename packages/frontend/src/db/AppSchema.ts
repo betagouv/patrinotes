@@ -384,6 +384,23 @@ const pop_images = new Table({
   dept_number: column.text,
 });
 
+const state_report_alert = new Table({
+  state_report_id: column.text,
+  alert: column.text,
+  commentaires: column.text,
+  show_in_report: column.integer,
+  service_id: column.text,
+});
+
+const state_report_alert_attachment = new Table({
+  state_report_alert_id: column.text,
+  attachment_id: column.text,
+  is_deprecated: column.integer,
+  label: column.text,
+  created_at: column.text,
+  service_id: column.text,
+});
+
 export const AppSchema = new Schema({
   report,
   service,
@@ -407,6 +424,8 @@ export const AppSchema = new Schema({
   state_report_sent_email,
   pop_objets,
   pop_images,
+  state_report_alert,
+  state_report_alert_attachment,
   attachments: new AttachmentTable({
     name: "attachments",
   }),
@@ -435,6 +454,7 @@ export type StateReportAttachment = Database["state_report_attachment"];
 export type StateReportSentEmail = Database["state_report_sent_email"];
 export type PopObjet = Database["pop_objets"];
 export type PopImage = Database["pop_images"];
+export type StateReportAlert = Database["state_report_alert"];
 
 import type { Database as BackendDatabase } from "../../../backend/src/db/db";
 import { AttachmentTable } from "@powersync/attachments";

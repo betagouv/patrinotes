@@ -43,7 +43,7 @@ export const MenuTitle = ({
           xs: buttons ? "none" : "block",
           lg: "block",
         }}
-        pl={backButtonOnClick ? undefined : "16px"}
+        pl={backButtonOnClick ? "16px" : 0}
         textOverflow="ellipsis"
         fontSize="20px"
         fontWeight="bold"
@@ -89,5 +89,23 @@ export const ModalCloseButton = ({ onClose }: { onClose: () => void }) => {
     >
       Fermer
     </button>
+  );
+};
+
+export const ModalBackButton = ({ onClick }: { onClick: () => void }) => {
+  return (
+    <Button
+      priority="tertiary no outline"
+      sx={{
+        fontSize: "14px",
+      }}
+      title="Retour"
+      type="button"
+      iconId="ri-arrow-left-line"
+      data-fr-js-modal-button="true"
+      onClick={onClick}
+    >
+      Retour
+    </Button>
   );
 };

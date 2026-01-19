@@ -9,7 +9,9 @@ export class AttachmentQueue extends AbstractAttachmentQueue {
         UNION ALL
         SELECT attachment_id FROM state_report_attachment
         UNION ALL
-        SELECT attachment_id FROM visited_section_attachment `,
+        SELECT attachment_id FROM visited_section_attachment
+        UNION ALL
+        SELECT attachment_id FROM state_report_alert_attachment`,
       [],
       {
         onResult: ({ rows }) => onUpdate(rows?._array?.map((r) => r.attachment_id) ?? []),
