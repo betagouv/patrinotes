@@ -20,6 +20,7 @@ import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
+import { fr } from "@codegouvfr/react-dsfr";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -101,17 +102,22 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
   );
 };
 
-const SectionItem = ({
+export const SectionItem = ({
   section,
   isVisited,
+  details,
   onClick,
+  withIcon,
 }: {
   section: string;
   isVisited?: boolean;
+  details?: string;
+  withIcon?: boolean;
   onClick: (section: string) => void;
 }) => {
   return (
     <Tile
+      detail={details}
       title={
         <Flex alignItems="center" flexDirection="column">
           {isVisited ? (
@@ -125,7 +131,7 @@ const SectionItem = ({
       buttonProps={{
         onClick: () => onClick(section),
       }}
-      noIcon
+      noIcon={!withIcon}
       sx={{
         width: { xs: "100%", lg: "48%" },
         py: isVisited ? "16px" : undefined,

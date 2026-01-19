@@ -10,11 +10,13 @@ export const MenuTitle = ({
   buttons,
   hideDivider,
   alert,
+  onClose,
 }: {
   children: ReactNode;
   backButtonOnClick?: () => void;
   buttons?: ReactNode;
   hideDivider?: boolean;
+  onClose?: () => void;
   alert?: ReactNode;
 }) => (
   <>
@@ -61,7 +63,7 @@ export const MenuTitle = ({
       >
         {buttons}
       </Flex>
-      <ModalCloseButton onClose={() => menuActor.send({ type: "CLOSE" })} />
+      <ModalCloseButton onClose={onClose ?? (() => menuActor.send({ type: "CLOSE" }))} />
     </Flex>
     {alert ? alert : null}
     {!hideDivider ? (

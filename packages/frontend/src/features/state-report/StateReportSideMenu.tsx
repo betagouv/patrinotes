@@ -1,8 +1,10 @@
-import { Box, Drawer, Stack } from "@mui/material";
+import { Box, Drawer, Stack, Typography } from "@mui/material";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { Button } from "#components/MUIDsfr.tsx";
 import { useStateReportFormContext } from "./utils";
 import { ReactNode, useState } from "react";
+import { MenuTitle } from "../menu/MenuTitle";
+import { SectionItem } from "./steps/ConstatDetaille";
 
 export const StateReportSideMenu = () => {
   const [sideMenu, setSideMenu] = useState<MenuStates>("closed");
@@ -68,8 +70,33 @@ const modalContents: Record<MenuStates, (props: ModalContentProps) => ReactNode>
 };
 
 const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
-  return null;
+  return (
+    <Stack>
+      <MenuTitle hideDivider onClose={onClose}>
+        Alertes
+      </MenuTitle>
+      <Typography mb="24px">
+        Vous avez remarqué un problème lié au monument historique ?<br />
+        Signalez une alerte auprès du service concerné :
+      </Typography>
+      <Stack gap="8px" flexWrap="wrap" flexDirection="row">
+        {sections.map(({ title, details }) => (
+          <SectionItem key={title} withIcon section={title} details={details} isVisited={false} onClick={() => {}} />
+        ))}
+      </Stack>
+    </Stack>
+  );
 };
+
+const sections = [
+  { title: "Edifice en péril", details: "CRMH" },
+  { title: "Abords de l'édifice", details: "UDAP" },
+  { title: "Objets et mobiliers", details: "CAOA" },
+  { title: "Archéologie", details: "SRA" },
+  { title: "Site classé ou inscrit", details: "DREAL" },
+  { title: "Biodiversité", details: "OFB" },
+  { title: "Sécurité", details: "Mairie" },
+];
 
 const StateReportNotesMenu = ({ onClose }: ModalContentProps) => {
   return null;
