@@ -22,7 +22,7 @@ function RouteComponent() {
   return (
     <Flex width="100%" height="100%" flexDirection="column" alignItems="center">
       <SimpleBanner width="100%" alignItems="flex-start" pt="20px">
-        <Flex width={{ xs: "100%", lg: "1200px" }} flexDirection="column" px="16px">
+        <Flex width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" flexDirection="column" px="16px">
           <Link to="/" style={{ textDecoration: "underline" }} search={{ document: "constats" }}>
             <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
               Retour à l'accueil
@@ -44,7 +44,7 @@ function RouteComponent() {
 const WithStateReport = () => {
   const { constatId } = Route.useParams();
   const reportQuery = useDbQuery(db.selectFrom("state_report").where("id", "=", constatId).selectAll());
-  console.log(reportQuery.data);
+
   if (reportQuery.isLoading) {
     return (
       <Center mt="100px" height="100%">

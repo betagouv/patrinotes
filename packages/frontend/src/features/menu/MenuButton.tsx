@@ -105,32 +105,6 @@ export const MenuButton = () => {
                 Déconnexion
               </Typography>
             </Button>
-            {/* <Popover.Root
-              positioning={{ placement: "bottom-end" }}
-              modal
-              open={isPopoverOpen}
-              onOpenChange={({ open }) => {
-                if (!isDesktop) return;
-                if (open) menuActor.send({ type: "OPEN" });
-                if (menu === "main") menuActor.send({ type: "CLOSE" });
-              }}
-            >
-              <Popover.Trigger asChild>
-                <Button
-                  className={css({ ml: "16px", mb: "0" })}
-                  priority="tertiary no outline"
-                  iconId="ri-settings-2-fill"
-                  data-test-id="settings-menu"
-                >
-                  Paramètre
-                </Button>
-              </Popover.Trigger>
-              <Popover.Positioner>
-                <Popover.Content borderRadius="0">
-                  <MenuActions />
-                </Popover.Content>
-              </Popover.Positioner>
-            </Popover.Root> */}
           </Flex>
         ) : (
           <Center zIndex="1150" position="absolute" top="0" right="24px" height="100%">

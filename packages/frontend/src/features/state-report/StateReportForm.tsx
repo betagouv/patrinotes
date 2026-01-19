@@ -9,6 +9,7 @@ import { useBannerBgColor } from "#components/Banner.tsx";
 import { useSyncForm } from "#components/SyncForm.tsx";
 import { db } from "../../db/db";
 import { useFormWithFocus, useRefreshForm } from "../../hooks/useFormWithFocus";
+import { StateReportSideMenu } from "./StateReportSideMenu";
 
 export const StateReportForm = ({ report }: { report: StateReport }) => {
   const [form, getFocused] = useFormWithFocus<StateReportFormType>({
@@ -29,22 +30,24 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
     <Flex flexDirection="column" alignItems={"center"} width="100%" height="100%">
       <FormProvider {...form}>
         <SyncForm report={report} />
-        <Flex
-          component="form"
-          alignItems="center"
-          bgcolor={bgColor}
-          flexDirection="column"
-          pt="32px"
-          pb="32px"
-          width="100%"
-          onSubmit={form.handleSubmit(onSubmit)}
-        >
-          <EmptyImmeubleMessage />
-          <Box width={{ xs: "100%", lg: "1200px" }} px="16px">
-            <ImmeubleAutocomplete />
-          </Box>
+        <Flex bgcolor={bgColor} width="100%" justifyContent="space-between">
+          <Flex
+            component="form"
+            alignItems="center"
+            flexDirection="column"
+            pt="32px"
+            pb="32px"
+            width="100%"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
+            <EmptyImmeubleMessage />
+            <Flex width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" px="16px" justifyContent="space-between">
+              <ImmeubleAutocomplete />
+              <StateReportSideMenu />
+            </Flex>
+          </Flex>
         </Flex>
-        <Box width={{ xs: "100%", lg: "1200px" }} px={{ xs: "0", lg: "16px" }} height="100%">
+        <Box width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" px={{ xs: "0", lg: "16px" }} height="100%">
           <WithReferencePop />
         </Box>
       </FormProvider>
