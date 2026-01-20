@@ -30,6 +30,9 @@ export const StateReportSideMenu = () => {
   const referencePop = form.watch("reference_pop");
   if (!referencePop) return null;
 
+  // TODO enable this
+  return null;
+
   return (
     <>
       <MenuModal menu={sideMenu} onClose={onClose} />

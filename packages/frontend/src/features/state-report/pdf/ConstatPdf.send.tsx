@@ -6,6 +6,7 @@ import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { PdfCanvas } from "../../../routes/pdf.$reportId";
 import { useUser } from "../../../contexts/AuthContext";
+
 export const SendConstatPdf = () => {
   const { localHtmlString } = useConstatPdfContext()!;
   const user = useUser()!;

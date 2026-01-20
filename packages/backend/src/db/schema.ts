@@ -179,6 +179,8 @@ export const stateReportAlert = pgTable("state_report_alert", {
   alert: text("alert").notNull(),
   commentaires: text(),
   showInReport: boolean("show_in_report"),
+  objetOuMobilier: text("objet_ou_mobilier"),
+  probleme: text("probleme"),
   service_id: text("service_id"),
 });
 

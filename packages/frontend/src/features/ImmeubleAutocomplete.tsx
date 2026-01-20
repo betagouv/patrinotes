@@ -92,7 +92,7 @@ export const ImmeubleAutocomplete = () => {
 
   if (hasValue && !isChanging)
     return (
-      <Flex flexDirection="column">
+      <Flex flexDirection="column" flex="1">
         {isWarningOpen ? (
           <Dialog
             open
@@ -139,6 +139,7 @@ export const ImmeubleAutocomplete = () => {
 
   return (
     <Box
+      width={{ xs: "100%", lg: "792px" }}
       sx={{
         ".immeubles-autocomplete-no-options": {
           padding: "0 !important",
