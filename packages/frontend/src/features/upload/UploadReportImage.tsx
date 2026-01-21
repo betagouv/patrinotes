@@ -186,7 +186,7 @@ export const PictureThumbnail = ({
     image.onload = () => {
       const scaleX = displayWidth / image.width;
       const scaleY = displayHeight / image.height;
-      const initialScale = Math.min(scaleX, scaleY) * 1.5;
+      const initialScale = Math.max(scaleX, scaleY);
 
       const xOffset = (displayWidth - image.width * initialScale) / 2;
       const yOffset = (displayHeight - image.height * initialScale) / 2;
