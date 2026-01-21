@@ -387,11 +387,18 @@ export const reportPdfTSchema = {
   response: { 200: Type.String() },
 };
 
+const AlertSchema = Type.Object({
+  id: Type.String(),
+  alert: Type.Union([Type.String(), Type.Null()]),
+  email: Type.String(),
+});
+
 export const stateReportPdfTSchema = {
   body: Type.Object({
     htmlString: Type.String(),
     stateReportId: Type.String(),
     recipients: Type.String(),
+    alerts: Type.Optional(Type.Array(AlertSchema)),
   }),
   response: { 200: Type.String() },
 };

@@ -1,6 +1,12 @@
-import { useContext, createContext } from "react";
+import { useContext, createContext, MutableRefObject } from "react";
 import { StateReport, StateReportAttachment, VisitedSection, VisitedSectionAttachment } from "../../../db/AppSchema";
 import { StateReportWithUser } from "../../report/ReportList";
+
+export type AlertWithEmail = {
+  id: string;
+  alert: string | null;
+  email: string;
+};
 
 type ConstatPdfContextType = {
   stateReport?: StateReportWithUserAndAttachments | null;
@@ -10,6 +16,9 @@ type ConstatPdfContextType = {
   setRecipients: (recipients: string[]) => void;
   localHtmlString: string | null;
   setLocalHtmlString: (htmlString: string) => void;
+  scrollToAlertRef?: MutableRefObject<((alertId: string) => void) | undefined>;
+  selectedAlerts: AlertWithEmail[];
+  setSelectedAlerts: (alerts: AlertWithEmail[]) => void;
 };
 
 export type SectionWithAttachments = VisitedSection & {
@@ -28,5 +37,7 @@ export const ConstatPdfContext = createContext<ConstatPdfContextType | undefined
   recipients: [],
   setRecipients: () => {},
   setLocalHtmlString: () => {},
+  selectedAlerts: [],
+  setSelectedAlerts: () => {},
 });
 export const useConstatPdfContext = () => useContext(ConstatPdfContext);

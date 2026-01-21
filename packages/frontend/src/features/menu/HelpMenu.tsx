@@ -87,6 +87,7 @@ export const HelpMenu = () => {
               sx={{
                 cursor: "pointer",
                 ":hover": { textDecoration: "underline" },
+                textDecoration: "underline",
               }}
               color="text-active-blue-france"
             >

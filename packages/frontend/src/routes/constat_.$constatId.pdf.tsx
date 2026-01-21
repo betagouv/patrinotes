@@ -1,12 +1,12 @@
 import { SimpleBanner } from "#components/Banner.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Box, BoxProps, Stack, styled, Typography } from "@mui/material";
+import { Box, BoxProps, Dialog, Stack, styled, Typography } from "@mui/material";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { StateReport, StateReportAttachment, VisitedSection, VisitedSectionAttachment } from "../db/AppSchema";
 import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
 import { useQuery } from "@tanstack/react-query";
-import { ConstatPdfContext, useConstatPdfContext } from "../features/state-report/pdf/ConstatPdfContext";
+import { AlertWithEmail, ConstatPdfContext, useConstatPdfContext } from "../features/state-report/pdf/ConstatPdfContext";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
 import { Button } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
@@ -17,7 +17,9 @@ import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";
 import Accordion from "@codegouvfr/react-dsfr/Accordion";
-import { useStateReportAlerts } from "../features/state-report/StateReportSideMenu";
+import { api } from "../api";
+import { ModalCloseButton } from "../features/menu/MenuTitle";
+import { fr } from "@codegouvfr/react-dsfr";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -40,6 +42,8 @@ const ConstatPdf = () => {
   const { constatId } = Route.useParams();
   const { mode } = Route.useSearch();
   const [recipients, setRecipients] = useState<string[]>([]);
+  const [selectedAlerts, setSelectedAlerts] = useState<AlertWithEmail[]>([]);
+  const scrollToAlertRef = useRef<((alertId: string) => void) | undefined>();
 
   const stateReportQuery = useQuery({
     queryKey: ["state-report-with-user-and-attachments", constatId],
@@ -158,6 +162,9 @@ const ConstatPdf = () => {
     setLocalHtmlString,
     recipients,
     setRecipients,
+    scrollToAlertRef,
+    selectedAlerts,
+    setSelectedAlerts,
   };
 
   return (
@@ -212,44 +219,7 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
   },
   send: {
     bannerProps: {
-      content: () => {
-        const { recipients, setRecipients } = useConstatPdfContext()!;
-        const navigate = useNavigate();
-        const { constatId } = Route.useParams();
-
-        return (
-          <Flex
-            flexDirection={{ xs: "column", lg: "row" }}
-            width="100%"
-            alignItems={{ xs: "center", lg: "flex-start" }}
-            gap="16px"
-            py={{ xs: "8px", lg: "24px" }}
-          >
-            <Typography pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
-              Courriels
-            </Typography>
-            <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
-              <EmailInput value={recipients} onValueChange={setRecipients} />
-            </Box>
-
-            <Box mr="100px" ml="8px">
-              <Button
-                type="button"
-                iconId="ri-send-plane-fill"
-                onClick={() =>
-                  navigate({
-                    to: "/constat/$constatId/pdf",
-                    params: { constatId },
-                    search: { mode: "sent" },
-                  })
-                }
-              >
-                Envoyer
-              </Button>
-            </Box>
-          </Flex>
-        );
-      },
+      content: () => <SendBannerContent />,
       buttons: () => null,
       alignTop: true,
     },
@@ -326,5 +296,143 @@ const GoBackButton = () => {
         Retour
       </Typography>
     </Box>
+  );
+};
+
+const SendBannerContent = () => {
+  const { recipients, setRecipients, localHtmlString, scrollToAlertRef, selectedAlerts } = useConstatPdfContext()!;
+  const navigate = useNavigate();
+  const { constatId } = Route.useParams();
+  const [alertErrors, setAlertErrors] = useState<Array<{ id: string; alert: string }> | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const handleSend = async () => {
+    setSendError(null);
+
+    // Validate all selected alerts have emails
+    const alertsWithoutEmail = selectedAlerts.filter((alert) => !alert.email);
+
+    if (alertsWithoutEmail.length) {
+      setAlertErrors(alertsWithoutEmail.map((a) => ({ id: a.id, alert: a.alert ?? "" })));
+      return;
+    }
+
+    // Send email
+    setIsSending(true);
+    try {
+      await api.post("/api/pdf/state-report", {
+        body: {
+          stateReportId: constatId,
+          htmlString: localHtmlString!,
+          recipients: recipients.join(","),
+          alerts: selectedAlerts.map((a) => ({ id: a.id, alert: a.alert, email: a.email })),
+        },
+      });
+      navigate({
+        to: "/constat/$constatId/pdf",
+        params: { constatId },
+        search: { mode: "sent" },
+      });
+    } catch (e) {
+      setSendError((e as Error).message || "Une erreur est survenue");
+      setIsSending(false);
+    }
+  };
+
+  const handleAlertClick = (alertId: string) => {
+    setAlertErrors(null);
+    scrollToAlertRef?.current?.(alertId);
+  };
+
+  return (
+    <>
+      <AlertEmailErrorModal
+        errors={alertErrors}
+        onClose={() => setAlertErrors(null)}
+        onAlertClick={handleAlertClick}
+      />
+      <Flex
+        flexDirection={{ xs: "column", lg: "row" }}
+        width="100%"
+        alignItems={{ xs: "center", lg: "flex-start" }}
+        gap="16px"
+        py={{ xs: "8px", lg: "24px" }}
+      >
+        <Typography pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
+          Courriels
+        </Typography>
+        <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
+          <EmailInput value={recipients} onValueChange={setRecipients} />
+          {sendError && (
+            <Typography color="error" mt="8px">
+              Erreur: {sendError}
+            </Typography>
+          )}
+        </Box>
+
+        <Box mr="100px" ml="8px">
+          <Button
+            type="button"
+            iconId="ri-send-plane-fill"
+            disabled={isSending}
+            onClick={handleSend}
+          >
+            {isSending ? "Envoi en cours..." : "Envoyer"}
+          </Button>
+        </Box>
+      </Flex>
+    </>
+  );
+};
+
+const AlertEmailErrorModal = ({
+  errors,
+  onClose,
+  onAlertClick,
+}: {
+  errors: Array<{ id: string; alert: string }> | null;
+  onClose: () => void;
+  onAlertClick: (alertId: string) => void;
+}) => {
+  return (
+    <Dialog open={!!errors?.length} onClose={onClose}>
+      <Box p="24px" maxWidth="500px">
+        <Flex justifyContent="space-between" alignItems="flex-start" mb="16px">
+          <Flex alignItems="center" gap="8px">
+            <Box
+              className="fr-icon-error-warning-fill"
+              sx={{ color: fr.colors.decisions.text.actionHigh.redMarianne.default }}
+            />
+            <Typography variant="h6" fontWeight="bold">
+              Alertes sans courriel
+            </Typography>
+          </Flex>
+          <ModalCloseButton onClose={onClose} />
+        </Flex>
+        <Typography mb="16px">
+          Veuillez renseigner un courriel pour les alertes suivantes :
+        </Typography>
+        <Stack component="ul" gap="8px" pl="16px">
+          {errors?.map(({ id, alert }) => (
+            <li key={id}>
+              <Typography
+                onClick={() => onAlertClick(id)}
+                sx={{
+                  cursor: "pointer",
+                  color: fr.colors.decisions.text.actionHigh.redMarianne.default,
+                  textDecoration: "underline",
+                  "&:hover": {
+                    textDecoration: "none",
+                  },
+                }}
+              >
+                {alert}
+              </Typography>
+            </li>
+          ))}
+        </Stack>
+      </Box>
+    </Dialog>
   );
 };

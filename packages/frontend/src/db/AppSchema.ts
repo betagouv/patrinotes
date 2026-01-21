@@ -390,6 +390,7 @@ const state_report_alert = new Table({
   commentaires: column.text,
   show_in_report: column.integer,
   service_id: column.text,
+  email: column.text,
 });
 
 const state_report_alert_attachment = new Table({

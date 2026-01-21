@@ -97,6 +97,9 @@ export const useStateReportAlertsWithEmail = (constatId: string) => {
   const service = useService();
 
   const populatedAlerts = alerts.map((alert) => {
+    if (alert.email) {
+      return { ...alert, email: alert.email };
+    }
     const emailKey = "courriel_" + (alert?.alert ?? "").toLowerCase();
     const email = service?.[emailKey as keyof typeof service] ?? "";
 
