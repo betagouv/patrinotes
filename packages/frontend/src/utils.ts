@@ -26,6 +26,8 @@ export const uppercaseFirstLetterIf = (str: string, condition: boolean) => {
   return condition ? str.charAt(0).toUpperCase() + str.slice(1) : str;
 };
 
+export const addSIfPlural = (count: number) => (count > 1 ? "s" : "");
+
 export const appDocumentEnum = z.enum(["constats", "compte-rendus"]);
 export type AppDocument = z.infer<typeof appDocumentEnum>;
 

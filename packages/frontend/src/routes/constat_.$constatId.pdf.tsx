@@ -16,6 +16,8 @@ import { getStateReportHtmlString } from "@cr-vif/pdf/constat";
 import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";
+import Accordion from "@codegouvfr/react-dsfr/Accordion";
+import { useStateReportAlerts } from "../features/state-report/StateReportSideMenu";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -214,6 +216,7 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
         const { recipients, setRecipients } = useConstatPdfContext()!;
         const navigate = useNavigate();
         const { constatId } = Route.useParams();
+
         return (
           <Flex
             flexDirection={{ xs: "column", lg: "row" }}

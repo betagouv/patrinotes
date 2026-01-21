@@ -87,13 +87,31 @@ const modalContents: Record<MenuStates, (props: ModalContentProps) => ReactNode>
   closed: () => null,
 };
 
+export const useStateReportAlerts = (constatId: string) => {
+  return useDbQuery(db.selectFrom("state_report_alert").where("state_report_id", "=", constatId).selectAll());
+};
+
+export const useStateReportAlertsWithEmail = (constatId: string) => {
+  const alertsQuery = useStateReportAlerts(constatId);
+  const alerts = alertsQuery.data ?? [];
+
+  const service = useService();
+
+  const populatedAlerts = alerts.map((alert) => {
+    const emailKey = "courriel_" + (alert?.alert ?? "").toLowerCase();
+    const email = service?.[emailKey as keyof typeof service] ?? "";
+
+    return { ...alert, email };
+  });
+
+  return { ...alertsQuery, data: populatedAlerts };
+};
+
 const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const { constatId } = routeApi.useParams();
 
-  const existingSectionsQuery = useDbQuery(
-    db.selectFrom("state_report_alert").where("state_report_id", "=", constatId).selectAll(),
-  );
+  const { constatId } = routeApi.useParams();
+  const existingSectionsQuery = useStateReportAlerts(constatId);
 
   const existingSections = existingSectionsQuery.data ?? [];
   const existingSectionNames = existingSections.map((s) => s.alert);
