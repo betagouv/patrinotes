@@ -1,12 +1,11 @@
 import { Box, Drawer, Stack, Typography } from "@mui/material";
-import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useStateReportFormContext } from "./utils";
 import { ReactNode, useId, useState } from "react";
 import { MenuTitle, ModalBackButton } from "../menu/MenuTitle";
 import { SectionItem } from "./steps/ConstatDetaille";
 import { fr } from "@codegouvfr/react-dsfr";
-import { useLiveUser, useService, useUser } from "../../contexts/AuthContext";
+import { useLiveUser, useService } from "../../contexts/AuthContext";
 import { useSpeechToTextV2 } from "../audio-record/SpeechRecorder.hook";
 import { useForm, useWatch } from "react-hook-form";
 import { useIsFormDisabled } from "../DisabledContext";
@@ -15,11 +14,14 @@ import { Divider } from "#components/ui/Divider.tsx";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
 import { useMutation } from "@tanstack/react-query";
-import { db, useDbQuery } from "../../db/db";
+import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../db/db";
 import { v7 } from "uuid";
 import { getRouteApi } from "@tanstack/react-router";
 import { StateReportAlert } from "../../db/AppSchema";
 import { Spinner } from "#components/Spinner.tsx";
+import { MinimalAttachment, UploadImage } from "../upload/UploadImage";
+import { UploadImageModal } from "../upload/UploadImageButton";
+import { processImage } from "../upload/UploadReportImage";
 
 export const StateReportSideMenu = () => {
   const [sideMenu, setSideMenu] = useState<MenuStates>("closed");
@@ -29,9 +31,6 @@ export const StateReportSideMenu = () => {
 
   const referencePop = form.watch("reference_pop");
   if (!referencePop) return null;
-
-  // TODO enable this
-  return null;
 
   return (
     <>
@@ -186,6 +185,7 @@ const SelectedSection = ({
   const formId = useId();
   const { constatId } = routeApi.useParams();
   const service = useService();
+  const isFormDisabled = useIsFormDisabled();
 
   const createOrUpdateAlertMutation = useMutation({
     mutationFn: async ({ commentaires, show_in_report }: SectionForm) => {
@@ -241,10 +241,19 @@ const SelectedSection = ({
         ) : null}
       </Typography>
       <Typography mt="8px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-        Service destinataire : {fullSection?.details}
+        Service destinataire : {sectionStaticData?.details}
       </Typography>
 
       <SectionCommentaires form={form} />
+
+      <SectionPhotos
+        alertId={fullSection?.id}
+        section={section}
+        constatId={constatId}
+        form={form}
+        isDisabled={isFormDisabled}
+      />
+
       <Divider my="16px" />
 
       <ShowInReportToggle form={form} />
@@ -312,6 +321,120 @@ const SectionCommentaires = ({ form }) => {
         </Button>
       </Flex>
     </Stack>
+  );
+};
+
+const SectionPhotos = ({
+  alertId,
+  section,
+  constatId,
+  form,
+  isDisabled,
+}: {
+  alertId: string | undefined;
+  section: string;
+  constatId: string;
+  form: ReturnType<typeof useForm<SectionForm>>;
+  isDisabled: boolean;
+}) => {
+  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
+  const user = useLiveUser()!;
+  const service = useService();
+
+  const attachmentsQuery = useDbQuery(
+    db
+      .selectFrom("state_report_alert_attachment")
+      .selectAll()
+      .where("state_report_alert_id", "=", alertId ?? "")
+      .where("is_deprecated", "=", 0)
+      .orderBy("created_at", "asc"),
+  );
+
+  const attachments = attachmentsQuery.data ?? [];
+
+  const onClose = () => setSelectedAttachment(null);
+  const onDelete = async (attachment: { id: string }) => {
+    await attachmentStorage.deleteFile(attachment.id);
+    await db
+      .updateTable("state_report_alert_attachment")
+      .set({ is_deprecated: 1 })
+      .where("id", "=", attachment.id)
+      .execute();
+  };
+
+  const addPhotoMutation = useMutation({
+    mutationFn: async ({ file }: { file: File }) => {
+      let currentAlertId = alertId;
+
+      // Auto-create alert if it doesn't exist
+      if (!currentAlertId) {
+        currentAlertId = v7();
+        await db
+          .insertInto("state_report_alert")
+          .values({
+            id: currentAlertId,
+            alert: section,
+            state_report_id: constatId,
+            commentaires: form.getValues("commentaires") || "",
+            show_in_report: form.getValues("show_in_report") ?? false,
+            service_id: service?.id ?? null,
+          })
+          .execute();
+      }
+
+      // Add the photo
+      const processedFile = await processImage(file);
+      const attachmentId = `${constatId}/images/${v7()}.jpg`;
+
+      await attachmentQueue.saveAttachment({
+        attachmentId,
+        buffer: processedFile,
+        mediaType: "image/jpeg",
+      });
+
+      await db
+        .insertInto("state_report_alert_attachment")
+        .values({
+          id: attachmentId,
+          state_report_alert_id: currentAlertId,
+          attachment_id: attachmentId,
+          label: "",
+          service_id: user.service_id,
+          created_at: new Date().toISOString(),
+          is_deprecated: 0,
+        })
+        .execute();
+
+      return attachmentId;
+    },
+  });
+
+  const onLabelChange = async (attachmentId: string, newLabel: string) => {
+    await db
+      .updateTable("state_report_alert_attachment")
+      .set({ label: newLabel })
+      .where("id", "=", attachmentId)
+      .execute();
+  };
+
+  return (
+    <Box width="100%" mt="16px">
+      <UploadImageModal
+        selectedAttachment={selectedAttachment}
+        onClose={onClose}
+        imageTable="state_report_alert_attachment"
+        onSave={({ id, label }) => onLabelChange(id, label || "")}
+      />
+
+      <UploadImage
+        onFiles={async (files) => addPhotoMutation.mutateAsync({ file: files[0] })}
+        multiple
+        attachments={attachments}
+        onClick={(a) => setSelectedAttachment(a!)}
+        onDelete={(attachment) => onDelete(attachment)}
+        isDisabled={isDisabled}
+      />
+    </Box>
   );
 };
 
