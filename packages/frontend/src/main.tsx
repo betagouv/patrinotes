@@ -19,7 +19,15 @@ import { ServiceSelection } from "./features/UdapSelection";
 
 globalThis.Buffer = Buffer;
 if ("serviceWorker" in navigator) {
-  registerSW({});
+  registerSW({
+    onNeedRefresh() {
+      // Automatically reload when a new version is available
+      window.location.reload();
+    },
+    onOfflineReady() {
+      console.log("App ready for offline use");
+    },
+  });
 }
 
 // force light mode
