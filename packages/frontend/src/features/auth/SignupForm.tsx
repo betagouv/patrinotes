@@ -11,6 +11,7 @@ import { FullWidthButton } from "#components/FullWidthButton.tsx";
 import { PasswordInput } from "#components/PasswordInput.tsx";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { omit } from "pastable";
+import { scrollToTop } from "../state-report/StateReportSummary";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -29,8 +30,9 @@ export const SignupForm = () => {
   const { setAuth } = useAuthContext();
   const navigate = useNavigate();
 
-  const mutation = useMutation((body: RouterInputs<"/api/create-user">["body"]) =>
-    unauthenticatedApi.post("/api/create-user", { body }),
+  const mutation = useMutation(
+    (body: RouterInputs<"/api/create-user">["body"]) => unauthenticatedApi.post("/api/create-user", { body }),
+    { onError: () => scrollToTop() },
   );
 
   const servicesQuery = useQuery({
