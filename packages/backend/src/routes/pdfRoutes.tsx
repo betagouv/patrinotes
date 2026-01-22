@@ -5,6 +5,7 @@ import { StateReportPDFDocument } from "@cr-vif/pdf/constat";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
 import { sendReportMail, sendStateReportMail } from "../features/mail";
+import { sendValidationRequestMail } from "../features/validationMail";
 import { generatePresignedUrl, getPDFName } from "../services/uploadService";
 import { Service } from "../../../frontend/src/db/AppSchema";
 import path from "path";
@@ -15,6 +16,7 @@ import { Selectable } from "kysely";
 import { getServices } from "../services/services";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
+import crypto from "crypto";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -228,6 +230,55 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     if (!recipients.includes(userMail)) recipients.push(userMail);
 
     const stateReport = stateReportQuery[0]! as Selectable<Database["state_report"]>;
+
+    // Check if user has hierarchical validation enabled
+    const userSettings = await db
+      .selectFrom("user_settings")
+      .where("user_id", "=", user.id)
+      .where("service_id", "=", user.service_id)
+      .selectAll()
+      .executeTakeFirst();
+
+    const hierarchicalValidationEnabled = userSettings?.hierarchical_validation_enabled;
+    const supervisorEmail = userSettings?.supervisor_email;
+
+    if (hierarchicalValidationEnabled && supervisorEmail) {
+      // Create validation record and send to supervisor
+      const validationLink = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiry
+
+      await db
+        .insertInto("state_report_validation")
+        .values({
+          id: v4(),
+          state_report_id: stateReportId,
+          user_id: user.id,
+          supervisor_email: supervisorEmail,
+          original_recipients: recipients.join(","),
+          html_string: htmlString,
+          alerts_json: request.body.alerts ? JSON.stringify(request.body.alerts) : null,
+          status: "pending",
+          validation_link: validationLink,
+          validation_link_expires_at: expiresAt.toISOString(),
+          created_at: new Date().toISOString(),
+          service_id: user.service_id,
+        })
+        .execute();
+
+      // Send validation request email to supervisor
+      await sendValidationRequestMail({
+        supervisorEmail,
+        validationLink,
+        stateReport: stateReport!,
+        userName: user.name,
+      });
+
+      // Return special response indicating pending validation
+      return JSON.stringify({ status: "pending_validation", supervisorEmail });
+    }
+
+    // Normal flow: send directly to recipients
     await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
 
     for (const recipient of recipients) {

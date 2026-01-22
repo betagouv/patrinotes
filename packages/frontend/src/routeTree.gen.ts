@@ -18,6 +18,7 @@ import { Route as ConnectionRouteImport } from './routes/connection'
 import { Route as CguRouteImport } from './routes/cgu'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ValidationLinkRouteImport } from './routes/validation.$link'
 import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$link'
 import { Route as PdfReportIdRouteImport } from './routes/pdf.$reportId'
 import { Route as EditReportIdRouteImport } from './routes/edit.$reportId'
@@ -68,6 +69,11 @@ const ResetPasswordIndexLazyRoute = ResetPasswordIndexLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/reset-password.index.lazy').then((d) => d.Route),
 )
+const ValidationLinkRoute = ValidationLinkRouteImport.update({
+  id: '/validation/$link',
+  path: '/validation/$link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordLinkRoute = ResetPasswordLinkRouteImport.update({
   id: '/reset-password/$link',
   path: '/reset-password/$link',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
+  '/validation/$link': typeof ValidationLinkRoute
   '/reset-password': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
+  '/validation/$link': typeof ValidationLinkRoute
   '/reset-password': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
+  '/validation/$link': typeof ValidationLinkRoute
   '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat_/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/edit/$reportId'
     | '/pdf/$reportId'
     | '/reset-password/$link'
+    | '/validation/$link'
     | '/reset-password'
     | '/constat/$constatId/pdf'
   fileRoutesByTo: FileRoutesByTo
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/edit/$reportId'
     | '/pdf/$reportId'
     | '/reset-password/$link'
+    | '/validation/$link'
     | '/reset-password'
     | '/constat/$constatId/pdf'
   id:
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/edit/$reportId'
     | '/pdf/$reportId'
     | '/reset-password/$link'
+    | '/validation/$link'
     | '/reset-password/'
     | '/constat_/$constatId/pdf'
   fileRoutesById: FileRoutesById
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   EditReportIdRoute: typeof EditReportIdRoute
   PdfReportIdRoute: typeof PdfReportIdRoute
   ResetPasswordLinkRoute: typeof ResetPasswordLinkRoute
+  ValidationLinkRoute: typeof ValidationLinkRoute
   ResetPasswordIndexLazyRoute: typeof ResetPasswordIndexLazyRoute
   ConstatConstatIdPdfRoute: typeof ConstatConstatIdPdfRoute
 }
@@ -262,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordIndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/validation/$link': {
+      id: '/validation/$link'
+      path: '/validation/$link'
+      fullPath: '/validation/$link'
+      preLoaderRoute: typeof ValidationLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password/$link': {
       id: '/reset-password/$link'
       path: '/reset-password/$link'
@@ -312,6 +332,7 @@ const rootRouteChildren: RootRouteChildren = {
   EditReportIdRoute: EditReportIdRoute,
   PdfReportIdRoute: PdfReportIdRoute,
   ResetPasswordLinkRoute: ResetPasswordLinkRoute,
+  ValidationLinkRoute: ValidationLinkRoute,
   ResetPasswordIndexLazyRoute: ResetPasswordIndexLazyRoute,
   ConstatConstatIdPdfRoute: ConstatConstatIdPdfRoute,
 }

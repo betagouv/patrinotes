@@ -131,6 +131,8 @@ const user_settings = new Table({
   user_id: column.text,
   default_emails: column.text,
   service_id: column.text,
+  hierarchical_validation_enabled: column.integer,
+  supervisor_email: column.text,
 });
 
 const pop_immeubles = new Table({
@@ -402,6 +404,22 @@ const state_report_alert_attachment = new Table({
   service_id: column.text,
 });
 
+const state_report_validation = new Table({
+  state_report_id: column.text,
+  user_id: column.text,
+  supervisor_email: column.text,
+  original_recipients: column.text,
+  html_string: column.text,
+  alerts_json: column.text,
+  status: column.text,
+  validation_link: column.text,
+  validation_link_expires_at: column.text,
+  supervisor_comment: column.text,
+  created_at: column.text,
+  validated_at: column.text,
+  service_id: column.text,
+});
+
 export const AppSchema = new Schema({
   report,
   service,
@@ -427,6 +445,7 @@ export const AppSchema = new Schema({
   pop_images,
   state_report_alert,
   state_report_alert_attachment,
+  state_report_validation,
   attachments: new AttachmentTable({
     name: "attachments",
   }),
@@ -456,6 +475,7 @@ export type StateReportSentEmail = Database["state_report_sent_email"];
 export type PopObjet = Database["pop_objets"];
 export type PopImage = Database["pop_images"];
 export type StateReportAlert = Database["state_report_alert"];
+export type StateReportValidation = Database["state_report_validation"];
 
 import type { Database as BackendDatabase } from "../../../backend/src/db/db";
 import { AttachmentTable } from "@powersync/attachments";
@@ -492,4 +512,5 @@ const _checkTables: { [K in SharedTables]: IsTableOk<K> } = {
   state_report_sent_email: true,
   pop_objets: true,
   pop_images: true,
+  state_report_validation: true,
 };

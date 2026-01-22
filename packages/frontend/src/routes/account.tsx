@@ -16,7 +16,7 @@ import { api, AuthUser } from "../api";
 import JSZip from "jszip";
 import { downloadFile } from "../utils";
 import { datePresets, DateRangePicker, SuccessAlert } from "./service";
-import { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { getPDFInMailName } from "@cr-vif/pdf";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -26,6 +26,7 @@ import { Accordion, Button, Center, Input, Select } from "#components/MUIDsfr.ts
 import { useStyles } from "tss-react";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
 import { fr } from "@codegouvfr/react-dsfr";
+import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -62,8 +63,8 @@ const AccountPage = () => {
             links={[
               { linkProps: { href: "#profile" }, text: "Mon profil" },
               { linkProps: { href: "#default-recipient" }, text: "Destinataires par défaut" },
+              { linkProps: { href: "#validation" }, text: "Validation hiérarchique" },
               { linkProps: { href: "#share" }, text: "Droit d'édition partagé" },
-              // { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
               { linkProps: { href: "#download-ce" }, text: "Télécharger mes constats" },
               { linkProps: { href: "#download-cr" }, text: "Télécharger mes CR" },
               { linkProps: { href: "#change-service" }, text: "Changer de service" },
@@ -86,6 +87,8 @@ const AccountPage = () => {
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
         <DefaultRecipient />
+        <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
+        <HierarchicalValidation />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <Share />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
@@ -176,6 +179,101 @@ const DefaultRecipient = () => {
   );
 };
 
+const HierarchicalValidation = () => {
+  const user = useUser()!;
+  const { userSettings, isLoading: isUserSettingsLoading, existing } = useUserSettings();
+
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [supervisorEmail, setSupervisorEmail] = useState("");
+
+  useEffect(() => {
+    if (userSettings) {
+      setIsEnabled(!!userSettings.hierarchical_validation_enabled);
+      setSupervisorEmail(userSettings.supervisor_email || "");
+    }
+  }, [userSettings]);
+
+  const saveSettingsMutation = useMutation(async ({ enabled, email }: { enabled: boolean; email: string }) => {
+    const doesUserSettingExist =
+      existing ||
+      !!(await db.selectFrom("user_settings").where("user_id", "=", user.id).selectAll().executeTakeFirst());
+
+    if (doesUserSettingExist) {
+      return db
+        .updateTable("user_settings")
+        .set({
+          hierarchical_validation_enabled: enabled ? 1 : 0,
+          supervisor_email: email || null,
+        })
+        .where("user_id", "=", user.id)
+        .execute();
+    }
+
+    return db
+      .insertInto("user_settings")
+      .values({
+        id: v4(),
+        user_id: user.id,
+        default_emails: userSettings.default_emails || "",
+        service_id: user.service_id,
+        hierarchical_validation_enabled: enabled ? 1 : 0,
+        supervisor_email: email || null,
+      })
+      .execute();
+  });
+
+  const handleToggleChange = (checked: boolean) => {
+    setIsEnabled(checked);
+    saveSettingsMutation.mutate({ enabled: checked, email: supervisorEmail });
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setSupervisorEmail(newEmail);
+  };
+
+  const handleEmailBlur = () => {
+    if (isEnabled) {
+      saveSettingsMutation.mutate({ enabled: isEnabled, email: supervisorEmail });
+    }
+  };
+
+  return (
+    <Flex gap="0px" flexDirection="column" width="100%">
+      <Title anchor="validation">2. Validation hiérarchique</Title>
+      <Box>
+        {isUserSettingsLoading ? (
+          <Spinner size={100} />
+        ) : (
+          <>
+            <Box mb="16px">
+              <ToggleSwitch
+                label="Activer la validation hiérarchique"
+                helperText="Quand cette option est activée, vos constats d'état seront d'abord envoyés à votre responsable pour validation avant d'être transmis aux destinataires."
+                checked={isEnabled}
+                onChange={handleToggleChange}
+              />
+            </Box>
+            {isEnabled && (
+              <Input
+                label="Courriel du responsable hiérarchique"
+                hintText="Cette personne recevra vos constats pour validation"
+                nativeInputProps={{
+                  type: "email",
+                  value: supervisorEmail,
+                  onChange: handleEmailChange,
+                  onBlur: handleEmailBlur,
+                  placeholder: "responsable@example.com",
+                }}
+              />
+            )}
+          </>
+        )}
+      </Box>
+    </Flex>
+  );
+};
+
 const Share = () => {
   const user = useUser()!;
 
@@ -200,7 +298,7 @@ const Share = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="share">2. Droit d'édition partagé</Title>
+      <Title anchor="share">3. Droit d'édition partagé</Title>
       {coworkers.length ? (
         <Box>
           <Box mb="16px">Ces personnes peuvent créer, modifier et supprimer vos CR : </Box>
@@ -351,7 +449,7 @@ const DownloadCRs = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="download-cr">3. Télécharger mes CR</Title>
+      <Title anchor="download-cr">4. Télécharger mes CR</Title>
       <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
       <Box mb="16px">
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
@@ -415,7 +513,7 @@ const DownloadCEs = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="download-ce">4. Télécharger mes CE</Title>
+      <Title anchor="download-ce">5. Télécharger mes CE</Title>
       <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
       <Box mb="16px">
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
@@ -472,7 +570,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="change-service">5. Changer de service</Title>
+      <Title anchor="change-service">6. Changer de service</Title>
       {/* @ts-ignore */}
       <Alert
         style={{

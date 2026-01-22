@@ -295,7 +295,42 @@ export const userSettings = pgTable("user_settings", {
   userId: text("user_id"),
   defaultEmails: text("default_emails"),
   serviceId: text("service_id"),
+  hierarchicalValidationEnabled: boolean("hierarchical_validation_enabled").default(false),
+  supervisorEmail: text("supervisor_email"),
 });
+
+export const stateReportValidation = pgTable(
+  "state_report_validation",
+  {
+    id: text().primaryKey().notNull(),
+    stateReportId: text("state_report_id").notNull(),
+    userId: text("user_id").notNull(),
+    supervisorEmail: text("supervisor_email").notNull(),
+    originalRecipients: text("original_recipients").notNull(),
+    htmlString: text("html_string").notNull(),
+    alertsJson: text("alerts_json"),
+    status: text().notNull().default("pending"),
+    validationLink: text("validation_link").unique(),
+    validationLinkExpiresAt: text("validation_link_expires_at"),
+    supervisorComment: text("supervisor_comment"),
+    createdAt: text("created_at").notNull(),
+    validatedAt: text("validated_at"),
+    serviceId: text("service_id").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.stateReportId],
+      foreignColumns: [stateReport.id],
+      name: "state_report_validation_state_report_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "state_report_validation_user_id_fkey",
+    }),
+    index("state_report_validation_link_idx").on(table.validationLink),
+  ],
+);
 
 export const merimee = pgTable(
   "merimee",

@@ -16,6 +16,7 @@ import { getStateReportHtmlString } from "@cr-vif/pdf/constat";
 import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";
+import { PendingConstatPdf } from "../features/state-report/pdf/ConstatPdf.pending";
 import Accordion from "@codegouvfr/react-dsfr/Accordion";
 import { api } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
@@ -25,11 +26,13 @@ export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => {
     const mode = search?.mode as PageMode;
-    const isModeValid = ["view", "edit", "send", "sent"].includes(mode);
+    const isModeValid = ["view", "edit", "send", "sent", "pending_validation"].includes(mode);
+    const supervisorEmail = search?.supervisorEmail as string | undefined;
 
     return {
       mode: isModeValid ? mode : "view",
-    } as { mode: PageMode };
+      supervisorEmail,
+    } as { mode: PageMode; supervisorEmail?: string };
   },
 });
 const noop = () => null;
@@ -178,14 +181,16 @@ const ConstatPdf = () => {
   );
 };
 
-type PageMode = "view" | "send" | "sent";
+type PageMode = "view" | "send" | "sent" | "pending_validation";
 
 const BannerAndContent = ({ mode }: { mode: PageMode }) => {
-  const { bannerProps, Component } = contentMap[mode];
+  const { supervisorEmail } = Route.useSearch();
+  const entry = contentMap[mode];
+  const { bannerProps, Component } = entry;
   return (
     <>
       <Banner {...bannerProps} />
-      <Component />
+      {mode === "pending_validation" ? <PendingConstatPdf supervisorEmail={supervisorEmail} /> : <Component />}
     </>
   );
 };
@@ -231,6 +236,13 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
       buttons: noop,
     },
     Component: SentConstatPdf,
+  },
+  pending_validation: {
+    bannerProps: {
+      content: noop,
+      buttons: noop,
+    },
+    Component: () => null, // Component is handled separately in BannerAndContent
   },
 };
 
@@ -321,7 +333,7 @@ const SendBannerContent = () => {
     // Send email
     setIsSending(true);
     try {
-      await api.post("/api/pdf/state-report", {
+      const response = await api.post("/api/pdf/state-report", {
         body: {
           stateReportId: constatId,
           htmlString: localHtmlString!,
@@ -329,6 +341,22 @@ const SendBannerContent = () => {
           alerts: selectedAlerts.map((a) => ({ id: a.id, alert: a.alert, email: a.email })),
         },
       });
+
+      // Check if response indicates pending validation
+      try {
+        const parsed = typeof response === "string" ? JSON.parse(response) : response;
+        if (parsed.status === "pending_validation") {
+          navigate({
+            to: "/constat/$constatId/pdf",
+            params: { constatId },
+            search: { mode: "pending_validation", supervisorEmail: parsed.supervisorEmail },
+          });
+          return;
+        }
+      } catch {
+        // Not JSON, treat as normal URL response
+      }
+
       navigate({
         to: "/constat/$constatId/pdf",
         params: { constatId },
