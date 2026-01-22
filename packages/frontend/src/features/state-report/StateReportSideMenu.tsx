@@ -1,6 +1,6 @@
 import { Box, Drawer, Stack, Typography } from "@mui/material";
 import { Button, Input } from "#components/MUIDsfr.tsx";
-import { useStateReportFormContext } from "./utils";
+import { useIsStateReportDisabled, useStateReportFormContext } from "./utils";
 import { ReactNode, useId, useState } from "react";
 import { MenuTitle, ModalBackButton } from "../menu/MenuTitle";
 import { SectionItem } from "./steps/ConstatDetaille";
@@ -188,7 +188,7 @@ const SelectedSection = ({
   const formId = useId();
   const { constatId } = routeApi.useParams();
   const service = useService();
-  const isFormDisabled = useIsFormDisabled();
+  const isFormDisabled = useIsStateReportDisabled();
 
   const createOrUpdateAlertMutation = useMutation({
     mutationFn: async ({ commentaires, show_in_report }: SectionForm) => {
@@ -261,7 +261,7 @@ const SelectedSection = ({
 
       <ShowInReportToggle form={form} />
 
-      <FullWidthButton type="submit" form={formId} style={{ marginTop: "16px" }}>
+      <FullWidthButton type="submit" form={formId} disabled={isFormDisabled} style={{ marginTop: "16px" }}>
         Enregistrer
       </FullWidthButton>
     </Stack>
@@ -272,9 +272,12 @@ const ShowInReportToggle = ({ form }) => {
   const value = useWatch({ control: form.control, name: "show_in_report" });
   const setValue = (val: boolean) => form.setValue("show_in_report", val);
 
+  const isDisabled = useIsStateReportDisabled();
+
   return (
     <ToggleSwitch
       inputTitle="Afficher dans le rapport"
+      disabled={isDisabled}
       showCheckedHint={false}
       onChange={setValue}
       checked={value}
@@ -284,7 +287,7 @@ const ShowInReportToggle = ({ form }) => {
 };
 
 const SectionCommentaires = ({ form }) => {
-  const isFormDisabled = useIsFormDisabled();
+  const isFormDisabled = useIsStateReportDisabled();
 
   const value = useWatch({ control: form.control, name: "commentaires" });
   const setValue = (val: string) => form.setValue("commentaires", val);
