@@ -97,6 +97,7 @@ export const ContexteVisite = () => {
 
 const PeopleList = () => {
   const form = useStateReportFormContext();
+  const isFormDisabled = useIsStateReportDisabled();
 
   const personnesPresentesRaw = useWatch({ control: form.control, name: "personnes_presentes" });
 
@@ -137,6 +138,7 @@ const PeopleList = () => {
       <Box>
         <IconLink
           icon="ri-add-line"
+          disabled={isFormDisabled}
           onClick={(e) => {
             e.preventDefault();
             if (!personnesPresentes?.length) {
