@@ -1,0 +1,1 @@
+ALTER TABLE "state_report" ADD COLUMN "notes" text;

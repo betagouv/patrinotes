@@ -651,6 +651,8 @@ export const stateReport = pgTable(
     preconisations: text(),
     preconisations_commentaires: text("preconisations_commentaires"),
 
+    notes: text(),
+
     attachmentId: text("attachment_id"),
 
     serviceId: text("service_id").notNull(),

@@ -731,6 +731,64 @@ const sections = [
   { title: "Sécurité", details: "Mairie" },
 ];
 
-const StateReportNotesMenu = (_props: ModalContentProps) => {
-  return null;
+const StateReportNotesMenu = ({ onClose }: ModalContentProps) => {
+  const form = useStateReportFormContext();
+  const isFormDisabled = useIsStateReportDisabled();
+
+  const value = useWatch({ control: form.control, name: "notes" });
+  const setValue = (val: string) => form.setValue("notes", val);
+
+  const { isRecording, transcript, toggle } = useSpeechToTextV2({
+    onEnd: (text) => {
+      setValue(form.getValues("notes") + " " + text);
+    },
+  });
+
+  const isIdleProps = form.register("notes");
+  const isListeningProps = {
+    ...isIdleProps,
+    value: value + " " + transcript,
+    onChange: () => {},
+  };
+  const textAreaProps = isRecording ? isListeningProps : isIdleProps;
+
+  return (
+    <Stack px={{ xs: "16px", lg: 0 }}>
+      <MenuTitle hideDivider onClose={onClose}>
+        Alertes
+      </MenuTitle>
+      <Typography mb="24px">Ces notes n’apparaîtront pas dans le document envoyé pour le constat d’état.</Typography>
+      <Stack
+        flexWrap="wrap"
+        flexDirection="row"
+        sx={{
+          ".fr-tile__content": { paddingBottom: "0 !important" },
+        }}
+      >
+        <Input
+          sx={{ width: "100%" }}
+          textArea
+          label=""
+          nativeTextAreaProps={{
+            ...textAreaProps,
+            rows: 10,
+          }}
+          disabled={(isFormDisabled || isRecording) ?? false}
+        />
+
+        <Flex justifyContent="space-between" alignItems="center" mt="-8px" width="100%">
+          <Button
+            disabled={isFormDisabled}
+            type="button"
+            priority={isRecording ? "primary" : "tertiary"}
+            iconId="ri-mic-fill"
+            onClick={() => toggle()}
+          >
+            {isRecording ? <>En cours</> : <>Dicter</>}
+          </Button>
+          <Typography fontSize="12px">Sauvegarde automatique.</Typography>
+        </Flex>
+      </Stack>
+    </Stack>
+  );
 };

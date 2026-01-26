@@ -84,6 +84,7 @@ const SyncForm = ({ report }: { report: StateReport }) => {
 
 const emptyStateReport: StateReport = {
   id: "",
+  notes: "",
   nature_edifice: null,
   reference_pop: null,
   adresse: null,
