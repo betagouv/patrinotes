@@ -82,6 +82,8 @@ const ServicePage = () => {
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
         <Clauses />
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
+        <AlertesMH />
+        <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
         <Activity />
       </Center>
     </Flex>
@@ -603,7 +605,7 @@ const Activity = () => {
 
   return (
     <Flex gap="16px" flexDirection="column" width="100%">
-      <Title anchor="rapport-activite">4. Rapport d'activité</Title>
+      <Title anchor="rapport-activite">5. Rapport d'activité</Title>
 
       <DateRangePicker startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />
 
@@ -772,8 +774,10 @@ const AlertesForm = ({ service }: { service: Service }) => {
   });
 
   return (
-    <Stack>
-      <Input label="Courriel CRMH" {...form.register("courriel_crmh")} />
+    <Stack gap="0px" flexDirection="column" width="100%">
+      <Title anchor="alertes-mh">4. Alertes MH</Title>
+
+      <Input sx={{ mt: "16px" }} label="Courriel CRMH" {...form.register("courriel_crmh")} />
       <Input label="Courriel CAOA" {...form.register("courriel_caoa")} />
       <Input label="Courriel DREAL" {...form.register("courriel_dreal")} />
       <Input label="Courriel SRA" {...form.register("courriel_sra")} />

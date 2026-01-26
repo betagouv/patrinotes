@@ -8,7 +8,6 @@ import { fr } from "@codegouvfr/react-dsfr";
 import { useLiveUser, useService } from "../../contexts/AuthContext";
 import { useSpeechToTextV2 } from "../audio-record/SpeechRecorder.hook";
 import { useForm, useWatch } from "react-hook-form";
-import { useIsFormDisabled } from "../DisabledContext";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
@@ -109,6 +108,8 @@ export const useStateReportAlertsWithEmail = (constatId: string) => {
   return { ...alertsQuery, data: populatedAlerts };
 };
 
+const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
+
 const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
@@ -117,6 +118,19 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
 
   const existingSections = existingSectionsQuery.data ?? [];
   const existingSectionNames = existingSections.map((s) => s.alert);
+
+  const objetsMobiliersCount = existingSections.filter((s) => s.alert === OBJETS_MOBILIERS_SECTION).length;
+
+  if (selectedSection === OBJETS_MOBILIERS_SECTION) {
+    return (
+      <ObjetsEtMobiliersPage
+        onClose={onClose}
+        onBack={() => setSelectedSection(null)}
+        items={existingSections.filter((s) => s.alert === OBJETS_MOBILIERS_SECTION)}
+        isLoading={existingSectionsQuery.isLoading}
+      />
+    );
+  }
 
   if (selectedSection) {
     return (
@@ -151,16 +165,23 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
             <Spinner />
           </Box>
         ) : (
-          sections.map(({ title, details }) => (
-            <SectionItem
-              key={title}
-              withIcon
-              section={title}
-              details={details}
-              isVisited={existingSectionNames.includes(title)}
-              onClick={() => setSelectedSection(title)}
-            />
-          ))
+          sections.map(({ title, details }) => {
+            const isObjetsMobiliers = title === OBJETS_MOBILIERS_SECTION;
+            const displayDetails =
+              isObjetsMobiliers && objetsMobiliersCount > 0 ? `${details} (${objetsMobiliersCount})` : details;
+            const isVisited = isObjetsMobiliers ? objetsMobiliersCount > 0 : existingSectionNames.includes(title);
+
+            return (
+              <SectionItem
+                key={title}
+                withIcon
+                section={title}
+                details={displayDetails}
+                isVisited={isVisited}
+                onClick={() => setSelectedSection(title)}
+              />
+            );
+          })
         )}
       </Stack>
     </Stack>
@@ -192,11 +213,12 @@ const SelectedSection = ({
 
   const createOrUpdateAlertMutation = useMutation({
     mutationFn: async ({ commentaires, show_in_report }: SectionForm) => {
+      const showInReportValue = show_in_report ? 1 : 0;
       if (fullSection) {
         await db
           .updateTable("state_report_alert")
           .where("id", "=", fullSection.id)
-          .set({ commentaires, show_in_report })
+          .set({ commentaires, show_in_report: showInReportValue })
           .execute();
         return;
       }
@@ -208,7 +230,7 @@ const SelectedSection = ({
           alert: section,
           state_report_id: constatId,
           commentaires: commentaires,
-          show_in_report: show_in_report,
+          show_in_report: showInReportValue,
           service_id: service?.id ?? null,
         })
         .execute();
@@ -268,7 +290,7 @@ const SelectedSection = ({
   );
 };
 
-const ShowInReportToggle = ({ form }) => {
+const ShowInReportToggle = ({ form }: { form: { control: any; setValue: (name: string, value: any) => void } }) => {
   const value = useWatch({ control: form.control, name: "show_in_report" });
   const setValue = (val: boolean) => form.setValue("show_in_report", val);
 
@@ -286,7 +308,16 @@ const ShowInReportToggle = ({ form }) => {
   );
 };
 
-const SectionCommentaires = ({ form }) => {
+const SectionCommentaires = ({
+  form,
+}: {
+  form: {
+    control: any;
+    setValue: (name: string, value: any) => void;
+    getValues: (name: string) => any;
+    register: (name: string) => any;
+  };
+}) => {
   const isFormDisabled = useIsStateReportDisabled();
 
   const value = useWatch({ control: form.control, name: "commentaires" });
@@ -340,7 +371,7 @@ const SectionPhotos = ({
   alertId: string | undefined;
   section: string;
   constatId: string;
-  form: ReturnType<typeof useForm<SectionForm>>;
+  form: { getValues: (name: string) => any };
   isDisabled: boolean;
 }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
@@ -382,7 +413,7 @@ const SectionPhotos = ({
             alert: section,
             state_report_id: constatId,
             commentaires: form.getValues("commentaires") || "",
-            show_in_report: form.getValues("show_in_report") ?? false,
+            show_in_report: form.getValues("show_in_report") ? 1 : 0,
             service_id: service?.id ?? null,
           })
           .execute();
@@ -444,6 +475,252 @@ const SectionPhotos = ({
   );
 };
 
+const ObjetsEtMobiliersPage = ({
+  onClose,
+  onBack,
+  items,
+  isLoading,
+}: {
+  onClose: () => void;
+  onBack: () => void;
+  items: StateReportAlert[];
+  isLoading: boolean;
+}) => {
+  const isFormDisabled = useIsStateReportDisabled();
+  const [pendingNewItems, setPendingNewItems] = useState<string[]>([]);
+  const { constatId } = routeApi.useParams();
+
+  const sectionStaticData = sections.find((s) => s.title === OBJETS_MOBILIERS_SECTION);
+  const service = useService();
+  const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
+  const email = service?.[emailKey as keyof typeof service] ?? "";
+
+  const addNewItem = () => {
+    setPendingNewItems((prev) => [...prev, v7()]);
+  };
+
+  const removePendingItem = (tempId: string) => {
+    setPendingNewItems((prev) => prev.filter((id) => id !== tempId));
+  };
+
+  const onItemSaved = (tempId: string) => {
+    removePendingItem(tempId);
+  };
+
+  return (
+    <Stack px={{ xs: "16px", lg: 0 }}>
+      <MenuTitle onClose={onClose} hideDivider>
+        <ModalBackButton onClick={onBack} />
+      </MenuTitle>
+
+      <Typography fontSize="16px" fontWeight="bold">
+        Alerte : {OBJETS_MOBILIERS_SECTION}
+        {email ? (
+          <>
+            <br />
+            {email}
+          </>
+        ) : null}
+      </Typography>
+      <Typography mt="8px" mb="16px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
+        Service destinataire : {sectionStaticData?.details}
+      </Typography>
+
+      {isLoading ? (
+        <Box mt="24px">
+          <Spinner />
+        </Box>
+      ) : (
+        <>
+          {items.map((item, index) => (
+            <Box key={item.id}>
+              {index > 0 && <Divider my="24px" />}
+              <ObjetMobilierItemForm item={item} constatId={constatId} />
+            </Box>
+          ))}
+
+          {pendingNewItems.map((tempId, index) => (
+            <Box key={tempId}>
+              {(items.length > 0 || index > 0) && <Divider my="24px" />}
+              <ObjetMobilierItemForm
+                item={undefined}
+                constatId={constatId}
+                onSaved={() => onItemSaved(tempId)}
+                onCancel={() => removePendingItem(tempId)}
+                isNew
+              />
+            </Box>
+          ))}
+
+          {items.length === 0 && pendingNewItems.length === 0 && (
+            <ObjetMobilierItemForm item={undefined} constatId={constatId} isNew />
+          )}
+
+          {(items.length > 0 || pendingNewItems.length > 0) && (
+            <>
+              <Divider my="24px" />
+              <Button
+                priority="secondary"
+                iconId="ri-add-line"
+                onClick={addNewItem}
+                disabled={isFormDisabled}
+                sx={{ width: "100%" }}
+              >
+                Ajouter objet ou mobilier
+              </Button>
+            </>
+          )}
+        </>
+      )}
+    </Stack>
+  );
+};
+
+type ObjetMobilierForm = {
+  objet_ou_mobilier: string;
+  commentaires: string;
+  show_in_report: boolean;
+};
+
+const ObjetMobilierItemForm = ({
+  item,
+  constatId,
+  onSaved,
+  onCancel,
+  isNew,
+}: {
+  item: StateReportAlert | undefined;
+  constatId: string;
+  onSaved?: () => void;
+  onCancel?: () => void;
+  isNew?: boolean;
+}) => {
+  const formId = useId();
+  const service = useService();
+  const isFormDisabled = useIsStateReportDisabled();
+  const [savedId, setSavedId] = useState<string | undefined>(item?.id);
+
+  const createOrUpdateAlertMutation = useMutation({
+    mutationFn: async ({ objet_ou_mobilier, commentaires, show_in_report }: ObjetMobilierForm) => {
+      const showInReportValue = show_in_report ? 1 : 0;
+
+      if (savedId) {
+        await db
+          .updateTable("state_report_alert")
+          .where("id", "=", savedId)
+          .set({ objet_ou_mobilier, commentaires, show_in_report: showInReportValue })
+          .execute();
+        return savedId;
+      }
+
+      const newId = v7();
+      await db
+        .insertInto("state_report_alert")
+        .values({
+          id: newId,
+          alert: OBJETS_MOBILIERS_SECTION,
+          state_report_id: constatId,
+          objet_ou_mobilier,
+          commentaires,
+          show_in_report: showInReportValue,
+          service_id: service?.id ?? null,
+        })
+        .execute();
+
+      setSavedId(newId);
+      onSaved?.();
+      return newId;
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!savedId) {
+        onCancel?.();
+        return;
+      }
+
+      const attachments = await db
+        .selectFrom("state_report_alert_attachment")
+        .selectAll()
+        .where("state_report_alert_id", "=", savedId)
+        .execute();
+
+      for (const attachment of attachments) {
+        await attachmentStorage.deleteFile(attachment.id);
+        await db.deleteFrom("state_report_alert_attachment").where("id", "=", attachment.id).execute();
+      }
+
+      await db.deleteFrom("state_report_alert").where("id", "=", savedId).execute();
+    },
+  });
+
+  const form = useForm<ObjetMobilierForm>({
+    defaultValues: {
+      objet_ou_mobilier: item?.objet_ou_mobilier ?? "",
+      commentaires: item?.commentaires ?? "",
+      show_in_report: !!item?.show_in_report,
+    },
+  });
+
+  const itemTitle = isNew && !savedId ? "Nouvel objet ou mobilier" : item?.objet_ou_mobilier || "Objet ou mobilier";
+
+  return (
+    <Stack
+      component="form"
+      onSubmit={form.handleSubmit((values) => createOrUpdateAlertMutation.mutate(values))}
+      id={formId}
+      sx={{
+        p: "16px",
+        border: `1px solid ${fr.colors.decisions.border.default.grey.default}`,
+        borderRadius: "4px",
+        backgroundColor: fr.colors.decisions.background.default.grey.default,
+      }}
+    >
+      <Typography fontSize="14px" fontWeight="bold" mb="16px">
+        {itemTitle}
+      </Typography>
+
+      <Input
+        disabled={isFormDisabled}
+        label="Nom de l'objet ou mobilier"
+        nativeInputProps={form.register("objet_ou_mobilier")}
+      />
+
+      <SectionCommentaires form={form} />
+
+      <SectionPhotos
+        alertId={savedId}
+        section={OBJETS_MOBILIERS_SECTION}
+        constatId={constatId}
+        form={form}
+        isDisabled={isFormDisabled}
+      />
+
+      <Divider my="16px" />
+
+      <ShowInReportToggle form={form} />
+
+      <Flex gap="8px" mt="16px">
+        <Button type="submit" priority="primary" disabled={isFormDisabled || createOrUpdateAlertMutation.isPending}>
+          Enregistrer
+        </Button>
+        {(savedId || isNew) && (
+          <Button
+            type="button"
+            priority="secondary"
+            iconId="ri-delete-bin-line"
+            disabled={isFormDisabled || deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate()}
+          >
+            Supprimer
+          </Button>
+        )}
+      </Flex>
+    </Stack>
+  );
+};
+
 const sections = [
   { title: "Edifice en péril", details: "CRMH" },
   { title: "Abords de l'édifice", details: "UDAP" },
@@ -454,6 +731,6 @@ const sections = [
   { title: "Sécurité", details: "Mairie" },
 ];
 
-const StateReportNotesMenu = ({ onClose }: ModalContentProps) => {
+const StateReportNotesMenu = (_props: ModalContentProps) => {
   return null;
 };

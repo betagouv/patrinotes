@@ -391,6 +391,7 @@ const state_report_alert = new Table({
   show_in_report: column.integer,
   service_id: column.text,
   email: column.text,
+  objet_ou_mobilier: column.text,
 });
 
 const state_report_alert_attachment = new Table({
