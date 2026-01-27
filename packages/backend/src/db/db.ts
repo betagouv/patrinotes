@@ -40,6 +40,8 @@ export type Database = {
   pop_objets: Kyselify<typeof tables.popObjets>;
   state_report: Kyselify<typeof tables.stateReport>;
   state_report_attachment: Kyselify<typeof tables.stateReportAttachment>;
+  state_report_alert: Kyselify<typeof tables.stateReportAlert>;
+  state_report_alert_attachment: Kyselify<typeof tables.stateReportAlertAttachment>;
   user_dept: Kyselify<typeof tables.userDept>;
   merimee_to_memoire: Kyselify<typeof tables.merimeeToMemoire>;
   visited_section: Kyselify<typeof tables.visitedSection>;

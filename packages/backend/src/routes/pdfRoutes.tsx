@@ -4,7 +4,7 @@ import { ReportPDFDocument } from "@cr-vif/pdf";
 import { StateReportPDFDocument } from "@cr-vif/pdf/constat";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
-import { sendReportMail, sendStateReportMail } from "../features/mail";
+import { sendReportMail, sendStateReportMail, sendAlertMail } from "../features/mail";
 import { generatePresignedUrl, getPDFName } from "../services/uploadService";
 import { Service } from "../../../frontend/src/db/AppSchema";
 import path from "path";
@@ -229,6 +229,60 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     const stateReport = stateReportQuery[0]! as Selectable<Database["state_report"]>;
     await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
+
+    if (request.body.alerts && request.body.alerts.length > 0) {
+      const service = request.user!.service as Service;
+
+      for (const alertSelection of request.body.alerts) {
+        if (!alertSelection.email) continue;
+
+        try {
+          const alert = await db
+            .selectFrom("state_report_alert")
+            .selectAll()
+            .where("id", "=", alertSelection.id)
+            .executeTakeFirst();
+
+          if (!alert) continue;
+
+          const alertPhotos = await db
+            .selectFrom("state_report_alert_attachment")
+            .selectAll()
+            .where("state_report_alert_id", "=", alertSelection.id)
+            .where("is_deprecated", "=", false)
+            .execute();
+
+          const photosWithUrls = await Promise.all(
+            alertPhotos.map(async (photo) => ({
+              url: await generatePresignedUrl("attachment/" + photo.id),
+              label: photo.label,
+            })),
+          );
+
+          const alertData = {
+            monumentName: stateReport.titre_edifice || "Monument non spécifié",
+            commune: stateReport.commune || "Commune non spécifiée",
+            department: service.department || service.name || "Département non spécifié",
+            alertType: alert.alert || "Alerte",
+            comments: alert.commentaires,
+            agentName: user.name,
+            agentEmail: user.email,
+            serviceName: service.name || "Service non spécifié",
+            photos: photosWithUrls,
+          };
+
+          await sendAlertMail({
+            recipient: alertSelection.email,
+            alertData,
+          });
+
+          debug(`Alert email sent for alert ${alert.id} to ${alertSelection.email}`);
+        } catch (alertError) {
+          debug(`Failed to send alert email for alert ${alertSelection.id}: ${alertError}`);
+          console.error(`Failed to send alert email for alert ${alertSelection.id}:`, alertError);
+        }
+      }
+    }
 
     for (const recipient of recipients) {
       const id = v4();

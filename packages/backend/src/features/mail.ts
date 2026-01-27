@@ -7,6 +7,7 @@ import { Database } from "../db/db";
 import { Selectable } from "kysely";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
 import { createBordereauMailContent } from "./bordereau";
+import { createAlertMailContent, getAlertMailSubject, AlertMailData } from "./mail/alertMail";
 
 const transporter = createTransport({
   host: ENV.EMAIL_HOST,
@@ -81,5 +82,26 @@ export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string;
     to: email,
     subject: "CR VIF - Réinitialisation de mot de passe",
     text: `Voici le lien de réinitialisation de votre mot de passe : ${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`,
+  });
+};
+
+export type AlertMailParams = {
+  recipient: string;
+  alertData: AlertMailData;
+};
+
+export const sendAlertMail = ({ recipient, alertData }: AlertMailParams) => {
+  sentry?.captureMessage("Sending alert mail", {
+    extra: { recipient, alertType: alertData.alertType, monumentName: alertData.monumentName },
+  });
+
+  const content = createAlertMailContent(alertData);
+  const subject = getAlertMailSubject(alertData.alertType, alertData.monumentName);
+
+  return transporter.sendMail({
+    from: ENV.EMAIL_EMITTER,
+    to: recipient,
+    subject,
+    html: content,
   });
 };
