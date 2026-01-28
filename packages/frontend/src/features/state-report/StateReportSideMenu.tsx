@@ -96,16 +96,18 @@ export const useStateReportAlertsWithEmail = (constatId: string) => {
 
   const service = useLiveService();
 
-  const populatedAlerts = alerts.map((alert) => {
-    if (alert.email) {
-      return { ...alert, email: String(alert.email) };
-    }
-    const emailKey = "courriel_" + (alert?.alert ?? "").toLowerCase();
-    const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
-    const email = String(emailRaw || "");
+  const populatedAlerts = alerts
+    .map((alert) => {
+      if (alert.email) {
+        return { ...alert, email: String(alert.email) };
+      }
+      const emailKey = "courriel_" + (alert?.alert ?? "").toLowerCase();
+      const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
+      const email = String(emailRaw || "");
 
-    return { ...alert, email };
-  });
+      return { ...alert, email };
+    })
+    .sort((a, b) => a.alert!.localeCompare(b.alert!));
 
   return { ...alertsQuery, data: populatedAlerts };
 };
