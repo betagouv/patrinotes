@@ -10,10 +10,10 @@ import { Box, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { endOfYear, startOfYear } from "date-fns";
-import { omit } from "pastable";
+import { omit, pick } from "pastable";
 import { useEffect, useState } from "react";
 import { v4 } from "uuid";
-import { useRefreshUser, useUser } from "../contexts/AuthContext";
+import { useLiveService, useRefreshUser, useUser } from "../contexts/AuthContext";
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
@@ -750,39 +750,58 @@ export const SuccessAlert = () => {
 };
 
 const AlertesMH = () => {
-  const service = useUser()!.service;
+  const service = useLiveService();
+
   if (!service) return null;
   return <AlertesForm service={service} />;
 };
 
 const AlertesForm = ({ service }: { service: Service }) => {
-  const [form, getFocused] = useFormWithFocus<Service>({ defaultValues: service });
-
-  useRefreshForm({
-    form,
-    values: service,
-    getFocused,
+  const form = useForm({
+    defaultValues: pick(service, [
+      "courriel_caoa",
+      "courriel_crmh",
+      "courriel_dreal",
+      "courriel_ofb",
+      "courriel_sra",
+      "courriel_udap",
+    ]),
   });
 
-  useSyncForm({
-    form,
-    baseObject: service,
-    syncObject: async (id, diff) => {
-      console.log("saving", id, diff);
-      await db.updateTable("service").where("id", "=", id).set(diff).execute();
+  const saveMutation = useMutation({
+    mutationFn: async (data: Partial<Service>) => {
+      await db.updateTable("service").set(data).where("id", "=", service.id).execute();
     },
   });
 
   return (
-    <Stack gap="0px" flexDirection="column" width="100%">
+    <Stack
+      component="form"
+      gap="0px"
+      flexDirection="column"
+      width="100%"
+      onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+    >
       <Title anchor="alertes-mh">4. Alertes MH</Title>
 
-      <Input sx={{ mt: "16px" }} label="Courriel CRMH" {...form.register("courriel_crmh")} />
-      <Input label="Courriel CAOA" {...form.register("courriel_caoa")} />
-      <Input label="Courriel DREAL" {...form.register("courriel_dreal")} />
-      <Input label="Courriel SRA" {...form.register("courriel_sra")} />
-      <Input label="Courriel UDAP" {...form.register("courriel_udap")} />
-      <Input label="Courriel OFB" {...form.register("courriel_ofb")} />
+      <Input sx={{ mt: "16px" }} label="Courriel CRMH" nativeInputProps={{ ...form.register("courriel_crmh") }} />
+      <Input label="Courriel CAOA" nativeInputProps={{ ...form.register("courriel_caoa") }} />
+      <Input label="Courriel DREAL" nativeInputProps={{ ...form.register("courriel_dreal") }} />
+      <Input label="Courriel SRA" nativeInputProps={{ ...form.register("courriel_sra") }} />
+      <Input label="Courriel UDAP" nativeInputProps={{ ...form.register("courriel_udap") }} />
+      <Input label="Courriel OFB" nativeInputProps={{ ...form.register("courriel_ofb") }} />
+
+      <Flex>
+        <Button
+          sx={{ mt: "24px", ml: "auto" }}
+          iconId="ri-save-3-line"
+          iconPosition="left"
+          type="submit"
+          disabled={saveMutation.isPending}
+        >
+          Enregistrer
+        </Button>
+      </Flex>
     </Stack>
   );
 };

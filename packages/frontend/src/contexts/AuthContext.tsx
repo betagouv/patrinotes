@@ -131,6 +131,13 @@ export const useService = () => {
   return user!.service;
 };
 
+export const useLiveService = () => {
+  const user = useUser();
+  const serviceQuery = useDbQuery(db.selectFrom("service").where("id", "=", user!.service.id).selectAll());
+
+  return serviceQuery.data?.[0];
+};
+
 export const useRefreshUser = () => {
   const { setAuth, auth } = useContext(AuthContext);
   const user = auth.user;

@@ -26,23 +26,26 @@ export const SendConstatPdf = () => {
   const alertsQuery = useStateReportAlertsWithEmail(constatId);
   const alerts = alertsQuery.data ?? [];
 
-  // Track which alerts are selected (checked) - all checked by default
   const [checkedAlertIds, setCheckedAlertIds] = useState<Set<string>>(new Set());
+  const isInitialized = useRef(false);
 
-  // Initialize all alerts as checked when data loads
+  // init all alerts as checked when data loads
+  const alertIds = alerts.map((a) => a.id).join(",");
   useEffect(() => {
-    if (alerts.length > 0 && checkedAlertIds.size === 0) {
+    if (alerts.length > 0 && !isInitialized.current) {
+      isInitialized.current = true;
       setCheckedAlertIds(new Set(alerts.map((a) => a.id)));
     }
-  }, [alerts]);
+  }, [alertIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update selectedAlerts in context when checked alerts or their emails change
+  // sync selected alerts to context
   useEffect(() => {
+    if (!isInitialized.current) return;
     const selected = alerts
       .filter((a) => checkedAlertIds.has(a.id))
-      .map((a) => ({ id: a.id, alert: a.alert, email: a.email }));
+      .map((a) => ({ id: a.id, alert: a.alert, email: String(a.email || "") }));
     setSelectedAlerts(selected);
-  }, [checkedAlertIds, alerts, setSelectedAlerts]);
+  }, [checkedAlertIds, alertIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleAlert = (alertId: string) => {
     setCheckedAlertIds((prev) => {
@@ -56,20 +59,19 @@ export const SendConstatPdf = () => {
     });
   };
 
-  // Refs for scroll + focus
+  // scroll + focus
   const alertRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const accordionRef = useRef<HTMLDivElement | null>(null);
 
-  // Expose scroll function to parent via context
+  // expose scroll function to parent via context
   useEffect(() => {
     if (scrollToAlertRef) {
       scrollToAlertRef.current = (alertId: string) => {
-        // Expand accordion if collapsed
         const accordionButton = accordionRef.current?.querySelector("button[aria-expanded='false']");
         if (accordionButton) {
           (accordionButton as HTMLButtonElement).click();
         }
-        // Wait for accordion to expand, then scroll and focus
+
         setTimeout(() => {
           const ref = alertRefs.current[alertId];
           ref?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -145,21 +147,15 @@ const AlertRow = ({
   const service = useService();
   const [email, setEmail] = useState(alert.email || "");
 
-  // Check if this alert has a service email configured
   const emailKey = "courriel_" + (alert.alert ?? "").toLowerCase();
   const hasServiceEmail = !!service?.[emailKey as keyof typeof service];
 
   const saveEmailMutation = useMutation({
     mutationFn: async (newEmail: string) => {
-      await db
-        .updateTable("state_report_alert")
-        .set({ email: newEmail })
-        .where("id", "=", alert.id)
-        .execute();
+      await db.updateTable("state_report_alert").set({ email: newEmail }).where("id", "=", alert.id).execute();
     },
   });
 
-  // Save on blur if changed
   const handleBlur = () => {
     if (email !== alert.email) {
       saveEmailMutation.mutate(email);
@@ -176,6 +172,7 @@ const AlertRow = ({
           ) : (
             <Box sx={{ mt: "4px" }}>
               <Input
+                label=""
                 nativeInputProps={{
                   ref: inputRef as React.LegacyRef<HTMLInputElement>,
                   value: email,

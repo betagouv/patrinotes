@@ -2,10 +2,11 @@ import { Box, Drawer, Stack, Typography } from "@mui/material";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useIsStateReportDisabled, useStateReportFormContext } from "./utils";
 import { ReactNode, useId, useState } from "react";
+import { EmailInput } from "#components/EmailInput.tsx";
 import { MenuTitle, ModalBackButton } from "../menu/MenuTitle";
 import { SectionItem } from "./steps/ConstatDetaille";
 import { fr } from "@codegouvfr/react-dsfr";
-import { useLiveUser, useService } from "../../contexts/AuthContext";
+import { useLiveService, useLiveUser, useService } from "../../contexts/AuthContext";
 import { useSpeechToTextV2 } from "../audio-record/SpeechRecorder.hook";
 import { useForm, useWatch } from "react-hook-form";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -93,14 +94,15 @@ export const useStateReportAlertsWithEmail = (constatId: string) => {
   const alertsQuery = useStateReportAlerts(constatId);
   const alerts = alertsQuery.data ?? [];
 
-  const service = useService();
+  const service = useLiveService();
 
   const populatedAlerts = alerts.map((alert) => {
     if (alert.email) {
-      return { ...alert, email: alert.email };
+      return { ...alert, email: String(alert.email) };
     }
     const emailKey = "courriel_" + (alert?.alert ?? "").toLowerCase();
-    const email = service?.[emailKey as keyof typeof service] ?? "";
+    const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
+    const email = String(emailRaw || "");
 
     return { ...alert, email };
   });
@@ -115,11 +117,51 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
 
   const { constatId } = routeApi.useParams();
   const existingSectionsQuery = useStateReportAlerts(constatId);
+  const service = useLiveService();
 
   const existingSections = existingSectionsQuery.data ?? [];
   const existingSectionNames = existingSections.map((s) => s.alert);
 
   const objetsMobiliersCount = existingSections.filter((s) => s.alert === OBJETS_MOBILIERS_SECTION).length;
+
+  const createAlertMutation = useMutation({
+    mutationFn: async (sectionTitle: string) => {
+      if (existingSectionNames.includes(sectionTitle)) {
+        return;
+      }
+
+      const sectionData = sections.find((s) => s.title === sectionTitle);
+      const emailKey = "courriel_" + (sectionData?.details ?? "").toLowerCase();
+      const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
+      const email = String(emailRaw || "") || null;
+
+      await db
+        .insertInto("state_report_alert")
+        .values({
+          id: v7(),
+          alert: sectionTitle,
+          state_report_id: constatId,
+          commentaires: "",
+          show_in_report: 0,
+          service_id: service?.id ?? null,
+          email,
+        })
+        .execute();
+    },
+    onSuccess: (_, sectionTitle) => {
+      setSelectedSection(sectionTitle);
+    },
+  });
+
+  const handleSectionClick = (title: string) => {
+    if (title === OBJETS_MOBILIERS_SECTION) {
+      setSelectedSection(title);
+    } else if (existingSectionNames.includes(title)) {
+      setSelectedSection(title);
+    } else {
+      createAlertMutation.mutate(title);
+    }
+  };
 
   if (selectedSection === OBJETS_MOBILIERS_SECTION) {
     return (
@@ -178,7 +220,7 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
                 section={title}
                 details={displayDetails}
                 isVisited={isVisited}
-                onClick={() => setSelectedSection(title)}
+                onClick={() => handleSectionClick(title)}
               />
             );
           })
@@ -208,8 +250,54 @@ const SelectedSection = ({
 }) => {
   const formId = useId();
   const { constatId } = routeApi.useParams();
-  const service = useService();
+  const service = useLiveService();
   const isFormDisabled = useIsStateReportDisabled();
+
+  const sectionStaticData = sections.find((s) => s.title === section);
+
+  const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
+  const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
+  const email = String(emailRaw || "");
+
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+
+  // Use saved email if it exists (even if empty), otherwise fall back to service email
+  const savedEmail = fullSection?.email != null ? String(fullSection.email) : String(email || "");
+  const [editedEmails, setEditedEmails] = useState<string[]>([]);
+
+  const displayEmails = isEditingEmail
+    ? editedEmails
+    : savedEmail
+      ? savedEmail
+          .split(",")
+          .map((e: string) => e.trim())
+          .filter(Boolean)
+      : [];
+
+  const startEditingEmail = () => {
+    setEditedEmails(
+      savedEmail
+        ? savedEmail
+            .split(",")
+            .map((e: string) => e.trim())
+            .filter(Boolean)
+        : [],
+    );
+    setIsEditingEmail(true);
+  };
+
+  const updateEmailMutation = useMutation({
+    mutationFn: async (emails: string[]) => {
+      if (!fullSection?.id) return;
+      const emailString = emails.join(", ");
+      await db.updateTable("state_report_alert").where("id", "=", fullSection.id).set({ email: emailString }).execute();
+    },
+  });
+
+  const handleEmailChange = (emails: string[]) => {
+    setEditedEmails(emails);
+    updateEmailMutation.mutate(emails);
+  };
 
   const createOrUpdateAlertMutation = useMutation({
     mutationFn: async ({ commentaires, show_in_report }: SectionForm) => {
@@ -232,6 +320,7 @@ const SelectedSection = ({
           commentaires: commentaires,
           show_in_report: showInReportValue,
           service_id: service?.id ?? null,
+          email: email || null,
         })
         .execute();
     },
@@ -241,14 +330,10 @@ const SelectedSection = ({
     defaultValues: { commentaires: fullSection?.commentaires ?? "", show_in_report: !!fullSection?.show_in_report },
   });
 
-  const sectionStaticData = sections.find((s) => s.title === section);
-
-  const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
-  const email = service?.[emailKey as keyof typeof service] ?? "";
-
   return (
     <Stack
       component="form"
+      sx={{ px: { xs: "16px", lg: 0 }, pb: { xs: "32px", lg: 0 } }}
       onSubmit={form.handleSubmit((values) => createOrUpdateAlertMutation.mutate(values))}
       id={formId}
     >
@@ -258,16 +343,40 @@ const SelectedSection = ({
 
       <Typography fontSize="16px" fontWeight="bold">
         Alerte : {section}
-        {email ? (
-          <>
-            <br />
-            {email}
-          </>
-        ) : null}
       </Typography>
       <Typography mt="8px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
         Service destinataire : {sectionStaticData?.details}
       </Typography>
+
+      {isEditingEmail ? (
+        <Box mt="16px">
+          <EmailInput
+            label="Courriels"
+            hintText="Ajoutez plusieurs courriels si nécessaire"
+            value={displayEmails}
+            onValueChange={handleEmailChange}
+          />
+          <Button type="button" priority="secondary" onClick={() => setIsEditingEmail(false)} sx={{ mt: "8px" }}>
+            Fermer
+          </Button>
+        </Box>
+      ) : (
+        <Flex alignItems="center" gap="8px" mt="8px">
+          <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
+            {savedEmail || "Aucun courriel configuré"}
+          </Typography>
+          {!isFormDisabled && (
+            <Button
+              type="button"
+              priority="tertiary no outline"
+              onClick={startEditingEmail}
+              sx={{ minHeight: "auto", padding: "0 8px" }}
+            >
+              Modifier
+            </Button>
+          )}
+        </Flex>
+      )}
 
       <SectionCommentaires form={form} />
 
@@ -403,9 +512,13 @@ const SectionPhotos = ({
     mutationFn: async ({ file }: { file: File }) => {
       let currentAlertId = alertId;
 
-      // Auto-create alert if it doesn't exist
       if (!currentAlertId) {
         currentAlertId = v7();
+
+        const sectionData = sections.find((s) => s.title === section);
+        const emailKey = "courriel_" + (sectionData?.details ?? "").toLowerCase();
+        const sectionEmail = service?.[emailKey as keyof typeof service] ?? null;
+
         await db
           .insertInto("state_report_alert")
           .values({
@@ -415,11 +528,11 @@ const SectionPhotos = ({
             commentaires: form.getValues("commentaires") || "",
             show_in_report: form.getValues("show_in_report") ? 1 : 0,
             service_id: service?.id ?? null,
+            email: sectionEmail,
           })
           .execute();
       }
 
-      // Add the photo
       const processedFile = await processImage(file);
       const attachmentId = `${constatId}/images/${v7()}.jpg`;
 
@@ -491,7 +604,7 @@ const ObjetsEtMobiliersPage = ({
   const { constatId } = routeApi.useParams();
 
   const sectionStaticData = sections.find((s) => s.title === OBJETS_MOBILIERS_SECTION);
-  const service = useService();
+  const service = useLiveService();
   const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
   const email = service?.[emailKey as keyof typeof service] ?? "";
 
@@ -515,15 +628,15 @@ const ObjetsEtMobiliersPage = ({
 
       <Typography fontSize="16px" fontWeight="bold">
         Alerte : {OBJETS_MOBILIERS_SECTION}
+      </Typography>
+      <Typography mt="8px" mb="16px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
+        Service destinataire : {sectionStaticData?.details}
         {email ? (
           <>
             <br />
             {email}
           </>
         ) : null}
-      </Typography>
-      <Typography mt="8px" mb="16px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-        Service destinataire : {sectionStaticData?.details}
       </Typography>
 
       {isLoading ? (
@@ -600,9 +713,52 @@ const ObjetMobilierItemForm = ({
   const isFormDisabled = useIsStateReportDisabled();
   const [savedId, setSavedId] = useState<string | undefined>(item?.id);
 
+  const serviceEmailRaw = service?.["courriel_caoa" as keyof typeof service] ?? "";
+  const serviceEmail = String(serviceEmailRaw || "");
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+
+  // Use saved email if it exists (even if empty), otherwise fall back to service email
+  const savedEmail = item?.email != null ? String(item.email) : String(serviceEmail || "");
+  const [editedEmails, setEditedEmails] = useState<string[]>([]);
+
+  const displayEmails = isEditingEmail
+    ? editedEmails
+    : savedEmail
+      ? savedEmail
+          .split(",")
+          .map((e: string) => e.trim())
+          .filter(Boolean)
+      : [];
+
+  const startEditingEmail = () => {
+    setEditedEmails(
+      savedEmail
+        ? savedEmail
+            .split(",")
+            .map((e: string) => e.trim())
+            .filter(Boolean)
+        : [],
+    );
+    setIsEditingEmail(true);
+  };
+
+  const updateEmailMutation = useMutation({
+    mutationFn: async (emails: string[]) => {
+      if (!savedId) return;
+      const emailString = emails.join(", ");
+      await db.updateTable("state_report_alert").where("id", "=", savedId).set({ email: emailString }).execute();
+    },
+  });
+
+  const handleEmailChange = (emails: string[]) => {
+    setEditedEmails(emails);
+    updateEmailMutation.mutate(emails);
+  };
+
   const createOrUpdateAlertMutation = useMutation({
     mutationFn: async ({ objet_ou_mobilier, commentaires, show_in_report }: ObjetMobilierForm) => {
       const showInReportValue = show_in_report ? 1 : 0;
+      const serviceEmailForInsert = String(service?.["courriel_caoa" as keyof typeof service] || "") || null;
 
       if (savedId) {
         await db
@@ -624,6 +780,7 @@ const ObjetMobilierItemForm = ({
           commentaires,
           show_in_report: showInReportValue,
           service_id: service?.id ?? null,
+          email: serviceEmailForInsert,
         })
         .execute();
 
@@ -698,6 +855,41 @@ const ObjetMobilierItemForm = ({
       />
 
       <Divider my="16px" />
+
+      {isEditingEmail ? (
+        <Box mb="16px">
+          <EmailInput
+            label="Courriels"
+            hintText="Ajoutez plusieurs courriels si nécessaire"
+            value={displayEmails}
+            onValueChange={handleEmailChange}
+          />
+          <Button type="button" priority="secondary" onClick={() => setIsEditingEmail(false)} sx={{ mt: "8px" }}>
+            Fermer
+          </Button>
+          {!savedId && (
+            <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default} mt="8px">
+              Enregistrez d'abord l'alerte pour modifier le courriel
+            </Typography>
+          )}
+        </Box>
+      ) : (
+        <Flex alignItems="center" gap="8px" mb="16px">
+          <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
+            {savedEmail || "Aucun courriel configuré"}
+          </Typography>
+          {!isFormDisabled && (
+            <Button
+              type="button"
+              priority="tertiary no outline"
+              onClick={startEditingEmail}
+              sx={{ minHeight: "auto", padding: "0 8px" }}
+            >
+              Modifier
+            </Button>
+          )}
+        </Flex>
+      )}
 
       <ShowInReportToggle form={form} />
 
