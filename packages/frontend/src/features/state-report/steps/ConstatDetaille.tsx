@@ -115,8 +115,11 @@ export const SectionItem = ({
   withIcon?: boolean;
   onClick: (section: string) => void;
 }) => {
+  const isDisabled = useIsStateReportDisabled();
+
   return (
     <Tile
+      disabled={isDisabled && !isVisited}
       detail={details}
       title={
         <Flex alignItems="center" flexDirection="column">

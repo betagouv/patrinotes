@@ -35,7 +35,7 @@ export const StateReportSideMenu = () => {
   return (
     <>
       <MenuModal menu={sideMenu} onClose={onClose} />
-      <Stack spacing="8px">
+      <Stack mt={{ xs: "16px", lg: "0" }} gap="8px" flexDirection={{ xs: "row", lg: "column" }}>
         <Button
           priority="secondary"
           onClick={() => setSideMenu("alerts")}

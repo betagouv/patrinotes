@@ -18,8 +18,7 @@ import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
 import { useForm } from "react-hook-form";
-import { useFormWithFocus, useRefreshForm } from "../hooks/useFormWithFocus";
-import { useSyncForm } from "#components/SyncForm.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
 
 const ServicePage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -72,7 +71,7 @@ const ServicePage = () => {
         px={{ xs: "16px", lg: "0" }}
         textAlign="left"
       >
-        <Typography variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="32px">
+        <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="32px">
           Service
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
@@ -218,7 +217,7 @@ const ServicesList = () => {
 
   return (
     <Flex gap="16px" flexDirection="column" width="100%">
-      <Title anchor="services-instructeurs">2. Services instructeurs</Title>
+      <Title anchor="services-instructeurs">2. Services instructeurs de comptes-rendus</Title>
       <Flex gap="16px" alignItems="center">
         <div>
           <Button
@@ -424,7 +423,7 @@ const ServiceInstructeurForm = ({
 const Clauses = () => {
   return (
     <Flex gap="16px" flexDirection="column" width="100%">
-      <Title anchor="clauses-departementales">3. Clauses départementales</Title>
+      <Title anchor="clauses-departementales">3. Clauses départementales pour les comptes-rendus</Title>
       <div>Pensez à faire des contenus courts et explicites pour vos lecteurs.</div>
 
       <SingleClause clauseKey="contacts-utiles" title="Contacts utiles" />
@@ -582,7 +581,7 @@ const Activity = () => {
   const [startDate, setStartDate] = useState(datePresets[0].startDate);
   const [endDate, setEndDate] = useState(datePresets[0].endDate);
 
-  const query = useDbQuery(
+  const crQuery = useDbQuery(
     db
       .selectFrom("report")
       .where("service_id", "=", user.service.id)
@@ -593,13 +592,34 @@ const Activity = () => {
       .select((eb) => [eb.fn.count("id").as("count")]),
   );
 
-  const udapQuery = useDbQuery(
+  const ceQuery = useDbQuery(
+    db
+      .selectFrom("state_report")
+      .where("service_id", "=", user.service.id)
+      .where("created_by", "=", user.id)
+      .where("created_at", ">=", startDate.toISOString())
+      .where("created_at", "<=", endDate.toISOString())
+      .where("attachment_id", "is not", null)
+      .select((eb) => [eb.fn.count("id").as("count")]),
+  );
+
+  const udapCrQuery = useDbQuery(
     db
       .selectFrom("report")
       .where("service_id", "=", user.service.id)
       .where("createdAt", ">=", startDate.toISOString())
       .where("createdAt", "<=", endDate.toISOString())
       .where("pdf", "is not", null)
+      .select((eb) => [eb.fn.count("id").as("count")]),
+  );
+
+  const udapCeQuery = useDbQuery(
+    db
+      .selectFrom("state_report")
+      .where("service_id", "=", user.service.id)
+      .where("created_at", ">=", startDate.toISOString())
+      .where("created_at", "<=", endDate.toISOString())
+      .where("attachment_id", "is not", null)
       .select((eb) => [eb.fn.count("id").as("count")]),
   );
 
@@ -611,7 +631,7 @@ const Activity = () => {
 
       <Flex gap="8px" flexDirection={{ xs: "column", lg: "row" }} width="100%">
         <Center
-          bgcolor="green-emeraude-975-75"
+          bgcolor={fr.colors.decisions.artwork.background.greenEmeraude.default}
           flexDirection="column"
           alignItems="center"
           borderRadius="5px"
@@ -619,11 +639,14 @@ const Activity = () => {
           height="215px"
           textAlign="center"
         >
+          <i className="fr-icon fr-icon-account-circle-fill" style={{ fontSize: "48px", marginBottom: "8px" }}></i>
           <div>CR envoyés par {user.name} :</div>
-          <div>{query.isLoading ? <Spinner /> : <div>{query.data?.[0]?.count as any}</div>}</div>
+          <div>{crQuery.isLoading ? <Spinner /> : <div>{crQuery.data?.[0]?.count as any}</div>}</div>
+          <Box mt="16px">CE envoyés par {user.name} :</Box>
+          <div>{ceQuery.isLoading ? <Spinner /> : <div>{ceQuery.data?.[0]?.count as any}</div>}</div>
         </Center>
         <Center
-          bgcolor="green-emeraude-975-75"
+          bgcolor={fr.colors.decisions.artwork.background.greenEmeraude.default}
           flexDirection="column"
           alignItems="center"
           borderRadius="5px"
@@ -631,8 +654,11 @@ const Activity = () => {
           height="215px"
           textAlign="center"
         >
+          <i className="fr-icon fr-icon-france-fill" style={{ fontSize: "48px", marginBottom: "8px" }}></i>
           <div>CR envoyés par l'UDAP :</div>
-          <div>{query.isLoading ? <Spinner /> : <div>{udapQuery.data?.[0]?.count as any}</div>}</div>
+          <div>{crQuery.isLoading ? <Spinner /> : <div>{udapCrQuery.data?.[0]?.count as any}</div>}</div>
+          <Box mt="16px">CE envoyés par l'UDAP :</Box>
+          <div>{ceQuery.isLoading ? <Spinner /> : <div>{udapCeQuery.data?.[0]?.count as any}</div>}</div>
         </Center>
       </Flex>
     </Flex>
@@ -782,7 +808,7 @@ const AlertesForm = ({ service }: { service: Service }) => {
       width="100%"
       onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
     >
-      <Title anchor="alertes-mh">4. Alertes MH</Title>
+      <Title anchor="alertes-mh">4. Alertes visites Monuments Historiques</Title>
 
       <Input sx={{ mt: "16px" }} label="Courriel CRMH" nativeInputProps={{ ...form.register("courriel_crmh") }} />
       <Input label="Courriel CAOA" nativeInputProps={{ ...form.register("courriel_caoa") }} />
