@@ -34,11 +34,9 @@ const View = (props: StateReportPDFDocumentProps) => {
     enabled: !!props.htmlString,
   });
 
-  console.log(query.error);
-
   if (query.isLoading)
     return (
-      <Center height="100%">
+      <Center height="100%" mt="100px">
         <Spinner />
       </Center>
     );

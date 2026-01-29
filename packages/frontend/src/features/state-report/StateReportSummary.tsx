@@ -137,18 +137,18 @@ const SummaryContent = ({ onClick }: { onClick?: () => void }) => {
         <Box
           position="relative"
           component="li"
-          className={isActive("constat-general") ? "active" : ""}
-          onClick={() => navigateToStep("constat-general")}
-        >
-          Constat général
-        </Box>
-        <Box
-          position="relative"
-          component="li"
           className={isActive("constat-detaille") ? "active" : ""}
           onClick={() => navigateToStep("constat-detaille")}
         >
           Constat détaillé
+        </Box>
+        <Box
+          position="relative"
+          component="li"
+          className={isActive("constat-general") ? "active" : ""}
+          onClick={() => navigateToStep("constat-general")}
+        >
+          Constat général
         </Box>
       </Box>
     </Box>

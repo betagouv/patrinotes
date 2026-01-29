@@ -13,10 +13,12 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { MandatoryFieldReminder } from "./ConstatGeneral";
 import { IconLink } from "#components/ui/IconLink.tsx";
+import { ButtonsSwitch } from "../WithReferencePop";
 
 export const ContexteVisite = () => {
   const form = useStateReportFormContext();
   const isDisabled = useIsStateReportDisabled();
+
   return (
     <Stack
       px="16px"
@@ -91,6 +93,7 @@ export const ContexteVisite = () => {
           }}
         />
       </Flex>
+      <ButtonsSwitch />
     </Stack>
   );
 };

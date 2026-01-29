@@ -6,7 +6,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { scrollToTop, StateReportSummary } from "./StateReportSummary";
 import { Tabs } from "#components/Tabs.tsx";
 import { MonumentHistorique } from "./steps/MonumentHistorique";
-import { fr } from "@codegouvfr/react-dsfr";
+import { fr, FrIconClassName, RiIconClassName } from "@codegouvfr/react-dsfr";
 import { getRouteApi, UseNavigateResult } from "@tanstack/react-router";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { ContexteVisite } from "./steps/ContexteVisite";
@@ -39,7 +39,6 @@ export const WithReferencePop = () => {
           <Flex height="100%" width="100%" flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "24px" }}>
             <Box minWidth="280px">
               <StateReportSummary />
-              {isDesktop ? <ButtonsSwitch /> : null}
             </Box>
             <Box
               borderLeft={{ xs: "none", lg: "1px solid" }}
@@ -47,7 +46,7 @@ export const WithReferencePop = () => {
               flex="1"
             >
               <ContentSwitch />
-              {isDesktop || step === "informations" ? null : <ButtonsSwitch />}
+              {/* {isDesktop || step === "informations" ? null : <ButtonsSwitch />} */}
             </Box>
           </Flex>
         )}
@@ -64,12 +63,61 @@ const ContentSwitch = () => {
   const content: Record<StateReportStep, ReactNode> = {
     informations: <MonumentHistorique />,
     "contexte-visite": <ContexteVisite />,
-    "constat-general": <ConstatGeneral />,
     "constat-detaille": <ConstatDetaille />,
+    "constat-general": <ConstatGeneral />,
     documents: null,
   };
 
   return <>{content[step]}</>;
+};
+
+const ButtonsContainer = ({ children }: { children: ReactNode }) => {
+  return (
+    <Stack gap="8px" width="100%" flexDirection={{ xs: "column", lg: "row" }} justifyContent="space-between">
+      {children}
+    </Stack>
+  );
+};
+
+const LeftButton = ({ children, onClick }: { children: ReactNode; onClick: () => void }) => {
+  return (
+    <Button
+      iconPosition="left"
+      iconId="ri-arrow-left-line"
+      priority="secondary"
+      size="large"
+      nativeButtonProps={{
+        onClick,
+      }}
+      sx={buttonSxProps}
+    >
+      {children}
+    </Button>
+  );
+};
+
+const RightButton = ({
+  children,
+  onClick,
+  customIcon,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  customIcon?: FrIconClassName | RiIconClassName;
+}) => {
+  return (
+    <Button
+      iconPosition="right"
+      iconId={customIcon ?? "ri-arrow-right-line"}
+      size="large"
+      nativeButtonProps={{
+        onClick,
+      }}
+      sx={buttonSxProps}
+    >
+      {children}
+    </Button>
+  );
 };
 
 export const ButtonsSwitch = () => {
@@ -85,97 +133,24 @@ export const ButtonsSwitch = () => {
   const buttons: Record<StateReportStep, ReactNode> = {
     informations: <InformationsButtons navigateToStep={navigateToStep} />,
     "contexte-visite": (
-      <Stack gap="8px" width="100%" mx="16px">
-        <Button
-          iconPosition="left"
-          iconId="ri-arrow-left-line"
-          priority="secondary"
-          size="large"
-          nativeButtonProps={{
-            onClick: () => navigateToStep("informations"),
-          }}
-          sx={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Information du MH
-        </Button>
-        <Button
-          iconPosition="right"
-          iconId="ri-arrow-right-line"
-          size="large"
-          nativeButtonProps={{
-            onClick: () => navigateToStep("constat-general"),
-          }}
-          sx={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Constat général
-        </Button>
-      </Stack>
-    ),
-    "constat-general": (
-      <Stack gap="8px" width="100%" mx="16px">
-        <Button
-          iconPosition="left"
-          iconId="ri-arrow-left-line"
-          priority="secondary"
-          size="large"
-          nativeButtonProps={{
-            onClick: () => navigateToStep("contexte-visite"),
-          }}
-          sx={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Contexte de la visite
-        </Button>
-        <Button
-          iconPosition="right"
-          iconId="ri-arrow-right-line"
-          size="large"
-          nativeButtonProps={{
-            onClick: () => navigateToStep("constat-detaille"),
-          }}
-          sx={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Constat détaillé
-        </Button>
-        <CreateButton />
-      </Stack>
+      <ButtonsContainer>
+        <LeftButton onClick={() => navigateToStep("informations")}>Information du MH</LeftButton>
+        <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
+      </ButtonsContainer>
     ),
     "constat-detaille": (
-      <Stack gap="8px" width="100%" mx="16px">
-        <Button
-          iconPosition="left"
-          iconId="ri-arrow-left-line"
-          priority="secondary"
-          size="large"
-          nativeButtonProps={{
-            onClick: () => navigateToStep("constat-general"),
-          }}
-          sx={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Constat général
-        </Button>
-        <CreateButton />
-      </Stack>
+      <ButtonsContainer>
+        <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
+        <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
+      </ButtonsContainer>
     ),
+    "constat-general": (
+      <ButtonsContainer>
+        <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
+        <CreateButton />
+      </ButtonsContainer>
+    ),
+
     documents: null,
   };
 
@@ -240,34 +215,14 @@ const CreateButton = () => {
     }
 
     setFormErrors(missingFields);
-
-    // navigate({
-    //   to: "/constat/$constatId/pdf",
-    //   params: {
-    //     constatId,
-    //   },
-    //   search: { mode: "view" },
-    // })
   };
 
   return (
     <>
       <FormErrorModal formErrors={formErrors} onClose={() => setFormErrors(null)} />
-      <Button
-        iconPosition="left"
-        iconId="fr-icon-article-fill"
-        size="large"
-        nativeButtonProps={{
-          onClick: () => onSubmit(),
-        }}
-        sx={{
-          width: "100%",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
         {attachmentId ? "Voir le constat" : "Finaliser le constat"}
-      </Button>
+      </RightButton>
     </>
   );
 };
@@ -396,17 +351,18 @@ const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateR
   };
 
   return (
-    <Stack gap="8px" width="100%" mx="16px">
+    <Stack
+      gap="8px"
+      width="100%"
+      mx={{ xs: "16px", lg: "0" }}
+      flexDirection={{ xs: "column", lg: "row" }}
+      justifyContent="space-between"
+    >
       {isEditing ? (
-        <>
+        <Flex alignItems="center" gap="8px" flexDirection={{ xs: "column", lg: "row" }}>
           <Button
             size="large"
-            sx={{
-              width: "100%",
-              mx: "16px",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            sx={buttonSxProps}
             priority="secondary"
             nativeButtonProps={{
               onClick: () => onCancel(),
@@ -416,50 +372,37 @@ const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateR
           </Button>
           <Button
             size="large"
-            sx={{
-              width: "100%",
-              mx: "16px",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            sx={buttonSxProps}
             priority="secondary"
+            iconId="ri-save-fill"
+            iconPosition="right"
             nativeButtonProps={{
               onClick: () => onSave(),
             }}
           >
             Valider les modifications
           </Button>
-        </>
+        </Flex>
       ) : (
         <Button
           iconPosition="right"
           iconId="ri-pencil-fill"
           size="large"
           priority="secondary"
-          sx={{
-            width: "100%",
-            mx: "16px",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          disabled={isDisabled}
+          sx={buttonSxProps}
+          disabled={isDisabled || isEditing}
           nativeButtonProps={{
             onClick: () => onEdit(),
           }}
         >
-          Compléter
+          Compléter les infos
         </Button>
       )}
       <Button
         iconPosition="right"
         iconId="ri-arrow-right-line"
         size="large"
-        sx={{
-          width: "100%",
-          mx: "16px",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        sx={buttonSxProps}
         nativeButtonProps={{
           onClick: () => navigateToStep("contexte-visite"),
         }}
@@ -468,4 +411,10 @@ const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateR
       </Button>
     </Stack>
   );
+};
+
+const buttonSxProps = {
+  width: { xs: "100%", lg: "auto" },
+  alignItems: "center",
+  justifyContent: "center",
 };

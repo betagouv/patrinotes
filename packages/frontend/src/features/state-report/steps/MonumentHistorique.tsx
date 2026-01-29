@@ -41,16 +41,6 @@ export const MonumentHistorique = () => {
         width="100%"
         flex="1"
       >
-        {isEditing ? (
-          //@ts-ignore
-          <Alert
-            severity="info"
-            title={undefined}
-            description="Les informations modifiées ne seront pas reportées sur sa fiche POP."
-            sx={{ mb: "16px" }}
-          />
-        ) : null}
-
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
           <EditableField label="Nature de l'édifice" field="nature_edifice" isEditing={isEditing} isDisabled />
           <EditableField
@@ -81,7 +71,7 @@ export const MonumentHistorique = () => {
           />
         </Flex>
 
-        <Divider />
+        <Divider my={"16px"} />
 
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
           <EditableField label="Adresse" field="adresse" isEditing={isEditing} />
@@ -93,7 +83,7 @@ export const MonumentHistorique = () => {
           <EditableField label="Référence cadastrale" field="reference_cadastrale" isEditing={isEditing} />
         </Flex>
 
-        <Divider />
+        <Divider my={"16px"} />
 
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
           <EditableField label="Nature de la protection" field="nature_protection" isEditing={isEditing} />
@@ -114,12 +104,19 @@ export const MonumentHistorique = () => {
             isEditing={isEditing}
           />
         </Flex>
+        <Divider my={"16px"} />
+        <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box>
+        {isEditing ? (
+          //@ts-ignore
+          <Alert
+            severity="info"
+            title={undefined}
+            description="Les informations modifiées ne seront pas reportées sur sa fiche POP."
+            sx={{ mt: "16px" }}
+          />
+        ) : null}
+        {isDesktop ? <ButtonsSwitch /> : null}
       </Flex>
-
-      <Box mt="24px" px={{ xs: "16px", lg: "64px" }}>
-        <MonumentObjets />
-      </Box>
-      {isDesktop ? null : <ButtonsSwitch />}
 
       <Box position="relative" height="60px" width="100%" mt={{ xs: "16px", lg: "32px" }}>
         <Box
@@ -149,6 +146,8 @@ export const MonumentHistorique = () => {
           </Box>
         </Box>
       </Box>
+
+      {!isDesktop ? <ButtonsSwitch /> : null}
     </Flex>
   );
 };
@@ -156,6 +155,19 @@ export const MonumentHistorique = () => {
 const getNbToShow = (page: number) => {
   let baseNb = 2;
   return baseNb + (page - 1) * 6;
+};
+
+const MonumentObjetsEdition = () => {
+  return (
+    <Stack>
+      <Typography fontWeight="bold">Objets mobiliers conservés</Typography>
+      <Typography>
+        Vous ne pouvez pas modifier ces informations. Toutefois, vous pouvez{" "}
+        <a className="fr-link">signaler une alerte</a> si vous remarquez l’absence ou une détérioration d’un objet
+        mobilier.
+      </Typography>
+    </Stack>
+  );
 };
 
 const MonumentObjets = () => {
@@ -351,7 +363,6 @@ const renderBasicInput = ({
   label: string;
   disabled?: boolean;
 }) => {
-  if (label === "Référence POP") console.log(inputProps);
   return <Input label={label} nativeInputProps={{ ...inputProps }} disabled={disabled} />;
 };
 

@@ -20,6 +20,7 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { deserializePreconisations, serializePreconisations } from "@cr-vif/pdf/constat";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
+import { ButtonsSwitch } from "../WithReferencePop";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -45,6 +46,9 @@ export const ConstatGeneral = () => {
       <EtatGeneralImages isDisabled={isDisabled} />
       <Divider my={{ xs: "24px", lg: "32px" }} />
       <Preconisations isDisabled={isDisabled} />
+      <Box mt="32px">
+        <ButtonsSwitch />
+      </Box>
     </Stack>
   );
 };

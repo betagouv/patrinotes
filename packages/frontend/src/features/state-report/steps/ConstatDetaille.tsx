@@ -21,6 +21,7 @@ import { useIsStateReportDisabled } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
+import { ButtonsSwitch } from "../WithReferencePop";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -39,6 +40,8 @@ export const ConstatDetaille = () => {
       </Typography>
 
       <SectionsList visitedSections={sectionsQuery.data} />
+
+      <ButtonsSwitch />
     </Stack>
   );
 };
