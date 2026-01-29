@@ -6,7 +6,11 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import { StateReport, StateReportAttachment, VisitedSection, VisitedSectionAttachment } from "../db/AppSchema";
 import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
 import { useQuery } from "@tanstack/react-query";
-import { AlertWithEmail, ConstatPdfContext, useConstatPdfContext } from "../features/state-report/pdf/ConstatPdfContext";
+import {
+  AlertWithEmail,
+  ConstatPdfContext,
+  useConstatPdfContext,
+} from "../features/state-report/pdf/ConstatPdfContext";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
 import { Button } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
@@ -271,7 +275,7 @@ const GoBackButton = () => {
   const { constatId } = Route.useParams();
   const navigate = useNavigate();
   const goBack = () => {
-    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step: "constat-detaille", mode: "view" } });
+    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step: "constat-general", mode: "view" } });
   };
 
   return (
@@ -347,11 +351,7 @@ const SendBannerContent = () => {
 
   return (
     <>
-      <AlertEmailErrorModal
-        errors={alertErrors}
-        onClose={() => setAlertErrors(null)}
-        onAlertClick={handleAlertClick}
-      />
+      <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={handleAlertClick} />
       <Flex
         flexDirection={{ xs: "column", lg: "row" }}
         width="100%"
@@ -372,12 +372,7 @@ const SendBannerContent = () => {
         </Box>
 
         <Box mr="100px" ml="8px">
-          <Button
-            type="button"
-            iconId="ri-send-plane-fill"
-            disabled={isSending}
-            onClick={handleSend}
-          >
+          <Button type="button" iconId="ri-send-plane-fill" disabled={isSending} onClick={handleSend}>
             {isSending ? "Envoi en cours..." : "Envoyer"}
           </Button>
         </Box>
@@ -410,9 +405,7 @@ const AlertEmailErrorModal = ({
           </Flex>
           <ModalCloseButton onClose={onClose} />
         </Flex>
-        <Typography mb="16px">
-          Veuillez renseigner un courriel pour les alertes suivantes :
-        </Typography>
+        <Typography mb="16px">Veuillez renseigner un courriel pour les alertes suivantes :</Typography>
         <Stack component="ul" gap="8px" pl="16px">
           {errors?.map(({ id, alert }) => (
             <li key={id}>
