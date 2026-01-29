@@ -448,7 +448,7 @@ const generateImageCell = (image: Image | undefined) => {
           </p>`
           : "<p></p>"
       }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%; min-height: 200px; margin-bottom: 30px;" />
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%;  margin-bottom: 30px;" />
       <div style="position:relative">
         <div style="position:absolute; bottom:0; left:0; right:0; top:-30px;text-align:center; font-size:8pt; color:gray;">
         ${image.label ? `<span>${image.label}</span>` : ""}
