@@ -14,6 +14,7 @@ import { db, useDbQuery } from "../../../db/db";
 import { PopImage, PopObjet } from "../../../db/AppSchema";
 import { getRouteApi } from "@tanstack/react-router";
 import { Divider } from "#components/ui/Divider.tsx";
+import { Spinner } from "#components/Spinner.tsx";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -201,34 +202,58 @@ const MonumentObjets = () => {
     enabled: !!monumentReference,
   });
 
-  const imagesQuery = useQuery({
-    queryKey: ["pop-images-for-objets", objetsQuery.data?.objets.map((o) => o.reference)],
-    queryFn: async () => {
-      const references = objetsQuery.data!.objets.map((o) => o.reference);
-      const images = await api.get("/api/state-report/objets-images", {
-        query: { references: references.join(",") as any },
-      });
-      return { images: images as PopImage[] };
-    },
-    refetchOnWindowFocus: false,
-    enabled: !!objetsQuery.data?.objets.length,
-  });
-
   const { objets } = objetsQuery.data ?? { objets: [] };
-  const { images } = imagesQuery.data ?? { images: [] };
 
   const total = totalCountQuery.data?.[0]?.count ?? 0;
-  const shouldShowLoadMore = (objets.length || 0) < (total as number);
 
   return (
     <>
       <Typography variant="subtitle1" fontWeight="bold" mb="16px">
         Objets mobiliers conservés
       </Typography>
-      {objets?.length ? (
+      {objetsQuery.isLoading ? (
+        <Box mb="16px" mt="64px">
+          <Spinner size={80} />
+        </Box>
+      ) : (
+        <MonumentObjetList popObjets={objets} total={total as number} loadMore={() => setPage((p) => p + 1)} />
+      )}
+    </>
+  );
+};
+
+const MonumentObjetList = ({
+  popObjets,
+  total,
+  loadMore,
+}: {
+  popObjets: PopObjet[];
+  total: number;
+  loadMore: () => void;
+}) => {
+  const shouldShowLoadMore = (popObjets.length || 0) < (total as number);
+
+  const imagesQuery = useQuery({
+    queryKey: ["pop-images-for-objets", popObjets.map((o) => o.reference)],
+    queryFn: async () => {
+      const references = popObjets.map((o) => o.reference);
+      const images = await api.get("/api/state-report/objets-images", {
+        query: { references: references.join(",") as any },
+      });
+      return { images: images as PopImage[] };
+    },
+    refetchOnWindowFocus: false,
+    enabled: !!popObjets.length,
+  });
+
+  const images = imagesQuery.data?.images ?? [];
+
+  return (
+    <>
+      {popObjets?.length ? (
         <Stack width="100%" gap="16px">
           <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }} flexWrap="wrap">
-            {objets.map((obj) => (
+            {popObjets.map((obj) => (
               <MonumentObjetItem
                 key={obj.id}
                 popObjet={obj}
@@ -237,7 +262,7 @@ const MonumentObjets = () => {
             ))}
           </Flex>
           {shouldShowLoadMore ? (
-            <Button priority="tertiary" sx={{ px: "32px" }} onClick={() => setPage((p) => p + 1)}>
+            <Button priority="tertiary" sx={{ px: "32px" }} onClick={loadMore}>
               Voir plus de mobiliers
             </Button>
           ) : null}
