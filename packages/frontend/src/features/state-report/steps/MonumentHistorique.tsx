@@ -8,7 +8,7 @@ import { PropsWithChildren, useState } from "react";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../../api";
 import { db, useDbQuery } from "../../../db/db";
 import { PopImage, PopObjet } from "../../../db/AppSchema";
@@ -174,8 +174,6 @@ const MonumentObjetsEdition = () => {
 const MonumentObjets = () => {
   const form = useStateReportFormContext();
   const monumentReference = useWatch({ control: form.control, name: "reference_pop" });
-  const [page, setPage] = useState(0);
-  const nbToShow = getNbToShow(page + 1);
 
   const totalCountQuery = useDbQuery(
     db
@@ -186,25 +184,32 @@ const MonumentObjets = () => {
     { throttleMs: 10000 },
   );
 
-  // TODO: useInfiniteQuery
-  const objetsQuery = useQuery({
-    queryKey: ["pop-objets", monumentReference, nbToShow],
-    queryFn: async () => {
-      if (!monumentReference) return { objets: [], images: [] };
+  const objetsQuery = useInfiniteQuery({
+    queryKey: ["pop-objets", monumentReference],
+    queryFn: async (ctx) => {
+      const offset = ctx.pageParam?.offset ?? 0;
+      const limit = ctx.pageParam?.limit ?? 2;
+
       const objetsResponse = await db
         .selectFrom("pop_objets")
         .selectAll()
-        .where("reference_a_une_notice_merimee_mh", "like", "%" + monumentReference.trim())
-        .limit(nbToShow)
+        .where("reference_a_une_notice_merimee_mh", "like", "%" + monumentReference!.trim())
+        .limit(limit)
+        .offset(offset)
         .execute();
-      return { objets: objetsResponse };
+
+      return { objets: objetsResponse, offset, limit };
+    },
+    getNextPageParam: (lastPage) => {
+      return { offset: lastPage.offset + lastPage.limit, limit: 6 };
     },
     enabled: !!monumentReference,
   });
 
-  const { objets } = objetsQuery.data ?? { objets: [] };
-
   const total = totalCountQuery.data?.[0]?.count ?? 0;
+  const nbShown = objetsQuery.data ? objetsQuery.data.pages.reduce((acc, page) => acc + page.objets.length, 0) : 0;
+
+  const shouldShowLoadMore = nbShown < (total as number);
 
   return (
     <>
@@ -216,23 +221,28 @@ const MonumentObjets = () => {
           <Spinner size={80} />
         </Box>
       ) : (
-        <MonumentObjetList popObjets={objets} total={total as number} loadMore={() => setPage((p) => p + 1)} />
+        <>
+          <Stack width="100%" gap="16px">
+            {objetsQuery.data?.pages.filter(Boolean).map((page) => (
+              <MonumentObjetPage popObjets={page.objets} />
+            ))}
+          </Stack>
+          {shouldShowLoadMore ? (
+            <Button
+              priority="tertiary"
+              sx={{ px: "32px", mt: "16px", width: "calc(50% - 8px)", justifyContent: "center" }}
+              onClick={() => objetsQuery.fetchNextPage()}
+            >
+              Voir plus de mobiliers
+            </Button>
+          ) : null}
+        </>
       )}
     </>
   );
 };
 
-const MonumentObjetList = ({
-  popObjets,
-  total,
-  loadMore,
-}: {
-  popObjets: PopObjet[];
-  total: number;
-  loadMore: () => void;
-}) => {
-  const shouldShowLoadMore = (popObjets.length || 0) < (total as number);
-
+const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
   const imagesQuery = useQuery({
     queryKey: ["pop-images-for-objets", popObjets.map((o) => o.reference)],
     queryFn: async () => {
@@ -251,22 +261,15 @@ const MonumentObjetList = ({
   return (
     <>
       {popObjets?.length ? (
-        <Stack width="100%" gap="16px">
-          <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }} flexWrap="wrap">
-            {popObjets.map((obj) => (
-              <MonumentObjetItem
-                key={obj.id}
-                popObjet={obj}
-                images={images.filter((img) => img.reference === obj.reference)}
-              />
-            ))}
-          </Flex>
-          {shouldShowLoadMore ? (
-            <Button priority="tertiary" sx={{ px: "32px" }} onClick={loadMore}>
-              Voir plus de mobiliers
-            </Button>
-          ) : null}
-        </Stack>
+        <Flex width="100%" gap="16px" flexDirection={{ xs: "column", lg: "row" }} flexWrap="wrap">
+          {popObjets.map((obj) => (
+            <MonumentObjetItem
+              key={obj.id}
+              popObjet={obj}
+              images={images.filter((img) => img.reference === obj.reference)}
+            />
+          ))}
+        </Flex>
       ) : (
         <Flex>
           <Typography>Ce monument ne contient pas d’objets mobiliers.</Typography>
