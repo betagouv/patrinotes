@@ -11,6 +11,7 @@ import {
   ConstatPdfContext,
   useConstatPdfContext,
 } from "../features/state-report/pdf/ConstatPdfContext";
+import { useStateReportAlertsWithEmail } from "../features/state-report/StateReportSideMenu";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
 import { Button } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
@@ -146,20 +147,23 @@ const ConstatPdf = () => {
   const sections = sectionsQuery.data;
   const stateReport = stateReportQuery.data;
 
+  const alertsQuery = useStateReportAlertsWithEmail(constatId);
+  const alerts = alertsQuery.data;
+
   const isSetRef = useRef(false);
   const [localHtmlString, setLocalHtmlString] = useState<null | string>(null);
 
   useEffect(() => {
     if (isSetRef.current) return;
-    if (!sections || !stateReport) return;
+    if (!sections || !stateReport || !alerts) return;
 
-    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections });
+    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
     setLocalHtmlString(htmlString);
     isSetRef.current = true;
-  }, [sections, stateReport]);
+  }, [sections, stateReport, alerts]);
 
   const contextValue = {
-    isLoading: stateReportQuery.isLoading || sectionsQuery.isLoading,
+    isLoading: stateReportQuery.isLoading || sectionsQuery.isLoading || alertsQuery.isLoading,
     stateReport: stateReport,
     sections: sections,
     localHtmlString,
@@ -169,6 +173,7 @@ const ConstatPdf = () => {
     scrollToAlertRef,
     selectedAlerts,
     setSelectedAlerts,
+    alerts,
   };
 
   return (

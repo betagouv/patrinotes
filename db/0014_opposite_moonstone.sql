@@ -1,0 +1,1 @@
+ALTER TABLE "state_report_alert" ADD COLUMN "nom_service_contacte" text;
