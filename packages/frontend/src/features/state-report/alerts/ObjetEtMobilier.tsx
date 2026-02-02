@@ -145,6 +145,7 @@ export const ObjetsEtMobiliersPage = ({
 
 type ObjetMobilierForm = {
   objet_ou_mobilier: string;
+  objet_ou_mobilier_name: string;
   commentaires: string;
   show_in_report: boolean;
   probleme: string;
@@ -164,20 +165,28 @@ const ObjetMobilierItemForm = ({
   isNew?: boolean;
 }) => {
   const formId = useId();
-  const service = useService();
+  const service = useLiveService();
   const isFormDisabled = useIsStateReportDisabled();
   const [savedId, setSavedId] = useState<string | undefined>(item?.id);
 
+  const emails = getEmailsForSection(OBJETS_MOBILIERS_SECTION, service!);
+  const servicesNames = alertSections.find((s) => s.title === OBJETS_MOBILIERS_SECTION)?.services.join(", ") || "";
+
   const createOrUpdateAlertMutation = useMutation({
-    mutationFn: async ({ objet_ou_mobilier, commentaires, show_in_report, probleme }: ObjetMobilierForm) => {
+    mutationFn: async ({
+      objet_ou_mobilier,
+      objet_ou_mobilier_name,
+      commentaires,
+      show_in_report,
+      probleme,
+    }: ObjetMobilierForm) => {
       const showInReportValue = show_in_report ? 1 : 0;
-      const serviceEmailForInsert = String(service?.["courriel_caoa" as keyof typeof service] || "") || null;
 
       if (savedId) {
         await db
           .updateTable("state_report_alert")
           .where("id", "=", savedId)
-          .set({ objet_ou_mobilier, commentaires, show_in_report: showInReportValue, probleme })
+          .set({ objet_ou_mobilier, objet_ou_mobilier_name, commentaires, show_in_report: showInReportValue, probleme })
 
           .execute();
         return savedId;
@@ -191,11 +200,13 @@ const ObjetMobilierItemForm = ({
           alert: OBJETS_MOBILIERS_SECTION,
           state_report_id: constatId,
           objet_ou_mobilier,
+          objet_ou_mobilier_name,
           commentaires,
           probleme,
           show_in_report: showInReportValue,
           service_id: service?.id ?? null,
-          email: serviceEmailForInsert,
+          email: emails.join(",") || null,
+          nom_service_contacte: servicesNames || null,
         })
         .execute();
 
@@ -230,13 +241,15 @@ const ObjetMobilierItemForm = ({
   const form = useForm<ObjetMobilierForm>({
     defaultValues: {
       objet_ou_mobilier: item?.objet_ou_mobilier ?? "",
+      objet_ou_mobilier_name: item?.objet_ou_mobilier_name ?? "",
       commentaires: item?.commentaires ?? "",
       show_in_report: !!item?.show_in_report,
       probleme: item?.probleme ?? "",
     },
   });
 
-  const itemTitle = isNew && !savedId ? "Nouvel objet ou mobilier" : item?.objet_ou_mobilier || "Objet ou mobilier";
+  const itemTitle =
+    isNew && !savedId ? "Nouvel objet ou mobilier" : item?.objet_ou_mobilier_name || "Objet ou mobilier";
 
   return (
     <Stack
@@ -341,7 +354,14 @@ const ObjetEtMobilierSelect = ({ form }: { form: UseFormReturn<ObjetMobilierForm
       disabled={isFormDisabled}
       nativeSelectProps={{
         ...form.register("objet_ou_mobilier"),
-        onChange: (e) => form.setValue("objet_ou_mobilier", e.target.value),
+        onChange: (e) => {
+          form.setValue("objet_ou_mobilier", e.target.value);
+          const selectedObj = objetsEtMobiliersQuery.data?.find((obj) => obj.reference === e.target.value);
+          form.setValue(
+            "objet_ou_mobilier_name",
+            selectedObj ? uppercaseFirstLetterIf(selectedObj.titre_editorial!, true) : "",
+          );
+        },
       }}
     >
       <option value="" disabled>

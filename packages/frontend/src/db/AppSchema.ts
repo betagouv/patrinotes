@@ -395,6 +395,7 @@ const state_report_alert = new Table({
   email: column.text,
   nom_service_contacte: column.text,
   objet_ou_mobilier: column.text,
+  objet_ou_mobilier_name: column.text,
   probleme: column.text,
 });
 
@@ -497,4 +498,6 @@ const _checkTables: { [K in SharedTables]: IsTableOk<K> } = {
   state_report_sent_email: true,
   pop_objets: true,
   pop_images: true,
+  state_report_alert: true,
+  state_report_alert_attachment: true,
 };
