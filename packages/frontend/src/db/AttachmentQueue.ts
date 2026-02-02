@@ -5,13 +5,13 @@ import { attachmentStorage } from "./db";
 export class AttachmentQueue extends AbstractAttachmentQueue {
   onAttachmentIdsChange(onUpdate: (ids: string[]) => void): void {
     this.powersync.watch(
-      ` SELECT attachment_id FROM report_attachment
+      ` SELECT attachment_id FROM report_attachment WHERE is_deprecated = 0
         UNION ALL
-        SELECT attachment_id FROM state_report_attachment
+        SELECT attachment_id FROM state_report_attachment WHERE is_deprecated = 0
         UNION ALL
-        SELECT attachment_id FROM visited_section_attachment
+        SELECT attachment_id FROM visited_section_attachment WHERE is_deprecated = 0
         UNION ALL
-        SELECT attachment_id FROM state_report_alert_attachment`,
+        SELECT attachment_id FROM state_report_alert_attachment WHERE is_deprecated = 0`,
       [],
       {
         onResult: ({ rows }) => onUpdate(rows?._array?.map((r) => r.attachment_id) ?? []),
