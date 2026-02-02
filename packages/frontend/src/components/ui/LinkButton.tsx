@@ -14,7 +14,7 @@ export const LinkButton = ({ children, ...props }: ButtonProps & { children: Rea
         fontSize: "14px",
         fontWeight: "normal",
         textDecoration: "underline",
-        textUnderlineOffset: "2px",
+        textUnderlineOffset: "8px",
         padding: { xs: "0", lg: "0 8px" },
         ...props.sx,
       }}

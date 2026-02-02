@@ -19,6 +19,7 @@ import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./Sectio
 import { deserializeMandatoryEmails } from "./StateReportAlert.utils";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { LinkButton } from "#components/ui/LinkButton.tsx";
+import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -47,13 +48,9 @@ export const StateReportAlertSectionForm = ({
   form: AlertSectionsForm;
 }) => {
   const constatId = routeApi.useParams().constatId;
-
-  const mandatoryEmails = deserializeMandatoryEmails(alert?.mandatory_emails || "");
-  const serviceSuffix = addSIfPlural(mandatoryEmails.length);
-
   const isFormDisabled = useIsStateReportDisabled();
 
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const { mandatory_emails, additional_emails } = alert;
 
   const saveAlertMutation = useMutation({
     mutationFn: async () => {
@@ -71,21 +68,13 @@ export const StateReportAlertSectionForm = ({
       <Typography fontSize="16px" fontWeight="bold">
         Alerte : {title}
       </Typography>
-      <Typography mt="8px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-        Service{serviceSuffix} destinataire{serviceSuffix} :{" "}
-        {mandatoryEmails.map((e) => e.service).join(", ") || "Non spécifié"}
-      </Typography>
 
-      <Flex alignItems={{ xs: "start", lg: "center" }} flexDirection={{ xs: "column", sm: "row" }}>
-        <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-          {mandatoryEmails.map((e) => e.email).join(", ") || "Aucun courriel configuré"}
-        </Typography>
-        {!isFormDisabled && (
-          <LinkButton type="button" onClick={() => setIsEditingEmail(true)}>
-            Modifier
-          </LinkButton>
-        )}
-      </Flex>
+      <StateReportAlertsEmailInput
+        mandatory_emails={mandatory_emails}
+        additional_emails={additional_emails}
+        form={form}
+        name={name}
+      />
 
       <SectionCommentaires form={form} name={name} />
       <SectionPhotos alertId={alert?.id} constatId={constatId} isDisabled={isFormDisabled} />
