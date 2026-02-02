@@ -184,8 +184,8 @@ export const stateReportAlert = pgTable("state_report_alert", {
   probleme: text("probleme"),
   service_id: text("service_id"),
   sendEmail: boolean("send_email"),
-  email: text(),
-  nomServiceContacte: text("nom_service_contacte"),
+  mandatoryEmails: text("mandatory_emails"),
+  additionalEmails: text("additional_emails"),
 });
 
 export const stateReportAlertAttachment = pgTable("state_report_alert_attachment", {

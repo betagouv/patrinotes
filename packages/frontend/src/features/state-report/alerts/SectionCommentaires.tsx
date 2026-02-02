@@ -20,21 +20,21 @@ import { Spinner } from "#components/Spinner.tsx";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { processImage } from "../../upload/UploadReportImage";
-import { alertSections } from "@cr-vif/pdf/constat";
+import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 
-export const SectionCommentaires = ({ form }: { form: any }) => {
+export const SectionCommentaires = ({ form, name }: { form: AlertSectionsForm; name: AlertSectionName }) => {
   const isFormDisabled = useIsStateReportDisabled();
 
-  const value = useWatch({ control: form.control, name: "commentaires" });
-  const setValue = (val: string) => form.setValue("commentaires", val);
+  const value = useWatch({ control: form.control, name: `${name}.commentaires` });
+  const setValue = (val: string) => form.setValue(`${name}.commentaires`, val);
 
   const { isRecording, transcript, toggle } = useSpeechToTextV2({
     onEnd: (text) => {
-      setValue(form.getValues("commentaires") + " " + text);
+      setValue(form.getValues(`${name}.commentaires`) + " " + text);
     },
   });
 
-  const isIdleProps = form.register("commentaires");
+  const isIdleProps = form.register(`${name}.commentaires`);
   const isListeningProps = {
     ...isIdleProps,
     value: value + " " + transcript,
@@ -68,15 +68,11 @@ export const SectionCommentaires = ({ form }: { form: any }) => {
 
 export const SectionPhotos = ({
   alertId,
-  section,
   constatId,
-  form,
   isDisabled,
 }: {
   alertId: string | undefined;
-  section: string;
   constatId: string;
-  form: { getValues: (name: string) => any };
   isDisabled: boolean;
 }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
@@ -107,27 +103,6 @@ export const SectionPhotos = ({
   const addPhotoMutation = useMutation({
     mutationFn: async ({ file }: { file: File }) => {
       let currentAlertId = alertId;
-
-      if (!currentAlertId) {
-        currentAlertId = v7();
-
-        const sectionData = alertSections.find((s) => s.title === section);
-        const emailKey = "courriel_" + (sectionData?.details ?? "").toLowerCase();
-        const sectionEmail = service?.[emailKey as keyof typeof service] ?? null;
-
-        await db
-          .insertInto("state_report_alert")
-          .values({
-            id: currentAlertId,
-            alert: section,
-            state_report_id: constatId,
-            commentaires: form.getValues("commentaires") || "",
-            show_in_report: form.getValues("show_in_report") ? 1 : 0,
-            service_id: service?.id ?? null,
-            email: sectionEmail,
-          })
-          .execute();
-      }
 
       const processedFile = await processImage(file);
       const attachmentId = `${constatId}/images/${v7()}.jpg`;
@@ -184,9 +159,9 @@ export const SectionPhotos = ({
   );
 };
 
-export const ShowInReportToggle = ({ form }: { form: any }) => {
-  const value = useWatch({ control: form.control, name: "show_in_report" });
-  const setValue = (val: boolean) => form.setValue("show_in_report", val);
+export const ShowInReportToggle = ({ form, name }: { name: AlertSectionName; form: AlertSectionsForm }) => {
+  const value = useWatch({ control: form.control, name: `${name}.show_in_report` });
+  const setValue = (val: boolean) => form.setValue(`${name}.show_in_report`, val as any);
 
   const isDisabled = useIsStateReportDisabled();
 
@@ -196,7 +171,7 @@ export const ShowInReportToggle = ({ form }: { form: any }) => {
       disabled={isDisabled}
       showCheckedHint={false}
       onChange={setValue}
-      checked={value}
+      checked={!!value}
       label="Afficher dans le rapport"
     />
   );
