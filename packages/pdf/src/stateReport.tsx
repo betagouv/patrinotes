@@ -507,11 +507,11 @@ export const serializePreconisations = (value: { preconisation: string; commenta
     .join("/");
 };
 
-const generateAlertsTable = (alerts: (StateReportAlert & { email: string })[]) => {
+const generateAlertsTable = (alerts: StateReportAlert[]) => {
   return `<ul>
     ${alerts
       .filter((a) => !!a.alert && !!a.email)
-      .map((a: StateReportAlert & { email: string }) => {
+      .map((a: StateReportAlert) => {
         const section = alertSections.find((section) => section.title === a.alert);
         const withPronom = [section?.pronom ?? "à", a.nom_service_contacte];
 
@@ -527,7 +527,7 @@ const generateAlertsTable = (alerts: (StateReportAlert & { email: string })[]) =
   `;
 };
 
-export const alertSections = [
+export const alertSectionStaticData = [
   { title: "Edifice en péril", services: ["CRMH"] },
   { title: "Abords de l'édifice", services: ["UDAP"] },
   { title: "Objets et mobiliers", services: ["CAOA", "CRMH"] },

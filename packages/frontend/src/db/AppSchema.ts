@@ -392,11 +392,11 @@ const state_report_alert = new Table({
   commentaires: column.text,
   show_in_report: column.integer,
   service_id: column.text,
-  email: column.text,
-  nom_service_contacte: column.text,
   objet_ou_mobilier: column.text,
   objet_ou_mobilier_name: column.text,
   probleme: column.text,
+  mandatory_emails: column.text,
+  additional_emails: column.text,
 });
 
 const state_report_alert_attachment = new Table({
