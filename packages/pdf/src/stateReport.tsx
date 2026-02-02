@@ -1,5 +1,12 @@
 import { Document, Link, Page, Text, View } from "@react-pdf/renderer";
-import { Clause_v2, Report, Service, ServiceInstructeurs, StateReport } from "../../frontend/src/db/AppSchema";
+import {
+  Clause_v2,
+  Report,
+  Service,
+  ServiceInstructeurs,
+  StateReport,
+  StateReportAlert,
+} from "../../frontend/src/db/AppSchema";
 import { MarianneHeader, Pagination, initFonts, minifyHtml } from "./utils";
 import { Html } from "react-pdf-html";
 import { StateReportWithUser } from "../../frontend/src/features/report/ReportList";
@@ -217,9 +224,11 @@ const link =
 export const getStateReportHtmlString = ({
   stateReport,
   visitedSections: sections,
+  alerts,
 }: {
   stateReport: StateReportWithUserAndAttachments;
   visitedSections: SectionWithAttachments[];
+  alerts?: (StateReportAlert & { email: string })[];
 }) => {
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
@@ -354,6 +363,20 @@ export const getStateReportHtmlString = ({
         </div>`
           : ""
       }
+
+      ${
+        alerts?.length
+          ? `<div id="alertes">
+        <h2>Alertes</h2>
+        <b>
+          Suite à la visite, ${alerts.length} ont été signalées et transmises aux services concernés :
+        </b>
+        <br/>
+        ${generateAlertsTable(alerts)}
+        </div>`
+          : ""
+      }
+
       </div>
 
       <br/><br/><br/><br/><br/>
@@ -483,6 +506,37 @@ export const serializePreconisations = (value: { preconisation: string; commenta
     )
     .join("/");
 };
+
+const generateAlertsTable = (alerts: (StateReportAlert & { email: string })[]) => {
+  return `<ul>
+    ${alerts
+      .filter(a => !!a.alert && !!a.email)
+      .map(
+        (a: StateReportAlert & { email: string }) => {
+          const section = alertSections.find((section) => section.title === a.alert);
+          const withPronom = [(section?.pronom ?? "à"), (a.nom_service_contacte), ];
+
+          return `
+            <li>
+              <b>${a.alert}</b><br/>
+              <i>Alerte transmise par courriel ${alertSections.find(section => section.title === a.alert)?.pronom ?? "à"} ${a.email || "N/A"}</i>
+            </li>
+          `},
+      )
+      .join("")}
+  </ul>
+  `;
+};
+
+export const alertSections = [
+  { title: "Edifice en péril", details: "CRMH", pronom: "au" },
+  { title: "Abords de l'édifice", details: "UDAP", pronom: "à l'" },
+  { title: "Objets et mobiliers", details: "CAOA", pronom: "au" },
+  { title: "Archéologie", details: "SRA", pronom: "à la" },
+  { title: "Site classé ou inscrit", details: "DREAL", pronom: "à la" },
+  { title: "Biodiversité", details: "OFB", pronom: "à l'" },
+  { title: "Sécurité", details: "Mairie", pronom: "à la" },
+];
 
 export const stateReportExtraCss = {
   ".column-block": {

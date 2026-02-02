@@ -6,8 +6,6 @@ import { Accordion, Center, Checkbox, Input } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { PdfCanvas } from "../../../routes/pdf.$reportId";
 import { useService, useUser } from "../../../contexts/AuthContext";
-import { getRouteApi } from "@tanstack/react-router";
-import { useStateReportAlerts, useStateReportAlertsWithEmail } from "../StateReportSideMenu";
 import { addSIfPlural } from "../../../utils";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -16,15 +14,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { db } from "../../../db/db";
 import { StateReportAlert } from "../../../db/AppSchema";
 
-const routeApi = getRouteApi("/constat_/$constatId/pdf");
-
 export const SendConstatPdf = () => {
-  const { localHtmlString, scrollToAlertRef, setSelectedAlerts } = useConstatPdfContext()!;
+  const { localHtmlString, scrollToAlertRef, setSelectedAlerts, alerts = [] } = useConstatPdfContext()!;
   const user = useUser()!;
-  const { constatId } = routeApi.useParams();
-
-  const alertsQuery = useStateReportAlertsWithEmail(constatId);
-  const alerts = alertsQuery.data ?? [];
 
   const [checkedAlertIds, setCheckedAlertIds] = useState<Set<string>>(new Set());
   const isInitialized = useRef(false);
@@ -130,6 +122,7 @@ export const SendConstatPdf = () => {
     </Stack>
   );
 };
+
 
 type AlertWithEmail = StateReportAlert & { email: string };
 

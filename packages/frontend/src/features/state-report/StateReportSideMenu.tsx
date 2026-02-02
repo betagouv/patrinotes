@@ -22,6 +22,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { MinimalAttachment, UploadImage } from "../upload/UploadImage";
 import { UploadImageModal } from "../upload/UploadImageButton";
 import { processImage } from "../upload/UploadReportImage";
+import { alertSections } from "@cr-vif/pdf/constat";
 
 export const StateReportSideMenu = () => {
   const [sideMenu, setSideMenu] = useState<MenuStates>("closed");
@@ -132,7 +133,7 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
         return;
       }
 
-      const sectionData = sections.find((s) => s.title === sectionTitle);
+      const sectionData = alertSections.find((s) => s.title === sectionTitle);
       const emailKey = "courriel_" + (sectionData?.details ?? "").toLowerCase();
       const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
       const email = String(emailRaw || "") || null;
@@ -209,7 +210,7 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
             <Spinner />
           </Box>
         ) : (
-          sections.map(({ title, details }) => {
+          alertSections.map(({ title, details }) => {
             const isObjetsMobiliers = title === OBJETS_MOBILIERS_SECTION;
             const displayDetails =
               isObjetsMobiliers && objetsMobiliersCount > 0 ? `${details} (${objetsMobiliersCount})` : details;
@@ -255,7 +256,7 @@ const SelectedSection = ({
   const service = useLiveService();
   const isFormDisabled = useIsStateReportDisabled();
 
-  const sectionStaticData = sections.find((s) => s.title === section);
+  const sectionStaticData = alertSections.find((s) => s.title === section);
 
   const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
   const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
@@ -517,7 +518,7 @@ const SectionPhotos = ({
       if (!currentAlertId) {
         currentAlertId = v7();
 
-        const sectionData = sections.find((s) => s.title === section);
+        const sectionData = alertSections.find((s) => s.title === section);
         const emailKey = "courriel_" + (sectionData?.details ?? "").toLowerCase();
         const sectionEmail = service?.[emailKey as keyof typeof service] ?? null;
 
@@ -605,7 +606,7 @@ const ObjetsEtMobiliersPage = ({
   const [pendingNewItems, setPendingNewItems] = useState<string[]>([]);
   const { constatId } = routeApi.useParams();
 
-  const sectionStaticData = sections.find((s) => s.title === OBJETS_MOBILIERS_SECTION);
+  const sectionStaticData = alertSections.find((s) => s.title === OBJETS_MOBILIERS_SECTION);
   const service = useLiveService();
   const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
   const email = service?.[emailKey as keyof typeof service] ?? "";
@@ -914,16 +915,6 @@ const ObjetMobilierItemForm = ({
     </Stack>
   );
 };
-
-const sections = [
-  { title: "Edifice en péril", details: "CRMH" },
-  { title: "Abords de l'édifice", details: "UDAP" },
-  { title: "Objets et mobiliers", details: "CAOA" },
-  { title: "Archéologie", details: "SRA" },
-  { title: "Site classé ou inscrit", details: "DREAL" },
-  { title: "Biodiversité", details: "OFB" },
-  { title: "Sécurité", details: "Mairie" },
-];
 
 const StateReportNotesMenu = ({ onClose }: ModalContentProps) => {
   const form = useStateReportFormContext();

@@ -184,6 +184,7 @@ export const stateReportAlert = pgTable("state_report_alert", {
   service_id: text("service_id"),
   sendEmail: boolean("send_email"),
   email: text(),
+  nomServiceContacte: text("nom_service_contacte"),
 });
 
 export const stateReportAlertAttachment = pgTable("state_report_alert_attachment", {

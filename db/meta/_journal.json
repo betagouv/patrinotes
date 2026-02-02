@@ -99,6 +99,13 @@
       "when": 1769421571954,
       "tag": "0013_cool_caretaker",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1770021909168,
+      "tag": "0014_opposite_moonstone",
+      "breakpoints": true
     }
   ]
 }
