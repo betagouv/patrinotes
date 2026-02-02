@@ -510,32 +510,41 @@ export const serializePreconisations = (value: { preconisation: string; commenta
 const generateAlertsTable = (alerts: (StateReportAlert & { email: string })[]) => {
   return `<ul>
     ${alerts
-      .filter(a => !!a.alert && !!a.email)
-      .map(
-        (a: StateReportAlert & { email: string }) => {
-          const section = alertSections.find((section) => section.title === a.alert);
-          const withPronom = [(section?.pronom ?? "à"), (a.nom_service_contacte), ];
+      .filter((a) => !!a.alert && !!a.email)
+      .map((a: StateReportAlert & { email: string }) => {
+        const section = alertSections.find((section) => section.title === a.alert);
+        const withPronom = [section?.pronom ?? "à", a.nom_service_contacte];
 
-          return `
+        return `
             <li>
               <b>${a.alert}</b><br/>
-              <i>Alerte transmise par courriel ${alertSections.find(section => section.title === a.alert)?.pronom ?? "à"} ${a.email || "N/A"}</i>
+              <i>Alerte transmise par courriel ${alertSections.find((section) => section.title === a.alert)?.pronom ?? "à"} ${a.email || "N/A"}</i>
             </li>
-          `},
-      )
+          `;
+      })
       .join("")}
   </ul>
   `;
 };
 
 export const alertSections = [
-  { title: "Edifice en péril", details: "CRMH", pronom: "au" },
-  { title: "Abords de l'édifice", details: "UDAP", pronom: "à l'" },
-  { title: "Objets et mobiliers", details: "CAOA", pronom: "au" },
-  { title: "Archéologie", details: "SRA", pronom: "à la" },
-  { title: "Site classé ou inscrit", details: "DREAL", pronom: "à la" },
-  { title: "Biodiversité", details: "OFB", pronom: "à l'" },
-  { title: "Sécurité", details: "Mairie", pronom: "à la" },
+  { title: "Edifice en péril", services: ["CRMH"] },
+  { title: "Abords de l'édifice", services: ["UDAP"] },
+  { title: "Objets et mobiliers", services: ["CAOA", "CRMH"] },
+  { title: "Archéologie", services: ["SRA"] },
+  { title: "Site classé ou inscrit", services: ["DREAL"] },
+  { title: "Biodiversité", services: ["OFB"] },
+  { title: "Sécurité", services: ["Mairie"] },
+];
+
+export const servicePronoms = [
+  { serviceCode: "CRMH", pronom: "au" },
+  { serviceCode: "UDAP", pronom: "à l'" },
+  { serviceCode: "CAOA", pronom: "au" },
+  { serviceCode: "SRA", pronom: "à la" },
+  { serviceCode: "DREAL", pronom: "à la" },
+  { serviceCode: "OFB", pronom: "à l'" },
+  { serviceCode: "Mairie", pronom: "à la" },
 ];
 
 export const stateReportExtraCss = {

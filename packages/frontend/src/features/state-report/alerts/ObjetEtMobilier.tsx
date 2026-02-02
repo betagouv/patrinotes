@@ -17,16 +17,29 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
 import { v7 } from "uuid";
 import { getRouteApi } from "@tanstack/react-router";
-import { StateReportAlert } from "../../../db/AppSchema";
+import { Service, StateReportAlert } from "../../../db/AppSchema";
 import { Spinner } from "#components/Spinner.tsx";
 import { alertSections } from "@cr-vif/pdf/constat";
 import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
 import { useConstatPdfContext } from "../pdf/ConstatPdfContext";
 import { uppercaseFirstLetterIf } from "../../../utils";
+import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
 export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
+
+export const getEmailsForSection = (sectionTitle: string, service: Service) => {
+  const sectionStaticData = alertSections.find((s) => s.title === sectionTitle);
+  if (!sectionStaticData || !service) return [];
+
+  const emailKeys = sectionStaticData.services.map((svc) => "courriel_" + svc.toLowerCase().replace(/\s+/g, "_"));
+  const emails = emailKeys
+    .map((key) => service[key as keyof typeof service])
+    .filter((email): email is string => typeof email === "string" && email.trim().length > 0);
+
+  return emails;
+};
 
 export const ObjetsEtMobiliersPage = ({
   onClose,
@@ -45,8 +58,9 @@ export const ObjetsEtMobiliersPage = ({
 
   const sectionStaticData = alertSections.find((s) => s.title === OBJETS_MOBILIERS_SECTION);
   const service = useLiveService();
-  const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
-  const email = service?.[emailKey as keyof typeof service] ?? "";
+
+  const emails = getEmailsForSection(OBJETS_MOBILIERS_SECTION, service!);
+  const servicesNames = sectionStaticData?.services.join(", ") || "";
 
   const addNewItem = () => {
     setPendingNewItems((prev) => [...prev, v7()]);
@@ -70,11 +84,11 @@ export const ObjetsEtMobiliersPage = ({
         Alerte : {OBJETS_MOBILIERS_SECTION}
       </Typography>
       <Typography mt="8px" mb="16px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-        Service destinataire : {sectionStaticData?.details}
-        {email ? (
+        Service destinataire : {servicesNames}
+        {emails.length > 0 ? (
           <>
             <br />
-            {email}
+            {emails.join(", ")}
           </>
         ) : null}
       </Typography>
@@ -133,6 +147,7 @@ type ObjetMobilierForm = {
   objet_ou_mobilier: string;
   commentaires: string;
   show_in_report: boolean;
+  probleme: string;
 };
 
 const ObjetMobilierItemForm = ({
@@ -154,7 +169,7 @@ const ObjetMobilierItemForm = ({
   const [savedId, setSavedId] = useState<string | undefined>(item?.id);
 
   const createOrUpdateAlertMutation = useMutation({
-    mutationFn: async ({ objet_ou_mobilier, commentaires, show_in_report }: ObjetMobilierForm) => {
+    mutationFn: async ({ objet_ou_mobilier, commentaires, show_in_report, probleme }: ObjetMobilierForm) => {
       const showInReportValue = show_in_report ? 1 : 0;
       const serviceEmailForInsert = String(service?.["courriel_caoa" as keyof typeof service] || "") || null;
 
@@ -162,7 +177,8 @@ const ObjetMobilierItemForm = ({
         await db
           .updateTable("state_report_alert")
           .where("id", "=", savedId)
-          .set({ objet_ou_mobilier, commentaires, show_in_report: showInReportValue })
+          .set({ objet_ou_mobilier, commentaires, show_in_report: showInReportValue, probleme })
+
           .execute();
         return savedId;
       }
@@ -176,6 +192,7 @@ const ObjetMobilierItemForm = ({
           state_report_id: constatId,
           objet_ou_mobilier,
           commentaires,
+          probleme,
           show_in_report: showInReportValue,
           service_id: service?.id ?? null,
           email: serviceEmailForInsert,
@@ -215,6 +232,7 @@ const ObjetMobilierItemForm = ({
       objet_ou_mobilier: item?.objet_ou_mobilier ?? "",
       commentaires: item?.commentaires ?? "",
       show_in_report: !!item?.show_in_report,
+      probleme: item?.probleme ?? "",
     },
   });
 
@@ -243,7 +261,7 @@ const ObjetMobilierItemForm = ({
       /> */}
 
       <ObjetEtMobilierSelect form={form} />
-
+      <ProblemeRadioButtons form={form} />
       <SectionCommentaires form={form} />
 
       <SectionPhotos
@@ -276,6 +294,26 @@ const ObjetMobilierItemForm = ({
       </Flex>
     </Stack>
   );
+};
+
+const ProblemeRadioButtons = ({ form }: { form: UseFormReturn<ObjetMobilierForm> }) => {
+  const isFormDisabled = useIsStateReportDisabled();
+
+  const value = useWatch({ control: form.control, name: "probleme" });
+
+  const handleChange = (newValue: string) => {
+    form.setValue("probleme", newValue);
+  };
+
+  const options = ["Objet absent", "Dégradation importante"].map((label) => ({
+    label,
+    nativeInputProps: {
+      checked: value === label,
+      onChange: () => handleChange(label),
+    },
+  }));
+
+  return <RadioButtons style={{ marginBottom: 0 }} legend="Problème à signaler" options={options} />;
 };
 
 const ObjetEtMobilierSelect = ({ form }: { form: UseFormReturn<ObjetMobilierForm> }) => {
