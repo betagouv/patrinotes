@@ -1,0 +1,1 @@
+ALTER TABLE "state_report_alert" ADD COLUMN "objet_ou_mobilier_name" text;

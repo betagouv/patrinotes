@@ -25,6 +25,7 @@ import Accordion from "@codegouvfr/react-dsfr/Accordion";
 import { api } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
 import { fr } from "@codegouvfr/react-dsfr";
+import { OBJETS_MOBILIERS_SECTION } from "../features/state-report/alerts/ObjetEtMobilier";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -144,10 +145,22 @@ const ConstatPdf = () => {
     refetchOnWindowFocus: false,
   });
 
+  const alertsQuery = useQuery({
+    queryKey: ["state-report-alerts", constatId],
+    queryFn: async () => {
+      const alerts = await db
+        .selectFrom("state_report_alert")
+        .selectAll()
+        .where("state_report_id", "=", constatId)
+        .execute();
+
+      return alerts;
+    },
+    refetchOnWindowFocus: false,
+  });
+
   const sections = sectionsQuery.data;
   const stateReport = stateReportQuery.data;
-
-  const alertsQuery = useStateReportAlertsWithEmail(constatId);
   const alerts = alertsQuery.data;
 
   const isSetRef = useRef(false);

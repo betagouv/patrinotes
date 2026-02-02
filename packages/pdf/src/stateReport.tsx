@@ -228,7 +228,7 @@ export const getStateReportHtmlString = ({
 }: {
   stateReport: StateReportWithUserAndAttachments;
   visitedSections: SectionWithAttachments[];
-  alerts?: (StateReportAlert & { email: string })[];
+  alerts?: StateReportAlert[];
 }) => {
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
