@@ -395,6 +395,7 @@ const state_report_alert = new Table({
   email: column.text,
   nom_service_contacte: column.text,
   objet_ou_mobilier: column.text,
+  probleme: column.text,
 });
 
 const state_report_alert_attachment = new Table({

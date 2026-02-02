@@ -23,8 +23,9 @@ import { MinimalAttachment, UploadImage } from "../upload/UploadImage";
 import { UploadImageModal } from "../upload/UploadImageButton";
 import { processImage } from "../upload/UploadReportImage";
 import { alertSections } from "@cr-vif/pdf/constat";
-import { OBJETS_MOBILIERS_SECTION, ObjetsEtMobiliersPage } from "./alerts/ObjetEtMobilier";
+import { getEmailsForSection, OBJETS_MOBILIERS_SECTION, ObjetsEtMobiliersPage } from "./alerts/ObjetEtMobilier";
 import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./alerts/SectionCommentaires";
+import { addSIfPlural } from "../../utils";
 
 export const StateReportSideMenu = () => {
   const [sideMenu, setSideMenu] = useState<MenuStates>("closed");
@@ -134,9 +135,7 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
       }
 
       const sectionData = alertSections.find((s) => s.title === sectionTitle);
-      const emailKey = "courriel_" + (sectionData?.details ?? "").toLowerCase();
-      const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
-      const email = String(emailRaw || "") || null;
+      const emails = getEmailsForSection(sectionTitle, service!);
 
       await db
         .insertInto("state_report_alert")
@@ -147,7 +146,7 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
           commentaires: "",
           show_in_report: 0,
           service_id: service?.id ?? null,
-          email,
+          email: emails.join(", ") || null,
         })
         .execute();
     },
@@ -212,10 +211,9 @@ const StateReportAlertsMenu = ({ onClose }: ModalContentProps) => {
             <Spinner />
           </Box>
         ) : (
-          alertSections.map(({ title, details }) => {
+          alertSections.map(({ title, services }) => {
             const isObjetsMobiliers = title === OBJETS_MOBILIERS_SECTION;
-            const displayDetails =
-              isObjetsMobiliers && objetsMobiliersCount > 0 ? `${details} (${objetsMobiliersCount})` : details;
+            const displayDetails = `${services.join(", ")}`;
             const isVisited = isObjetsMobiliers ? objetsMobiliersCount > 0 : existingSectionNames.includes(title);
 
             return (
@@ -258,16 +256,13 @@ const SelectedSection = ({
   const service = useLiveService();
   const isFormDisabled = useIsStateReportDisabled();
 
+  const emails = getEmailsForSection(section, service!);
   const sectionStaticData = alertSections.find((s) => s.title === section);
-
-  const emailKey = "courriel_" + (sectionStaticData?.details ?? "").toLowerCase();
-  const emailRaw = service?.[emailKey as keyof typeof service] ?? "";
-  const email = String(emailRaw || "");
 
   const [isEditingEmail, setIsEditingEmail] = useState(false);
 
   // Use saved email if it exists (even if empty), otherwise fall back to service email
-  const savedEmail = fullSection?.email != null ? String(fullSection.email) : String(email || "");
+  const savedEmail = fullSection?.email != null ? String(fullSection.email) : emails.join(", ");
   const [editedEmails, setEditedEmails] = useState<string[]>([]);
 
   const displayEmails = isEditingEmail
@@ -325,7 +320,7 @@ const SelectedSection = ({
           commentaires: commentaires,
           show_in_report: showInReportValue,
           service_id: service?.id ?? null,
-          email: email || null,
+          email: emails.join(", ") || null,
         })
         .execute();
     },
@@ -334,6 +329,8 @@ const SelectedSection = ({
   const form = useForm<SectionForm>({
     defaultValues: { commentaires: fullSection?.commentaires ?? "", show_in_report: !!fullSection?.show_in_report },
   });
+
+  const serviceSuffix = addSIfPlural(sectionStaticData?.services?.length ?? 1);
 
   return (
     <Stack
@@ -350,7 +347,7 @@ const SelectedSection = ({
         Alerte : {section}
       </Typography>
       <Typography mt="8px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-        Service destinataire : {sectionStaticData?.details}
+        Service{serviceSuffix} destinataire{serviceSuffix} : {sectionStaticData?.services.join(", ") || "Non spécifié"}
       </Typography>
 
       {isEditingEmail ? (
