@@ -20,6 +20,7 @@ import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
 import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
 import { useStyles } from "tss-react";
+import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -74,6 +75,8 @@ export const StateReportAlertObjetSectionForm = ({
     },
   });
 
+  const { mandatory_emails, additional_emails } = alerts[0].alert;
+
   return (
     <Stack>
       <MenuTitle onClose={onClose} hideDivider>
@@ -84,21 +87,12 @@ export const StateReportAlertObjetSectionForm = ({
         Alerte : {title}
       </Typography>
 
-      <Typography mt="8px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-        Service{serviceSuffix} destinataire{serviceSuffix} :{" "}
-        {mandatoryEmails.map((e) => e.service).join(", ") || "Non spécifié"}
-      </Typography>
-
-      <Flex alignItems={{ xs: "start", lg: "center" }} flexDirection={{ xs: "column", sm: "row" }}>
-        <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-          {mandatoryEmails.map((e) => e.email).join(", ") || "Aucun courriel configuré"}
-        </Typography>
-        {!isFormDisabled && (
-          <LinkButton type="button" onClick={() => setIsEditingEmail(true)}>
-            modifier
-          </LinkButton>
-        )}
-      </Flex>
+      <StateReportAlertsEmailInput
+        mandatory_emails={mandatory_emails}
+        additional_emails={additional_emails}
+        form={form}
+        name={alerts[0].name}
+      />
 
       <Stack mt="24px">
         {objetsQuery.isLoading ? (
