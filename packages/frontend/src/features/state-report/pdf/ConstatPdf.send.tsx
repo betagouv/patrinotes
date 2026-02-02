@@ -28,7 +28,7 @@ export const SendConstatPdf = () => {
       isInitialized.current = true;
       setCheckedAlertIds(new Set(alerts.map((a) => a.id)));
     }
-  }, [alertIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [alertIds]);
 
   // sync selected alerts to context
   useEffect(() => {
@@ -37,7 +37,7 @@ export const SendConstatPdf = () => {
       .filter((a) => checkedAlertIds.has(a.id))
       .map((a) => ({ id: a.id, alert: a.alert, email: String(a.email || "") }));
     setSelectedAlerts(selected);
-  }, [checkedAlertIds, alertIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [checkedAlertIds, alertIds]);
 
   const toggleAlert = (alertId: string) => {
     setCheckedAlertIds((prev) => {
@@ -122,7 +122,6 @@ export const SendConstatPdf = () => {
     </Stack>
   );
 };
-
 
 type AlertWithEmail = StateReportAlert & { email: string };
 
