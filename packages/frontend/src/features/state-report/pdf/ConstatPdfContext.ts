@@ -16,12 +16,6 @@ export type AlertWithEmail = {
   email: string;
 };
 
-type ConstatPdfContextType = {
-  stateReport?: StateReportWithUserAndAttachments | null;
-  sections?: SectionWithAttachments[];
-  isLoading: boolean;
-};
-
 export type StateReportWithUserAndAttachments = StateReportWithUser & {
   attachments: (StateReportAttachment & { file: string })[];
 };

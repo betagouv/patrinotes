@@ -42,17 +42,15 @@ export const PDF = () => {
   const { mode } = Route.useSearch();
 
   const navigate = useNavigate();
-  const generatePdfMutation = useMutation(
-    async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
+  const generatePdfMutation = useMutation({
+    mutationFn: async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
       await api.post("/api/pdf/report", { body: { reportId, htmlString, recipients } });
       // downloadFile(url);
     },
-    {
-      onSuccess: () => {
-        navigate({ search: { mode: "sent" } as any });
-      },
+    onSuccess: () => {
+      navigate({ search: { mode: "sent" } as any });
     },
-  );
+  });
 
   const toggleMode = () => {
     navigate({ search: { mode: mode === "edit" ? "view" : "edit" } as any, replace: true });
@@ -130,8 +128,8 @@ export const PDF = () => {
   const isServiceInstructeurLoaded = report?.serviceInstructeur ? !!serviceInstructeur : true;
   const htmlString = snapshotQuery.data;
 
-  const saveSnapshotMutation = useMutation(
-    async ({ report, html }: { report: string; html: string }) => {
+  const saveSnapshotMutation = useMutation({
+    mutationFn: async ({ report, html }: { report: string; html: string }) => {
       await db.deleteFrom("pdf_snapshot").where("report_id", "=", reportId).where("user_id", "=", user.id).execute();
 
       await db
@@ -145,8 +143,8 @@ export const PDF = () => {
         })
         .execute();
     },
-    { onSuccess: () => toggleMode() },
-  );
+    onSuccess: () => toggleMode(),
+  });
 
   const EditButtons = () => {
     const { editor } = useContext(TextEditorContext);
@@ -191,7 +189,7 @@ export const PDF = () => {
     );
   };
 
-  if (generatePdfMutation.isLoading)
+  if (generatePdfMutation.isPending)
     return (
       <Center flexDirection="column" width="100%" height="100%">
         <Spinner />
@@ -201,7 +199,7 @@ export const PDF = () => {
   const SendButtons = () => {
     return (
       <>
-        <Button iconId="ri-send-plane-fill" type="submit" disabled={generatePdfMutation.isLoading}>
+        <Button iconId="ri-send-plane-fill" type="submit" disabled={generatePdfMutation.isPending}>
           Envoyer
         </Button>
       </>
@@ -249,7 +247,7 @@ export const PDF = () => {
       </Flex>
       <TextEditorContextProvider>
         {report ? (
-          <SendForm generatePdf={generatePdfMutation.mutate} report={report}>
+          <SendForm generatePdf={(args) => generatePdfMutation.mutate(args)} report={report}>
             <EditBanner
               mode={mode}
               title={

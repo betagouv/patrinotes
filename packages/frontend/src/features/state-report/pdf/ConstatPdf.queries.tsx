@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { db, getAttachmentUrl } from "../../../db/db";
 
 export const constatPdfQueries = {
@@ -121,5 +121,15 @@ export const constatPdfQueries = {
         }));
       },
       refetchOnWindowFocus: false,
+    }),
+};
+
+export const constatPdfMutations = {
+  send: ({ constatId }: { constatId: string }) =>
+    mutationOptions({
+      mutationKey: ["send-constat-pdf", constatId],
+      mutationFn: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      },
     }),
 };
