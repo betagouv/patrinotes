@@ -120,7 +120,11 @@ const AlertSectionsList = ({
   if (selectedSection) {
     const commonProps = {
       onClose: () => onClose(),
-      onBack: () => setSelectedSection(null),
+      onBack: (data?: StateReportAlert[]) => {
+        // prevents forcing unallowed edits when going back
+        if (!data) sectionsForm.reset({ alertSections });
+        setSelectedSection(null);
+      },
       form: sectionsForm,
       title: selectedSection,
     };

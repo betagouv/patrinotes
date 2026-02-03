@@ -1,9 +1,7 @@
 import { AbstractPowerSyncDatabase, PowerSyncBackendConnector } from "@powersync/web";
-import { get } from "idb-keyval";
 import { api, RouterOutputs, unauthenticatedApi } from "../api";
 import { apiStore, get80PercentOfTokenLifespan } from "../ApiStore";
 import { ENV } from "../envVars";
-import { getPicturesStore } from "../features/idb";
 
 const emitterChannel = new BroadcastChannel("sw-messages");
 
@@ -25,8 +23,13 @@ export class Connector implements PowerSyncBackendConnector {
     if (!batchTransactions) return;
 
     for (const operation of batchTransactions.crud) {
-      console.log("applying operation", operation.toJSON());
-      await api.post("/api/upload-data", { body: operation.toJSON() });
+      const payload = operation.toJSON();
+      if (!payload.data || Object.keys(payload.data).length === 0) {
+        console.warn("skipping empty operation", payload);
+        continue;
+      }
+      console.log("applying operation", payload);
+      await api.post("/api/upload-data", { body: payload });
     }
 
     return batchTransactions.complete();

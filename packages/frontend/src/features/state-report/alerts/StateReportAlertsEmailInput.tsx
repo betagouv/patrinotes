@@ -1,7 +1,7 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import { Stack, Typography } from "@mui/material";
 import { useState } from "react";
-import { deserializeMandatoryEmails, serializeMandatoryEmails } from "./StateReportAlert.utils";
+import { AlertErrors, deserializeMandatoryEmails, serializeMandatoryEmails } from "./StateReportAlert.utils";
 import { addSIfPlural } from "../../../utils";
 import { Flex } from "#components/ui/Flex.tsx";
 import { useIsStateReportDisabled } from "../utils";
@@ -15,14 +15,18 @@ export const StateReportAlertsEmailInput = ({
   additional_emails,
   form,
   name,
+  errors,
+  isEditingEmail,
+  setIsEditingEmail,
 }: {
   mandatory_emails?: string | null;
   additional_emails?: string | null;
   form: AlertSectionsForm;
   name: AlertSectionName;
+  isEditingEmail: boolean;
+  setIsEditingEmail: (isEditing: boolean) => void;
+  errors: AlertErrors | null;
 }) => {
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-
   const mandatoryEmails = deserializeMandatoryEmails(mandatory_emails || "");
   const additionalEmails = additional_emails?.split(",").map((email) => email.trim()) || [];
 
@@ -39,7 +43,7 @@ export const StateReportAlertsEmailInput = ({
 
       {isEditingEmail ? (
         <Stack mt="16px" gap="8px">
-          <MandatoryEmailsForm initialValues={mandatoryEmails} form={form} name={name} />
+          <MandatoryEmailsForm initialValues={mandatoryEmails} form={form} name={name} errors={errors} />
           <AdditionalEmailsForm initialValues={additionalEmails} form={form} name={name} />
         </Stack>
       ) : (
@@ -62,10 +66,12 @@ const MandatoryEmailsForm = ({
   initialValues,
   form,
   name,
+  errors,
 }: {
   initialValues: { email: string; service: string }[];
   form: AlertSectionsForm;
   name: AlertSectionName;
+  errors: AlertErrors | null;
 }) => {
   const [values, setValues] = useState(initialValues);
 
@@ -80,21 +86,28 @@ const MandatoryEmailsForm = ({
 
   return (
     <Stack>
-      {values.map((val, index) => (
-        <Input
-          key={index}
-          label={val.service ? `Courriel ${val.service}*` : "Courriel"}
-          nativeInputProps={{
-            type: "text",
-            value: val.email,
-            onChange: (e) => {
-              const newValues = [...values];
-              newValues[index].email = e.target.value;
-              setValues(newValues);
-            },
-          }}
-        />
-      ))}
+      {values.map((val, index) => {
+        const inputErrors = errors?.email.filter((e) => e.service === val.service);
+        const error = inputErrors && inputErrors.length > 0 ? inputErrors[0] : null;
+
+        return (
+          <Input
+            state={error ? "error" : undefined}
+            stateRelatedMessage={error ? error.error : undefined}
+            key={index}
+            label={val.service ? `Courriel ${val.service}*` : "Courriel"}
+            nativeInputProps={{
+              type: "text",
+              value: val.email,
+              onChange: (e) => {
+                const newValues = [...values];
+                newValues[index].email = e.target.value;
+                setValues(newValues);
+              },
+            }}
+          />
+        );
+      })}
     </Stack>
   );
 };

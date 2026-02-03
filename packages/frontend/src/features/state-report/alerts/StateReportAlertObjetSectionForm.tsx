@@ -1,26 +1,23 @@
-import { Box, Stack, Typography } from "@mui/material";
-import { PopObjet, StateReportAlert } from "../../../db/AppSchema";
-import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
-import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
-import { getRouteApi } from "@tanstack/react-router";
-import { deserializeMandatoryEmails } from "./StateReportAlert.utils";
-import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
-import { addSIfPlural, uppercaseFirstLetterIf } from "../../../utils";
-import { fr } from "@codegouvfr/react-dsfr";
-import { Flex } from "#components/ui/Flex.tsx";
-import { Button, Center, Select } from "#components/MUIDsfr.tsx";
-import { Fragment, useState } from "react";
-import { LinkButton } from "#components/ui/LinkButton.tsx";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useWatch } from "react-hook-form";
-import { db } from "../../../db/db";
-import { Divider } from "#components/ui/Divider.tsx";
-import { Spinner } from "#components/Spinner.tsx";
-import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
-import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
-import { useStyles } from "tss-react";
+import { Center, Select } from "#components/MUIDsfr.tsx";
+import { Spinner } from "#components/Spinner.tsx";
+import { Divider } from "#components/ui/Divider.tsx";
+import { Flex } from "#components/ui/Flex.tsx";
+import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
+import { Box, Stack, Typography } from "@mui/material";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
+import { Fragment, useState } from "react";
+import { useWatch } from "react-hook-form";
+import { PopObjet, StateReportAlert } from "../../../db/AppSchema";
+import { db } from "../../../db/db";
+import { uppercaseFirstLetterIf } from "../../../utils";
+import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
+import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
+import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
+import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
+import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -34,19 +31,11 @@ export const StateReportAlertObjetSectionForm = ({
 }: {
   title: string;
   onClose: () => void;
-  onBack: () => void;
+  onBack: (data?: StateReportAlert[]) => void;
   alerts: { alert: StateReportAlert; name: AlertSectionName }[];
   form: AlertSectionsForm;
   appendAlert: () => Promise<void>;
 }) => {
-  const { css } = useStyles();
-  const constatId = routeApi.useParams().constatId;
-
-  const mandatoryEmails = deserializeMandatoryEmails(alerts[0]?.alert.mandatory_emails || "");
-  const serviceSuffix = addSIfPlural(mandatoryEmails.length);
-
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-
   const isFormDisabled = useIsStateReportDisabled();
   const stateReportForm = useStateReportFormContext();
 
@@ -65,13 +54,32 @@ export const StateReportAlertObjetSectionForm = ({
     },
     refetchOnWindowFocus: false,
   });
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [errors, setErrors] = useState<AlertErrors | null>(null);
 
   const saveAlertsMutation = useMutation({
     mutationFn: async () => {
+      const firstAlert = form.getValues(alerts[0].name);
+      const errors = checkAlertErrors(firstAlert);
+
+      if (errors.email.length && isEditingEmail) {
+        setErrors(errors);
+        return;
+      }
+
+      // every objet alerts share the same emails
+      const { mandatory_emails, additional_emails } = firstAlert;
+
       for (const { name } of alerts) {
         const { id, ...data } = form.getValues(name);
-        await db.updateTable("state_report_alert").where("id", "=", id).set(data).execute();
+        await db
+          .updateTable("state_report_alert")
+          .where("id", "=", id)
+          .set({ ...data, mandatory_emails, additional_emails })
+          .execute();
       }
+
+      onBack(alerts.map((alert) => alert.alert));
     },
   });
 
@@ -88,10 +96,13 @@ export const StateReportAlertObjetSectionForm = ({
       </Typography>
 
       <StateReportAlertsEmailInput
-        mandatory_emails={mandatory_emails}
-        additional_emails={additional_emails}
         form={form}
         name={alerts[0].name}
+        mandatory_emails={mandatory_emails}
+        additional_emails={additional_emails}
+        isEditingEmail={isEditingEmail}
+        setIsEditingEmail={setIsEditingEmail}
+        errors={errors}
       />
 
       <Stack mt="24px">
@@ -123,7 +134,7 @@ export const StateReportAlertObjetSectionForm = ({
           <FullWidthButton
             type="button"
             onClick={() => saveAlertsMutation.mutate()}
-            disabled={isFormDisabled}
+            disabled={saveAlertsMutation.isPending || isFormDisabled}
             style={{ marginTop: "16px" }}
           >
             Enregistrer

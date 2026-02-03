@@ -16,7 +16,7 @@ import { addSIfPlural } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled } from "../utils";
 import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
-import { deserializeMandatoryEmails } from "./StateReportAlert.utils";
+import { AlertErrors, checkAlertErrors, deserializeMandatoryEmails } from "./StateReportAlert.utils";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
@@ -42,7 +42,7 @@ export const StateReportAlertSectionForm = ({
 }: {
   title: string;
   onClose: () => void;
-  onBack: () => void;
+  onBack: (data?: StateReportAlert[]) => void;
   alert: StateReportAlert;
   name: AlertSectionName;
   form: AlertSectionsForm;
@@ -52,10 +52,23 @@ export const StateReportAlertSectionForm = ({
 
   const { mandatory_emails, additional_emails } = alert;
 
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [errors, setErrors] = useState<AlertErrors | null>(null);
+
   const saveAlertMutation = useMutation({
     mutationFn: async () => {
-      const { id, ...data } = form.getValues(name);
+      const alert = form.getValues(name);
+      const errors = checkAlertErrors(alert);
+
+      if (errors.email.length && isEditingEmail) {
+        setErrors(errors);
+        return;
+      }
+
+      const { id, ...data } = alert;
       await db.updateTable("state_report_alert").where("id", "=", alert.id).set(data).execute();
+
+      onBack([alert]);
     },
   });
 
@@ -70,10 +83,13 @@ export const StateReportAlertSectionForm = ({
       </Typography>
 
       <StateReportAlertsEmailInput
-        mandatory_emails={mandatory_emails}
-        additional_emails={additional_emails}
         form={form}
         name={name}
+        mandatory_emails={mandatory_emails}
+        additional_emails={additional_emails}
+        isEditingEmail={isEditingEmail}
+        setIsEditingEmail={setIsEditingEmail}
+        errors={errors}
       />
 
       <SectionCommentaires form={form} name={name} />
@@ -86,7 +102,7 @@ export const StateReportAlertSectionForm = ({
       <FullWidthButton
         type="button"
         onClick={() => saveAlertMutation.mutate()}
-        disabled={isFormDisabled}
+        disabled={saveAlertMutation.isPending || isFormDisabled}
         style={{ marginTop: "16px" }}
       >
         Enregistrer

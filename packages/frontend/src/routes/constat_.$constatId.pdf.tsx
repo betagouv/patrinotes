@@ -11,7 +11,6 @@ import {
   ConstatPdfContext,
   useConstatPdfContext,
 } from "../features/state-report/pdf/ConstatPdfContext";
-import { useStateReportAlertsWithEmail } from "../features/state-report/StateReportSideMenu";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
 import { Button } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
@@ -25,7 +24,6 @@ import Accordion from "@codegouvfr/react-dsfr/Accordion";
 import { api } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
 import { fr } from "@codegouvfr/react-dsfr";
-import { OBJETS_MOBILIERS_SECTION } from "../features/state-report/alerts/ObjetEtMobilier";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -322,7 +320,7 @@ const GoBackButton = () => {
 };
 
 const SendBannerContent = () => {
-  const { recipients, setRecipients, localHtmlString, scrollToAlertRef, selectedAlerts } = useConstatPdfContext()!;
+  const { recipients, setRecipients, localHtmlString, selectedAlerts } = useConstatPdfContext()!;
   const navigate = useNavigate();
   const { constatId } = Route.useParams();
   const [alertErrors, setAlertErrors] = useState<Array<{ id: string; alert: string }> | null>(null);
@@ -348,7 +346,6 @@ const SendBannerContent = () => {
           stateReportId: constatId,
           htmlString: localHtmlString!,
           recipients: recipients.join(","),
-          alerts: selectedAlerts.map((a) => ({ id: a.id, alert: a.alert, email: a.email })),
         },
       });
       navigate({
@@ -362,14 +359,10 @@ const SendBannerContent = () => {
     }
   };
 
-  const handleAlertClick = (alertId: string) => {
-    setAlertErrors(null);
-    scrollToAlertRef?.current?.(alertId);
-  };
-
   return (
     <>
-      <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={handleAlertClick} />
+      {/* // TODO */}
+      <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={() => {}} />
       <Flex
         flexDirection={{ xs: "column", lg: "row" }}
         width="100%"

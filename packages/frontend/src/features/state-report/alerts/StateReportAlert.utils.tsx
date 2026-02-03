@@ -1,5 +1,5 @@
 import { alertSectionStaticData } from "@cr-vif/pdf/constat";
-import { Service } from "../../../db/AppSchema";
+import { Service, StateReportAlert } from "../../../db/AppSchema";
 
 export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
 
@@ -29,3 +29,30 @@ export const deserializeMandatoryEmails = (data: string): { service: string; ema
     return { service, email };
   });
 };
+
+export const checkAlertErrors = (alert: StateReportAlert): AlertErrors => {
+  const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+  const missingEmails = mandatoryEmails
+    .filter((e) => !e.email)
+    .map((e) => ({ service: e.service, error: MISSING_EMAIL_ERROR }));
+  const invalidEmails = mandatoryEmails
+    .filter((e) => e.email && !checkEmailValid(e.email))
+    .map((e) => ({ service: e.service, error: INVALID_EMAIL_ERROR }));
+  return {
+    email: [...missingEmails, ...invalidEmails],
+  };
+};
+
+export const checkEmailValid = (email: string): boolean => {
+  const input = document.createElement("input");
+  input.type = "email";
+  input.value = email;
+  return input.checkValidity();
+};
+
+export type AlertErrors = {
+  email: { service: string; error: string }[];
+};
+
+const MISSING_EMAIL_ERROR = "Veuillez renseigner un courriel pour ce service.";
+const INVALID_EMAIL_ERROR = "Veuillez renseigner un courriel valide.";
