@@ -113,6 +113,13 @@
       "when": 1770028989777,
       "tag": "0015_secret_glorian",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1770140948234,
+      "tag": "0016_pale_rhodey",
+      "breakpoints": true
     }
   ]
 }

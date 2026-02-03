@@ -279,6 +279,19 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       }
     }
 
+    // update mandatory emails since they might have been filled before sending
+    await db.transaction().execute(async (tx) => {
+      for (const alert of request.body.alerts || []) {
+        if (!alert.shouldSend) continue;
+
+        await tx
+          .updateTable("state_report_alert")
+          .set({ mandatory_emails: alert.mandatory_emails })
+          .where("id", "=", alert.id)
+          .execute();
+      }
+    });
+
     for (const recipient of recipients) {
       const id = v4();
 
