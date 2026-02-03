@@ -15,7 +15,7 @@ import { StateReportAlert } from "../../../db/AppSchema";
 import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { AlertErrors } from "../alerts/StateReportAlert.utils";
 import { useAlerts, useHtmlString } from "./ConstatPdf.hook";
-import { AlertWithAttachments, useSendConstatFormContext } from "./ConstatPdfContext";
+import { AlertWithAttachments, useIsSendConstatFormDisabled, useSendConstatFormContext } from "./ConstatPdfContext";
 import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
 import { groupBy } from "pastable";
 
@@ -23,11 +23,13 @@ export const SendConstatPdf = () => {
   const htmlString = useHtmlString();
   const user = useUser()!;
 
+  const isDisabled = useIsSendConstatFormDisabled();
+
   return (
     <Stack>
       <Center>
         <Center width="800px" flexDirection="column">
-          <AlertsAccordion />
+          {!isDisabled ? <AlertsAccordion /> : null}
           <View
             htmlString={htmlString}
             images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
@@ -41,9 +43,11 @@ export const SendConstatPdf = () => {
 
 const AlertsAccordion = () => {
   const alerts = useAlerts();
-
+  const form = useSendConstatFormContext();
   const alertSuffix = addSIfPlural(alerts.length);
 
+  const alertErrors = useWatch({ control: form.control, name: "alertErrors" });
+  const hasErrors = alertErrors.some((error) => error.email.length > 0);
   return (
     <Accordion
       sx={{ width: "100%" }}
@@ -64,10 +68,12 @@ const AlertsAccordion = () => {
         >
           <Flex alignItems="center" justifyContent="space-between" width="100%">
             {alerts!.length} alerte{alertSuffix} signalée{alertSuffix}
-            <i
-              className="fr-icon fr-icon--right fr-icon-error-warning-fill"
-              style={{ color: fr.colors.decisions.text.actionHigh.redMarianne.default, marginRight: "16px" }}
-            />
+            {hasErrors ? (
+              <i
+                className="fr-icon fr-icon--right fr-icon-error-warning-fill"
+                style={{ color: fr.colors.decisions.text.actionHigh.redMarianne.default, marginRight: "16px" }}
+              />
+            ) : null}
           </Flex>
         </Box>
       }
@@ -105,6 +111,8 @@ const AlertCheckboxes = ({ alerts: baseAlerts }: { alerts: AlertWithAttachments[
     for (const alertIndex of indices) {
       form.setValue(`alerts.${alertIndex}.shouldSend`, shouldSend);
     }
+
+    form.getValues("checkErrors")();
   };
 
   return (
