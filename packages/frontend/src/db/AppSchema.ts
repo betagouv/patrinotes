@@ -462,6 +462,7 @@ export type StateReportSentEmail = Database["state_report_sent_email"];
 export type PopObjet = Database["pop_objets"];
 export type PopImage = Database["pop_images"];
 export type StateReportAlert = Database["state_report_alert"];
+export type StateReportAlertAttachment = Database["state_report_alert_attachment"];
 
 import type { Database as BackendDatabase } from "../../../backend/src/db/db";
 import { AttachmentTable } from "@powersync/attachments";

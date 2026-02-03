@@ -92,3 +92,5 @@ export const decodeBase64 = (base64: string): ArrayBuffer => {
 
   return arraybuffer;
 };
+
+export type Awaitable<T> = T | Promise<T>;

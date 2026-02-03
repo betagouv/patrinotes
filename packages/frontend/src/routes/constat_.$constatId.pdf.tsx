@@ -2,17 +2,19 @@ import { SimpleBanner } from "#components/Banner.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps, Dialog, Stack, styled, Typography } from "@mui/material";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
-import { StateReport, StateReportAttachment, VisitedSection, VisitedSectionAttachment } from "../db/AppSchema";
-import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
-import { useQuery } from "@tanstack/react-query";
+import { createContext, ReactNode, useContext, useEffect, useId, useRef, useState } from "react";
 import {
-  AlertWithEmail,
-  ConstatPdfContext,
-  useConstatPdfContext,
-} from "../features/state-report/pdf/ConstatPdfContext";
+  StateReport,
+  StateReportAlert,
+  StateReportAttachment,
+  VisitedSection,
+  VisitedSectionAttachment,
+} from "../db/AppSchema";
+import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
+import { useMutation, useQuery, UseMutationResult } from "@tanstack/react-query";
+import { SendConstatForm, useSendConstatFormContext } from "../features/state-report/pdf/ConstatPdfContext";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
-import { Button } from "#components/MUIDsfr.tsx";
+import { Button, Center } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
 import { EditConstatPdf } from "../features/state-report/pdf/ConstatPdf.edit";
 import { TextEditorToolbar } from "../features/text-editor/TextEditorToolbar";
@@ -24,6 +26,10 @@ import Accordion from "@codegouvfr/react-dsfr/Accordion";
 import { api } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
 import { fr } from "@codegouvfr/react-dsfr";
+import { FormProvider, useForm } from "react-hook-form";
+import { constatPdfQueries } from "../features/state-report/pdf/ConstatPdf.queries";
+import { Spinner } from "#components/Spinner.tsx";
+import { useRecipients } from "../features/state-report/pdf/ConstatPdf.hook";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -36,6 +42,7 @@ export const Route = createFileRoute("/constat_/$constatId/pdf")({
     } as { mode: PageMode };
   },
 });
+
 const noop = () => null;
 
 function RouteComponent() {
@@ -45,156 +52,80 @@ function RouteComponent() {
 const ConstatPdf = () => {
   const { constatId } = Route.useParams();
   const { mode } = Route.useSearch();
-  const [recipients, setRecipients] = useState<string[]>([]);
-  const [selectedAlerts, setSelectedAlerts] = useState<AlertWithEmail[]>([]);
   const scrollToAlertRef = useRef<((alertId: string) => void) | undefined>();
 
-  const stateReportQuery = useQuery({
-    queryKey: ["state-report-with-user-and-attachments", constatId],
-    queryFn: async () => {
-      const stateReportQuery = await db
-        .selectFrom("state_report")
-        .leftJoin("user", "user.id", "state_report.created_by")
-        .selectAll(["state_report"])
-        .select(["user.name as createdByName"])
-        .where("state_report.id", "=", constatId)
-        .limit(1)
-        .execute();
-
-      if (stateReportQuery.length === 0) {
-        return null;
-      }
-
-      const stateReport = stateReportQuery[0];
-
-      const attachmentQuery = await db
-        .selectFrom("state_report_attachment")
-        .selectAll()
-        .where("state_report_id", "=", constatId)
-        .execute();
-
-      const attachmentsWithFiles = await Promise.all(
-        attachmentQuery.map(async (attachment) => {
-          const file = await getAttachmentUrl(attachment.id);
-          return {
-            ...attachment,
-            file,
-          };
-        }),
-      );
-
-      const newRecipients = [];
-      if (stateReport.proprietaire_email) {
-        newRecipients.push(stateReport.proprietaire_email);
-      }
-      if (
-        stateReport.proprietaire_representant_email &&
-        stateReport.proprietaire_representant_email !== stateReport.proprietaire_email
-      ) {
-        newRecipients.push(stateReport.proprietaire_representant_email);
-      }
-
-      setRecipients(newRecipients);
-
-      return {
-        ...stateReportQuery[0],
-        attachments: attachmentsWithFiles,
-      };
+  const form = useForm<SendConstatForm>({
+    defaultValues: {
+      sections: [],
+      stateReport: null as any,
+      recipients: [],
+      alerts: [],
+      htmlString: "",
     },
-    refetchOnWindowFocus: false,
   });
 
-  const sectionsQuery = useQuery({
-    queryKey: ["visited-sections", constatId],
-    queryFn: async () => {
-      const visitedSections = await db
-        .selectFrom("visited_section")
-        .selectAll()
-        .where("state_report_id", "=", constatId)
+  const sendConstatMutation = useSendConstatMutation();
 
-        .execute();
+  const onSubmit = async (values: SendConstatForm) => {
+    console.log(values);
+  };
 
-      const visitedSectionAttachments = await db
-        .selectFrom("visited_section_attachment")
-        .selectAll()
-        .where(
-          "visited_section_id",
-          "in",
-          visitedSections.map((vs) => vs.id),
-        )
-        .where("is_deprecated", "=", 0)
-        .execute();
+  const stateReportQuery = useQuery(constatPdfQueries.stateReport({ constatId }));
+  const sectionsQuery = useQuery(constatPdfQueries.sections({ constatId }));
+  const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
 
-      const attachments = await Promise.all(
-        visitedSectionAttachments.map(async (attachment) => {
-          const file = await getAttachmentUrl(attachment.id);
-          return {
-            ...attachment,
-            file,
-          };
-        }),
-      );
-
-      return visitedSections.map((section) => ({
-        ...section,
-        attachments: attachments.filter((att) => att.visited_section_id === section.id),
-      }));
-    },
-    refetchOnWindowFocus: false,
-  });
-
-  const alertsQuery = useQuery({
-    queryKey: ["state-report-alerts", constatId],
-    queryFn: async () => {
-      const alerts = await db
-        .selectFrom("state_report_alert")
-        .selectAll()
-        .where("state_report_id", "=", constatId)
-        .execute();
-
-      return alerts;
-    },
-    refetchOnWindowFocus: false,
-  });
-
-  const sections = sectionsQuery.data;
   const stateReport = stateReportQuery.data;
+  const sections = sectionsQuery.data;
   const alerts = alertsQuery.data;
 
-  const isSetRef = useRef(false);
-  const [localHtmlString, setLocalHtmlString] = useState<null | string>(null);
+  // sync recipients with state report owner emails
+  useEffect(() => {
+    if (!stateReport) return;
 
+    const emails = new Set<string>();
+    emails.add(stateReport.proprietaire_email ?? "");
+    emails.add(stateReport.proprietaire_representant_email ?? "");
+
+    const emailsArray = Array.from(emails).filter(Boolean);
+
+    form.setValue("recipients", emailsArray);
+  }, [stateReportQuery.data, form]);
+
+  // generate html string (only once since displaying it is a heavy operation)
+  const isSetRef = useRef(false);
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
 
     const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
-    setLocalHtmlString(htmlString);
+    form.setValue("htmlString", htmlString);
     isSetRef.current = true;
   }, [sections, stateReport, alerts]);
 
-  const contextValue = {
-    isLoading: stateReportQuery.isLoading || sectionsQuery.isLoading || alertsQuery.isLoading,
-    stateReport: stateReport,
-    sections: sections,
-    localHtmlString,
-    setLocalHtmlString,
-    recipients,
-    setRecipients,
-    scrollToAlertRef,
-    selectedAlerts,
-    setSelectedAlerts,
-    alerts,
-  };
+  // sync alerts with form since they can be edited in the alert accordion
+  useEffect(() => {
+    if (!alerts) return;
+    form.setValue("alerts", alerts);
+  }, [alerts, form]);
+
+  const isLoading = stateReportQuery.isLoading || sectionsQuery.isLoading || alertsQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <Center height="100%">
+        <Spinner />
+      </Center>
+    );
+  }
 
   return (
-    <Stack height="100%">
-      <ConstatPdfContext.Provider value={contextValue}>
+    <FormProvider {...form}>
+      <Stack height="100%" component="form" onSubmit={form.handleSubmit(onSubmit)}>
         <TextEditorContextProvider height="100%">
           <BannerAndContent mode={mode} />
         </TextEditorContextProvider>
-      </ConstatPdfContext.Provider>
-    </Stack>
+      </Stack>
+    </FormProvider>
   );
 };
 
@@ -262,6 +193,7 @@ const Banner = ({ content, buttons, alignTop }: BannerProps) => {
 
   const Content = content;
   const Buttons = buttons;
+
   return (
     <SimpleBanner minHeight="80px" position="sticky" top="0" zIndex="appBar" py={{ xs: "8px", lg: "0" }}>
       <Flex
@@ -319,50 +251,62 @@ const GoBackButton = () => {
   );
 };
 
-const SendBannerContent = () => {
-  const { recipients, setRecipients, localHtmlString, selectedAlerts } = useConstatPdfContext()!;
-  const navigate = useNavigate();
+export const useSendConstatMutation = () => {
   const { constatId } = Route.useParams();
-  const [alertErrors, setAlertErrors] = useState<Array<{ id: string; alert: string }> | null>(null);
-  const [isSending, setIsSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
 
-  const handleSend = async () => {
-    setSendError(null);
+  // const handleSend = async () => {
+  //   setSendError(null);
 
-    // Validate all selected alerts have emails
-    const alertsWithoutEmail = selectedAlerts.filter((alert) => !alert.email);
+  //   // Validate all selected alerts have emails
+  //   const alertsWithoutEmail = selectedAlerts.filter((alert) => !alert.email);
 
-    if (alertsWithoutEmail.length) {
-      setAlertErrors(alertsWithoutEmail.map((a) => ({ id: a.id, alert: a.alert ?? "" })));
-      return;
-    }
+  //   if (alertsWithoutEmail.length) {
+  //     setAlertErrors(alertsWithoutEmail.map((a) => ({ id: a.id, alert: a.alert ?? "" })));
+  //     return;
+  //   }
 
-    // Send email
-    setIsSending(true);
-    try {
-      await api.post("/api/pdf/state-report", {
-        body: {
-          stateReportId: constatId,
-          htmlString: localHtmlString!,
-          recipients: recipients.join(","),
-        },
-      });
-      navigate({
-        to: "/constat/$constatId/pdf",
-        params: { constatId },
-        search: { mode: "sent" },
-      });
-    } catch (e) {
-      setSendError((e as Error).message || "Une erreur est survenue");
-      setIsSending(false);
-    }
+  //   // Send email
+  //   setIsSending(true);
+  //   try {
+  //     await api.post("/api/pdf/state-report", {
+  //       body: {
+  //         stateReportId: constatId,
+  //         htmlString: localHtmlString!,
+  //         recipients: recipients.join(","),
+  //       },
+  //     });
+  //     navigate({
+  //       to: "/constat/$constatId/pdf",
+  //       params: { constatId },
+  //       search: { mode: "sent" },
+  //     });
+  //   } catch (e) {
+  //     setSendError((e as Error).message || "Une erreur est survenue");
+  //     setIsSending(false);
+  //   }
+  // };
+
+  return useMutation({
+    mutationFn: async (values: any) => {
+      console.log(values);
+    },
+  });
+};
+
+const SendBannerContent = () => {
+  const form = useSendConstatFormContext();
+  const recipients = useRecipients();
+
+  const setRecipients = (emails: string[]) => {
+    form.setValue("recipients", emails);
   };
 
+  const navigate = useNavigate();
+  const { constatId } = Route.useParams();
   return (
     <>
       {/* // TODO */}
-      <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={() => {}} />
+      {/* <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={() => {}} /> */}
       <Flex
         flexDirection={{ xs: "column", lg: "row" }}
         width="100%"
@@ -375,11 +319,11 @@ const SendBannerContent = () => {
         </Typography>
         <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
           <EmailInput value={recipients} onValueChange={setRecipients} />
-          {sendError && (
+          {/* {sendError && (
             <Typography color="error" mt="8px">
               Erreur: {sendError}
             </Typography>
-          )}
+          )} */}
         </Box>
 
         <Box mr="100px" ml="8px">
