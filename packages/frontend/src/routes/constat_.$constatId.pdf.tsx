@@ -11,7 +11,7 @@ import {
   VisitedSectionAttachment,
 } from "../db/AppSchema";
 import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
-import { useMutation, useQuery, UseMutationResult } from "@tanstack/react-query";
+import { useMutation, useQuery, UseMutationResult, useMutationState } from "@tanstack/react-query";
 import { SendConstatForm, useSendConstatFormContext } from "../features/state-report/pdf/ConstatPdfContext";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
 import { Button, Center } from "#components/MUIDsfr.tsx";
@@ -27,9 +27,10 @@ import { api } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
 import { fr } from "@codegouvfr/react-dsfr";
 import { FormProvider, useForm } from "react-hook-form";
-import { constatPdfQueries } from "../features/state-report/pdf/ConstatPdf.queries";
+import { constatPdfMutations, constatPdfQueries } from "../features/state-report/pdf/ConstatPdf.queries";
 import { Spinner } from "#components/Spinner.tsx";
 import { useRecipients } from "../features/state-report/pdf/ConstatPdf.hook";
+import { last } from "pastable";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -52,7 +53,6 @@ function RouteComponent() {
 const ConstatPdf = () => {
   const { constatId } = Route.useParams();
   const { mode } = Route.useSearch();
-  const scrollToAlertRef = useRef<((alertId: string) => void) | undefined>();
 
   const form = useForm<SendConstatForm>({
     defaultValues: {
@@ -64,9 +64,10 @@ const ConstatPdf = () => {
     },
   });
 
-  const sendConstatMutation = useSendConstatMutation();
+  const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId }));
 
   const onSubmit = async (values: SendConstatForm) => {
+    sendConstatMutation.mutate(values);
     console.log(values);
   };
 
@@ -297,12 +298,22 @@ const SendBannerContent = () => {
   const form = useSendConstatFormContext();
   const recipients = useRecipients();
 
+  const { constatId } = Route.useParams();
+
+  const sendMutationStatus = useMutationState({
+    filters: {
+      mutationKey: constatPdfMutations.send({ constatId }).mutationKey,
+    },
+    select: ({ state }) => state.status,
+  });
+
+  const currentMutationStatus = last(sendMutationStatus);
+  const isPending = currentMutationStatus === "pending";
+
   const setRecipients = (emails: string[]) => {
     form.setValue("recipients", emails);
   };
 
-  const navigate = useNavigate();
-  const { constatId } = Route.useParams();
   return (
     <>
       {/* // TODO */}
@@ -319,16 +330,11 @@ const SendBannerContent = () => {
         </Typography>
         <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
           <EmailInput value={recipients} onValueChange={setRecipients} />
-          {/* {sendError && (
-            <Typography color="error" mt="8px">
-              Erreur: {sendError}
-            </Typography>
-          )} */}
         </Box>
 
         <Box mr="100px" ml="8px">
-          <Button type="button" iconId="ri-send-plane-fill" disabled={isSending} onClick={handleSend}>
-            {isSending ? "Envoi en cours..." : "Envoyer"}
+          <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending}>
+            {isPending ? "Envoi en cours..." : "Envoyer"}
           </Button>
         </Box>
       </Flex>

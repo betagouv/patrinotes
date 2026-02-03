@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useConstatPdfContext } from "./ConstatPdfContext";
 import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@cr-vif/pdf/constat";
 import { pdf } from "@react-pdf/renderer";
 import { Accordion, Center, Checkbox, Input } from "#components/MUIDsfr.tsx";
@@ -15,18 +14,19 @@ import { db } from "../../../db/db";
 import { StateReportAlert } from "../../../db/AppSchema";
 import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
 import { deserializeMandatoryEmails } from "../alerts/StateReportAlert.utils";
+import { useHtmlString } from "./ConstatPdf.hook";
 
 export const SendConstatPdf = () => {
-  const { localHtmlString, isLoading } = useConstatPdfContext()!;
+  const htmlString = useHtmlString();
   const user = useUser()!;
 
   return (
     <Stack>
       <Center>
         <Center width="800px" flexDirection="column">
-          <AlertsAccordion />
+          {/* <AlertsAccordion /> */}
           <View
-            htmlString={localHtmlString!}
+            htmlString={htmlString}
             images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
             service={user.service as any}
           />
@@ -125,13 +125,10 @@ const View = (props: StateReportPDFDocumentProps) => {
       return blob;
     },
     refetchOnWindowFocus: false,
-    staleTime: 0,
-    cacheTime: 0,
-
     enabled: !!props.htmlString,
   });
 
-  if (query.isLoading)
+  if (query.isLoading || !query.data)
     return (
       <Center height="100%">
         <Spinner />
