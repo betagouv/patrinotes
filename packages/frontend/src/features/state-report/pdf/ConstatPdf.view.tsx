@@ -31,6 +31,7 @@ const View = (props: StateReportPDFDocumentProps) => {
       const blob = await pdf(<StateReportPDFDocument {...props} />).toBlob();
       return blob;
     },
+    gcTime: 0,
     refetchOnWindowFocus: false,
     enabled: !!props.htmlString,
   });
@@ -41,8 +42,6 @@ const View = (props: StateReportPDFDocumentProps) => {
         <Spinner />
       </Center>
     );
-
-  console.log(query.data);
 
   return <PdfCanvas blob={query.data as Blob} />;
 };

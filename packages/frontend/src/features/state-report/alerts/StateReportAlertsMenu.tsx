@@ -12,10 +12,11 @@ import { db } from "../../../db/db";
 import { MenuTitle } from "../../menu/MenuTitle";
 import { StateReportAlertModalContentProps } from "../StateReportSideMenu";
 import { SectionItem } from "../steps/ConstatDetaille";
-import { getEmailsForSection, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "./StateReportAlert.utils";
+import { getEmailsForSection } from "./StateReportAlert.utils";
 import { StateReportAlertObjetSectionForm } from "./StateReportAlertObjetSectionForm";
 import { useStateReportAlerts } from "./StateReportAlerts.hook";
 import { StateReportAlertSectionForm } from "./StateReportAlertSectionForm";
+import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -157,7 +158,7 @@ const AlertSectionsList = ({
       {alertSectionStaticData.map(({ title, services }) => {
         // can have multiple elements if "Objets et mobiliers"
         const matchingFields = fieldArray.fields.filter((f) => f.alert === title);
-        const isVisited = matchingFields.some(getIsVisited);
+        const isVisited = matchingFields.some(getIsAlertVisited);
 
         return (
           <SectionItem
@@ -172,8 +173,4 @@ const AlertSectionsList = ({
       })}
     </>
   );
-};
-
-const getIsVisited = (alertSection: StateReportAlert) => {
-  return !!alertSection.commentaires || !!alertSection.objet_ou_mobilier;
 };

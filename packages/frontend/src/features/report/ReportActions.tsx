@@ -22,32 +22,36 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
 
   const navigate = useNavigate();
 
-  const downloadPdfMutation = useMutation(async () => {
-    const buffer = (await api.get("/api/upload/attachment", {
-      query: { filePath: report.attachment_id! },
-    } as any)) as Blob;
+  const downloadPdfMutation = useMutation({
+    mutationFn: async () => {
+      const buffer = (await api.get("/api/upload/attachment", {
+        query: { filePath: report.attachment_id! },
+      } as any)) as Blob;
 
-    const name = getPDFInMailName(report);
-    return downloadFile(window.URL.createObjectURL(buffer), name);
+      const name = getPDFInMailName(report);
+      return downloadFile(window.URL.createObjectURL(buffer), name);
+    },
   });
 
   const deleteMutation = useDeleteMutation();
-  const duplicateMutation = useMutation(async () => {
-    const payload = omit(report, ["id", "createdAt", "pdf", "title", "createdByName"]);
+  const duplicateMutation = useMutation({
+    mutationFn: async () => {
+      const payload = omit(report, ["id", "createdAt", "pdf", "title", "createdByName"]);
 
-    return db
-      .insertInto("report")
-      .values({
-        ...payload,
-        id: `report-${v4()}`,
-        title: `${report.title ?? "Sans titre"} - copie`,
-        createdAt: new Date().toISOString(),
-        redactedBy: user.name,
-        redactedById: user.id,
-        createdBy: user.id,
-        pdf: undefined,
-      })
-      .execute();
+      return db
+        .insertInto("report")
+        .values({
+          ...payload,
+          id: `report-${v4()}`,
+          title: `${report.title ?? "Sans titre"} - copie`,
+          createdAt: new Date().toISOString(),
+          redactedBy: user.name,
+          redactedById: user.id,
+          createdBy: user.id,
+          pdf: undefined,
+        })
+        .execute();
+    },
   });
 
   const canDownload = report.pdf !== null || report.attachment_id !== null;
@@ -109,6 +113,8 @@ const ReportActionButton = styled(Button)(({ theme }) => ({
 }));
 
 const useDeleteMutation = () =>
-  useMutation(async (id: string) => {
-    await db.updateTable("report").set({ disabled: 1 }).where("id", "=", id).execute();
+  useMutation({
+    mutationFn: async (id: string) => {
+      await db.updateTable("report").set({ disabled: 1 }).where("id", "=", id).execute();
+    },
   });

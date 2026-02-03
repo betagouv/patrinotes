@@ -30,33 +30,37 @@ export const ServicesMenu = () => {
 
   const [bannerProps, setBannerProps] = useState<BannerProps | null>(null);
 
-  const createServiceMutation = useMutation(async (service: ServiceInstructeurs) => {
-    await db
-      .insertInto("service_instructeurs")
-      .values({ ...service, id: v4(), service_id: user.service_id })
-      .execute();
+  const createServiceMutation = useMutation({
+    mutationFn: async (service: ServiceInstructeurs) => {
+      await db
+        .insertInto("service_instructeurs")
+        .values({ ...service, id: v4(), service_id: user.service_id })
+        .execute();
 
-    setBannerProps({
-      status: "success",
-      icon: fr.cx("ri-check-fill"),
-      text: `Service ajouté`,
-    });
-    setMode("view");
+      setBannerProps({
+        status: "success",
+        icon: fr.cx("ri-check-fill"),
+        text: `Service ajouté`,
+      });
+      setMode("view");
+    },
   });
 
-  const editServicesMutation = useMutation(async (newServices: ServiceInstructeurs[]) => {
-    const { updatedServices } = getDiff(services!.data, newServices);
+  const editServicesMutation = useMutation({
+    mutationFn: async (newServices: ServiceInstructeurs[]) => {
+      const { updatedServices } = getDiff(services!.data, newServices);
 
-    for (const service of updatedServices) {
-      await db.updateTable("service_instructeurs").set(service).where("id", "=", service.id).execute();
-    }
+      for (const service of updatedServices) {
+        await db.updateTable("service_instructeurs").set(service).where("id", "=", service.id).execute();
+      }
 
-    setBannerProps({
-      status: "success",
-      icon: fr.cx("ri-check-fill"),
-      text: `Modifications enregistrées`,
-    });
-    setMode("view");
+      setBannerProps({
+        status: "success",
+        icon: fr.cx("ri-check-fill"),
+        text: `Modifications enregistrées`,
+      });
+      setMode("view");
+    },
   });
 
   if (services.isLoading) {
@@ -81,7 +85,7 @@ export const ServicesMenu = () => {
             },
             display: { xs: "none", lg: "inline-flex" },
           }}
-          disabled={editServicesMutation.isLoading}
+          disabled={editServicesMutation.isPending}
           iconId="ri-save-fill"
           priority="primary"
           type="submit"
@@ -194,9 +198,11 @@ const ServicesList = ({
 
   const { fields, remove } = useFieldArray({ control: form.control, name: "services" });
 
-  const deleteServiceMutation = useMutation(async (id: string) => {
-    await db.deleteFrom("service_instructeurs").where("id", "=", id).execute();
-    remove(fields.findIndex((field) => field.id === id));
+  const deleteServiceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await db.deleteFrom("service_instructeurs").where("id", "=", id).execute();
+      remove(fields.findIndex((field) => field.id === id));
+    },
   });
 
   useEffect(() => {

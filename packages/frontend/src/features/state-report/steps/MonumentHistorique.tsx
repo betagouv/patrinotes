@@ -187,8 +187,8 @@ const MonumentObjets = () => {
   const objetsQuery = useInfiniteQuery({
     queryKey: ["pop-objets", monumentReference],
     queryFn: async (ctx) => {
-      const offset = ctx.pageParam?.offset ?? 0;
-      const limit = ctx.pageParam?.limit ?? 2;
+      const offset = ctx.pageParam.offset;
+      const limit = ctx.pageParam.limit;
 
       const objetsResponse = await db
         .selectFrom("pop_objets")
@@ -200,6 +200,7 @@ const MonumentObjets = () => {
 
       return { objets: objetsResponse, offset, limit };
     },
+    initialPageParam: { offset: 0, limit: 2 },
     getNextPageParam: (lastPage) => {
       return { offset: lastPage.offset + lastPage.limit, limit: 6 };
     },

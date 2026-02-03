@@ -61,17 +61,19 @@ export const EmailInput = ({
 
   const user = useUser()!;
 
-  const deleteSuggestionMutation = useMutation(async (email: string) => {
-    await db
-      .deleteFrom("suggested_email")
-      .where("email", "=", email)
-      .where("service_id", "=", user.service_id)
-      .execute();
+  const deleteSuggestionMutation = useMutation({
+    mutationFn: async (email: string) => {
+      await db
+        .deleteFrom("suggested_email")
+        .where("email", "=", email)
+        .where("service_id", "=", user.service_id)
+        .execute();
 
-    send({
-      type: "REMOVE",
-      item: email,
-    });
+      send({
+        type: "REMOVE",
+        item: email,
+      });
+    },
   });
 
   const isOpen = state.matches("suggesting") || state.matches("error");

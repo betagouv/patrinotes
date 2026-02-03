@@ -13,9 +13,9 @@ import { Typography } from "@mui/material";
 const ResetPasswordPage = () => {
   const form = useForm<ResetPasswordFormProps>();
 
-  const mutation = useMutation((body: ResetPasswordFormProps) =>
-    unauthenticatedApi.post("/api/send-reset-password", { body }),
-  );
+  const mutation = useMutation({
+    mutationFn: (body: ResetPasswordFormProps) => unauthenticatedApi.post("/api/send-reset-password", { body }),
+  });
 
   return (
     <Center mt="20px" mb="80px">
@@ -39,7 +39,7 @@ const ResetPasswordPage = () => {
             })}
           />
 
-          <FullWidthButton type="submit" disabled={mutation.isLoading}>
+          <FullWidthButton type="submit" disabled={mutation.isPending}>
             Valider
           </FullWidthButton>
         </form>

@@ -16,7 +16,9 @@ export const LoginForm = () => {
   const { auth, setAuth } = useAuthContext();
   const form = useForm<LoginFormProps>();
 
-  const mutation = useMutation((body: LoginFormProps) => unauthenticatedApi.post("/api/login-user", { body }));
+  const mutation = useMutation({
+    mutationFn: (body: LoginFormProps) => unauthenticatedApi.post("/api/login-user", { body }),
+  });
 
   const navigate = useNavigate();
 

@@ -1,25 +1,18 @@
-import { Box, Drawer, Stack, Typography } from "@mui/material";
 import { Button, Input } from "#components/MUIDsfr.tsx";
-import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
-import { ReactNode, useId, useState } from "react";
-import { EmailInput } from "#components/EmailInput.tsx";
-import { fr } from "@codegouvfr/react-dsfr";
-import { useLiveService, useLiveUser, useService } from "../../../contexts/AuthContext";
-import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
-import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Divider } from "#components/ui/Divider.tsx";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
-import { FullWidthButton } from "#components/FullWidthButton.tsx";
+import { Box, Stack } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
+import { useState } from "react";
+import { useWatch } from "react-hook-form";
 import { v7 } from "uuid";
-import { getRouteApi } from "@tanstack/react-router";
-import { StateReportAlert } from "../../../db/AppSchema";
-import { Spinner } from "#components/Spinner.tsx";
+import { useLiveUser, useService } from "../../../contexts/AuthContext";
+import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
+import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { processImage } from "../../upload/UploadReportImage";
+import { useIsStateReportDisabled } from "../utils";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 
 export const SectionCommentaires = ({ form, name }: { form: AlertSectionsForm; name: AlertSectionName }) => {

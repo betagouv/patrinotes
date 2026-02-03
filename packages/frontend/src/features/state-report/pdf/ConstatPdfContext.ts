@@ -9,6 +9,7 @@ import {
 } from "../../../db/AppSchema";
 import { StateReportWithUser } from "../../report/ReportList";
 import { useFormContext } from "react-hook-form";
+import { AlertErrors } from "../alerts/StateReportAlert.utils";
 
 export type AlertWithEmail = {
   id: string;
@@ -26,6 +27,7 @@ export type SectionWithAttachments = VisitedSection & {
 
 export type AlertWithAttachments = StateReportAlert & {
   attachments: (StateReportAlertAttachment & { file: string })[];
+  shouldSend: boolean;
 };
 
 export const useSendConstatFormContext = () => useFormContext<SendConstatForm>();
@@ -36,4 +38,5 @@ export type SendConstatForm = {
   alerts: AlertWithAttachments[];
   recipients: string[];
   htmlString: string;
+  alertErrors: AlertErrors[];
 };

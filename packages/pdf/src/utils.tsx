@@ -1,5 +1,6 @@
 import { Font, Image, Text, View, ViewProps } from "@react-pdf/renderer";
 import React from "react";
+import { StateReportAlert } from "../../frontend/src/db/AppSchema";
 
 export const initFonts = (folder: string = "") => {
   Font.register({
@@ -82,3 +83,21 @@ export const Pagination = () => {
 export function minifyHtml(htmlString: string) {
   return htmlString.split("\n").join("").split("  ").join("");
 }
+
+export const serializeMandatoryEmails = (emails: { service: string; email: string }[]): string => {
+  return emails.map((e) => `${e.service}:${e.email}`).join(";");
+};
+
+export const deserializeMandatoryEmails = (data: string): { service: string; email: string }[] => {
+  if (!data) return [];
+  return data.split(";").map((entry) => {
+    const [service, email] = entry.split(":");
+    return { service: service!, email: email ?? "" };
+  });
+};
+
+export const getIsAlertVisited = (alertSection: any) => {
+  return !!alertSection.commentaires || !!alertSection.objet_ou_mobilier;
+};
+
+export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";

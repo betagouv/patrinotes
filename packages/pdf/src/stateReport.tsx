@@ -7,13 +7,21 @@ import {
   StateReport,
   StateReportAlert,
 } from "../../frontend/src/db/AppSchema";
-import { MarianneHeader, Pagination, initFonts, minifyHtml } from "./utils";
+import {
+  MarianneHeader,
+  OBJETS_MOBILIERS_SECTION,
+  Pagination,
+  deserializeMandatoryEmails,
+  initFonts,
+  minifyHtml,
+} from "./utils";
 import { Html } from "react-pdf-html";
 import { StateReportWithUser } from "../../frontend/src/features/report/ReportList";
 import React from "react";
-
+import { groupBy } from "pastable";
 import { format } from "date-fns";
 import type {
+  AlertWithAttachments,
   SectionWithAttachments,
   StateReportWithUserAndAttachments,
 } from "../../frontend/src/features/state-report/pdf/ConstatPdfContext";
@@ -221,6 +229,13 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
 const link =
   "https://www.culture.gouv.fr/Thematiques/monuments-sites/Interventions-demarches/Travaux-sur-un-objet-un-immeuble-un-espace/Intervenir-sur-un-immeuble-inscrit";
 
+export type MinimalAlert = Omit<
+  AlertWithAttachments,
+  "service_id" | "state_report_id" | "show_in_report" | "shouldSend"
+> & {
+  show_in_report: any;
+};
+
 export const getStateReportHtmlString = ({
   stateReport,
   visitedSections: sections,
@@ -228,7 +243,7 @@ export const getStateReportHtmlString = ({
 }: {
   stateReport: StateReportWithUserAndAttachments;
   visitedSections: SectionWithAttachments[];
-  alerts?: StateReportAlert[];
+  alerts?: MinimalAlert[];
 }) => {
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
@@ -365,7 +380,7 @@ export const getStateReportHtmlString = ({
       }
 
       ${
-        alerts?.length
+        alerts?.filter((alert) => alert.show_in_report).length
           ? `<div id="alertes">
         <h2>Alertes</h2>
         <b>
@@ -507,11 +522,41 @@ export const serializePreconisations = (value: { preconisation: string; commenta
     .join("/");
 };
 
-const generateAlertsTable = (alerts: StateReportAlert[]) => {
+const generateAlertsTable = (alerts: MinimalAlert[]) => {
+  const groupedAlerts = groupBy(alerts, (alert) => alert.alert);
   return `<ul>
-    ${alerts
+    ${Object.entries(groupedAlerts)
+      .map(([alertTitle, alertGroup]) => {
+        const firstAlert = alertGroup[0];
+
+        const mandatoryEmails = deserializeMandatoryEmails(firstAlert.mandatory_emails || "");
+
+        const servicesDestArray = mandatoryEmails.map((e) => {
+          const pronom = servicePronoms.find((sp) => sp.serviceCode === e.service)?.pronom || "à";
+          return `${pronom}${e.service}` + (e.email ? ` (${e.email})` : "");
+        });
+
+        return `<li>
+          <div><b>${alertTitle}</b></div>
+          <i style="color: #3A3A3A">Alerte transmise par courriel ${formatArrayWithCommasAnd(servicesDestArray)}</i><br/>
+          <br/>
+          ${alertGroup.map(generateAlertTableRow).join("<br/>")}
+        </li>`;
+      })
+      .join("<br/>")}  
+  </ul>`;
+};
+
+const formatArrayWithCommasAnd = (items: string[]) => {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} et ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")} et ${items[items.length - 1]}`;
+};
+
+/*  ${alerts
       .filter((a) => !!a.alert && !!a.email)
-      .map((a: StateReportAlert) => {
+      .map((a) => {
         const section = alertSections.find((section) => section.title === a.alert);
         const withPronom = [section?.pronom ?? "à", a.nom_service_contacte];
 
@@ -523,8 +568,23 @@ const generateAlertsTable = (alerts: StateReportAlert[]) => {
           `;
       })
       .join("")}
-  </ul>
-  `;
+ */
+
+const generateAlertTableRow = (alert: MinimalAlert) => {
+  if (alert.alert === OBJETS_MOBILIERS_SECTION) {
+    return `
+      <div>- ${alert.objet_ou_mobilier_name} (<a href="${`https://pop.culture.gouv.fr/notice/palissy/${alert.objet_ou_mobilier}`}">${alert.objet_ou_mobilier}</a>) : ${alert.probleme}</div>
+      <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}</div>
+      ${generateImagesTable(alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })))}
+    `;
+  }
+
+  return `<div>
+  <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}</div>
+
+  ${generateImagesTable(alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })))}
+  
+  </div>`;
 };
 
 export const alertSectionStaticData = [
@@ -538,13 +598,13 @@ export const alertSectionStaticData = [
 ];
 
 export const servicePronoms = [
-  { serviceCode: "CRMH", pronom: "au" },
+  { serviceCode: "CRMH", pronom: "au " },
   { serviceCode: "UDAP", pronom: "à l'" },
-  { serviceCode: "CAOA", pronom: "au" },
-  { serviceCode: "SRA", pronom: "à la" },
-  { serviceCode: "DREAL", pronom: "à la" },
+  { serviceCode: "CAOA", pronom: "au " },
+  { serviceCode: "SRA", pronom: "à la " },
+  { serviceCode: "DREAL", pronom: "à la " },
   { serviceCode: "OFB", pronom: "à l'" },
-  { serviceCode: "Mairie", pronom: "à la" },
+  { serviceCode: "Mairie", pronom: "à la " },
 ];
 
 export const stateReportExtraCss = {

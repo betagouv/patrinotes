@@ -40,28 +40,32 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
   const isDraft = !report.attachment_id;
   const deleteMutation = useDeleteMutation();
 
-  const downloadPdfMutation = useMutation(async () => {
-    const buffer = (await api.get("/api/upload/attachment", {
-      query: { filePath: report.attachment_id! },
-    } as any)) as Blob;
+  const downloadPdfMutation = useMutation({
+    mutationFn: async () => {
+      const buffer = (await api.get("/api/upload/attachment", {
+        query: { filePath: report.attachment_id! },
+      } as any)) as Blob;
 
-    const name = getStateReportMailName(report);
-    return downloadFile(window.URL.createObjectURL(buffer), name);
+      const name = getStateReportMailName(report);
+      return downloadFile(window.URL.createObjectURL(buffer), name);
+    },
   });
 
-  const duplicateMutation = useMutation(async () => {
-    const payload = omit(report, ["id", "createdByName", "created_at", "created_by", "disabled"]);
+  const duplicateMutation = useMutation({
+    mutationFn: async () => {
+      const payload = omit(report, ["id", "createdByName", "created_at", "created_by", "disabled"]);
 
-    return db
-      .insertInto("state_report")
-      .values({
-        ...payload,
-        id: v4(),
-        titre_edifice: `${report.titre_edifice ?? "Sans titre"} - copie`,
-        created_at: new Date().toISOString(),
-        created_by: user.id,
-      })
-      .execute();
+      return db
+        .insertInto("state_report")
+        .values({
+          ...payload,
+          id: v4(),
+          titre_edifice: `${report.titre_edifice ?? "Sans titre"} - copie`,
+          created_at: new Date().toISOString(),
+          created_by: user.id,
+        })
+        .execute();
+    },
   });
 
   return (
@@ -112,6 +116,8 @@ const ReportActionButton = styled(Button)(({ theme }) => ({
 }));
 
 const useDeleteMutation = () =>
-  useMutation(async (id: string) => {
-    await db.updateTable("state_report").set({ disabled: 1 }).where("id", "=", id).execute();
+  useMutation({
+    mutationFn: async (id: string) => {
+      await db.updateTable("state_report").set({ disabled: 1 }).where("id", "=", id).execute();
+    },
   });

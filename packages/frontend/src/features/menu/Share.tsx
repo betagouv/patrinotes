@@ -45,23 +45,25 @@ export const ShareReport = ({ backButtonOnClick }: { backButtonOnClick: () => vo
       .map((email: string) => email.trim())
       .filter(Boolean) ?? [];
 
-  const saveEmailsMutation = useMutation(async (emails: string[]) => {
-    const doesUserSettingExist =
-      existing ||
-      !!(await db.selectFrom("user_settings").where("user_id", "=", user.id).selectAll().executeTakeFirst());
+  const saveEmailsMutation = useMutation({
+    mutationFn: async (emails: string[]) => {
+      const doesUserSettingExist =
+        existing ||
+        !!(await db.selectFrom("user_settings").where("user_id", "=", user.id).selectAll().executeTakeFirst());
 
-    if (doesUserSettingExist) {
+      if (doesUserSettingExist) {
+        return db
+          .updateTable("user_settings")
+          .set({ default_emails: emails.join(",") })
+          .where("user_id", "=", user.id)
+          .execute();
+      }
+
       return db
-        .updateTable("user_settings")
-        .set({ default_emails: emails.join(",") })
-        .where("user_id", "=", user.id)
+        .insertInto("user_settings")
+        .values({ id: v4(), user_id: user.id, default_emails: emails.join(",") })
         .execute();
-    }
-
-    return db
-      .insertInto("user_settings")
-      .values({ id: v4(), user_id: user.id, default_emails: emails.join(",") })
-      .execute();
+    },
   });
 
   return (
@@ -127,15 +129,16 @@ export const ShareReport = ({ backButtonOnClick }: { backButtonOnClick: () => vo
 const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; delegations: Delegation[] }) => {
   const user = useUser()!;
 
-  const createMutation = useMutation((delegation: Omit<Delegation, "id">) =>
-    db
-      .insertInto("delegation")
-      .values({ ...delegation, id: v4() })
-      .execute(),
-  );
-  const removeMutation = useMutation((delegation: Delegation) =>
-    db.deleteFrom("delegation").where("id", "=", delegation.id).execute(),
-  );
+  const createMutation = useMutation({
+    mutationFn: (delegation: Omit<Delegation, "id">) =>
+      db
+        .insertInto("delegation")
+        .values({ ...delegation, id: v4() })
+        .execute(),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (delegation: Delegation) => db.deleteFrom("delegation").where("id", "=", delegation.id).execute(),
+  });
 
   return (
     <>

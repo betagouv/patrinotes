@@ -27,9 +27,11 @@ export const useSyncForm = <T extends Report | StateReport | Service>({
 }) => {
   const newObject = useWatch({ control: form.control });
   const diff = disabled ? {} : getDiff(newObject, baseObject);
-  const syncMutation = useMutation(async () => {
-    if (Object.keys(diff).length === 0) return;
-    await syncObject(baseObject.id, diff);
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      if (Object.keys(diff).length === 0) return;
+      await syncObject(baseObject.id, diff);
+    },
   });
 
   useDebounce(() => syncMutation.mutate(), 500, [diff]);
