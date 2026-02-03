@@ -12,7 +12,11 @@ import {
 } from "../db/AppSchema";
 import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
 import { useMutation, useQuery, UseMutationResult, useMutationState } from "@tanstack/react-query";
-import { SendConstatForm, useSendConstatFormContext } from "../features/state-report/pdf/ConstatPdfContext";
+import {
+  SendConstatForm,
+  useIsSendConstatFormDisabled,
+  useSendConstatFormContext,
+} from "../features/state-report/pdf/ConstatPdfContext";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
@@ -32,6 +36,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { useRecipients } from "../features/state-report/pdf/ConstatPdf.hook";
 import { last } from "pastable";
 import { checkAlertErrors } from "../features/state-report/alerts/StateReportAlert.utils";
+import { getIsStateReportDisabled, useIsStateReportDisabled } from "../features/state-report/utils";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -63,16 +68,21 @@ const ConstatPdf = () => {
       alerts: [],
       htmlString: "",
       alertErrors: [],
+      checkErrors: () => {},
+      isStateReportDisabled: false,
     },
   });
 
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId }));
 
   const checkAllAlertsError = (alerts: SendConstatForm["alerts"]) => {
-    const alertErrors = alerts.map(checkAlertErrors);
+    const alertToSend = alerts.filter((alert) => alert.shouldSend);
+    const alertErrors = alertToSend.map(checkAlertErrors);
     form.setValue("alertErrors", alertErrors);
     return alertErrors;
   };
+
+  form.setValue("checkErrors", () => checkAllAlertsError(form.getValues().alerts));
 
   const navigate = useNavigate();
 
@@ -136,6 +146,13 @@ const ConstatPdf = () => {
     isSetRef.current = true;
   }, [sections, stateReport, alerts]);
 
+  // propagate isDisabled to children
+  useEffect(() => {
+    if (!stateReport) return;
+    const isStateReportDisabled = getIsStateReportDisabled({ attachment_id: stateReport.attachment_id });
+    form.setValue("isStateReportDisabled", isStateReportDisabled);
+  }, [stateReport]);
+
   const isLoading = stateReportQuery.isLoading || sectionsQuery.isLoading || alertsQuery.isLoading;
 
   if (isLoading) {
@@ -176,10 +193,14 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
       buttons: () => {
         const navigate = useNavigate();
         const { constatId } = Route.useParams();
+
+        const isDisabled = useIsSendConstatFormDisabled();
+
         return (
           <Flex gap="8px">
             <Button
               type="button"
+              disabled={isDisabled}
               onClick={() =>
                 navigate({
                   to: "/constat/$constatId/pdf",
@@ -285,6 +306,8 @@ const SendBannerContent = () => {
 
   const { constatId } = Route.useParams();
 
+  const isDisabled = useIsSendConstatFormDisabled();
+
   const sendMutationStatus = useMutationState({
     filters: {
       mutationKey: constatPdfMutations.send({ constatId }).mutationKey,
@@ -313,12 +336,14 @@ const SendBannerContent = () => {
         <Typography pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
           Courriels
         </Typography>
-        <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
-          <EmailInput value={recipients} onValueChange={setRecipients} />
-        </Box>
+        {!isDisabled ? (
+          <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
+            <EmailInput value={recipients} onValueChange={setRecipients} />
+          </Box>
+        ) : null}
 
         <Box mr="100px" ml="8px">
-          <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending}>
+          <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending || isDisabled}>
             {isPending ? "Envoi en cours..." : "Envoyer"}
           </Button>
         </Box>

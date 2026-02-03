@@ -8,7 +8,7 @@ import {
   VisitedSectionAttachment,
 } from "../../../db/AppSchema";
 import { StateReportWithUser } from "../../report/ReportList";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { AlertErrors } from "../alerts/StateReportAlert.utils";
 
 export type AlertWithEmail = {
@@ -31,7 +31,10 @@ export type AlertWithAttachments = StateReportAlert & {
 };
 
 export const useSendConstatFormContext = () => useFormContext<SendConstatForm>();
-
+export const useIsSendConstatFormDisabled = () => {
+  const form = useSendConstatFormContext();
+  return useWatch({ control: form.control, name: "isStateReportDisabled" });
+};
 export type SendConstatForm = {
   stateReport: StateReportWithUserAndAttachments;
   sections: SectionWithAttachments[];
@@ -39,4 +42,6 @@ export type SendConstatForm = {
   recipients: string[];
   htmlString: string;
   alertErrors: AlertErrors[];
+  checkErrors: () => void;
+  isStateReportDisabled: boolean;
 };

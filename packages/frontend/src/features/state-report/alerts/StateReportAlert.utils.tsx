@@ -18,12 +18,15 @@ export const getEmailsForSection = (sectionTitle: string, service: Service) => {
 
 export const checkAlertErrors = (alert: StateReportAlert): AlertErrors => {
   const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+
   const missingEmails = mandatoryEmails
     .filter((e) => !e.email)
     .map((e) => ({ service: e.service, error: MISSING_EMAIL_ERROR }));
+
   const invalidEmails = mandatoryEmails
     .filter((e) => e.email && !checkEmailValid(e.email))
     .map((e) => ({ service: e.service, error: INVALID_EMAIL_ERROR }));
+
   return {
     email: [...missingEmails, ...invalidEmails],
   };
