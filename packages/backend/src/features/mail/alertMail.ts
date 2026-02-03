@@ -1,135 +1,103 @@
 import { Selectable } from "kysely";
 import { Database } from "../../db/db";
+import { MinimalAlert } from "@cr-vif/pdf/constat";
+import {
+  ABORDS_DE_L_EDIFICE_SECTION,
+  ARCHEOLOGIE_SECTION,
+  BIODIVERSITE_SECTION,
+  EDIFICE_EN_PERIL_SECTION,
+  OBJETS_MOBILIERS_SECTION,
+  SECURITE_SECTION,
+  SITE_CLASSE_OU_INSCRIT_SECTION,
+} from "@cr-vif/pdf/utils";
+import { AuthUser } from "../../routes/authMiddleware";
+import { getServices } from "../../services/services";
 
-type AlertMailData = {
-  monumentName: string;
-  commune: string;
-  department: string;
-  alertType: string;
-  comments: string | null;
-  agentName: string;
-  agentEmail: string;
-  serviceName: string;
-  photos: { url: string; label?: string | null }[];
-};
-
-type AlertVariant = "generic" | "security" | "archaeology";
-
-const getAlertVariant = (alertType: string): AlertVariant => {
-  const normalizedType = alertType.toLowerCase();
-  if (normalizedType === "sécurité" || normalizedType === "securite") {
-    return "security";
+const getProblemDescription = ({ alert, user }: { alert: MinimalAlert; user: AuthUser }) => {
+  if (alert.alert === EDIFICE_EN_PERIL_SECTION) {
+    return `des potentiels désordres susceptibles de relever de votre pouvoir de police ont été repérés par`;
   }
-  if (normalizedType === "archéologie" || normalizedType === "archeologie" || normalizedType === "sra") {
-    return "archaeology";
+
+  if (alert.alert === ARCHEOLOGIE_SECTION) {
+    return `une potentielle atteinte à un enjeu archéologique a été relevée par`;
   }
-  return "generic";
+
+  const natureDescription = alertNatureMap[alert.alert as keyof typeof alertNatureMap] || "relatif à " + alert.alert;
+  return `un potentiel problème ${natureDescription} qui pourrait relever de votre compétence, a été identifié par`;
 };
 
-const createPhotoSection = (photos: AlertMailData["photos"]): string => {
-  if (!photos.length) return "";
-
-  const photoHtml = photos
-    .map(
-      (photo) => `
-      <div style="margin: 10px 0;">
-        <img src="${photo.url}" alt="${photo.label || "Photo"}" style="max-width: 600px; max-height: 400px; display: block;" />
-        ${photo.label ? `<p style="margin: 5px 0; font-style: italic;">${photo.label}</p>` : ""}
-      </div>
-    `,
-    )
-    .join("");
-
-  return `<div style="margin: 20px 0;">${photoHtml}</div>`;
+const alertNatureMap = {
+  [OBJETS_MOBILIERS_SECTION]: "relatif aux objets et mobiliers",
+  [ABORDS_DE_L_EDIFICE_SECTION]: "relatif aux abords de l'édifice",
+  [SITE_CLASSE_OU_INSCRIT_SECTION]: "relatif au site classé ou inscrit",
+  [BIODIVERSITE_SECTION]: "relatif à la biodiversité",
+  [SECURITE_SECTION]: "relatif à la sécurité",
 };
 
-const createGenericContent = (data: AlertMailData): string => {
-  const photoSection = createPhotoSection(data.photos);
+export const createAlertEmailContent = async ({
+  stateReport,
+  alert,
+  user,
+}: {
+  stateReport: Selectable<Database["state_report"]>;
+  alert: MinimalAlert;
+  user: AuthUser;
+}) => {
+  const uploadService = getServices().upload;
 
-  return `<p>Madame, Monsieur,</p>
+  const alertAttachments = alert.attachments.filter((att) => !att.is_deprecated);
+  const mailAttachments = await Promise.all(
+    alertAttachments.map(async (attachment) => {
+      const buffer = await uploadService.getAttachment({ filePath: attachment.id });
 
-<p>Dans le cadre d'un constat d'état réalisé sur le monument historique <strong>${data.monumentName}</strong>, situé à <strong>${data.commune} / ${data.department}</strong>, un potentiel problème <strong>relatif à ${data.alertType}</strong> qui pourrait relever de votre compétence, a été identifié par l'agent du <strong>${data.serviceName}</strong>, en charge du contrôle scientifique et technique, <strong>${data.agentName}</strong> :</p>
+      return {
+        filename: attachment.label || "Photo",
+        content: buffer,
+        cid: attachment.id,
+        contentType: "image/png",
+      };
+    }),
+  );
 
-<div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #000091;">
-${data.comments ? `<p>${data.comments}</p>` : ""}
-${photoSection}
-</div>
+  const html = `
+    <p>Madame, Monsieur,</p>
+    <p>Dans le cadre d’un constat d’état réalisé sur le monument historique <b>${uppercaseFirstLetter(stateReport.titre_edifice!)}</b>${stateReport.commune ? `, situé à ${stateReport.commune}` : ``},
+  ${getProblemDescription({ alert, user })} l’agent ${getServicePronom(user.service.name!)}, en charge du contrôle scientifique et technique, ${user.name} :</p>
 
-<p>Pour toute information complémentaire, ou pour communiquer l'éventuelle suite donnée à cette alerte, merci de contacter :</p>
+  ${alert.commentaires ? `<p>${alert.commentaires}</p>` : ""}
+    ${
+      mailAttachments.length
+        ? `<p>
+        ${mailAttachments.map((att) => `<img src="cid:${att.cid}" alt="${att.filename}" style="max-width: 600px; max-height: 400px; display: block; margin: 10px 0;" />`).join("")}
+    </p>`
+        : ""
+    }
 
-<p><strong>${data.agentName}</strong> – <strong>${data.serviceName}</strong></p>
-<p><strong>${data.agentEmail}</strong></p>
+  <p>Pour toute information complémentaire, ou pour communiquer l’éventuelle suite donnée à cette alerte, merci de contacter : <br/>
+  <b>${user.name} - ${user.service.name!}</b><br/>
+  <b>${user.email}</b>
+  </p>
+  <p>Merci,</p>
 
-<p>Merci,</p>
+  <p>Ministère de la culture</p>
 
-<p>Ministère de la Culture</p>
+  <p>(Envoi automatique depuis le service numérique Patrimoine Embarqué)</p>
+  `;
 
-<p style="font-style: italic; color: #666;">(Envoi automatique depuis le service numérique Patrimoine Embarqué)</p>`;
+  return { html, attachments: mailAttachments };
 };
 
-const createSecurityContent = (data: AlertMailData): string => {
-  const photoSection = createPhotoSection(data.photos);
-
-  return `<p>Madame, Monsieur,</p>
-
-<p>Dans le cadre d'un constat d'état réalisé sur le monument historique <strong>${data.monumentName}</strong>, situé à <strong>${data.commune} / ${data.department}</strong>, des <strong>potentiels désordres susceptibles de relever de votre pouvoir de police</strong> ont été repérés par l'agent du <strong>${data.serviceName}</strong>, en charge du contrôle scientifique et technique, <strong>${data.agentName}</strong> :</p>
-
-<div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #000091;">
-${data.comments ? `<p>${data.comments}</p>` : ""}
-${photoSection}
-</div>
-
-<p>Pour toute information complémentaire, ou pour communiquer l'éventuelle suite donnée à cette alerte, merci de contacter :</p>
-
-<p><strong>${data.agentName}</strong> – <strong>${data.serviceName}</strong></p>
-<p><strong>${data.agentEmail}</strong></p>
-
-<p>Merci,</p>
-
-<p>Ministère de la Culture</p>
-
-<p style="font-style: italic; color: #666;">(Envoi automatique depuis le service numérique Patrimoine Embarqué)</p>`;
+const getServicePronom = (serviceName: string) => {
+  if (serviceName.includes("UDAP")) return `de l’${serviceName}`;
+  if (serviceName.includes("SRA")) return `du ${serviceName}`;
+  if (serviceName.includes("CRMH")) return `de la ${serviceName}`;
+  return `du ${serviceName}`;
 };
 
-const createArchaeologyContent = (data: AlertMailData): string => {
-  const photoSection = createPhotoSection(data.photos);
-
-  return `<p>Madame, Monsieur,</p>
-
-<p>Lors d'un constat d'état réalisé sur <strong>${data.monumentName}</strong>, situé à <strong>${data.commune} / ${data.department}</strong>, <strong>une potentielle atteinte à un enjeu archéologique</strong> a été relevée par l'agent du <strong>${data.serviceName}</strong>, en charge du contrôle scientifique et technique, <strong>${data.agentName}</strong> :</p>
-
-<div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #000091;">
-${data.comments ? `<p>${data.comments}</p>` : ""}
-${photoSection}
-</div>
-
-<p>Pour toute information complémentaire, vous pouvez contacter l'agent en charge du constat d'état :</p>
-
-<p><strong>${data.agentName}</strong> – <strong>${data.serviceName}</strong></p>
-<p><strong>${data.agentEmail}</strong></p>
-
-<p>Cordialement,</p>
-
-<p>Ministère de la Culture</p>
-
-<p style="font-style: italic; color: #666;">(Envoi automatique depuis le service numérique Patrimoine Embarqué)</p>`;
-};
-
-export const createAlertMailContent = (data: AlertMailData): string => {
-  const variant = getAlertVariant(data.alertType);
-
-  switch (variant) {
-    case "security":
-      return createSecurityContent(data);
-    case "archaeology":
-      return createArchaeologyContent(data);
-    default:
-      return createGenericContent(data);
-  }
+const uppercaseFirstLetter = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 export const getAlertMailSubject = (alertType: string, monumentName: string): string => {
-  return `Alerte Patrimoine : ${alertType} - ${monumentName}`;
+  return `Alerte ${alertType} - ${monumentName}`;
 };
-
-export type { AlertMailData };

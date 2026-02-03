@@ -101,3 +101,9 @@ export const getIsAlertVisited = (alertSection: any) => {
 };
 
 export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
+export const EDIFICE_EN_PERIL_SECTION = "Edifice en péril";
+export const ABORDS_DE_L_EDIFICE_SECTION = "Abords de l'édifice";
+export const ARCHEOLOGIE_SECTION = "Archéologie";
+export const SITE_CLASSE_OU_INSCRIT_SECTION = "Site classé ou inscrit";
+export const BIODIVERSITE_SECTION = "Biodiversité";
+export const SECURITE_SECTION = "Sécurité";

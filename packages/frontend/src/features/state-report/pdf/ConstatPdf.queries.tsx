@@ -1,6 +1,8 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { db, getAttachmentUrl } from "../../../db/db";
-import { SendConstatForm } from "./ConstatPdfContext";
+import { AlertWithAttachments, SendConstatForm } from "./ConstatPdfContext";
+import { api } from "../../../api";
+import { MinimalAlert } from "@cr-vif/pdf/constat";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
@@ -133,8 +135,15 @@ export const constatPdfMutations = {
   send: ({ constatId }: { constatId: string }) =>
     mutationOptions({
       mutationKey: ["send-constat-pdf", constatId],
-      mutationFn: async (values: SendConstatForm) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+      mutationFn: async ({ alerts, htmlString, recipients }: SendConstatForm) => {
+        await api.post("/api/pdf/state-report", {
+          body: {
+            stateReportId: constatId,
+            htmlString: htmlString!,
+            recipients: recipients.join(","),
+            alerts: alerts,
+          },
+        });
       },
     }),
 };
