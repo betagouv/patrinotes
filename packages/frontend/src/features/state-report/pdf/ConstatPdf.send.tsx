@@ -15,101 +15,11 @@ import { db } from "../../../db/db";
 import { StateReportAlert } from "../../../db/AppSchema";
 
 export const SendConstatPdf = () => {
-  const { localHtmlString, scrollToAlertRef, setSelectedAlerts, alerts = [] } = useConstatPdfContext()!;
+  const { localHtmlString, setSelectedAlerts, alerts = [] } = useConstatPdfContext()!;
   const user = useUser()!;
-
-  const [checkedAlertIds, setCheckedAlertIds] = useState<Set<string>>(new Set());
-  const isInitialized = useRef(false);
-
-  // init all alerts as checked when data loads
-  const alertIds = alerts.map((a) => a.id).join(",");
-  useEffect(() => {
-    if (alerts.length > 0 && !isInitialized.current) {
-      isInitialized.current = true;
-      setCheckedAlertIds(new Set(alerts.map((a) => a.id)));
-    }
-  }, [alertIds]);
-
-  // sync selected alerts to context
-  useEffect(() => {
-    if (!isInitialized.current) return;
-    const selected = alerts
-      .filter((a) => checkedAlertIds.has(a.id))
-      .map((a) => ({ id: a.id, alert: a.alert, email: String(a.email || "") }));
-    setSelectedAlerts(selected);
-  }, [checkedAlertIds, alertIds]);
-
-  const toggleAlert = (alertId: string) => {
-    setCheckedAlertIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(alertId)) {
-        next.delete(alertId);
-      } else {
-        next.add(alertId);
-      }
-      return next;
-    });
-  };
-
-  // scroll + focus
-  const alertRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const accordionRef = useRef<HTMLDivElement | null>(null);
-
-  // expose scroll function to parent via context
-  useEffect(() => {
-    if (scrollToAlertRef) {
-      scrollToAlertRef.current = (alertId: string) => {
-        const accordionButton = accordionRef.current?.querySelector("button[aria-expanded='false']");
-        if (accordionButton) {
-          (accordionButton as HTMLButtonElement).click();
-        }
-
-        setTimeout(() => {
-          const ref = alertRefs.current[alertId];
-          ref?.scrollIntoView({ behavior: "smooth", block: "center" });
-          ref?.focus();
-        }, 100);
-      };
-    }
-  }, [scrollToAlertRef]);
 
   return (
     <Stack>
-      {alerts?.length ? (
-        <Center>
-          <Box ref={accordionRef} sx={{ width: { xs: "100%", lg: "800px" } }}>
-            <Accordion
-              label={
-                <div
-                  className="fr-icon ri-alarm-warning-fill"
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  {alerts.length} alerte{addSIfPlural(alerts.length)} signalée{addSIfPlural(alerts.length)}
-                </div>
-              }
-            >
-              <Stack px="16px">
-                <Typography>
-                  Les alertes seront envoyées aux services concernés, mais vous pouvez déselectionner celles à ne pas
-                  envoyer
-                </Typography>
-
-                <Stack mt="16px" gap="16px">
-                  {alerts.map((alert) => (
-                    <AlertRow
-                      key={alert.id}
-                      alert={alert}
-                      inputRef={(el) => (alertRefs.current[alert.id] = el)}
-                      checked={checkedAlertIds.has(alert.id)}
-                      onToggle={() => toggleAlert(alert.id)}
-                    />
-                  ))}
-                </Stack>
-              </Stack>
-            </Accordion>
-          </Box>
-        </Center>
-      ) : null}
       <Center>
         <Center width="800px" flexDirection="column">
           <View
@@ -143,9 +53,7 @@ const AlertRow = ({
   const hasServiceEmail = !!service?.[emailKey as keyof typeof service];
 
   const saveEmailMutation = useMutation({
-    mutationFn: async (newEmail: string) => {
-      await db.updateTable("state_report_alert").set({ email: newEmail }).where("id", "=", alert.id).execute();
-    },
+    mutationFn: async (newEmail: string) => {},
   });
 
   const handleBlur = () => {
