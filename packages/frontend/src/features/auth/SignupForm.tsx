@@ -30,10 +30,10 @@ export const SignupForm = () => {
   const { setAuth } = useAuthContext();
   const navigate = useNavigate();
 
-  const mutation = useMutation(
-    (body: RouterInputs<"/api/create-user">["body"]) => unauthenticatedApi.post("/api/create-user", { body }),
-    { onError: () => scrollToTop() },
-  );
+  const mutation = useMutation({
+    mutationFn: (body: RouterInputs<"/api/create-user">["body"]) =>
+      unauthenticatedApi.post("/api/create-user", { body }),
+  });
 
   const servicesQuery = useQuery({
     queryKey: ["udaps"],
@@ -41,13 +41,12 @@ export const SignupForm = () => {
       const response = await unauthenticatedApi.get("/api/services");
       return response;
     },
-    onError: (error) => console.error(error),
   });
 
   const signup = async (values: SignupFormProps) => {
     const name = `${values.prenom} ${values.nom}`;
     const valuesWithName = { ...omit(values, ["nom", "prenom"]), name };
-    const response = await mutation.mutateAsync(valuesWithName);
+    const response = await mutation.mutateAsync(valuesWithName, { onError: () => scrollToTop() });
     setAuth(response as any);
     navigate({ to: "/", search: { document: "constats" } });
   };

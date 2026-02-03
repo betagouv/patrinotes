@@ -26,11 +26,12 @@ import Accordion from "@codegouvfr/react-dsfr/Accordion";
 import { api } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
 import { fr } from "@codegouvfr/react-dsfr";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { constatPdfMutations, constatPdfQueries } from "../features/state-report/pdf/ConstatPdf.queries";
 import { Spinner } from "#components/Spinner.tsx";
 import { useRecipients } from "../features/state-report/pdf/ConstatPdf.hook";
 import { last } from "pastable";
+import { checkAlertErrors } from "../features/state-report/alerts/StateReportAlert.utils";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -61,14 +62,25 @@ const ConstatPdf = () => {
       recipients: [],
       alerts: [],
       htmlString: "",
+      alertErrors: [],
     },
   });
 
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId }));
 
+  const checkAllAlertsError = (alerts: SendConstatForm["alerts"]) => {
+    const alertErrors = alerts.map(checkAlertErrors);
+    form.setValue("alertErrors", alertErrors);
+    return alertErrors;
+  };
+
   const onSubmit = async (values: SendConstatForm) => {
-    sendConstatMutation.mutate(values);
+    const errors = checkAllAlertsError(values.alerts);
     console.log(values);
+    if (errors.some((e) => e.email.length > 0)) {
+      return;
+    }
+    // sendConstatMutation.mutate(values);
   };
 
   const stateReportQuery = useQuery(constatPdfQueries.stateReport({ constatId }));
@@ -92,22 +104,30 @@ const ConstatPdf = () => {
     form.setValue("recipients", emailsArray);
   }, [stateReportQuery.data, form]);
 
+  // sync alerts with form since they can be edited in the alert accordion
+  useEffect(() => {
+    if (!alerts) return;
+    const alertsWithShouldSend = alerts.map((alert) => ({ ...alert, shouldSend: true }));
+
+    form.setValue("alerts", alertsWithShouldSend);
+
+    checkAllAlertsError(alertsWithShouldSend);
+  }, [alerts, form]);
+
   // generate html string (only once since displaying it is a heavy operation)
   const isSetRef = useRef(false);
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
 
+    console.log("AAA", stateReport.plan_situation);
+    console.log("AAA", stateReport.attachments);
+
     const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
     form.setValue("htmlString", htmlString);
+
     isSetRef.current = true;
   }, [sections, stateReport, alerts]);
-
-  // sync alerts with form since they can be edited in the alert accordion
-  useEffect(() => {
-    if (!alerts) return;
-    form.setValue("alerts", alerts);
-  }, [alerts, form]);
 
   const isLoading = stateReportQuery.isLoading || sectionsQuery.isLoading || alertsQuery.isLoading;
 
@@ -121,7 +141,7 @@ const ConstatPdf = () => {
 
   return (
     <FormProvider {...form}>
-      <Stack height="100%" component="form" onSubmit={form.handleSubmit(onSubmit)}>
+      <Stack height="100%" component="form" onSubmit={form.handleSubmit((values) => onSubmit(values))}>
         <TextEditorContextProvider height="100%">
           <BannerAndContent mode={mode} />
         </TextEditorContextProvider>

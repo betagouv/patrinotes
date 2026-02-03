@@ -16,7 +16,7 @@ import { addSIfPlural } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled } from "../utils";
 import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
-import { AlertErrors, checkAlertErrors, deserializeMandatoryEmails } from "./StateReportAlert.utils";
+import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";

@@ -14,9 +14,11 @@ type UploadImageButtonProps = {
 };
 
 export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImageButtonProps) => {
-  const uploadImageMutation = useMutation(async ({ files }: { files: File[] }) => {
-    await addImage({ files });
-    ref.current!.value = "";
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ files }: { files: File[] }) => {
+      await addImage({ files });
+      ref.current!.value = "";
+    },
   });
 
   const onChange = async (e: ChangeEvent<HTMLInputElement>) => {

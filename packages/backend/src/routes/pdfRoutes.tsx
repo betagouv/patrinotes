@@ -6,7 +6,7 @@ import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
 import { sendReportMail, sendStateReportMail, sendAlertMail } from "../features/mail";
 import { generatePresignedUrl, getPDFName } from "../services/uploadService";
-import { Service } from "../../../frontend/src/db/AppSchema";
+import { Service, StateReportAlert } from "../../../frontend/src/db/AppSchema";
 import path from "path";
 import { makeDebug } from "../features/debug";
 import { v4 } from "uuid";
@@ -132,7 +132,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
   fastify.post("/state-report", { schema: stateReportPdfTSchema }, async (request) => {
     const user = request.user!;
-    const { stateReportId: stateReportId, htmlString } = request.body;
+    const { stateReportId: stateReportId, htmlString, alerts } = request.body;
     debug(`Generating PDF for state report ${stateReportId} by user ${user.id}`);
     debug(`HTML string length: ${htmlString.length}`);
     const stateReportQuery = await db
@@ -199,7 +199,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     }));
 
     const service = request.user!.service as Service;
-    const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap });
+    const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap, alerts });
 
     const name = stateReportId + "/constat_d_etat_" + Math.round(Date.now() / 1000) + ".pdf";
     await request.services.upload.uploadAttachment({ buffer: pdf, filePath: name });
@@ -363,10 +363,12 @@ const generateStateReportPdf = async ({
   htmlString,
   service,
   attachmentsUrlMap,
+  alerts,
 }: {
   htmlString: string;
   service: Service;
   attachmentsUrlMap: { id: string; url: string }[];
+  alerts?: (Omit<StateReportAlert, "service_id" | "state_report_id" | "show_in_report"> & { show_in_report: any })[];
 }) => {
   const fontsPath = path.resolve(process.cwd(), "./public");
   Font.register({
@@ -444,7 +446,14 @@ export const reportPdfTSchema = {
 const AlertSchema = Type.Object({
   id: Type.String(),
   alert: Type.Union([Type.String(), Type.Null()]),
-  email: Type.String(),
+  commentaires: Type.Union([Type.String(), Type.Null()]),
+  show_in_report: Type.Union([Type.Boolean(), Type.Null()]),
+  mandatory_emails: Type.Union([Type.String(), Type.Null()]),
+  additional_emails: Type.Union([Type.String(), Type.Null()]),
+  objet_ou_mobilier: Type.Union([Type.String(), Type.Null()]),
+  objet_ou_mobilier_name: Type.Union([Type.String(), Type.Null()]),
+  probleme: Type.Union([Type.String(), Type.Null()]),
+  shouldSend: Type.Union([Type.Boolean(), Type.Null()]),
 });
 
 export const stateReportPdfTSchema = {

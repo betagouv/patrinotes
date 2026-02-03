@@ -1,5 +1,6 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { db, getAttachmentUrl } from "../../../db/db";
+import { SendConstatForm } from "./ConstatPdfContext";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
@@ -23,6 +24,7 @@ export const constatPdfQueries = {
 
         const attachmentQuery = await db
           .selectFrom("state_report_attachment")
+          .where("is_deprecated", "=", 0)
           .selectAll()
           .where("state_report_id", "=", constatId)
           .execute();
@@ -43,6 +45,7 @@ export const constatPdfQueries = {
         };
       },
       refetchOnWindowFocus: false,
+      gcTime: 0,
     }),
 
   sections: ({ constatId }: { constatId: string }) =>
@@ -82,6 +85,7 @@ export const constatPdfQueries = {
         }));
       },
       refetchOnWindowFocus: false,
+      gcTime: 0,
     }),
 
   alerts: ({ constatId }: { constatId: string }) =>
@@ -121,6 +125,7 @@ export const constatPdfQueries = {
         }));
       },
       refetchOnWindowFocus: false,
+      gcTime: 0,
     }),
 };
 
@@ -128,7 +133,7 @@ export const constatPdfMutations = {
   send: ({ constatId }: { constatId: string }) =>
     mutationOptions({
       mutationKey: ["send-constat-pdf", constatId],
-      mutationFn: async () => {
+      mutationFn: async (values: SendConstatForm) => {
         await new Promise((resolve) => setTimeout(resolve, 3000));
       },
     }),

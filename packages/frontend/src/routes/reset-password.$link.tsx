@@ -13,14 +13,16 @@ const ResetPasswordAction = () => {
   const form = useForm<any>();
   const { link } = Route.useParams();
 
-  const mutation = useMutation(async (body: ResetPasswordActionForm) => {
-    const result = await unauthenticatedApi.post("/api/reset-password", {
-      body: { newPassword: body.password, temporaryLink: link },
-    });
+  const mutation = useMutation({
+    mutationFn: async (body: ResetPasswordActionForm) => {
+      const result = await unauthenticatedApi.post("/api/reset-password", {
+        body: { newPassword: body.password, temporaryLink: link },
+      });
 
-    form.reset();
+      form.reset();
 
-    return result;
+      return result;
+    },
   });
 
   return (

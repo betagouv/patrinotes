@@ -1,7 +1,7 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import { Stack, Typography } from "@mui/material";
 import { useState } from "react";
-import { AlertErrors, deserializeMandatoryEmails, serializeMandatoryEmails } from "./StateReportAlert.utils";
+import { AlertErrors } from "./StateReportAlert.utils";
 import { addSIfPlural } from "../../../utils";
 import { Flex } from "#components/ui/Flex.tsx";
 import { useIsStateReportDisabled } from "../utils";
@@ -9,6 +9,7 @@ import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useDebounce } from "react-use";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
+import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
 
 export const StateReportAlertsEmailInput = ({
   mandatory_emails,

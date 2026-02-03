@@ -565,6 +565,9 @@ importers:
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0
+      pastable:
+        specifier: ^2.2.1
+        version: 2.2.1(react@18.3.1)(xstate@5.21.0)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -8789,7 +8792,7 @@ snapshots:
       '@babel/types': 7.28.4
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
-      debug: 4.4.1
+      debug: 4.4.3
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -12313,7 +12316,7 @@ snapshots:
 
   agent-base@6.0.2:
     dependencies:
-      debug: 4.4.1
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 

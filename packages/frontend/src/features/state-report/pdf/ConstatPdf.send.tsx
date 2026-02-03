@@ -12,9 +12,12 @@ import { fr } from "@codegouvfr/react-dsfr";
 import React, { useEffect, useRef, useState } from "react";
 import { db } from "../../../db/db";
 import { StateReportAlert } from "../../../db/AppSchema";
-import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
-import { deserializeMandatoryEmails } from "../alerts/StateReportAlert.utils";
-import { useHtmlString } from "./ConstatPdf.hook";
+import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
+import { AlertErrors } from "../alerts/StateReportAlert.utils";
+import { useAlerts, useHtmlString } from "./ConstatPdf.hook";
+import { AlertWithAttachments, useSendConstatFormContext } from "./ConstatPdfContext";
+import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { groupBy } from "pastable";
 
 export const SendConstatPdf = () => {
   const htmlString = useHtmlString();
@@ -24,7 +27,7 @@ export const SendConstatPdf = () => {
     <Stack>
       <Center>
         <Center width="800px" flexDirection="column">
-          {/* <AlertsAccordion /> */}
+          <AlertsAccordion />
           <View
             htmlString={htmlString}
             images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
@@ -37,11 +40,9 @@ export const SendConstatPdf = () => {
 };
 
 const AlertsAccordion = () => {
-  const { alerts, alertsFormId } = useConstatPdfContext()!;
-  const alertSuffix = addSIfPlural(alerts!.length);
+  const alerts = useAlerts();
 
-  const form = useForm({ defaultValues: { alerts: alerts! } });
-  const fieldArray = useFieldArray({ control: form.control, name: "alerts" });
+  const alertSuffix = addSIfPlural(alerts.length);
 
   return (
     <Accordion
@@ -53,22 +54,29 @@ const AlertsAccordion = () => {
             display: "flex",
             alignItems: "center",
             fontSize: "16px",
+            width: "100%",
             gap: "8px",
-            "::before": {
+            "::before, ::after": {
               width: "16px",
-              mb: "4px",
+              mb: "2px",
             },
           }}
         >
-          {alerts!.length} alerte{alertSuffix} signalée{alertSuffix}
+          <Flex alignItems="center" justifyContent="space-between" width="100%">
+            {alerts!.length} alerte{alertSuffix} signalée{alertSuffix}
+            <i
+              className="fr-icon fr-icon--right fr-icon-error-warning-fill"
+              style={{ color: fr.colors.decisions.text.actionHigh.redMarianne.default, marginRight: "16px" }}
+            />
+          </Flex>
         </Box>
       }
     >
-      <Stack px="16px" component="form" id={alertsFormId}>
+      <Stack px="16px">
         <Typography>
           Les alertes seront envoyées aux services concernés, mais vous pouvez désélectionner celles à ne pas envoyer.
         </Typography>
-        <AlertCheckboxes alerts={fieldArray.fields} form={form} />
+        <AlertCheckboxes alerts={alerts} />
         {/* {fieldArray.fields.map((field, index) => (
           <AlertRow key={field.id} alert={field} form={form} name={`alerts.${index}`} />
         ))} */}
@@ -77,19 +85,29 @@ const AlertsAccordion = () => {
   );
 };
 
-type AlertRowProps = {
-  form: UseFormReturn<{ alerts: StateReportAlert[] }>;
-  name: `alerts.${number}`;
-  alerts: StateReportAlert;
-};
+const AlertCheckboxes = ({ alerts: baseAlerts }: { alerts: AlertWithAttachments[] }) => {
+  const form = useSendConstatFormContext();
 
-const AlertCheckboxes = ({
-  alerts,
-  form,
-}: {
-  alerts: StateReportAlert[];
-  form: UseFormReturn<{ alerts: StateReportAlert[] }>;
-}) => {
+  const alertErrors = useWatch({ control: form.control, name: "alertErrors" });
+  const flatErrors = alertErrors.flatMap((error) => error.email);
+
+  const alertsWithIndex = baseAlerts.map((alert, index) => ({ ...alert, index }));
+  const groupedAlerts = groupBy(alertsWithIndex, (alert) => alert.alert);
+  const alertsNames = Object.keys(groupedAlerts);
+
+  const alerts = alertsNames.map((name) => {
+    const grouped = groupedAlerts[name];
+
+    return { ...grouped[0], indices: grouped.map((a) => a.index) };
+  });
+
+  const toggleShouldSend = (id: string, shouldSend: boolean) => {
+    const alertIndex = alerts.findIndex((alert) => alert.id === id);
+    if (alertIndex === -1) return;
+
+    form.setValue(`alerts.${alertIndex}.shouldSend`, shouldSend);
+  };
+
   return (
     <Checkbox
       sx={{ mt: "24px" }}
@@ -97,22 +115,62 @@ const AlertCheckboxes = ({
         const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
         const additionalEmails = alert.additional_emails?.split(",").map((email) => email.trim()) || [];
 
+        const emailErrors = flatErrors.filter((error) => mandatoryEmails.some((me) => me.service === error.service));
         const flatEmails = [...mandatoryEmails.map((e) => e.email), ...additionalEmails].filter(Boolean);
 
         return {
           label: alert.alert,
-          hintText: flatEmails.length ? flatEmails.join(", ") : null,
-          nativeInputProps: {},
+          hintText: !emailErrors.length ? (
+            flatEmails.join(", ")
+          ) : (
+            <AlertEmailInput alert={alert} errors={emailErrors} />
+          ),
+          nativeInputProps: {
+            onChange: (e) => toggleShouldSend(alert.id, e.target.checked),
+            checked: alert.shouldSend,
+          },
         };
       })}
     />
   );
 };
 
-const AlertRow = ({ alert, form, name }: AlertRowProps) => {
+const AlertEmailInput = ({
+  alert,
+  errors,
+}: {
+  alert: AlertWithAttachments & { indices: number[] };
+  errors: AlertErrors["email"];
+}) => {
+  const form = useSendConstatFormContext();
+  const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+
+  const onChange = (service: string, email: string) => {
+    const newMandatoryEmails = mandatoryEmails.map((me) => (me.service === service ? { service, email } : me));
+
+    const serialized = serializeMandatoryEmails(newMandatoryEmails);
+
+    for (const index of alert.indices) {
+      form.setValue(`alerts.${index}.mandatory_emails`, serialized);
+    }
+  };
+
   return (
-    <Stack>
-      <Checkbox options={[]}></Checkbox>
+    <Stack mt="8px">
+      {errors.map((error, index) => (
+        <Input
+          key={index}
+          state="error"
+          stateRelatedMessage={error.error}
+          label={error.service ? `Courriel ${error.service}*` : "Courriel"}
+          nativeInputProps={{
+            onChange: (e) => {
+              onChange(error.service, e.target.value);
+            },
+            value: mandatoryEmails.find((me) => me.service === error.service)?.email || "",
+          }}
+        />
+      ))}
     </Stack>
   );
 };

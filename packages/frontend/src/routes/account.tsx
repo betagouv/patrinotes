@@ -138,23 +138,25 @@ const DefaultRecipient = () => {
       .map((email: string) => email.trim())
       .filter(Boolean) ?? [];
 
-  const saveEmailsMutation = useMutation(async (emails: string[]) => {
-    const doesUserSettingExist =
-      existing ||
-      !!(await db.selectFrom("user_settings").where("user_id", "=", user.id).selectAll().executeTakeFirst());
+  const saveEmailsMutation = useMutation({
+    mutationFn: async (emails: string[]) => {
+      const doesUserSettingExist =
+        existing ||
+        !!(await db.selectFrom("user_settings").where("user_id", "=", user.id).selectAll().executeTakeFirst());
 
-    if (doesUserSettingExist) {
+      if (doesUserSettingExist) {
+        return db
+          .updateTable("user_settings")
+          .set({ default_emails: emails.join(",") })
+          .where("user_id", "=", user.id)
+          .execute();
+      }
+
       return db
-        .updateTable("user_settings")
-        .set({ default_emails: emails.join(",") })
-        .where("user_id", "=", user.id)
+        .insertInto("user_settings")
+        .values({ id: v4(), user_id: user.id, default_emails: emails.join(","), service_id: user.service_id })
         .execute();
-    }
-
-    return db
-      .insertInto("user_settings")
-      .values({ id: v4(), user_id: user.id, default_emails: emails.join(","), service_id: user.service_id })
-      .execute();
+    },
   });
 
   return (
@@ -276,15 +278,16 @@ export const BreadcrumbNav = ({ label }: { label: string }) => {
 const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; delegations: Delegation[] }) => {
   const user = useUser()!;
 
-  const createMutation = useMutation((delegation: Omit<Delegation, "id">) =>
-    db
-      .insertInto("delegation")
-      .values({ ...delegation, id: v4() })
-      .execute(),
-  );
-  const removeMutation = useMutation((delegation: Delegation) =>
-    db.deleteFrom("delegation").where("id", "=", delegation.id).execute(),
-  );
+  const createMutation = useMutation({
+    mutationFn: (delegation: Omit<Delegation, "id">) =>
+      db
+        .insertInto("delegation")
+        .values({ ...delegation, id: v4() })
+        .execute(),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (delegation: Delegation) => db.deleteFrom("delegation").where("id", "=", delegation.id).execute(),
+  });
 
   return (
     <Flex gap="8px" flexWrap="wrap">
@@ -317,22 +320,24 @@ const DownloadCRs = () => {
 
   const user = useUser()!;
 
-  const downloadMutation = useMutation(async (reports: { id: string; name: string }[]) => {
-    if (!reports?.length) {
-      return;
-    }
-    const zip = new JSZip();
+  const downloadMutation = useMutation({
+    mutationFn: async (reports: { id: string; name: string }[]) => {
+      if (!reports?.length) {
+        return;
+      }
+      const zip = new JSZip();
 
-    for (const report of reports) {
-      // TODO: use local attachments since they are already downloaded
-      const pdf = await api.get("/api/pdf/report", { query: { reportId: report.id } });
-      zip.file(report.name, pdf as string, { base64: true });
-    }
+      for (const report of reports) {
+        // TODO: use local attachments since they are already downloaded
+        const pdf = await api.get("/api/pdf/report", { query: { reportId: report.id } });
+        zip.file(report.name, pdf as string, { base64: true });
+      }
 
-    const content = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(content);
-    downloadFile(url, getZipFilename(startDate, endDate));
-    URL.revokeObjectURL(url);
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      downloadFile(url, getZipFilename(startDate, endDate));
+      URL.revokeObjectURL(url);
+    },
   });
 
   const crs = useDbQuery(
@@ -381,22 +386,24 @@ const DownloadCEs = () => {
 
   const user = useUser()!;
 
-  const downloadMutation = useMutation(async (reports: { id: string; name: string }[]) => {
-    if (!reports?.length) {
-      return;
-    }
-    const zip = new JSZip();
+  const downloadMutation = useMutation({
+    mutationFn: async (reports: { id: string; name: string }[]) => {
+      if (!reports?.length) {
+        return;
+      }
+      const zip = new JSZip();
 
-    for (const report of reports) {
-      // TODO: use local attachments since they are already downloaded
-      const pdf = await api.get("/api/pdf/state-report", { query: { stateReportId: report.id } });
-      zip.file(report.name, pdf as string, { base64: true });
-    }
+      for (const report of reports) {
+        // TODO: use local attachments since they are already downloaded
+        const pdf = await api.get("/api/pdf/state-report", { query: { stateReportId: report.id } });
+        zip.file(report.name, pdf as string, { base64: true });
+      }
 
-    const content = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(content);
-    downloadFile(url, getCEZipFilename(startDate, endDate));
-    URL.revokeObjectURL(url);
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      downloadFile(url, getCEZipFilename(startDate, endDate));
+      URL.revokeObjectURL(url);
+    },
   });
 
   const crs = useDbQuery(
@@ -455,17 +462,18 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
       }
       return filteredResponse;
     },
-    onError: (error) => console.error(error),
   });
 
-  const changeServiceMutation = useMutation(async (service_id: string) => {
-    const service = servicesQuery.data?.find((u) => u.id === service_id);
-    if (!service) return;
-    await api.post("/api/change-service", {
-      body: { service_id },
-    });
+  const changeServiceMutation = useMutation({
+    mutationFn: async (service_id: string) => {
+      const service = servicesQuery.data?.find((u) => u.id === service_id);
+      if (!service) return;
+      await api.post("/api/change-service", {
+        body: { service_id },
+      });
 
-    onSuccess?.(service as AuthUser["service"]);
+      onSuccess?.(service as AuthUser["service"]);
+    },
   });
 
   const { css } = useStyles();

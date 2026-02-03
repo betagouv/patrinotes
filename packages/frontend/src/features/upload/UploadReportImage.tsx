@@ -25,29 +25,31 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
   const user = useLiveUser();
 
-  const addImageFileMutation = useMutation(async (file: File) => {
-    const attachmentId = `${reportId}/images/${v7()}.jpg`;
-    const buffer = await processImage(file);
+  const addImageFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const attachmentId = `${reportId}/images/${v7()}.jpg`;
+      const buffer = await processImage(file);
 
-    await attachmentQueue.saveAttachment({
-      attachmentId,
-      buffer,
-      mediaType: "image/jpeg",
-    });
+      await attachmentQueue.saveAttachment({
+        attachmentId,
+        buffer,
+        mediaType: "image/jpeg",
+      });
 
-    await db
-      .insertInto("report_attachment")
-      .values({
-        id: attachmentId,
-        attachment_id: attachmentId,
-        report_id: reportId,
-        service_id: user!.service_id,
-        created_at: new Date().toISOString(),
-        is_deprecated: 0,
-      })
-      .execute();
+      await db
+        .insertInto("report_attachment")
+        .values({
+          id: attachmentId,
+          attachment_id: attachmentId,
+          report_id: reportId,
+          service_id: user!.service_id,
+          created_at: new Date().toISOString(),
+          is_deprecated: 0,
+        })
+        .execute();
 
-    return attachmentId;
+      return attachmentId;
+    },
   });
 
   const picturesQuery = useDbQuery(
@@ -62,9 +64,11 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
 
   const pictures = picturesQuery.data ?? [];
 
-  const deletePictureMutation = useMutation(async ({ id }: { id: string }) => {
-    await attachmentStorage.deleteFile(id);
-    await db.deleteFrom("report_attachment").where("id", "=", id).execute();
+  const deletePictureMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      await attachmentStorage.deleteFile(id);
+      await db.deleteFrom("report_attachment").where("id", "=", id).execute();
+    },
   });
 
   return (

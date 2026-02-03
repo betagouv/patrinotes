@@ -45,7 +45,6 @@ export const PDF = () => {
   const generatePdfMutation = useMutation({
     mutationFn: async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
       await api.post("/api/pdf/report", { body: { reportId, htmlString, recipients } });
-      // downloadFile(url);
     },
     onSuccess: () => {
       navigate({ search: { mode: "sent" } as any });
