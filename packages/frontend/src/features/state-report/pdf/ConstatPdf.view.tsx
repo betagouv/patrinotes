@@ -6,15 +6,16 @@ import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { PdfCanvas } from "../../../routes/pdf.$reportId";
 import { useUser } from "../../../contexts/AuthContext";
+import { useHtmlString } from "./ConstatPdf.hook";
 export const ViewConstatPdf = () => {
-  const { localHtmlString } = useConstatPdfContext()!;
+  const htmlString = useHtmlString();
   const user = useUser()!;
 
   return (
     <Center>
       <Center width="800px" flexDirection="column">
         <View
-          htmlString={localHtmlString!}
+          htmlString={htmlString}
           images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
           service={user.service as any}
         />

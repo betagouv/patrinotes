@@ -67,7 +67,7 @@ export const StateReportAlertObjetSectionForm = ({
         return;
       }
 
-      // every objet alerts share the same emails
+      // every 'objet et mobilier' alerts share the same emails
       const { mandatory_emails, additional_emails } = firstAlert;
 
       for (const { name } of alerts) {

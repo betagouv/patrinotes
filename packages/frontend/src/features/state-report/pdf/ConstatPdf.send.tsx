@@ -13,15 +13,18 @@ import { fr } from "@codegouvfr/react-dsfr";
 import React, { useEffect, useRef, useState } from "react";
 import { db } from "../../../db/db";
 import { StateReportAlert } from "../../../db/AppSchema";
+import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
+import { deserializeMandatoryEmails } from "../alerts/StateReportAlert.utils";
 
 export const SendConstatPdf = () => {
-  const { localHtmlString, setSelectedAlerts, alerts = [] } = useConstatPdfContext()!;
+  const { localHtmlString, isLoading } = useConstatPdfContext()!;
   const user = useUser()!;
 
   return (
     <Stack>
       <Center>
         <Center width="800px" flexDirection="column">
+          <AlertsAccordion />
           <View
             htmlString={localHtmlString!}
             images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
@@ -33,70 +36,84 @@ export const SendConstatPdf = () => {
   );
 };
 
-type AlertWithEmail = StateReportAlert & { email: string };
+const AlertsAccordion = () => {
+  const { alerts, alertsFormId } = useConstatPdfContext()!;
+  const alertSuffix = addSIfPlural(alerts!.length);
 
-const AlertRow = ({
-  alert,
-  inputRef,
-  checked,
-  onToggle,
-}: {
-  alert: AlertWithEmail;
-  inputRef: (el: HTMLInputElement | null) => void;
-  checked: boolean;
-  onToggle: () => void;
-}) => {
-  const service = useService();
-  const [email, setEmail] = useState(alert.email || "");
-
-  const emailKey = "courriel_" + (alert.alert ?? "").toLowerCase();
-  const hasServiceEmail = !!service?.[emailKey as keyof typeof service];
-
-  const saveEmailMutation = useMutation({
-    mutationFn: async (newEmail: string) => {},
-  });
-
-  const handleBlur = () => {
-    if (email !== alert.email) {
-      saveEmailMutation.mutate(email);
-    }
-  };
+  const form = useForm({ defaultValues: { alerts: alerts! } });
+  const fieldArray = useFieldArray({ control: form.control, name: "alerts" });
 
   return (
+    <Accordion
+      sx={{ width: "100%" }}
+      label={
+        <Box
+          className="fr-icon ri-alarm-warning-fill"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            fontSize: "16px",
+            gap: "8px",
+            "::before": {
+              width: "16px",
+              mb: "4px",
+            },
+          }}
+        >
+          {alerts!.length} alerte{alertSuffix} signalée{alertSuffix}
+        </Box>
+      }
+    >
+      <Stack px="16px" component="form" id={alertsFormId}>
+        <Typography>
+          Les alertes seront envoyées aux services concernés, mais vous pouvez désélectionner celles à ne pas envoyer.
+        </Typography>
+        <AlertCheckboxes alerts={fieldArray.fields} form={form} />
+        {/* {fieldArray.fields.map((field, index) => (
+          <AlertRow key={field.id} alert={field} form={form} name={`alerts.${index}`} />
+        ))} */}
+      </Stack>
+    </Accordion>
+  );
+};
+
+type AlertRowProps = {
+  form: UseFormReturn<{ alerts: StateReportAlert[] }>;
+  name: `alerts.${number}`;
+  alerts: StateReportAlert;
+};
+
+const AlertCheckboxes = ({
+  alerts,
+  form,
+}: {
+  alerts: StateReportAlert[];
+  form: UseFormReturn<{ alerts: StateReportAlert[] }>;
+}) => {
+  return (
     <Checkbox
-      options={[
-        {
+      sx={{ mt: "24px" }}
+      options={alerts.map((alert) => {
+        const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+        const additionalEmails = alert.additional_emails?.split(",").map((email) => email.trim()) || [];
+
+        const flatEmails = [...mandatoryEmails.map((e) => e.email), ...additionalEmails].filter(Boolean);
+
+        return {
           label: alert.alert,
-          hintText: hasServiceEmail ? (
-            <Typography>{alert.email}</Typography>
-          ) : (
-            <Box sx={{ mt: "4px" }}>
-              <Input
-                label=""
-                nativeInputProps={{
-                  ref: inputRef as React.LegacyRef<HTMLInputElement>,
-                  value: email,
-                  onChange: (e) => setEmail(e.target.value),
-                  onBlur: handleBlur,
-                  placeholder: "Courriel",
-                }}
-                hintText={
-                  !email ? (
-                    <Typography color={fr.colors.decisions.text.actionHigh.redMarianne.default}>
-                      Veuillez renseigner un courriel
-                    </Typography>
-                  ) : undefined
-                }
-              />
-            </Box>
-          ),
-          nativeInputProps: {
-            checked,
-            onChange: onToggle,
-          },
-        },
-      ]}
+          hintText: flatEmails.length ? flatEmails.join(", ") : null,
+          nativeInputProps: {},
+        };
+      })}
     />
+  );
+};
+
+const AlertRow = ({ alert, form, name }: AlertRowProps) => {
+  return (
+    <Stack>
+      <Checkbox options={[]}></Checkbox>
+    </Stack>
   );
 };
 
