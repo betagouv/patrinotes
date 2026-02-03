@@ -101,11 +101,10 @@ const AlertCheckboxes = ({ alerts: baseAlerts }: { alerts: AlertWithAttachments[
     return { ...grouped[0], indices: grouped.map((a) => a.index) };
   });
 
-  const toggleShouldSend = (id: string, shouldSend: boolean) => {
-    const alertIndex = alerts.findIndex((alert) => alert.id === id);
-    if (alertIndex === -1) return;
-
-    form.setValue(`alerts.${alertIndex}.shouldSend`, shouldSend);
+  const toggleShouldSend = (indices: number[], shouldSend: boolean) => {
+    for (const alertIndex of indices) {
+      form.setValue(`alerts.${alertIndex}.shouldSend`, shouldSend);
+    }
   };
 
   return (
@@ -126,7 +125,7 @@ const AlertCheckboxes = ({ alerts: baseAlerts }: { alerts: AlertWithAttachments[
             <AlertEmailInput alert={alert} errors={emailErrors} />
           ),
           nativeInputProps: {
-            onChange: (e) => toggleShouldSend(alert.id, e.target.checked),
+            onChange: (e) => toggleShouldSend(alert.indices, e.target.checked),
             checked: alert.shouldSend,
           },
         };

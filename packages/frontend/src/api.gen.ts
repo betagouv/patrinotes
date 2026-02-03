@@ -42,6 +42,12 @@ export namespace Endpoints {
           drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
       };
     };
@@ -72,6 +78,12 @@ export namespace Endpoints {
           drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
       };
       accessToken: string;
@@ -113,6 +125,12 @@ export namespace Endpoints {
           drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
       };
       accessToken: string;
@@ -146,6 +164,12 @@ export namespace Endpoints {
           drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
       };
       accessToken: string;
@@ -196,6 +220,12 @@ export namespace Endpoints {
       drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
       dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
       service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
   export type post_Apiuploadattachment = {
@@ -248,7 +278,25 @@ export namespace Endpoints {
     method: "POST";
     path: "/api/pdf/state-report";
     parameters: {
-      body: { htmlString: string; stateReportId: string; recipients: string };
+      body: {
+        htmlString: string;
+        stateReportId: string;
+        recipients: string;
+        alerts?:
+          | Array<{
+              id: string;
+              alert: string | Schemas.null | Array<string | Schemas.null>;
+              commentaires: string | Schemas.null | Array<string | Schemas.null>;
+              show_in_report: boolean | Schemas.null | Array<boolean | Schemas.null>;
+              mandatory_emails: string | Schemas.null | Array<string | Schemas.null>;
+              additional_emails: string | Schemas.null | Array<string | Schemas.null>;
+              objet_ou_mobilier: string | Schemas.null | Array<string | Schemas.null>;
+              objet_ou_mobilier_name: string | Schemas.null | Array<string | Schemas.null>;
+              probleme: string | Schemas.null | Array<string | Schemas.null>;
+              shouldSend: boolean | Schemas.null | Array<boolean | Schemas.null>;
+            }>
+          | undefined;
+      };
     };
     response: string;
   };

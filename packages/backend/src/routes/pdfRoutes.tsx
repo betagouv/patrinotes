@@ -4,7 +4,7 @@ import { ReportPDFDocument } from "@cr-vif/pdf";
 import { StateReportPDFDocument } from "@cr-vif/pdf/constat";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
-import { sendReportMail, sendStateReportMail, sendAlertMail } from "../features/mail";
+import { sendReportMail, sendStateReportMail, sendAlertEmail } from "../features/mail";
 import { generatePresignedUrl, getPDFName } from "../services/uploadService";
 import { Service, StateReportAlert } from "../../../frontend/src/db/AppSchema";
 import path from "path";
@@ -15,6 +15,7 @@ import { Selectable } from "kysely";
 import { getServices } from "../services/services";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
+import { deserializeMandatoryEmails } from "@cr-vif/pdf/utils";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -133,8 +134,10 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.post("/state-report", { schema: stateReportPdfTSchema }, async (request) => {
     const user = request.user!;
     const { stateReportId: stateReportId, htmlString, alerts } = request.body;
+
     debug(`Generating PDF for state report ${stateReportId} by user ${user.id}`);
     debug(`HTML string length: ${htmlString.length}`);
+
     const stateReportQuery = await db
       .selectFrom("state_report")
       .leftJoin("user", "user.id", "state_report.created_by")
@@ -148,19 +151,17 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       return "State report not found";
     }
 
-    const attachmentQuery = await db
+    const stateReportAttachmentsQuery = await db
       .selectFrom("state_report_attachment")
       .selectAll()
       .where("state_report_id", "=", stateReportId)
+      .where("is_deprecated", "=", false)
       .execute();
 
-    const attachmentsWithUrl = await Promise.all(
-      attachmentQuery.map(async (attachment) => {
+    const stateReportAttachments = await Promise.all(
+      stateReportAttachmentsQuery.map(async (attachment) => {
         const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return {
-          ...attachment,
-          url,
-        };
+        return { ...attachment, url };
       }),
     );
 
@@ -170,7 +171,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .where("state_report_id", "=", stateReportId)
       .execute();
 
-    const visitedSectionAttachments = visitedSections?.length
+    const visitedSectionsAttachmentsQuery = visitedSections?.length
       ? await db
           .selectFrom("visited_section_attachment")
           .selectAll()
@@ -179,24 +180,43 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
             "in",
             visitedSections.map((vs) => vs.id),
           )
+          .where("is_deprecated", "=", false)
           .execute()
       : [];
 
-    const attachments = await Promise.all(
-      visitedSectionAttachments.map(async (attachment) => {
-        // const buffer = await getServices().upload.getAttachment({ filePath: attachment.id });
+    const visitedSectionsAttachments = await Promise.all(
+      visitedSectionsAttachmentsQuery.map(async (attachment) => {
         const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return {
-          ...attachment,
-          url,
-        };
+        return { ...attachment, url };
       }),
     );
 
-    const attachmentsUrlMap = [...attachmentsWithUrl, ...attachments].map((attachment) => ({
-      id: attachment.id,
-      url: attachment.url,
-    }));
+    const alertsAttachmentsQuery = alerts?.length
+      ? await db
+          .selectFrom("state_report_alert_attachment")
+          .selectAll()
+          .where(
+            "state_report_alert_id",
+            "in",
+            alerts.map((a) => a.id),
+          )
+          .where("is_deprecated", "=", false)
+          .execute()
+      : [];
+
+    const alertsAttachments = await Promise.all(
+      alertsAttachmentsQuery.map(async (attachment) => {
+        const url = await generatePresignedUrl("attachment/" + attachment.id);
+        return { ...attachment, url };
+      }),
+    );
+
+    const attachmentsUrlMap = [...stateReportAttachments, ...visitedSectionsAttachments, ...alertsAttachments].map(
+      (attachment) => ({
+        id: attachment.id,
+        url: attachment.url,
+      }),
+    );
 
     const service = request.user!.service as Service;
     const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap, alerts });
@@ -231,55 +251,30 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
 
     if (request.body.alerts && request.body.alerts.length > 0) {
-      const service = request.user!.service as Service;
-
-      for (const alertSelection of request.body.alerts) {
-        if (!alertSelection.email) continue;
+      for (const alert of request.body.alerts) {
+        if (!alert.shouldSend) continue;
 
         try {
-          const alert = await db
-            .selectFrom("state_report_alert")
-            .selectAll()
-            .where("id", "=", alertSelection.id)
-            .executeTakeFirst();
+          const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+          const additionalEmails = alert.additional_emails
+            ? alert.additional_emails.split(",").map((e) => e.trim())
+            : [];
 
-          if (!alert) continue;
+          const alertRecipients = Array.from(new Set([...mandatoryEmails.map((e) => e.email), ...additionalEmails]));
 
-          const alertPhotos = await db
-            .selectFrom("state_report_alert_attachment")
-            .selectAll()
-            .where("state_report_alert_id", "=", alertSelection.id)
-            .where("is_deprecated", "=", false)
-            .execute();
+          const alertAttachments = alertsAttachmentsQuery.filter((a) => a.state_report_alert_id === alert.id);
 
-          const photosWithUrls = await Promise.all(
-            alertPhotos.map(async (photo) => ({
-              url: await generatePresignedUrl("attachment/" + photo.id),
-              label: photo.label,
-            })),
-          );
-
-          const alertData = {
-            monumentName: stateReport.titre_edifice || "Monument non spécifié",
-            commune: stateReport.commune || "Commune non spécifiée",
-            department: service.department || service.name || "Département non spécifié",
-            alertType: alert.alert || "Alerte",
-            comments: alert.commentaires,
-            agentName: user.name,
-            agentEmail: user.email,
-            serviceName: service.name || "Service non spécifié",
-            photos: photosWithUrls,
-          };
-
-          await sendAlertMail({
-            recipient: alertSelection.email,
-            alertData,
+          await sendAlertEmail({
+            to: alertRecipients.join(","),
+            stateReport: stateReport!,
+            alert: { ...alert, attachments: alertAttachments as any[] },
+            user,
           });
 
-          debug(`Alert email sent for alert ${alert.id} to ${alertSelection.email}`);
+          debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.join(",")}`);
         } catch (alertError) {
-          debug(`Failed to send alert email for alert ${alertSelection.id}: ${alertError}`);
-          console.error(`Failed to send alert email for alert ${alertSelection.id}:`, alertError);
+          debug(`Failed to send alert email for alert ${alert.id}: ${alertError}`);
+          console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
         }
       }
     }
@@ -447,13 +442,13 @@ const AlertSchema = Type.Object({
   id: Type.String(),
   alert: Type.Union([Type.String(), Type.Null()]),
   commentaires: Type.Union([Type.String(), Type.Null()]),
-  show_in_report: Type.Union([Type.Boolean(), Type.Null()]),
+  show_in_report: Type.Union([Type.Boolean(), Type.Number(), Type.Null()]),
   mandatory_emails: Type.Union([Type.String(), Type.Null()]),
   additional_emails: Type.Union([Type.String(), Type.Null()]),
   objet_ou_mobilier: Type.Union([Type.String(), Type.Null()]),
   objet_ou_mobilier_name: Type.Union([Type.String(), Type.Null()]),
   probleme: Type.Union([Type.String(), Type.Null()]),
-  shouldSend: Type.Union([Type.Boolean(), Type.Null()]),
+  shouldSend: Type.Union([Type.Boolean(), Type.Number(), Type.Null()]),
 });
 
 export const stateReportPdfTSchema = {

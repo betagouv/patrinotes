@@ -5,9 +5,10 @@ import { sentry } from "./sentry";
 import { getPDFInMailName } from "@cr-vif/pdf";
 import { Database } from "../db/db";
 import { Selectable } from "kysely";
-import { getStateReportMailName } from "@cr-vif/pdf/constat";
+import { getStateReportMailName, MinimalAlert } from "@cr-vif/pdf/constat";
 import { createBordereauMailContent } from "./bordereau";
-import { createAlertMailContent, getAlertMailSubject, AlertMailData } from "./mail/alertMail";
+import { getAlertMailSubject, createAlertEmailContent } from "./mail/alertMail";
+import { AuthUser } from "../routes/authMiddleware";
 
 const transporter = createTransport({
   host: ENV.EMAIL_HOST,
@@ -85,23 +86,29 @@ export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string;
   });
 };
 
-export type AlertMailParams = {
-  recipient: string;
-  alertData: AlertMailData;
-};
-
-export const sendAlertMail = ({ recipient, alertData }: AlertMailParams) => {
+export const sendAlertEmail = async ({
+  to,
+  stateReport,
+  alert,
+  user,
+}: {
+  to: string;
+  stateReport: Selectable<Database["state_report"]>;
+  alert: MinimalAlert;
+  user: AuthUser;
+}) => {
   sentry?.captureMessage("Sending alert mail", {
-    extra: { recipient, alertType: alertData.alertType, monumentName: alertData.monumentName },
+    extra: { to, alertType: alert.alert, monumentName: stateReport.titre_edifice || "" },
   });
 
-  const content = createAlertMailContent(alertData);
-  const subject = getAlertMailSubject(alertData.alertType, alertData.monumentName);
+  const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
+  const subject = getAlertMailSubject(alert.alert!, stateReport.titre_edifice || "");
 
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
-    to: recipient,
+    to,
     subject,
-    html: content,
+    html,
+    attachments,
   });
 };

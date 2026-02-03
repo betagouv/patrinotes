@@ -74,13 +74,23 @@ const ConstatPdf = () => {
     return alertErrors;
   };
 
+  const navigate = useNavigate();
+
   const onSubmit = async (values: SendConstatForm) => {
     const errors = checkAllAlertsError(values.alerts);
-    console.log(values);
     if (errors.some((e) => e.email.length > 0)) {
       return;
     }
-    // sendConstatMutation.mutate(values);
+    sendConstatMutation.mutateAsync(values, {
+      onError: (e) => console.error(e),
+      onSuccess: () => {
+        navigate({
+          to: "/constat/$constatId/pdf",
+          params: { constatId },
+          search: { mode: "sent" },
+        });
+      },
+    });
   };
 
   const stateReportQuery = useQuery(constatPdfQueries.stateReport({ constatId }));
@@ -119,9 +129,6 @@ const ConstatPdf = () => {
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
-
-    console.log("AAA", stateReport.plan_situation);
-    console.log("AAA", stateReport.attachments);
 
     const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
     form.setValue("htmlString", htmlString);
@@ -270,48 +277,6 @@ const GoBackButton = () => {
       </Typography>
     </Box>
   );
-};
-
-export const useSendConstatMutation = () => {
-  const { constatId } = Route.useParams();
-
-  // const handleSend = async () => {
-  //   setSendError(null);
-
-  //   // Validate all selected alerts have emails
-  //   const alertsWithoutEmail = selectedAlerts.filter((alert) => !alert.email);
-
-  //   if (alertsWithoutEmail.length) {
-  //     setAlertErrors(alertsWithoutEmail.map((a) => ({ id: a.id, alert: a.alert ?? "" })));
-  //     return;
-  //   }
-
-  //   // Send email
-  //   setIsSending(true);
-  //   try {
-  //     await api.post("/api/pdf/state-report", {
-  //       body: {
-  //         stateReportId: constatId,
-  //         htmlString: localHtmlString!,
-  //         recipients: recipients.join(","),
-  //       },
-  //     });
-  //     navigate({
-  //       to: "/constat/$constatId/pdf",
-  //       params: { constatId },
-  //       search: { mode: "sent" },
-  //     });
-  //   } catch (e) {
-  //     setSendError((e as Error).message || "Une erreur est survenue");
-  //     setIsSending(false);
-  //   }
-  // };
-
-  return useMutation({
-    mutationFn: async (values: any) => {
-      console.log(values);
-    },
-  });
 };
 
 const SendBannerContent = () => {

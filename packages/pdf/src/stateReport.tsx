@@ -8,9 +8,15 @@ import {
   StateReportAlert,
 } from "../../frontend/src/db/AppSchema";
 import {
+  ABORDS_DE_L_EDIFICE_SECTION,
+  ARCHEOLOGIE_SECTION,
+  BIODIVERSITE_SECTION,
+  EDIFICE_EN_PERIL_SECTION,
   MarianneHeader,
   OBJETS_MOBILIERS_SECTION,
   Pagination,
+  SECURITE_SECTION,
+  SITE_CLASSE_OU_INSCRIT_SECTION,
   deserializeMandatoryEmails,
   initFonts,
   minifyHtml,
@@ -588,13 +594,13 @@ const generateAlertTableRow = (alert: MinimalAlert) => {
 };
 
 export const alertSectionStaticData = [
-  { title: "Edifice en péril", services: ["CRMH"] },
-  { title: "Abords de l'édifice", services: ["UDAP"] },
-  { title: "Objets et mobiliers", services: ["CAOA", "CRMH"] },
-  { title: "Archéologie", services: ["SRA"] },
-  { title: "Site classé ou inscrit", services: ["DREAL"] },
-  { title: "Biodiversité", services: ["OFB"] },
-  { title: "Sécurité", services: ["Mairie"] },
+  { title: EDIFICE_EN_PERIL_SECTION, services: ["CRMH"] },
+  { title: ABORDS_DE_L_EDIFICE_SECTION, services: ["UDAP"] },
+  { title: OBJETS_MOBILIERS_SECTION, services: ["CAOA", "CRMH"] },
+  { title: ARCHEOLOGIE_SECTION, services: ["SRA"] },
+  { title: SITE_CLASSE_OU_INSCRIT_SECTION, services: ["DREAL"] },
+  { title: BIODIVERSITE_SECTION, services: ["OFB"] },
+  { title: SECURITE_SECTION, services: ["Mairie"] },
 ];
 
 export const servicePronoms = [
