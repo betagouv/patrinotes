@@ -38,7 +38,7 @@ const ServicePage = () => {
       width="100%"
       mb="40px"
     >
-      <Stack width={{ xs: "100%", lg: "auto" }}>
+      <Stack width={{ xs: "100%", lg: "auto" }} position={{ xs: undefined, lg: "sticky" }} top={{ lg: "0" }}>
         <Box mt="32px" mb={{ xs: "16px", lg: "32px" }} px={{ xs: "16px", lg: "0" }}>
           <GoHomeButton />
         </Box>
