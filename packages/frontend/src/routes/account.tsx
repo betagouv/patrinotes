@@ -26,6 +26,7 @@ import { Accordion, Button, Center, Input, Select } from "#components/MUIDsfr.ts
 import { useStyles } from "tss-react";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
 import { fr } from "@codegouvfr/react-dsfr";
+import { scrollToTop } from "../features/state-report/StateReportSummary";
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -33,12 +34,12 @@ const AccountPage = () => {
   const onSuccess = (service: AuthUser["service"]) => {
     setService(service);
     setIsSuccess(true);
-    document.getElementsByClassName("MuiBox-root")?.[0]?.scrollTo(0, 0);
+    scrollToTop();
   };
 
   return (
     <Flex
-      gap={{ xs: "0", lg: "80px" }}
+      gap={{ xs: "0", lg: "40px" }}
       flexDirection={{ xs: "column", lg: "row" }}
       justifyContent="center"
       alignItems={{ lg: "flex-start", xs: "center" }}
@@ -81,7 +82,7 @@ const AccountPage = () => {
         px={{ xs: "16px", lg: "0" }}
         textAlign="left"
       >
-        <Typography variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="32px">
+        <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="32px">
           Mon compte
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
@@ -119,6 +120,7 @@ export const AccordionIfMobile = ({ children }: { children: NonNullable<ReactNod
           "& .fr-summary": { p: 0, m: 0 },
         }}
         display={{ xs: "none", lg: "block" }}
+        width="280px"
         mb="32px"
         px={{ xs: "16px", lg: "0" }}
       >
@@ -142,13 +144,19 @@ const DefaultRecipient = () => {
     mutationFn: async (emails: string[]) => {
       const doesUserSettingExist =
         existing ||
-        !!(await db.selectFrom("user_settings").where("user_id", "=", user.id).selectAll().executeTakeFirst());
+        !!(await db
+          .selectFrom("user_settings")
+          .where("user_id", "=", user.id)
+          .where("service_id", "=", user.service_id)
+          .selectAll()
+          .executeTakeFirst());
 
       if (doesUserSettingExist) {
         return db
           .updateTable("user_settings")
           .set({ default_emails: emails.join(",") })
           .where("user_id", "=", user.id)
+          .where("service_id", "=", user.service_id)
           .execute();
       }
 

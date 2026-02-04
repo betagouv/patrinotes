@@ -152,7 +152,7 @@ export const ReportList = ({
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
-      <Center mb="24px">
+      <Center mb="40px">
         <Box width="926px">
           <DocumentTypeSelector />
         </Box>
@@ -245,7 +245,7 @@ export const StateReportList = ({
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
-      <Center mb="24px">
+      <Center mb="40px">
         <Box width="926px">
           <DocumentTypeSelector />
         </Box>

@@ -19,13 +19,14 @@ import { db, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
 import { useForm } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
+import { scrollToTop } from "../features/state-report/StateReportSummary";
 
 const ServicePage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const onSuccess = () => {
     setIsSuccess(true);
-    document.getElementById("root")?.scrollTo(0, 0);
+    scrollToTop();
   };
 
   return (
