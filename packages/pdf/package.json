@@ -24,6 +24,7 @@
     "@react-pdf/renderer": "^4.1.5",
     "buffer": "^6.0.3",
     "date-fns": "^3.6.0",
+    "linkify-html": "^4.3.2",
     "pastable": "^2.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

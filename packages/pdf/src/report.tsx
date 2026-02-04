@@ -2,7 +2,7 @@ import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { Html } from "react-pdf-html";
 import { Clause_v2, Report, Service, ServiceInstructeurs } from "../../frontend/src/db/AppSchema";
-import { MarianneHeader, minifyHtml, Pagination } from "./utils";
+import { MarianneHeader, processHtml, Pagination } from "./utils";
 import React from "react";
 
 export const getPDFInMailName = (report: Omit<Report, "disabled">) => {
@@ -284,7 +284,7 @@ export const getReportHtmlString = (
 
   const address = [report.applicantAddress, report.city].filter(Boolean).join(" ");
 
-  return minifyHtml(`
+  return processHtml(`
     <p class="meeting-date">
     ${
       meetDate

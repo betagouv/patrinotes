@@ -42,7 +42,7 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
           >
             <EmptyImmeubleMessage />
             <Flex
-              width={{ xs: "100%", lg: "1200px" }}
+              width={{ xs: "100%", lg: "100%" }}
               maxWidth="100%"
               px="16px"
               justifyContent="space-between"
@@ -53,7 +53,7 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
             </Flex>
           </Flex>
         </Flex>
-        <Box width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" px={{ xs: "0", lg: "16px" }} height="100%">
+        <Box width={{ xs: "100%", lg: "100%" }} maxWidth="100%" px={{ xs: "0", lg: "16px" }} height="100%">
           <WithReferencePop />
         </Box>
       </FormProvider>
@@ -67,7 +67,7 @@ const EmptyImmeubleMessage = () => {
   const referencePop = form.watch("reference_pop");
   if (referencePop) return null;
   return (
-    <Typography width={{ xs: "100%", lg: "1200px" }} px="16px" mb="32px">
+    <Typography width={{ xs: "100%", lg: "100%" }} px="16px" mb="32px">
       Récupérez les informations d'un monument historique puis saisissez votre constat :
     </Typography>
   );

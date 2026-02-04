@@ -1,7 +1,7 @@
 import { Font, Image, Text, View, ViewProps } from "@react-pdf/renderer";
 import React from "react";
 import { StateReportAlert } from "../../frontend/src/db/AppSchema";
-
+import linkifyHtml from "linkify-html";
 export const initFonts = (folder: string = "") => {
   Font.register({
     family: "Marianne",
@@ -25,10 +25,6 @@ export const initFonts = (folder: string = "") => {
     ],
   });
 };
-
-Font.registerHyphenationCallback((word) => {
-  return [word];
-});
 
 export const MarianneHeader = ({
   marianneUrl,
@@ -80,9 +76,19 @@ export const Pagination = () => {
   );
 };
 
-export function minifyHtml(htmlString: string) {
+const minifyHtml = (htmlString: string) => {
   return htmlString.split("\n").join("").split("  ").join("");
-}
+};
+const breakUrl = (url: string) => url.replace(/([/\-._])/g, "$1\u200B");
+
+export const processHtml = (htmlString: string) => {
+  return minifyHtml(
+    linkifyHtml(htmlString, {
+      target: "_blank",
+      format: (value) => breakUrl(value),
+    }),
+  );
+};
 
 export const serializeMandatoryEmails = (emails: { service: string; email: string }[]): string => {
   return emails.map((e) => `${e.service}:${e.email}`).join(";");

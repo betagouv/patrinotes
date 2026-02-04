@@ -30,6 +30,7 @@ import { format } from "date-fns";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
+import { isDev } from "../envVars";
 
 type Mode = "edit" | "view" | "send" | "sent";
 
@@ -517,7 +518,6 @@ const EditBanner = ({
               alignItems="center"
               alignSelf={{ xs: "center", lg: "flex-start" }}
               my={{ xs: 0, lg: isSend ? "24px" : "20px" }}
-              // mb={{ xs: isSend ? "16px" : 0, lg: 0 }}
             >
               {buttons}
             </Flex>
@@ -552,9 +552,11 @@ export const WithReport = ({
 }) => {
   const { editor } = useContext(TextEditorContext);
   const [htmlString] = useState(initialHtmlString);
+
   useEffect(() => {
     if (!editor) return;
 
+    console.log("htmlString", htmlString);
     editor.commands.setContent(htmlString);
   }, [editor]);
 
@@ -624,6 +626,20 @@ export const PdfCanvas = ({ blob }: { blob: Blob }) => {
 
   return (
     <>
+      {isDev ? (
+        <Button
+          type="button"
+          onClick={() => {
+            const link = document.createElement("a");
+            link.href = file;
+            link.download = "report.pdf";
+            link.click();
+          }}
+          sx={{ position: "fixed", bottom: 16, left: 16, zIndex: 10 }}
+        >
+          Télécharger le pdf
+        </Button>
+      ) : null}
       {makeArrayOf(nbPages ?? 1).map((_, page) => (
         <PdfCanvasPage key={page} file={file} page={page + 1} />
       ))}

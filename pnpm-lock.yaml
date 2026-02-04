@@ -565,6 +565,9 @@ importers:
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0
+      linkify-html:
+        specifier: ^4.3.2
+        version: 4.3.2(linkifyjs@4.3.2)
       pastable:
         specifier: ^2.2.1
         version: 2.2.1(react@18.3.1)(xstate@5.21.0)
@@ -5774,6 +5777,11 @@ packages:
     peerDependenciesMeta:
       canvas:
         optional: true
+
+  linkify-html@4.3.2:
+    resolution: {integrity: sha512-RozNgrfSFrNQlprJSZIN7lF+ZVPj5Pz8POQcu1PYGAUhL9tKtvtWcOXOmlXjuGGEWHtC6gt6Q2U4+VUq9ELmng==}
+    peerDependencies:
+      linkifyjs: ^4.0.0
 
   linkify-it@5.0.0:
     resolution: {integrity: sha512-5aHCbzQRADcdP+ATqnDuhhJ/MRIqDkZX5pyjFHRRysS8vZ5AbqGEoFIb6pYHPZ+L/OC2Lc+xT8uHVVR5CAK/wQ==}
@@ -14334,6 +14342,10 @@ snapshots:
       uhyphen: 0.2.0
     optionalDependencies:
       canvas: 2.11.2
+
+  linkify-html@4.3.2(linkifyjs@4.3.2):
+    dependencies:
+      linkifyjs: 4.3.2
 
   linkify-it@5.0.0:
     dependencies:

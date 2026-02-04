@@ -19,7 +19,7 @@ import {
   SITE_CLASSE_OU_INSCRIT_SECTION,
   deserializeMandatoryEmails,
   initFonts,
-  minifyHtml,
+  processHtml,
 } from "./utils";
 import { Html } from "react-pdf-html";
 import { StateReportWithUser } from "../../frontend/src/features/report/ReportList";
@@ -49,11 +49,6 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
           stylesheet={stateReportExtraCss}
           collapse
           renderers={{
-            unbreakable: ({ children, ...props }) => (
-              <View {...props} wrap={true}>
-                {children}
-              </View>
-            ),
             tr: ({ children, ...props }) => (
               <View {...props} wrap={false}>
                 {children}
@@ -269,7 +264,7 @@ export const getStateReportHtmlString = ({
   // h2 pour les titres de sections
   // alt text sur les images
   // constat détaillé : le commentaire doit être juste après ce qu'il commente
-  return minifyHtml(`
+  return processHtml(`
     <p>  
       <span style="font-size: 20pt">Constat d'état du monument historique</span><br/><br/>
       <span style="font-size: 20pt"><b>${stateReport.titre_edifice}</b></span><br/><br/>
@@ -341,6 +336,8 @@ export const getStateReportHtmlString = ({
             })
             .join("")}
         </ul>
+
+        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires}</p>` : ""}
 
       <hr />
 
