@@ -14,6 +14,7 @@ import { getReportQueries, getStateReportQueries } from "../useDocumentQueries";
 import { StateReportListItem } from "../state-report/StateReportListItem";
 import { AppDocument } from "../../utils";
 import { DocumentTypeSelector } from "#components/DocumentTypeSelector.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
 
 export type ReportWithUser = Report & { createdByName: string | null };
 export type StateReportWithUser = StateReport & { createdByName: string | null };
@@ -279,6 +280,14 @@ export const StateReportList = ({
         width="100%"
         mt={{ xs: "48px", lg: "85px" }}
         mb={{ xs: "48px", lg: "110px" }}
+        sx={{
+          [`.fr-pagination__link[title='Page ${page! + 1}']`]: {
+            color: fr.colors.decisions.text.disabled.grey.default + " !important",
+          },
+          ".fr-pagination__link[aria-current]:not([aria-current=false])": {
+            color: "unset",
+          },
+        }}
       >
         {hidePagination || error ? null : (
           <>
