@@ -239,7 +239,7 @@ const DefaultRecipient = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
-      <Title anchor="default-recipient">2. Destinataire par défaut</Title>
+      <Title anchor="default-recipient">2. Destinataires par défaut</Title>
       {isUserSettingsLoading ? (
         <Box>
           <Spinner size={100} />
