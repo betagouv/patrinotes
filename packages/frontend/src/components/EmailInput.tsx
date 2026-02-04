@@ -10,6 +10,7 @@ import { createSuggestionMachine } from "../features/suggestionsMachine";
 import { Box, Stack } from "@mui/material";
 import { Button, Input } from "./MUIDsfr";
 import { Flex } from "./ui/Flex";
+import { useIsDesktop } from "../hooks/useIsDesktop";
 
 export const EmailInput = ({
   label,
@@ -79,6 +80,8 @@ export const EmailInput = ({
   const isOpen = state.matches("suggesting") || state.matches("error");
   const suggestions = state.context.suggestions;
 
+  const isDesktop = useIsDesktop();
+
   return (
     <Stack>
       <Box ref={wrapperRef} position="relative" width="100%">
@@ -86,7 +89,7 @@ export const EmailInput = ({
           sx={{
             mb: "1.5rem",
             "& > input": {
-              pr: single ? "0" : "100px",
+              pr: single ? "0" : { xs: "0", lg: "100px" },
             },
           }}
           label={label}
@@ -103,7 +106,7 @@ export const EmailInput = ({
           }}
         />
 
-        {!single ? (
+        {!single && isDesktop ? (
           <Button
             sx={{
               zIndex: 1,
@@ -183,8 +186,30 @@ export const EmailInput = ({
         ) : null}
       </Box>
 
+      {!single && !isDesktop ? (
+        <Button
+          sx={{
+            zIndex: 1,
+            mt: "-16px",
+          }}
+          type="button"
+          priority="tertiary"
+          iconId="ri-add-line"
+          onClick={onClick}
+        >
+          Ajouter
+        </Button>
+      ) : null}
+
       {!single ? (
-        <Flex gap="8px" justifyContent="flex-start" alignItems="center" width="100%" mt="-16px" flexWrap="wrap">
+        <Flex
+          gap="8px"
+          justifyContent="flex-start"
+          alignItems="center"
+          mt={!single && !isDesktop ? "16px" : "-16px"}
+          width="100%"
+          flexWrap="wrap"
+        >
           {value.filter(Boolean).map((email) => (
             <Tag
               key={email}
