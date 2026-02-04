@@ -20,7 +20,7 @@ export const UploadImage = ({ onFiles, attachments, multiple, onClick, onDelete,
           }}
         />
       )}
-      <Box display="flex" height="100%" mt="8px" flexWrap="wrap">
+      <Box display="flex" height="100%" mt="16px" flexWrap="wrap" gap="8px">
         {attachment
           ? attachments.map((attachment) => (
               <PictureThumbnail
