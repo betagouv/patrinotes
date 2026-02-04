@@ -166,6 +166,7 @@ export const PictureThumbnail = ({
   useEffect(() => {
     drawCanvas();
   }, [pictureLines.data, bgUrlQuery.data]);
+
   const drawCanvas = () => {
     if (!canvasRef.current) return;
     if (!bgUrlQuery.data) return;
@@ -225,9 +226,9 @@ export const PictureThumbnail = ({
   const finalStatus = idbStatusQuery.data?.[0]?.state ?? AttachmentState.QUEUED_UPLOAD;
 
   return (
-    <Stack gap="4px" width={{ xs: "100%", sm: "180px", md: "240px" }}>
+    <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
       <ReportStatus status={finalStatus as any} />
-      <Flex flexDirection="column" justifyContent="flex-end" width="100%">
+      <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
         <Box ref={canvasRef} component="canvas" flex="1"></Box>
         <Flex
           display={isDisabled ? "none" : "flex"}
