@@ -134,7 +134,7 @@ export const ButtonsSwitch = () => {
     informations: <InformationsButtons navigateToStep={navigateToStep} />,
     "contexte-visite": (
       <ButtonsContainer>
-        <LeftButton onClick={() => navigateToStep("informations")}>Information du MH</LeftButton>
+        <LeftButton onClick={() => navigateToStep("informations")}>Informations du MH</LeftButton>
         <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
       </ButtonsContainer>
     ),

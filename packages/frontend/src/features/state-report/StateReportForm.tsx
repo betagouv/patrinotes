@@ -40,16 +40,17 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
             width="100%"
             onSubmit={form.handleSubmit(onSubmit)}
           >
-            <EmptyImmeubleMessage />
-            <Flex
-              width={{ xs: "100%", lg: "100%" }}
-              maxWidth="100%"
-              px="16px"
-              justifyContent="space-between"
-              flexDirection={{ xs: "column", lg: "row" }}
-            >
-              <ImmeubleAutocomplete />
-              <StateReportSideMenu />
+            <Flex width="100%" maxWidth="1200px" flexDirection="column">
+              <EmptyImmeubleMessage />
+              <Flex
+                maxWidth="100%"
+                px="16px"
+                justifyContent="space-between"
+                flexDirection={{ xs: "column", lg: "row" }}
+              >
+                <ImmeubleAutocomplete />
+                <StateReportSideMenu />
+              </Flex>
             </Flex>
           </Flex>
         </Flex>
