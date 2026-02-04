@@ -30,19 +30,27 @@ export const MonumentHistorique = () => {
   const isCustom = referencePop === "CUSTOM";
 
   return (
-    <Flex flexDirection="column" height="100%">
+    <Flex
+      flexDirection="column"
+      height="100%"
+      sx={{
+        ".fr-input-group:not(:last-child)": {
+          marginBottom: "16px !important",
+        },
+      }}
+    >
       <Flex
         flexDirection="column"
         px={{ xs: "16px", lg: "64px" }}
         pt={{ xs: "24px", lg: "32px" }}
-        gap={{ xs: "16px", lg: "16px" }}
+        gap={isEditing ? 0 : "16px"}
         sx={{
           ".fr-input-group": { width: "100%" },
         }}
         width="100%"
         flex="1"
       >
-        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
           <EditableField label="Nature de l'édifice" field="nature_edifice" isEditing={isEditing} isDisabled />
           <EditableField
             label="Référence POP"
@@ -51,7 +59,7 @@ export const MonumentHistorique = () => {
             isDisabled
             renderInput={
               isCustom
-                ? ({ label, disabled }) => renderBasicInput({ inputProps: {}, label: "Référence POP", disabled })
+                ? ({ label, disabled }) => renderBasicInput({ inputProps: {} as any, label: "Référence POP", disabled })
                 : undefined
             }
             renderValue={({ value }) => {
@@ -72,26 +80,36 @@ export const MonumentHistorique = () => {
           />
         </Flex>
 
-        <Divider my={"16px"} />
+        <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
-        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
           <EditableField label="Adresse" field="adresse" isEditing={isEditing} />
           <EditableField label="Commune" field="commune" isEditing={isEditing} />
         </Flex>
 
-        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+        <Flex
+          flexDirection={{ xs: "column", lg: "row" }}
+          width="100%"
+          gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
+          mt={isEditing ? "16px" : 0}
+        >
           <EditableField label="Commune historique" field="commune_historique" isEditing={isEditing} />
           <EditableField label="Référence cadastrale" field="reference_cadastrale" isEditing={isEditing} />
         </Flex>
 
-        <Divider my={"16px"} />
+        <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
-        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={{ xs: "0", lg: "16px" }}>
+        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
           <EditableField label="Nature de la protection" field="nature_protection" isEditing={isEditing} />
           <EditableField label="Période de construction" field="periode_construction" isEditing={isEditing} />
         </Flex>
 
-        <Flex width="100%" flexDirection={{ xs: "column", lg: isEditing ? "column" : "row" }} gap="16px">
+        <Flex
+          width="100%"
+          flexDirection={{ xs: "column", lg: isEditing ? "column" : "row" }}
+          gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
+          mt={isEditing ? "16px" : "0"}
+        >
           <EditableField
             renderInput={renderTextAreaInput}
             label="Parties protégées"
@@ -105,7 +123,7 @@ export const MonumentHistorique = () => {
             isEditing={isEditing}
           />
         </Flex>
-        <Divider my={"16px"} />
+        <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
         <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box>
         {isEditing ? (
           //@ts-ignore

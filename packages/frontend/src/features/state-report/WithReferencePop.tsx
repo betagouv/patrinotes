@@ -403,6 +403,7 @@ const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateR
         iconId="ri-arrow-right-line"
         size="large"
         sx={buttonSxProps}
+        disabled={isEditing}
         nativeButtonProps={{
           onClick: () => navigateToStep("contexte-visite"),
         }}
