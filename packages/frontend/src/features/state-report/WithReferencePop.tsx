@@ -73,7 +73,7 @@ const ContentSwitch = () => {
 
 const ButtonsContainer = ({ children }: { children: ReactNode }) => {
   return (
-    <Stack gap="8px" width="100%" flexDirection={{ xs: "column", lg: "row" }} justifyContent="space-between">
+    <Stack gap="12px" width="100%" flexDirection={{ xs: "column", lg: "row" }} justifyContent="space-between">
       {children}
     </Stack>
   );

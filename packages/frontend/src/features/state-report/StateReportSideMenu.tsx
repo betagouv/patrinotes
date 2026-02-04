@@ -21,7 +21,7 @@ export const StateReportSideMenu = () => {
   return (
     <>
       <MenuModal menu={sideMenu} onClose={onClose} />
-      <Stack mt={{ xs: "16px", lg: "0" }} gap="8px" flexDirection={{ xs: "row", lg: "column" }}>
+      <Stack mt={{ xs: "16px", lg: "0" }} gap="12px" flexDirection={{ xs: "row", lg: "column" }}>
         <Button
           priority="secondary"
           onClick={() => setSideMenu("alerts")}
