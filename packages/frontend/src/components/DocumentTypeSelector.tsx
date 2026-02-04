@@ -15,6 +15,7 @@ export const DocumentTypeSelector = () => {
         ...old,
         document: docType,
       }),
+      resetScroll: false,
     });
   };
 
