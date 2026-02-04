@@ -484,13 +484,13 @@ const generateImagesTable = (images: (Image | undefined)[]) => {
 
 const generateImageCell = (image: Image | undefined) => {
   if (!image) return '<div class="column"></div>';
-  return `<div class="column" >
+  return `<div class="column">
       ${
         image.title
           ? `<p>
           <span style="font-size: 16pt"><strong>${image.title}</strong></span>
           </p>`
-          : "<p></p>"
+          : `<p style="height: 16pt"></p>`
       }
       <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%;  margin-bottom: 30px;" />
       <div style="position:relative">
@@ -533,7 +533,7 @@ const generateAlertsTable = (alerts: MinimalAlert[]) => {
   return `<ul>
     ${Object.entries(groupedAlerts)
       .map(([alertTitle, alertGroup]) => {
-        const firstAlert = alertGroup[0];
+        const firstAlert = alertGroup[0]!;
 
         const mandatoryEmails = deserializeMandatoryEmails(firstAlert.mandatory_emails || "");
 
