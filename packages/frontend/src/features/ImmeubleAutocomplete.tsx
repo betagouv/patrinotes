@@ -183,6 +183,9 @@ export const ImmeubleAutocomplete = () => {
         onInputChange={(_e, newInputValue) => {
           setInputValue(newInputValue);
         }}
+        onFocus={() =>
+          document.getElementById("mh-autocomplete")?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
         renderOption={({ key, ...props }, option, state, _ownerState) =>
           option === null ? (
             <Box>Aucun résultat !</Box>
@@ -235,7 +238,7 @@ export const ImmeubleAutocomplete = () => {
           )
         }
         renderInput={(params) => (
-          <div className="fr-input-group">
+          <div className="fr-input-group" id="mh-autocomplete">
             <label className="fr-label" htmlFor={params.id}>
               Nom ou référence du monument
             </label>
