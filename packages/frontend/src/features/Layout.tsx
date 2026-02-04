@@ -3,17 +3,19 @@ import { fr } from "@codegouvfr/react-dsfr";
 import Badge from "@codegouvfr/react-dsfr/Badge";
 import { Typography } from "@mui/material";
 import Box from "@mui/material/Box/Box";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { type PropsWithChildren } from "react";
 import { useIsLoggedIn } from "../contexts/AuthContext";
 import { MenuButton, MenuModal } from "../features/menu/MenuButton";
 import { useIsDesktop } from "../hooks/useIsDesktop";
 
 export const Layout = ({ children, noProvider }: PropsWithChildren & { noProvider?: boolean }) => {
+  const router = useRouter();
+  const shouldFooterTakeFullheight = router.state.location.pathname.includes("/constat/");
   return (
     <Box display="flex" position="relative" flexDirection={"column"} height="100vh" sx={{ overflowX: "hidden" }}>
       <AppHeader noProvider={noProvider} />
-      <Box flex="1">{children}</Box>
+      <Box flex={shouldFooterTakeFullheight ? "1" : undefined}>{children}</Box>
       <AppFooter />
     </Box>
   );
@@ -21,7 +23,12 @@ export const Layout = ({ children, noProvider }: PropsWithChildren & { noProvide
 
 const AppFooter = () => {
   return (
-    <footer id="fr-footer" className="fr-footer" role="contentinfo" style={{ border: "none", borderBottomWidth: 0 }}>
+    <footer
+      id="fr-footer"
+      className="fr-footer"
+      role="contentinfo"
+      style={{ border: "none", borderBottomWidth: 0, flex: 1 }}
+    >
       <div className="fr-container">
         <div className="fr-footer__body">
           <div className="fr-footer__brand fr-enlarge-link">
