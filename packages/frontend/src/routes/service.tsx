@@ -1,11 +1,10 @@
 import { Chip, ControlledChip } from "#components/Chip";
 import { EnsureUser } from "#components/EnsureUser";
-import { Button, Center, Input } from "#components/MUIDsfr.tsx";
+import { Button, Center, Input, Summary } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import Alert from "@codegouvfr/react-dsfr/Alert";
-import Summary from "@codegouvfr/react-dsfr/Summary";
 import { Box, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -13,13 +12,24 @@ import { endOfYear, startOfYear } from "date-fns";
 import { omit, pick } from "pastable";
 import { useEffect, useState } from "react";
 import { v4 } from "uuid";
-import { useLiveService, useRefreshUser, useUser } from "../contexts/AuthContext";
+import { useLiveService, useRefreshUser, useService, useUser } from "../contexts/AuthContext";
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
 import { useForm } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";
+import { useActiveSection } from "../hooks/useActiveSection";
+
+const serviceSections = [
+  { linkProps: { href: "#service-informations" }, text: "Informations service" },
+  { linkProps: { href: "#services-instructeurs" }, text: "Services instructeurs pour les CR" },
+  { linkProps: { href: "#clauses-departementales" }, text: "Clauses départementales pour les CR" },
+  { linkProps: { href: "#alertes-mh" }, text: "Alertes visites Monuments Historiques" },
+  { linkProps: { href: "#rapport-activite" }, text: "Rapport d'activité" },
+];
+
+const sectionIds = serviceSections.map((section) => section.linkProps.href.replace("#", ""));
 
 const ServicePage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -29,6 +39,8 @@ const ServicePage = () => {
     scrollToTop();
   };
 
+  const activeSection = useActiveSection(sectionIds);
+  console.log("activeSection", activeSection);
   return (
     <Flex
       gap={{ xs: "0", lg: "40px" }}
@@ -47,18 +59,20 @@ const ServicePage = () => {
         </Typography>
         <AccordionIfMobile>
           <Summary
+            sx={{
+              ".fr-summary__link": {
+                color: fr.colors.decisions.text.actionHigh.blueFrance.default,
+              },
+              [`.fr-summary__link[href='#${activeSection}']`]: {
+                textDecoration: "underline",
+              },
+            }}
             style={{
               paddingLeft: "16px",
               paddingRight: "16px",
               backgroundColor: "transparent",
             }}
-            links={[
-              { linkProps: { href: "#service-informations" }, text: "Informations service" },
-              { linkProps: { href: "#services-instructeurs" }, text: "Services instructeurs pour les CR" },
-              { linkProps: { href: "#clauses-departementales" }, text: "Clauses départementales pour les CR" },
-              { linkProps: { href: "#alertes-mh" }, text: "Alertes visites Monuments Historiques" },
-              { linkProps: { href: "#rapport-activite" }, text: "Rapport d'activité" },
-            ]}
+            links={serviceSections}
           />
         </AccordionIfMobile>
       </Stack>
@@ -414,7 +428,7 @@ const ServiceInstructeurForm = ({
             createOrEditServiceMutation.mutate(selected);
           }}
         >
-          {isNew ? "Créer" : "Modifier"}
+          Enregistrer
         </Button>
       </Flex>
     </Flex>
@@ -570,7 +584,7 @@ const ClauseForm = ({
             createOrEditClauseMutation.mutate(selected);
           }}
         >
-          {isNew ? "Créer" : "Modifier"}
+          Enregistrer
         </Button>
       </Flex>
     </Flex>
@@ -778,10 +792,8 @@ export const SuccessAlert = () => {
 };
 
 const AlertesMH = () => {
-  const service = useLiveService();
-
-  if (!service) return null;
-  return <AlertesForm service={service} />;
+  const service = useService();
+  return <AlertesForm service={service as any} />;
 };
 
 const AlertesForm = ({ service }: { service: Service }) => {

@@ -8,6 +8,7 @@ import { Tile as DsfrTile } from "@codegouvfr/react-dsfr/Tile";
 import { Box, styled } from "@mui/material";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { Checkbox as DsfrCheckbox } from "@codegouvfr/react-dsfr/Checkbox";
+import { Summary as DsfrSummary } from "@codegouvfr/react-dsfr/Summary";
 
 export const Center = styled(Box)({
   display: "flex",
@@ -24,3 +25,4 @@ export const Badge = styled(DsfrBadge)();
 export const Tile = styled(DsfrTile)();
 export const Link = styled(RouterLink)();
 export const Checkbox = styled(DsfrCheckbox)();
+export const Summary = styled(DsfrSummary)();

@@ -1,6 +1,5 @@
 import { EnsureUser } from "#components/EnsureUser.tsx";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import Summary from "@codegouvfr/react-dsfr/Summary";
 import Download from "@codegouvfr/react-dsfr/Download";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -22,12 +21,25 @@ import { getPDFInMailName } from "@cr-vif/pdf";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
-import { Accordion, Button, Center, Input, Select } from "#components/MUIDsfr.tsx";
+import { Accordion, Button, Center, Input, Select, Summary } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";
 import { useForm } from "react-hook-form";
+import { useActiveSection } from "../hooks/useActiveSection";
+
+const accountSections = [
+  { linkProps: { href: "#profile" }, text: "Mon profil" },
+  { linkProps: { href: "#default-recipient" }, text: "Destinataires par défaut" },
+  { linkProps: { href: "#share" }, text: "Droit d'édition partagé" },
+  // { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
+  { linkProps: { href: "#download-ce" }, text: "Télécharger mes constats" },
+  { linkProps: { href: "#download-cr" }, text: "Télécharger mes CR" },
+  { linkProps: { href: "#change-service" }, text: "Changer de service" },
+];
+
+const sectionIds = accountSections.map((section) => section.linkProps.href.replace("#", "") as string);
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -37,6 +49,8 @@ const AccountPage = () => {
     setIsSuccess(true);
     scrollToTop();
   };
+
+  const activeSection = useActiveSection(sectionIds);
 
   return (
     <Flex
@@ -56,20 +70,20 @@ const AccountPage = () => {
         </Typography>
         <AccordionIfMobile>
           <Summary
+            sx={{
+              ".fr-summary__link": {
+                color: fr.colors.decisions.text.actionHigh.blueFrance.default,
+              },
+              [`.fr-summary__link[href='#${activeSection}']`]: {
+                textDecoration: "underline",
+              },
+            }}
             style={{
               paddingLeft: "16px",
               paddingRight: "16px",
               backgroundColor: "transparent",
             }}
-            links={[
-              { linkProps: { href: "#profile" }, text: "Mon profil" },
-              { linkProps: { href: "#default-recipient" }, text: "Destinataires par défaut" },
-              { linkProps: { href: "#share" }, text: "Droit d'édition partagé" },
-              // { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
-              { linkProps: { href: "#download-ce" }, text: "Télécharger mes constats" },
-              { linkProps: { href: "#download-cr" }, text: "Télécharger mes CR" },
-              { linkProps: { href: "#change-service" }, text: "Changer de service" },
-            ]}
+            links={accountSections}
           />
         </AccordionIfMobile>
       </Stack>
@@ -158,7 +172,7 @@ const Profile = () => {
       <Title anchor="profile">1. Mon profil</Title>
       <Input label="Nom complet" nativeInputProps={{ ...form.register("name") }} disabled sx={{ mb: "24px" }} />
       <Input label="Fonction" nativeInputProps={{ ...form.register("job") }} />
-      <Flex gap="16px" justifyContent="flex-end" width="100%" mt="24px">
+      <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
         <Button iconId="ri-save-3-line" iconPosition="left" type="submit" disabled={saveUserMutation.isPending}>
           Enregistrer
         </Button>
@@ -170,6 +184,18 @@ const Profile = () => {
 const DefaultRecipient = () => {
   const user = useUser()!;
   const { userSettings, isLoading: isUserSettingsLoading, existing } = useUserSettings();
+
+  const [defaultEmails, setDefaultEmails] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!userSettings?.default_emails) return;
+    setDefaultEmails(
+      userSettings.default_emails
+        .split(",")
+        .map((email: string) => email.trim())
+        .filter(Boolean),
+    );
+  }, [userSettings?.default_emails]);
 
   const selectedEmails =
     userSettings.default_emails
@@ -207,18 +233,33 @@ const DefaultRecipient = () => {
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="default-recipient">2. Destinataire par défaut</Title>
-      <Box>
-        {isUserSettingsLoading ? (
+      {isUserSettingsLoading ? (
+        <Box>
           <Spinner size={100} />
-        ) : (
+        </Box>
+      ) : (
+        <Stack>
           <EmailInput
             label="Courriel en copie par défaut :"
             hintText="Pour tous mes CRs envoyés"
-            value={selectedEmails}
-            onValueChange={(e) => saveEmailsMutation.mutate(e)}
+            value={defaultEmails}
+            onValueChange={(e) => setDefaultEmails(e)}
           />
-        )}
-      </Box>
+
+          <Flex gap="16px" justifyContent="flex-end" width="100%" mt="24px">
+            <Button
+              iconId="ri-save-3-line"
+              iconPosition="left"
+              type="button"
+              onClick={() => {
+                saveEmailsMutation.mutate(defaultEmails);
+              }}
+            >
+              Enregistrer
+            </Button>
+          </Flex>
+        </Stack>
+      )}
     </Flex>
   );
 };
