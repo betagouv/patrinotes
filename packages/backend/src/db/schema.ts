@@ -18,6 +18,7 @@ export const user = pgTable(
     name: text().notNull(),
     serviceId: text("service_id").notNull(),
     email: varchar({ length: 255 }).notNull(),
+    job: text(),
   },
   (table) => [
     foreignKey({

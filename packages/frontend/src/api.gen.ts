@@ -49,6 +49,7 @@ export namespace Endpoints {
           courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
+        job: string | Schemas.null | Array<string | Schemas.null>;
       };
     };
   };
@@ -85,6 +86,7 @@ export namespace Endpoints {
           courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
+        job: string | Schemas.null | Array<string | Schemas.null>;
       };
       accessToken: string;
       refreshToken: string;
@@ -132,6 +134,7 @@ export namespace Endpoints {
           courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
+        job: string | Schemas.null | Array<string | Schemas.null>;
       };
       accessToken: string;
       refreshToken: string;
@@ -171,6 +174,7 @@ export namespace Endpoints {
           courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
           courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
         };
+        job: string | Schemas.null | Array<string | Schemas.null>;
       };
       accessToken: string;
       refreshToken: string;
@@ -287,13 +291,13 @@ export namespace Endpoints {
               id: string;
               alert: string | Schemas.null | Array<string | Schemas.null>;
               commentaires: string | Schemas.null | Array<string | Schemas.null>;
-              show_in_report: boolean | Schemas.null | Array<boolean | Schemas.null>;
+              show_in_report: boolean | number | Schemas.null | Array<boolean | number | Schemas.null>;
               mandatory_emails: string | Schemas.null | Array<string | Schemas.null>;
               additional_emails: string | Schemas.null | Array<string | Schemas.null>;
               objet_ou_mobilier: string | Schemas.null | Array<string | Schemas.null>;
               objet_ou_mobilier_name: string | Schemas.null | Array<string | Schemas.null>;
               probleme: string | Schemas.null | Array<string | Schemas.null>;
-              shouldSend: boolean | Schemas.null | Array<boolean | Schemas.null>;
+              shouldSend: boolean | number | Schemas.null | Array<boolean | number | Schemas.null>;
             }>
           | undefined;
       };

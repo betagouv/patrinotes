@@ -5,7 +5,7 @@ import Download from "@codegouvfr/react-dsfr/Download";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { db, useDbQuery } from "../db/db";
-import { useLiveUser, useSetService, useUser } from "../contexts/AuthContext";
+import { useLiveUser, useRefreshUser, useSetService, useUser } from "../contexts/AuthContext";
 import { v4 } from "uuid";
 import { Spinner } from "#components/Spinner";
 import { EmailInput } from "../components/EmailInput";
@@ -27,6 +27,7 @@ import { useStyles } from "tss-react";
 import { getStateReportMailName } from "@cr-vif/pdf/constat";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";
+import { useForm } from "react-hook-form";
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -73,7 +74,7 @@ const AccountPage = () => {
         </AccordionIfMobile>
       </Stack>
       <Divider display={{ lg: "none" }} width="90%" ml="5%" color="background-action-low-blue-france-hover" />
-      <Center
+      <Stack
         flex="1"
         flexDirection="column"
         alignItems="flex-start"
@@ -82,20 +83,22 @@ const AccountPage = () => {
         px={{ xs: "16px", lg: "0" }}
         textAlign="left"
       >
-        <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="32px">
+        <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="64px">
           Mon compte
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
+        <Profile />
+        <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DefaultRecipient />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <Share />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
-        <DownloadCRs />
-        <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DownloadCEs />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
+        <DownloadCRs />
+        <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <ChangeService onSuccess={onSuccess} />
-      </Center>
+      </Stack>
     </Flex>
   );
 };
@@ -127,6 +130,40 @@ export const AccordionIfMobile = ({ children }: { children: NonNullable<ReactNod
         {children}
       </Box>
     </>
+  );
+};
+
+const Profile = () => {
+  const user = useUser()!;
+  const refreshUser = useRefreshUser();
+
+  const form = useForm<{ name: string; job: string }>({
+    defaultValues: { name: user?.name || "", job: user?.job || "" },
+  });
+
+  const saveUserMutation = useMutation({
+    mutationFn: async (data: { name: string; job: string }) => {
+      await db.updateTable("user").set({ name: data.name, job: data.job }).where("id", "=", user.id).execute();
+      await refreshUser.mutateAsync();
+    },
+  });
+
+  return (
+    <Stack
+      width="100%"
+      maxWidth="690px"
+      component="form"
+      onSubmit={form.handleSubmit((values) => saveUserMutation.mutate(values))}
+    >
+      <Title anchor="profile">1. Mon profil</Title>
+      <Input label="Nom complet" nativeInputProps={{ ...form.register("name") }} disabled sx={{ mb: "24px" }} />
+      <Input label="Fonction" nativeInputProps={{ ...form.register("job") }} />
+      <Flex gap="16px" justifyContent="flex-end" width="100%" mt="24px">
+        <Button iconId="ri-save-3-line" iconPosition="left" type="submit" disabled={saveUserMutation.isPending}>
+          Enregistrer
+        </Button>
+      </Flex>
+    </Stack>
   );
 };
 
@@ -168,8 +205,8 @@ const DefaultRecipient = () => {
   });
 
   return (
-    <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="default-recipient">1. Destinataire par défaut</Title>
+    <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
+      <Title anchor="default-recipient">2. Destinataire par défaut</Title>
       <Box>
         {isUserSettingsLoading ? (
           <Spinner size={100} />
@@ -209,8 +246,8 @@ const Share = () => {
   const delegatedToMe = delegatedToMeQuery.data ?? [];
 
   return (
-    <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="share">2. Droit d'édition partagé</Title>
+    <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
+      <Title anchor="share">3. Droit d'édition partagé</Title>
       {coworkers.length ? (
         <Box>
           <Box mb="16px">Ces personnes peuvent créer, modifier et supprimer vos CR : </Box>
@@ -298,7 +335,7 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
   });
 
   return (
-    <Flex gap="8px" flexWrap="wrap">
+    <Flex gap="8px" flexWrap="wrap" maxWidth="690px">
       {coworkers.map((coworker) => {
         const delegation = delegations.find((del) => del.delegatedTo === coworker.id);
         return (
@@ -318,72 +355,6 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
           </Chip>
         );
       })}
-    </Flex>
-  );
-};
-
-const DownloadCRs = () => {
-  const [startDate, setStartDate] = useState(datePresets[0].startDate);
-  const [endDate, setEndDate] = useState(datePresets[0].endDate);
-
-  const user = useUser()!;
-
-  const downloadMutation = useMutation({
-    mutationFn: async (reports: { id: string; name: string }[]) => {
-      if (!reports?.length) {
-        return;
-      }
-      const zip = new JSZip();
-
-      for (const report of reports) {
-        // TODO: use local attachments since they are already downloaded
-        const pdf = await api.get("/api/pdf/report", { query: { reportId: report.id } });
-        zip.file(report.name, pdf as string, { base64: true });
-      }
-
-      const content = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(content);
-      downloadFile(url, getZipFilename(startDate, endDate));
-      URL.revokeObjectURL(url);
-    },
-  });
-
-  const crs = useDbQuery(
-    db
-      .selectFrom("report")
-      .where("createdBy", "=", user.id)
-      .where("service_id", "=", user.service_id)
-      .where((eb) => eb.or([eb("pdf", "is not", null), eb("attachment_id", "is not", null)]))
-      .where("disabled", "!=", 1)
-      .where("createdAt", ">=", startDate.toISOString())
-      .where("createdAt", "<=", endDate.toISOString())
-      .selectAll(),
-  );
-
-  const reports = crs.data?.map((cr) => ({ id: cr.id, name: getPDFInMailName(cr) })) ?? [];
-
-  return (
-    <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="download-cr">3. Télécharger mes CR</Title>
-      <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
-      <Box mb="16px">
-        Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
-        vos comptes-rendus dont le poids peut être important.
-      </Box>
-      <Box bgcolor={fr.colors.decisions.background.alt.blueFrance.default + " !important"} px="24px" pt="18px" pb="4px">
-        {reports.length ? (
-          <Download
-            label={getZipFilename(startDate, endDate)}
-            details={`ZIP - ${reports.length} compte${reports.length > 1 ? "s" : ""} rendu${reports.length > 1 ? "s" : ""}`}
-            linkProps={{
-              onClick: () => downloadMutation.mutate(reports),
-              disabled: downloadMutation.isPending || reports.length === 0,
-            }}
-          />
-        ) : (
-          <Box pb="14px">Aucun CR disponible sur la période sélectionnée.</Box>
-        )}
-      </Box>
     </Flex>
   );
 };
@@ -429,7 +400,7 @@ const DownloadCEs = () => {
   const reports = crs.data?.map((cr) => ({ id: cr.id, name: getStateReportMailName(cr) })) ?? [];
 
   return (
-    <Flex gap="0px" flexDirection="column" width="100%">
+    <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="download-ce">4. Télécharger mes CE</Title>
       <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
       <Box mb="16px">
@@ -441,6 +412,72 @@ const DownloadCEs = () => {
           <Download
             label={getCEZipFilename(startDate, endDate)}
             details={`ZIP - ${reports.length} constat${reports.length > 1 ? "s" : ""} d'état`}
+            linkProps={{
+              onClick: () => downloadMutation.mutate(reports),
+              disabled: downloadMutation.isPending || reports.length === 0,
+            }}
+          />
+        ) : (
+          <Box pb="14px">Aucun CR disponible sur la période sélectionnée.</Box>
+        )}
+      </Box>
+    </Flex>
+  );
+};
+
+const DownloadCRs = () => {
+  const [startDate, setStartDate] = useState(datePresets[0].startDate);
+  const [endDate, setEndDate] = useState(datePresets[0].endDate);
+
+  const user = useUser()!;
+
+  const downloadMutation = useMutation({
+    mutationFn: async (reports: { id: string; name: string }[]) => {
+      if (!reports?.length) {
+        return;
+      }
+      const zip = new JSZip();
+
+      for (const report of reports) {
+        // TODO: use local attachments since they are already downloaded
+        const pdf = await api.get("/api/pdf/report", { query: { reportId: report.id } });
+        zip.file(report.name, pdf as string, { base64: true });
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      downloadFile(url, getZipFilename(startDate, endDate));
+      URL.revokeObjectURL(url);
+    },
+  });
+
+  const crs = useDbQuery(
+    db
+      .selectFrom("report")
+      .where("createdBy", "=", user.id)
+      .where("service_id", "=", user.service_id)
+      .where((eb) => eb.or([eb("pdf", "is not", null), eb("attachment_id", "is not", null)]))
+      .where("disabled", "!=", 1)
+      .where("createdAt", ">=", startDate.toISOString())
+      .where("createdAt", "<=", endDate.toISOString())
+      .selectAll(),
+  );
+
+  const reports = crs.data?.map((cr) => ({ id: cr.id, name: getPDFInMailName(cr) })) ?? [];
+
+  return (
+    <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
+      <Title anchor="download-cr">5. Télécharger mes CR</Title>
+      <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
+      <Box mb="16px">
+        Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
+        vos comptes-rendus dont le poids peut être important.
+      </Box>
+      <Box bgcolor={fr.colors.decisions.background.alt.blueFrance.default + " !important"} px="24px" pt="18px" pb="4px">
+        {reports.length ? (
+          <Download
+            label={getZipFilename(startDate, endDate)}
+            details={`ZIP - ${reports.length} compte${reports.length > 1 ? "s" : ""} rendu${reports.length > 1 ? "s" : ""}`}
             linkProps={{
               onClick: () => downloadMutation.mutate(reports),
               disabled: downloadMutation.isPending || reports.length === 0,
@@ -487,8 +524,8 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
   const { css } = useStyles();
 
   return (
-    <Flex gap="0px" flexDirection="column" width="100%">
-      <Title anchor="change-service">5. Changer de service</Title>
+    <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
+      <Title anchor="change-service">6. Changer de service</Title>
       {/* @ts-ignore */}
       <Alert
         style={{

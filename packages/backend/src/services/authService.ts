@@ -186,6 +186,7 @@ export class AuthService {
             name: userData.name,
             service_id: userData.service_id,
             email: userData.email,
+            job: userData.job,
           })
           .returningAll()
           .executeTakeFirstOrThrow();
@@ -278,6 +279,7 @@ export const userTSchema = Type.Object({
   name: Type.String(),
   service_id: Type.String(),
   service: serviceTSchema,
+  job: Type.Union([Type.String(), Type.Null()]),
 });
 
 export const authApi = ofetch.create({

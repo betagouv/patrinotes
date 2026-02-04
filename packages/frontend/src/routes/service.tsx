@@ -63,7 +63,7 @@ const ServicePage = () => {
         </AccordionIfMobile>
       </Stack>
       <Divider display={{ lg: "none" }} width="90%" ml="5%" color="background-action-low-blue-france-hover" />
-      <Center
+      <Stack
         flexDirection="column"
         alignItems="flex-start"
         maxWidth="900px"
@@ -85,7 +85,7 @@ const ServicePage = () => {
         <AlertesMH />
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
         <Activity />
-      </Center>
+      </Stack>
     </Flex>
   );
 };
@@ -143,7 +143,7 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
   });
 
   return (
-    <Flex gap="0px" flexDirection="column" width="100%">
+    <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="service-informations">1. Informations du service</Title>
       <Input
         sx={{ width: "100%", mt: "16px" }}
@@ -217,7 +217,7 @@ const ServicesList = () => {
   const service = useUser()!.service;
 
   return (
-    <Flex gap="16px" flexDirection="column" width="100%">
+    <Flex gap="16px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="services-instructeurs">2. Services instructeurs de comptes-rendus</Title>
       <Flex gap="16px" alignItems="center">
         <div>
@@ -277,7 +277,7 @@ const ServicePicker = ({
   );
 
   return (
-    <Flex gap="24px" flexDirection="column" width="100%">
+    <Flex gap="24px" flexDirection="column" width="100%" maxWidth="690px">
       {Object.entries(byFirstLetter)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([letter, items]) => (
@@ -355,7 +355,7 @@ const ServiceInstructeurForm = ({
   });
 
   return (
-    <Flex ref={scrollToRef} gap="16px" flexDirection="column" width="100%">
+    <Flex ref={scrollToRef} gap="16px" flexDirection="column" width="100%" maxWidth="690px">
       <Input
         sx={{ width: "100%" }}
         label="Intitulé service instructeur"
@@ -423,7 +423,7 @@ const ServiceInstructeurForm = ({
 
 const Clauses = () => {
   return (
-    <Flex gap="16px" flexDirection="column" width="100%">
+    <Flex gap="16px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="clauses-departementales">3. Clauses départementales pour les comptes-rendus</Title>
       <div>Pensez à faire des contenus courts et explicites pour vos lecteurs.</div>
 
@@ -525,7 +525,7 @@ const ClauseForm = ({
   });
 
   return (
-    <Flex ref={scrollToRef} gap="16px" flexDirection="column" width="100%">
+    <Flex ref={scrollToRef} gap="16px" flexDirection="column" width="100%" maxWidth="690px">
       <Input
         sx={{ width: "100%" }}
         label="Intitulé clause"
@@ -626,7 +626,7 @@ const Activity = () => {
   );
 
   return (
-    <Flex gap="16px" flexDirection="column" width="100%">
+    <Flex gap="16px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="rapport-activite">5. Rapport d'activité</Title>
 
       <DateRangePicker startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />
@@ -807,8 +807,9 @@ const AlertesForm = ({ service }: { service: Service }) => {
       component="form"
       gap="0px"
       flexDirection="column"
-      width="100%"
       onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
+      width="100%"
+      maxWidth="690px"
     >
       <Title anchor="alertes-mh">4. Alertes visites Monuments Historiques</Title>
 

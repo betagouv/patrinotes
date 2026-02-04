@@ -52,6 +52,7 @@ const service = new Table({
 const user = new Table({
   name: column.text,
   service_id: column.text,
+  job: column.text,
 });
 
 const delegation = new Table({
