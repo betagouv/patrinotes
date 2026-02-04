@@ -501,6 +501,7 @@ const ClauseForm = ({
     mutationFn: async (clause: Partial<Clause_v2>) => {
       if (!clause.service_id) throw new Error("service_id is required");
       if (!clause.key) throw new Error("key is required");
+      if (!clause.value) throw new Error("value is required");
 
       if (clause.id) {
         await db.updateTable("clause_v2").set(clause).where("id", "=", clause.id).execute();
