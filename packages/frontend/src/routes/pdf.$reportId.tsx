@@ -595,6 +595,7 @@ const View = (props: ReportPDFDocumentProps) => {
       const blob = await pdf(<ReportPDFDocument {...props} />).toBlob();
       return blob;
     },
+    gcTime: 0,
     refetchOnWindowFocus: false,
     enabled: !!props.htmlString,
   });

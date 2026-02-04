@@ -17,6 +17,7 @@ import TableCell from "@tiptap/extension-table-cell";
 import { stateReportExtraCss } from "@cr-vif/pdf/constat";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import { ColumnExtension } from "@gocapsule/column-extension";
+import Link from "@tiptap/extension-link";
 
 export const TextEditorContext = createContext<{ editor: Editor | null }>({
   editor: null,
@@ -42,17 +43,13 @@ export const TextEditorContextProvider = ({ children, ...props }: PropsWithChild
       Color.configure({
         types: ["textStyle"],
       }),
-      Image.configure({
-        resize: {
-          enabled: true,
-          alwaysPreserveAspectRatio: true,
-        },
-      }),
+      Image.configure({}),
       Placeholder.configure({}),
       TextStyle.configure({}),
       FontSize.configure({
         types: ["textStyle"],
       }),
+      Link.extend({}),
       HardBreak.extend({}),
       CustomHTML,
       //   addKeyboardShortcuts() {

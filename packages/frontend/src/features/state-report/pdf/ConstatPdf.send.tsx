@@ -187,7 +187,7 @@ const AlertEmailInput = ({
 
 const View = (props: StateReportPDFDocumentProps) => {
   const query = useQuery({
-    queryKey: ["report-pdf", props.htmlString],
+    queryKey: ["state-report-pdf", props.htmlString],
     queryFn: async () => {
       const blob = await pdf(<StateReportPDFDocument {...props} />).toBlob();
       return blob;
