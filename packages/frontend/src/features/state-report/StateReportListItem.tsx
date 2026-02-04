@@ -71,7 +71,7 @@ export const StateReportListItem = ({
           <Box textOverflow="ellipsis" overflow="hidden" whiteSpace="nowrap">
             {whereText}
           </Box>
-          <Box mt="8px">
+          <Box mt="8px" mb={whereText ? "0" : "24px"}>
             <ReportBadge status={isDraft ? "draft" : "published"} />
           </Box>
         </Box>
