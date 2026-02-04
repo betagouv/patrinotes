@@ -48,6 +48,9 @@ const AlertsAccordion = () => {
 
   const alertErrors = useWatch({ control: form.control, name: "alertErrors" });
   const hasErrors = alertErrors.some((error) => error.email.length > 0);
+
+  if (!alerts?.length) return null;
+
   return (
     <Accordion
       sx={{ width: "100%" }}

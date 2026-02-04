@@ -151,8 +151,9 @@ const Profile = () => {
   const user = useUser()!;
   const refreshUser = useRefreshUser();
 
-  const form = useForm<{ name: string; job: string }>({
-    defaultValues: { name: user?.name || "", job: user?.job || "" },
+  const [userData, setUserData] = useState<{ name: string; job: string }>({
+    name: user.name || "",
+    job: user.job || "",
   });
 
   const saveUserMutation = useMutation({
@@ -162,18 +163,28 @@ const Profile = () => {
     },
   });
 
+  const canSave = userData.name !== user.name || userData.job !== (user.job || "");
+
   return (
-    <Stack
-      width="100%"
-      maxWidth="690px"
-      component="form"
-      onSubmit={form.handleSubmit((values) => saveUserMutation.mutate(values))}
-    >
+    <Stack width="100%" maxWidth="690px">
       <Title anchor="profile">1. Mon profil</Title>
-      <Input label="Nom complet" nativeInputProps={{ ...form.register("name") }} disabled sx={{ mb: "24px" }} />
-      <Input label="Fonction" nativeInputProps={{ ...form.register("job") }} />
+      <Input
+        label="Nom complet"
+        nativeInputProps={{ value: userData.name, onChange: (e) => setUserData({ ...userData, name: e.target.value }) }}
+        disabled
+        sx={{ mb: "24px" }}
+      />
+      <Input
+        label="Fonction"
+        nativeInputProps={{ value: userData.job, onChange: (e) => setUserData({ ...userData, job: e.target.value }) }}
+      />
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
-        <Button iconId="ri-save-3-line" iconPosition="left" type="submit" disabled={saveUserMutation.isPending}>
+        <Button
+          iconId="ri-save-3-line"
+          iconPosition="left"
+          type="submit"
+          disabled={!canSave || saveUserMutation.isPending}
+        >
           Enregistrer
         </Button>
       </Flex>
@@ -196,12 +207,6 @@ const DefaultRecipient = () => {
         .filter(Boolean),
     );
   }, [userSettings?.default_emails]);
-
-  const selectedEmails =
-    userSettings.default_emails
-      ?.split(",")
-      .map((email: string) => email.trim())
-      .filter(Boolean) ?? [];
 
   const saveEmailsMutation = useMutation({
     mutationFn: async (emails: string[]) => {
@@ -230,6 +235,8 @@ const DefaultRecipient = () => {
     },
   });
 
+  const canSave = defaultEmails.join(",") !== userSettings?.default_emails;
+
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
       <Title anchor="default-recipient">2. Destinataire par défaut</Title>
@@ -254,6 +261,7 @@ const DefaultRecipient = () => {
               onClick={() => {
                 saveEmailsMutation.mutate(defaultEmails);
               }}
+              disabled={!canSave || saveEmailsMutation.isPending}
             >
               Enregistrer
             </Button>

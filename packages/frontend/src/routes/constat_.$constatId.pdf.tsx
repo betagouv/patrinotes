@@ -37,6 +37,7 @@ import { useRecipients } from "../features/state-report/pdf/ConstatPdf.hook";
 import { last } from "pastable";
 import { checkAlertErrors } from "../features/state-report/alerts/StateReportAlert.utils";
 import { getIsStateReportDisabled, useIsStateReportDisabled } from "../features/state-report/utils";
+import { useUserSettings } from "../hooks/useUserSettings";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -72,6 +73,8 @@ const ConstatPdf = () => {
       isStateReportDisabled: false,
     },
   });
+
+  const userSettings = useUserSettings();
 
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId }));
 
@@ -114,15 +117,19 @@ const ConstatPdf = () => {
   // sync recipients with state report owner emails
   useEffect(() => {
     if (!stateReport) return;
+    if (userSettings.isLoading) return;
+
+    const defaultRecipients = userSettings?.userSettings.default_emails?.split(",").map((email) => email.trim());
 
     const emails = new Set<string>();
     emails.add(stateReport.proprietaire_email ?? "");
     emails.add(stateReport.proprietaire_representant_email ?? "");
+    defaultRecipients?.forEach((email) => emails.add(email));
 
     const emailsArray = Array.from(emails).filter(Boolean);
 
     form.setValue("recipients", emailsArray);
-  }, [stateReportQuery.data, form]);
+  }, [stateReportQuery.data, userSettings, form]);
 
   // sync alerts with form since they can be edited in the alert accordion
   useEffect(() => {
