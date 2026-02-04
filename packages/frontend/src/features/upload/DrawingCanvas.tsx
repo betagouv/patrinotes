@@ -260,14 +260,14 @@ export const ImageCanvas = ({
       <Stack position="absolute" top="26px" right={{ xs: "16px" }} gap="18px" flexDirection="row" alignItems="center">
         {/* @ts-ignore */}
         <Button
-          sx={{ bgcolor: "white" }}
+          sx={{ bgcolor: "white !important" }}
           type="button"
           priority="secondary"
           iconId="ri-arrow-go-back-line"
           onClick={handleUndo}
           disabled={lines.length === 0}
         />
-        <Button sx={{ bgcolor: "white" }} type="button" priority="secondary" onClick={handleSave}>
+        <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
           OK
         </Button>
       </Stack>
