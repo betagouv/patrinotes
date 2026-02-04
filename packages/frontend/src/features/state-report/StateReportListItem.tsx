@@ -29,7 +29,7 @@ export const StateReportListItem = ({
 
   const title = report.titre_edifice;
   const whereText = report.commune ? `à ${report.commune}` : null;
-
+  const byText = report.redacted_by ? `par ${report.redacted_by}` : null;
   const isDraft = !report.attachment_id;
 
   return (
@@ -44,7 +44,7 @@ export const StateReportListItem = ({
         onClick={onClick}
         to={"/constat/$constatId"}
         params={{ constatId: report.id }}
-        search={{ step: "constat-general" }}
+        search={{ step: "constat-general", mode: "view" }}
       >
         <Box
           component="article"
@@ -71,6 +71,9 @@ export const StateReportListItem = ({
           <Box textOverflow="ellipsis" overflow="hidden" whiteSpace="nowrap">
             {whereText}
           </Box>
+          <Box textOverflow="ellipsis" overflow="hidden" whiteSpace="nowrap">
+            {byText}
+          </Box>
           <Box mt="8px" mb={whereText ? "0" : "24px"}>
             <ReportBadge status={isDraft ? "draft" : "published"} />
           </Box>
@@ -87,13 +90,6 @@ export const StateReportListItem = ({
 const MenuPopoverTrigger = ({ report, ...props }: { report: StateReportWithUser; onClick?: () => void }) => {
   const { css } = useStyles();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-  // const menuProps = {
-  //   report,
-  //   onClose: (e: Event) => {
-  //     if (e.target !== ref.current) setIsOpen(false);
-  //   },
-  // };
 
   const onClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     setAnchorEl(e.currentTarget);
