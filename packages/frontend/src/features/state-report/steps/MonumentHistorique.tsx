@@ -249,7 +249,7 @@ const MonumentObjets = () => {
           {shouldShowLoadMore ? (
             <Button
               priority="tertiary"
-              sx={{ px: "32px", mt: "16px", width: "calc(50% - 8px)", justifyContent: "center" }}
+              sx={{ px: "32px", mt: "16px", width: { xs: "100%", lg: "calc(50% - 8px)" }, justifyContent: "center" }}
               onClick={() => objetsQuery.fetchNextPage()}
             >
               Voir plus de mobiliers
