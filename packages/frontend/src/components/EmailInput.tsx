@@ -191,6 +191,7 @@ export const EmailInput = ({
           sx={{
             zIndex: 1,
             mt: "-16px",
+            bgcolor: "white",
           }}
           type="button"
           priority="tertiary"
