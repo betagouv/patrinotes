@@ -12,11 +12,12 @@ import { useStatus } from "@powersync/react";
 
 export const Layout = ({ children, noProvider }: PropsWithChildren & { noProvider?: boolean }) => {
   const router = useRouter();
-  const shouldFooterTakeFullheight = router.state.location.pathname.includes("/constat/");
+  const shouldFooterTakeFullheight = router.state.location.pathname.startsWith("/constat/");
+
   return (
     <Box display="flex" position="relative" flexDirection={"column"} height="100vh" sx={{ overflowX: "hidden" }}>
       <AppHeader noProvider={noProvider} />
-      <Box flex={shouldFooterTakeFullheight ? "1" : undefined}>{children}</Box>
+      <Box flex={shouldFooterTakeFullheight ? undefined : "1"}>{children}</Box>
       <AppFooter />
     </Box>
   );
