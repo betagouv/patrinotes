@@ -3,7 +3,7 @@ import { fr } from "@codegouvfr/react-dsfr";
 import Badge from "@codegouvfr/react-dsfr/Badge";
 import { Typography } from "@mui/material";
 import Box from "@mui/material/Box/Box";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { type PropsWithChildren } from "react";
 import { useIsLoggedIn } from "../contexts/AuthContext";
 import { MenuButton, MenuModal } from "../features/menu/MenuButton";
@@ -11,8 +11,8 @@ import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
 
 export const Layout = ({ children, noProvider }: PropsWithChildren & { noProvider?: boolean }) => {
-  const router = useRouter();
-  const shouldFooterTakeFullheight = router.state.location.pathname.startsWith("/constat/");
+  const location = useLocation();
+  const shouldFooterTakeFullheight = location.pathname.startsWith("/constat/");
 
   return (
     <Box display="flex" position="relative" flexDirection={"column"} height="100vh" sx={{ overflowX: "hidden" }}>
@@ -187,8 +187,27 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
                       <p className="fr-header__service-title">
                         <>
                           Patrimoine Embarqué{" "}
-                          <Badge as="span" noIcon severity="success">
-                            Beta
+                          <Badge
+                            small
+                            as="span"
+                            noIcon
+                            severity={
+                              status
+                                ? status.connected
+                                  ? "success"
+                                  : status.connecting
+                                    ? "warning"
+                                    : "error"
+                                : "success"
+                            }
+                          >
+                            {status
+                              ? status.connected
+                                ? "En ligne"
+                                : status.connecting
+                                  ? "Connexion"
+                                  : "Hors ligne"
+                              : "Beta"}
                           </Badge>
                         </>
                       </p>
