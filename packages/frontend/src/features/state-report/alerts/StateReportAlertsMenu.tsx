@@ -27,7 +27,9 @@ import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails }
 import { useDebounce } from "react-use";
 import { getDiff } from "#components/SyncForm.tsx";
 import { useAlertErrors, useSelectedAlertSection } from "../side-menu/StateReportSideMenu.store";
-import { pick } from "pastable";
+import { chunk, pick } from "pastable";
+import { useIsDesktop } from "../../../hooks/useIsDesktop";
+import { Flex } from "#components/ui/Flex.tsx";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -54,6 +56,7 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
       <Stack
         gap="8px"
         flexWrap="wrap"
+        mb={{ xs: "48px", lg: "80px" }}
         flexDirection={!selectedSection ? "row" : "column"}
         width="100%"
         sx={{
@@ -135,6 +138,7 @@ const AlertSectionsList = ({
 }) => {
   const constatId = routeApi.useParams().constatId;
   const userService = useLiveService()!;
+  const isDesktop = useIsDesktop();
 
   const addAlertMutation = useMutation({
     mutationFn: async (title: string) => {
@@ -212,24 +216,29 @@ const AlertSectionsList = ({
     );
   }
 
+  const chunked = chunk(alertSectionStaticData, isDesktop ? 2 : 1);
+
   return (
     <>
-      {alertSectionStaticData.map(({ title, services }) => {
-        // can have multiple elements if "Objets et mobiliers"
-        const matchingFields = alertSections.filter((f) => f.alert === title);
-        const isVisited = matchingFields.some(getIsAlertVisited);
-
-        return (
-          <SectionItem
-            key={title}
-            withIcon
-            section={title}
-            details={services.join(", ")}
-            isVisited={isVisited}
-            onClick={() => onSectionClick(title)}
-          />
-        );
-      })}
+      {chunked.map((chunk, index) => (
+        <Flex flexDirection="row" justifyContent="space-between" width="100%" key={index} gap="8px">
+          {chunk.map(({ title, services }) => {
+            const matchingFields = alertSections.filter((f) => f.alert === title);
+            const isVisited = matchingFields.some(getIsAlertVisited);
+            return (
+              <SectionItem
+                key={title}
+                withIcon
+                section={title}
+                details={services.join(", ")}
+                isVisited={isVisited}
+                onClick={() => onSectionClick(title)}
+              />
+            );
+          })}
+          {isDesktop && chunk.length === 1 ? <Box width="100%" p="2rem 2rem 2.25rem"></Box> : null}
+        </Flex>
+      ))}
     </>
   );
 };
