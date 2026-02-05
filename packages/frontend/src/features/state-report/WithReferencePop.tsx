@@ -110,7 +110,7 @@ export const WithReferencePop = () => {
   );
 };
 
-const fullWidth = "min(100%, 1200px)";
+const fullWidth = "min(100vw, 1200px)";
 const accordionWidth = "280px";
 const accordionPadding = "16px";
 const accordionMarginLeft = `calc((100% - ${fullWidth}) / 2)`;
