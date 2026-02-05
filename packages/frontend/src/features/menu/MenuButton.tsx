@@ -5,6 +5,7 @@ import { useIsDesktop, useIsXL } from "../../hooks/useIsDesktop";
 import { ClauseMenu } from "./ClauseMenu";
 import { HelpMenu } from "./HelpMenu";
 import { MenuActions } from "./MenuActions";
+import Badge from "@codegouvfr/react-dsfr/Badge";
 
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { ReportSearch } from "#components/ReportSearch.tsx";
@@ -14,8 +15,9 @@ import { useLocation, useRouter } from "@tanstack/react-router";
 import { useLogout } from "../../contexts/AuthContext";
 import { menuActor, MenuStates } from "./menuMachine";
 import { ModalCloseButton } from "./MenuTitle";
+import { useStatus } from "@powersync/react";
 
-export const MenuButton = () => {
+export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
   const logout = useLogout();
   const menu = useSelector(menuActor, (state) => state.value);
   const isDesktop = useIsDesktop();
@@ -108,6 +110,9 @@ export const MenuButton = () => {
           </Flex>
         ) : (
           <Center zIndex="1150" position="absolute" top="0" right="24px" height="100%">
+            <Box mr="24px">
+              <StatusBadge noProvider={noProvider} />
+            </Box>
             <Button
               sx={{
                 "::before": { width: "24px", height: "24px" },
@@ -126,6 +131,21 @@ export const MenuButton = () => {
         )}
       </Flex>
     </>
+  );
+};
+
+export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
+  const status = noProvider ? null : useStatus();
+
+  return (
+    <Badge
+      small
+      as="span"
+      noIcon
+      severity={status ? (status.connected ? "success" : status.connecting ? "warning" : "error") : "success"}
+    >
+      {status ? (status.connected ? "En ligne" : status.connecting ? "Connexion" : "Hors ligne") : "Beta"}
+    </Badge>
   );
 };
 

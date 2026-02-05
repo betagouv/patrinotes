@@ -6,7 +6,7 @@ import Box from "@mui/material/Box/Box";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { type PropsWithChildren } from "react";
 import { useIsLoggedIn } from "../contexts/AuthContext";
-import { MenuButton, MenuModal } from "../features/menu/MenuButton";
+import { MenuButton, MenuModal, StatusBadge } from "../features/menu/MenuButton";
 import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
 
@@ -141,7 +141,6 @@ const VersionDisplay = () => {
 const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
   const isDesktop = useIsDesktop();
   const isLoggedIn = noProvider ? null : useIsLoggedIn();
-  const status = noProvider ? null : useStatus();
 
   return (
     <>
@@ -185,38 +184,19 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
                   {isDesktop ? (
                     <div className="fr-header__service lg:d_unset">
                       <p className="fr-header__service-title">
-                        <>
+                        <Flex alignItems="center" gap="24px">
                           Patrimoine Embarqué{" "}
-                          <Badge
-                            small
-                            as="span"
-                            noIcon
-                            severity={
-                              status
-                                ? status.connected
-                                  ? "success"
-                                  : status.connecting
-                                    ? "warning"
-                                    : "error"
-                                : "success"
-                            }
-                          >
-                            {status
-                              ? status.connected
-                                ? "En ligne"
-                                : status.connecting
-                                  ? "Connexion"
-                                  : "Hors ligne"
-                              : "Beta"}
-                          </Badge>
-                        </>
+                          <Box>
+                            <StatusBadge noProvider={noProvider} />
+                          </Box>
+                        </Flex>
                       </p>
                     </div>
                   ) : undefined}
                 </Box>
               </Link>
               <Box display="flex" alignItems="center">
-                {isLoggedIn ? <MenuButton /> : null}
+                {isLoggedIn ? <MenuButton noProvider={noProvider} /> : null}
               </Box>
             </Box>
           </Box>
