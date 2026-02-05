@@ -8,6 +8,7 @@ import { type PropsWithChildren } from "react";
 import { useIsLoggedIn } from "../contexts/AuthContext";
 import { MenuButton, MenuModal } from "../features/menu/MenuButton";
 import { useIsDesktop } from "../hooks/useIsDesktop";
+import { useStatus } from "@powersync/react";
 
 export const Layout = ({ children, noProvider }: PropsWithChildren & { noProvider?: boolean }) => {
   const router = useRouter();
@@ -139,6 +140,7 @@ const VersionDisplay = () => {
 const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
   const isDesktop = useIsDesktop();
   const isLoggedIn = noProvider ? null : useIsLoggedIn();
+  const status = noProvider ? null : useStatus();
 
   return (
     <>

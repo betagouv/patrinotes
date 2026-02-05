@@ -808,9 +808,12 @@ const AlertesForm = ({ service }: { service: Service }) => {
     ]),
   });
 
+  const refreshUser = useRefreshUser();
+
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<Service>) => {
       await db.updateTable("service").set(data).where("id", "=", service.id).execute();
+      await refreshUser.mutateAsync();
     },
   });
 
