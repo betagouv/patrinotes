@@ -54,7 +54,7 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
             </Flex>
           </Flex>
         </Flex>
-        <Box width={{ xs: "100%", lg: "100%" }} maxWidth="100%" px={{ xs: "0", lg: "16px" }} height="100%">
+        <Box width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" px={{ xs: "0", lg: "16px" }} height="100%">
           <WithReferencePop />
         </Box>
       </FormProvider>
