@@ -98,7 +98,7 @@ const AlertSectionsList = ({
           state_report_id: constatId,
           commentaires: "",
           mandatory_emails: serializeMandatoryEmails(emails),
-          show_in_report: 0,
+          show_in_report: 1,
           service_id: userService?.id ?? null,
         })
         .returningAll()
@@ -157,7 +157,7 @@ const AlertSectionsList = ({
     <>
       {alertSectionStaticData.map(({ title, services }) => {
         // can have multiple elements if "Objets et mobiliers"
-        const matchingFields = fieldArray.fields.filter((f) => f.alert === title);
+        const matchingFields = alertSections.filter((f) => f.alert === title);
         const isVisited = matchingFields.some(getIsAlertVisited);
 
         return (
