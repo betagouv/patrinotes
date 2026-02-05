@@ -8,7 +8,7 @@ import { LoginForm } from "../features/auth/LoginForm";
 const LoginPage = () => {
   return (
     <Center mt="20px">
-      <Flex flexDirection="column" width="996px" p="16px" pb="0">
+      <Flex flexDirection="column" width="996px" p="16px" pb="0" mb={{ xs: "48px", lg: "80px" }}>
         <Typography variant="h4" mb="1.5rem">
           Connexion
         </Typography>

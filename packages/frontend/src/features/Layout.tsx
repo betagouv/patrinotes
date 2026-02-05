@@ -10,8 +10,9 @@ import { MenuButton, MenuModal, StatusBadge } from "../features/menu/MenuButton"
 import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
 
-export const Layout = ({ children, noProvider }: PropsWithChildren & { noProvider?: boolean }) => {
+export const Layout = ({ children }: PropsWithChildren) => {
   const location = useLocation();
+  const noProvider = ["/connection", "/inscription"].includes(location.pathname);
   const shouldFooterTakeFullheight = location.pathname.startsWith("/constat/");
 
   return (
