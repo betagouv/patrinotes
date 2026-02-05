@@ -17,7 +17,7 @@ import { useLiveService } from "../../../contexts/AuthContext";
 import { StateReportAlert } from "../../../db/AppSchema";
 import { db } from "../../../db/db";
 import { MenuTitle } from "../../menu/MenuTitle";
-import { StateReportAlertModalContentProps } from "../StateReportSideMenu";
+import { StateReportAlertModalContentProps } from "../side-menu/StateReportSideMenu";
 import { SectionItem } from "../steps/ConstatDetaille";
 import { getEmailsForSection } from "./StateReportAlert.utils";
 import { StateReportAlertObjetSectionForm } from "./StateReportAlertObjetSectionForm";
@@ -26,11 +26,13 @@ import { StateReportAlertSectionForm } from "./StateReportAlertSectionForm";
 import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
 import { useDebounce } from "react-use";
 import { getDiff } from "#components/SyncForm.tsx";
+import { useAlertErrors, useSelectedAlertSection } from "../side-menu/StateReportSideMenu.store";
+import { pick } from "pastable";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
 export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentProps) => {
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useSelectedAlertSection();
 
   const { constatId } = routeApi.useParams();
   const existingSectionsQuery = useStateReportAlerts(constatId);
@@ -77,6 +79,13 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
 
 export type AlertSectionsForm = UseFormReturn<{ alertSections: StateReportAlert[] }>;
 export type AlertSectionName = `alertSections.${number}`;
+export type AlertSectionFieldArray = UseFieldArrayReturn<
+  {
+    alertSections: StateReportAlert[];
+  },
+  "alertSections",
+  "id"
+>;
 
 const AlertSectionsForm = ({
   alertSections,
@@ -122,13 +131,7 @@ const AlertSectionsList = ({
   sectionsForm: AlertSectionsForm;
   alertSections: StateReportAlert[];
   onClose: () => void;
-  fieldArray: UseFieldArrayReturn<
-    {
-      alertSections: StateReportAlert[];
-    },
-    "alertSections",
-    "id"
-  >;
+  fieldArray: AlertSectionFieldArray;
 }) => {
   const constatId = routeApi.useParams().constatId;
   const userService = useLiveService()!;
@@ -145,6 +148,7 @@ const AlertSectionsList = ({
           commentaires: "",
           mandatory_emails: serializeMandatoryEmails(emails),
           show_in_report: 1,
+          should_send: 1,
           service_id: userService?.id ?? null,
         })
         .returningAll()
@@ -164,12 +168,13 @@ const AlertSectionsList = ({
     setSelectedSection(title);
   };
 
+  const [alertErrors] = useAlertErrors();
+  const sectionAlertErrors = alertErrors?.find((e) => e.alert === selectedSection)?.errors ?? null;
+
   if (selectedSection) {
     const commonProps = {
       onClose: () => onClose(),
-      onBack: (data?: StateReportAlert[]) => {
-        // prevents forcing unallowed edits when going back
-        if (!data) sectionsForm.reset({ alertSections });
+      onBack: () => {
         setSelectedSection(null);
       },
       form: sectionsForm,
@@ -180,7 +185,7 @@ const AlertSectionsList = ({
       const alerts = [] as { alert: StateReportAlert; name: AlertSectionName }[];
       fieldArray.fields.forEach((field, index) => {
         if (field.alert === OBJETS_MOBILIERS_SECTION) {
-          alerts.push({ alert: field, name: `alertSections.${index}` });
+          alerts.push({ alert: sectionsForm.getValues(`alertSections.${index}`), name: `alertSections.${index}` });
         }
       });
 
@@ -189,6 +194,7 @@ const AlertSectionsList = ({
           alerts={alerts}
           {...commonProps}
           appendAlert={() => addAlertMutation.mutateAsync(OBJETS_MOBILIERS_SECTION)}
+          errors={sectionAlertErrors}
         />
       );
     }
@@ -196,7 +202,14 @@ const AlertSectionsList = ({
     const alertIndex = fieldArray.fields.findIndex((f) => f.alert === selectedSection);
     const alert = sectionsForm.getValues(`alertSections.${alertIndex}`);
 
-    return <StateReportAlertSectionForm alert={alert} name={`alertSections.${alertIndex}`} {...commonProps} />;
+    return (
+      <StateReportAlertSectionForm
+        alert={alert}
+        name={`alertSections.${alertIndex}`}
+        errors={sectionAlertErrors}
+        {...commonProps}
+      />
+    );
   }
 
   return (
@@ -229,19 +242,21 @@ const AlertSectionSync = ({ form, baseAlerts }: { form: AlertSectionsForm; baseA
 
   const updateAlertMutation = useMutation({
     mutationFn: async (newAlerts: { id: string; changes: Partial<StateReportAlert> }[]) => {
-      for (const { id, changes } of newAlerts) {
-        await db.updateTable("state_report_alert").where("id", "=", id).set(changes).execute();
-      }
+      await db.transaction().execute(async (tx) => {
+        for (const { id, changes } of newAlerts) {
+          await tx.updateTable("state_report_alert").where("id", "=", id).set(changes).execute();
+        }
+      });
     },
   });
 
   useDebounce(
     () => {
-      const baseIds = baseAlerts.map((a) => a.id);
-
       const toUpdate: { id: string; changes: Partial<StateReportAlert> }[] = [];
 
-      for (const id of baseIds) {
+      for (const alert of baseAlerts) {
+        const id = alert.id;
+
         const base = baseAlerts.find((a) => a.id === id);
         const current = currentValues.find((a) => a.id === id);
 
@@ -252,8 +267,6 @@ const AlertSectionSync = ({ form, baseAlerts }: { form: AlertSectionsForm; baseA
 
         toUpdate.push({ id, changes: diff });
       }
-
-      console.log("updating", toUpdate);
 
       updateAlertMutation.mutateAsync(toUpdate);
     },

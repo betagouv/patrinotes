@@ -392,6 +392,7 @@ const state_report_alert = new Table({
   alert: column.text,
   commentaires: column.text,
   show_in_report: column.integer,
+  should_send: column.integer,
   service_id: column.text,
   objet_ou_mobilier: column.text,
   objet_ou_mobilier_name: column.text,

@@ -15,11 +15,12 @@ import { db } from "../../../db/db";
 import { addSIfPlural } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled } from "../utils";
-import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
+import { SectionCommentaires, SectionPhotos, ShouldSendToggle, ShowInReportToggle } from "./SectionCommentaires";
 import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
+import { useAlertErrors, useIsEditingAlertEmail } from "../side-menu/StateReportSideMenu.store";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -39,6 +40,7 @@ export const StateReportAlertSectionForm = ({
   alert,
   name,
   form,
+  errors,
 }: {
   title: string;
   onClose: () => void;
@@ -46,31 +48,14 @@ export const StateReportAlertSectionForm = ({
   alert: StateReportAlert;
   name: AlertSectionName;
   form: AlertSectionsForm;
+  errors: AlertErrors | null;
 }) => {
   const constatId = routeApi.useParams().constatId;
   const isFormDisabled = useIsStateReportDisabled();
 
   const { mandatory_emails, additional_emails } = alert;
 
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [errors, setErrors] = useState<AlertErrors | null>(null);
-
-  const saveAlertMutation = useMutation({
-    mutationFn: async () => {
-      const alert = form.getValues(name);
-      const errors = checkAlertErrors(alert);
-
-      if (errors.email.length && isEditingEmail) {
-        setErrors(errors);
-        return;
-      }
-
-      const { id, ...data } = alert;
-      await db.updateTable("state_report_alert").where("id", "=", alert.id).set(data).execute();
-
-      onBack([alert]);
-    },
-  });
+  const [isEditingEmail, setIsEditingEmail] = useIsEditingAlertEmail();
 
   return (
     <Stack>
@@ -82,9 +67,13 @@ export const StateReportAlertSectionForm = ({
         Alerte : {title}
       </Typography>
 
+      <Box mt="16px">
+        <ShouldSendToggle form={form} names={[name]} />
+      </Box>
+
       <StateReportAlertsEmailInput
         form={form}
-        name={name}
+        names={[name]}
         mandatory_emails={mandatory_emails}
         additional_emails={additional_emails}
         isEditingEmail={isEditingEmail}
@@ -97,14 +86,9 @@ export const StateReportAlertSectionForm = ({
 
       <Divider my="16px" />
 
-      <ShowInReportToggle form={form} name={name} />
+      <ShowInReportToggle form={form} names={[name]} />
 
-      <FullWidthButton
-        type="button"
-        onClick={() => saveAlertMutation.mutate()}
-        disabled={saveAlertMutation.isPending || isFormDisabled}
-        style={{ marginTop: "16px" }}
-      >
+      <FullWidthButton type="button" onClick={() => onBack()} disabled={isFormDisabled} style={{ marginTop: "16px" }}>
         Enregistrer
       </FullWidthButton>
     </Stack>

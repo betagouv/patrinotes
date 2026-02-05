@@ -17,6 +17,10 @@ import { ConstatDetaille } from "./steps/ConstatDetaille";
 import { pick } from "pastable";
 import { immeubleMapping } from "../ImmeubleAutocomplete";
 import { ModalCloseButton } from "../menu/MenuTitle";
+import { useStateReportAlerts } from "./alerts/StateReportAlerts.hook";
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
+import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
@@ -188,12 +192,18 @@ const formErrorsNavigate: Partial<
 };
 
 const CreateButton = () => {
-  const [formErrors, setFormErrors] = useState<string[] | null>(null);
+  const [missingFields, setMissingFields] = useState<string[] | null>(null);
+  const [alertErrors, setAlertErrors] = useAlertErrors();
+
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+
   const { constatId } = routeApi.useParams();
   const navigate = routeApi.useNavigate();
 
   const form = useStateReportFormContext();
-  const attachmentId = useWatch({ control: form.control, name: "attachment_id" });
+  const isDisabled = useIsStateReportDisabled();
+
+  const alertsQuery = useStateReportAlerts(constatId);
 
   const onSubmit = () => {
     const values = form.getValues();
@@ -203,7 +213,18 @@ const CreateButton = () => {
       })
       .map(([key]) => key);
 
-    if (!missingFields.length) {
+    const alertErrors = alertsQuery.data
+      ?.map((alert) => {
+        const errors = checkAlertErrors(alert);
+
+        return {
+          alert: alert.alert!,
+          errors,
+        };
+      })
+      .filter((alertErrors) => alertErrors.errors.email.length);
+
+    if (!missingFields.length && !alertErrors?.length) {
       navigate({
         to: "/constat/$constatId/pdf",
         params: {
@@ -214,14 +235,22 @@ const CreateButton = () => {
       return;
     }
 
-    setFormErrors(missingFields);
+    setAlertErrors(alertErrors ?? []);
+    setMissingFields(missingFields);
+
+    setIsErrorModalOpen(true);
+  };
+
+  const formErrors = {
+    missingFields: missingFields ?? [],
+    alertErrors: alertErrors ?? [],
   };
 
   return (
     <>
-      <FormErrorModal formErrors={formErrors} onClose={() => setFormErrors(null)} />
+      {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
       <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
-        {attachmentId ? "Voir le constat" : "Finaliser le constat"}
+        {isDisabled ? "Voir le constat" : "Finaliser le constat"}
       </RightButton>
     </>
   );
@@ -239,18 +268,41 @@ const labelsByField: Record<string, string> = {
   proportion_dans_cet_etat: "Proportion dans cet état",
 };
 
-const FormErrorModal = ({ formErrors, onClose }: { formErrors: string[] | null; onClose: () => void }) => {
-  const contextErrors = formErrors?.filter((field) => contextFields.includes(field));
-  const generalErrors = formErrors?.filter((field) => generalFields.includes(field));
+const FormErrorModal = ({
+  formErrors,
+  onClose,
+}: {
+  formErrors: { missingFields: string[]; alertErrors: { alert: string; errors: AlertErrors }[] } | null;
+  onClose: () => void;
+}) => {
+  const contextErrors = formErrors?.missingFields.filter((field) => contextFields.includes(field));
+  const generalErrors = formErrors?.missingFields.filter((field) => generalFields.includes(field));
+
+  const keepOnlyOneAlertOfEachType = (alerts: { alert: string; errors: AlertErrors }[]) => {
+    const uniqueAlertTypes = Array.from(new Set<string>(alerts.map(({ alert }) => alert)));
+
+    return uniqueAlertTypes.map((alertType) => {
+      const alert = alerts.find(({ alert: a }) => a === alertType);
+      return alert!;
+    });
+  };
+
+  const alertErrors = formErrors?.alertErrors ? keepOnlyOneAlertOfEachType(formErrors.alertErrors) : [];
 
   const navigate = routeApi.useNavigate();
   const navigateToField = (field: string) => {
     (formErrorsNavigate as any)[field]?.({ navigate });
     onClose();
   };
+
+  const navigateToAlert = (alert: string) => {
+    stateReportSideMenuStore.send({ type: "openAlertSection", section: alert });
+    onClose();
+  };
+
   return (
     <Dialog
-      open={!!formErrors?.length}
+      open={!!formErrors?.missingFields.length || !!formErrors?.alertErrors.length}
       sx={{
         ".MuiPaper-root": {
           maxWidth: { xs: "100%", sm: "800px" },
@@ -312,6 +364,26 @@ const FormErrorModal = ({ formErrors, onClose }: { formErrors: string[] | null; 
                         className="fr-link fr-link--icon-left fr-icon-error-fill"
                       >
                         {labelsByField[field]}
+                      </Typography>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {alertErrors && alertErrors.length ? (
+              <>
+                <Typography mt="16px" fontWeight="600">
+                  Alertes
+                </Typography>
+                <ul style={{ listStyleType: "none" }}>
+                  {alertErrors.map(({ alert, errors }) => (
+                    <li key={alert}>
+                      <Typography
+                        onClick={() => navigateToAlert(alert)}
+                        sx={{ cursor: "pointer", textDecoration: "underline", "::before": { color: "red" } }}
+                        className="fr-link fr-link--icon-left fr-icon-error-fill"
+                      >
+                        {alert}
                       </Typography>
                     </li>
                   ))}

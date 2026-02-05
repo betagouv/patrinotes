@@ -4,13 +4,15 @@ import { Box, Drawer, Stack, Typography } from "@mui/material";
 import { getRouteApi } from "@tanstack/react-router";
 import { ReactNode, useState } from "react";
 import { UseFormReturn, useWatch } from "react-hook-form";
-import { useSpeechToTextV2 } from "../audio-record/SpeechRecorder.hook";
-import { MenuTitle } from "../menu/MenuTitle";
-import { useIsStateReportDisabled, useStateReportFormContext } from "./utils";
-import { StateReportAlertsMenu } from "./alerts/StateReportAlertsMenu";
+import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { MenuTitle } from "../../menu/MenuTitle";
+import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
+import { StateReportAlertsMenu } from "../alerts/StateReportAlertsMenu";
+import { createStore } from "@xstate/store";
+import { StateReportMenuStates, useSideMenu } from "./StateReportSideMenu.store";
 
 export const StateReportSideMenu = () => {
-  const [sideMenu, setSideMenu] = useState<MenuStates>("closed");
+  const [sideMenu, setSideMenu] = useSideMenu();
   const onClose = () => setSideMenu("closed");
 
   const form = useStateReportFormContext();
@@ -43,7 +45,7 @@ export const StateReportSideMenu = () => {
   );
 };
 
-export const MenuModal = ({ menu, onClose }: { menu: MenuStates; onClose: () => void }) => {
+export const MenuModal = ({ menu, onClose }: { menu: StateReportMenuStates; onClose: () => void }) => {
   const Content = modalContents[menu] ?? null;
   const isModalOpen = menu !== "closed";
 
@@ -61,12 +63,11 @@ export const MenuModal = ({ menu, onClose }: { menu: MenuStates; onClose: () => 
   );
 };
 
-type MenuStates = "closed" | "notes" | "alerts";
 export type StateReportAlertModalContentProps = {
   onClose: () => void;
 };
 
-const modalContents: Record<MenuStates, (props: StateReportAlertModalContentProps) => ReactNode> = {
+const modalContents: Record<StateReportMenuStates, (props: StateReportAlertModalContentProps) => ReactNode> = {
   alerts: (props) => <StateReportAlertsMenu {...props} />,
   notes: (props) => <StateReportNotesMenu {...props} />,
   closed: () => null,

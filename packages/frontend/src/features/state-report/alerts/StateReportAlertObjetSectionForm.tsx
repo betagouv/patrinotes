@@ -14,10 +14,11 @@ import { db } from "../../../db/db";
 import { uppercaseFirstLetterIf } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
-import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./SectionCommentaires";
+import { SectionCommentaires, SectionPhotos, ShouldSendToggle, ShowInReportToggle } from "./SectionCommentaires";
 import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
-import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
+import { AlertSectionFieldArray, AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
+import { useIsEditingAlertEmail } from "../side-menu/StateReportSideMenu.store";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -28,6 +29,7 @@ export const StateReportAlertObjetSectionForm = ({
   alerts,
   form,
   appendAlert,
+  errors,
 }: {
   title: string;
   onClose: () => void;
@@ -35,6 +37,7 @@ export const StateReportAlertObjetSectionForm = ({
   alerts: { alert: StateReportAlert; name: AlertSectionName }[];
   form: AlertSectionsForm;
   appendAlert: () => Promise<void>;
+  errors: AlertErrors | null;
 }) => {
   const isFormDisabled = useIsStateReportDisabled();
   const stateReportForm = useStateReportFormContext();
@@ -54,34 +57,8 @@ export const StateReportAlertObjetSectionForm = ({
     },
     refetchOnWindowFocus: false,
   });
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [errors, setErrors] = useState<AlertErrors | null>(null);
 
-  const saveAlertsMutation = useMutation({
-    mutationFn: async () => {
-      const firstAlert = form.getValues(alerts[0].name);
-      const errors = checkAlertErrors(firstAlert);
-
-      if (errors.email.length && isEditingEmail) {
-        setErrors(errors);
-        return;
-      }
-
-      // every 'objet et mobilier' alerts share the same emails
-      const { mandatory_emails, additional_emails } = firstAlert;
-
-      for (const { name } of alerts) {
-        const { id, ...data } = form.getValues(name);
-        await db
-          .updateTable("state_report_alert")
-          .where("id", "=", id)
-          .set({ ...data, mandatory_emails, additional_emails })
-          .execute();
-      }
-
-      onBack(alerts.map((alert) => alert.alert));
-    },
-  });
+  const [isEditingEmail, setIsEditingEmail] = useIsEditingAlertEmail();
 
   const { mandatory_emails, additional_emails } = alerts[0].alert;
 
@@ -91,56 +68,66 @@ export const StateReportAlertObjetSectionForm = ({
         <ModalBackButton onClick={onBack} />
       </MenuTitle>
 
-      <Typography fontSize="16px" fontWeight="bold">
-        Alerte : {title}
-      </Typography>
+      {objetsQuery.isLoading ? (
+        <Center mt="180px">
+          <Spinner />
+        </Center>
+      ) : (
+        <>
+          <Typography fontSize="16px" fontWeight="bold">
+            Alerte : {title}
+          </Typography>
 
-      <StateReportAlertsEmailInput
-        form={form}
-        name={alerts[0].name}
-        mandatory_emails={mandatory_emails}
-        additional_emails={additional_emails}
-        isEditingEmail={isEditingEmail}
-        setIsEditingEmail={setIsEditingEmail}
-        errors={errors}
-      />
+          <Box mt="16px">
+            <ShouldSendToggle form={form} names={alerts.map((alert) => alert.name)} />
+          </Box>
 
-      <Stack mt="24px">
-        {objetsQuery.isLoading ? (
-          <Center mt="80px">
-            <Spinner />
-          </Center>
-        ) : (
-          alerts.map(({ alert, name }, index) => (
-            <Fragment key={alert.id}>
-              <AlertObjetForm form={form} name={name} objets={objetsQuery.data ?? []} />
-              {index < alerts.length - 1 && <Divider my="24px" />}
-            </Fragment>
-          ))
-        )}
+          <StateReportAlertsEmailInput
+            form={form}
+            names={alerts.map((alert) => alert.name)}
+            mandatory_emails={mandatory_emails}
+            additional_emails={additional_emails}
+            isEditingEmail={isEditingEmail}
+            setIsEditingEmail={setIsEditingEmail}
+            errors={errors}
+          />
 
-        <Flex gap="8px" mb="16px">
-          <FullWidthButton
-            type="button"
-            iconId="ri-add-line"
-            onClick={() => appendAlert()}
-            disabled={isFormDisabled}
-            style={{ marginTop: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}
-            priority="secondary"
-          >
-            Ajouter objet ou mobilier
-          </FullWidthButton>
+          <Stack mt="24px">
+            {alerts.map(({ alert, name }, index) => (
+              <Fragment key={alert.id}>
+                <AlertObjetForm form={form} name={name} objets={objetsQuery.data ?? []} />
+                {index < alerts.length - 1 && <Divider my="24px" />}
+              </Fragment>
+            ))}
 
-          <FullWidthButton
-            type="button"
-            onClick={() => saveAlertsMutation.mutate()}
-            disabled={saveAlertsMutation.isPending || isFormDisabled}
-            style={{ marginTop: "16px" }}
-          >
-            Enregistrer
-          </FullWidthButton>
-        </Flex>
-      </Stack>
+            <Box mt="16px">
+              <ShowInReportToggle form={form} names={alerts.map((alert) => alert.name)} />
+            </Box>
+
+            <Flex gap="8px" mb="16px">
+              <FullWidthButton
+                type="button"
+                iconId="ri-add-line"
+                onClick={() => appendAlert()}
+                disabled={isFormDisabled}
+                style={{ marginTop: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                priority="secondary"
+              >
+                Ajouter objet ou mobilier
+              </FullWidthButton>
+
+              <FullWidthButton
+                type="button"
+                onClick={() => onBack()}
+                disabled={isFormDisabled}
+                style={{ marginTop: "16px" }}
+              >
+                Enregistrer
+              </FullWidthButton>
+            </Flex>
+          </Stack>
+        </>
+      )}
     </Stack>
   );
 };
@@ -166,10 +153,6 @@ const AlertObjetForm = ({
 
       <SectionCommentaires form={form} name={name} />
       <SectionPhotos alertId={alertId} constatId={constatId} isDisabled={isFormDisabled} />
-
-      <Box mt="16px">
-        <ShowInReportToggle form={form} name={name} />
-      </Box>
     </Stack>
   );
 };

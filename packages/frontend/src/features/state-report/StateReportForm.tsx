@@ -9,7 +9,7 @@ import { useBannerBgColor } from "#components/Banner.tsx";
 import { useSyncForm } from "#components/SyncForm.tsx";
 import { db } from "../../db/db";
 import { useFormWithFocus, useRefreshForm } from "../../hooks/useFormWithFocus";
-import { StateReportSideMenu } from "./StateReportSideMenu";
+import { StateReportSideMenu } from "./side-menu/StateReportSideMenu";
 
 export const StateReportForm = ({ report }: { report: StateReport }) => {
   const [form, getFocused] = useFormWithFocus<StateReportFormType>({

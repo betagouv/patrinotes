@@ -17,6 +17,7 @@ export const getEmailsForSection = (sectionTitle: string, service: Service) => {
 };
 
 export const checkAlertErrors = (alert: StateReportAlert): AlertErrors => {
+  if (!alert.should_send) return { email: [] };
   const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
 
   const missingEmails = mandatoryEmails

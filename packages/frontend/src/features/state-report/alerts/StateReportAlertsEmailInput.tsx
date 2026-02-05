@@ -10,12 +10,13 @@ import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useDebounce } from "react-use";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { useWatch } from "react-hook-form";
 
 export const StateReportAlertsEmailInput = ({
   mandatory_emails,
   additional_emails,
   form,
-  name,
+  names,
   errors,
   isEditingEmail,
   setIsEditingEmail,
@@ -23,17 +24,27 @@ export const StateReportAlertsEmailInput = ({
   mandatory_emails?: string | null;
   additional_emails?: string | null;
   form: AlertSectionsForm;
-  name: AlertSectionName;
+  names: AlertSectionName[];
   isEditingEmail: boolean;
   setIsEditingEmail: (isEditing: boolean) => void;
   errors: AlertErrors | null;
 }) => {
   const mandatoryEmails = deserializeMandatoryEmails(mandatory_emails || "");
-  const additionalEmails = additional_emails?.split(",").map((email) => email.trim()) || [];
+  const additionalEmails =
+    additional_emails
+      ?.split(",")
+      .map((email) => email.trim())
+      .filter(Boolean) || [];
 
   const serviceSuffix = addSIfPlural(mandatoryEmails.length);
 
   const isFormDisabled = useIsStateReportDisabled();
+
+  const should_send = useWatch({ control: form.control, name: `${names[0]}.should_send` });
+
+  if (!should_send) {
+    return null;
+  }
 
   return (
     <Stack>
@@ -44,13 +55,14 @@ export const StateReportAlertsEmailInput = ({
 
       {isEditingEmail ? (
         <Stack mt="16px" gap="8px">
-          <MandatoryEmailsForm initialValues={mandatoryEmails} form={form} name={name} errors={errors} />
-          <AdditionalEmailsForm initialValues={additionalEmails} form={form} name={name} />
+          <MandatoryEmailsForm initialValues={mandatoryEmails} form={form} names={names} errors={errors} />
+          <AdditionalEmailsForm initialValues={additionalEmails} form={form} names={names} />
         </Stack>
       ) : (
         <Flex alignItems={{ xs: "start", lg: "center" }} flexDirection={{ xs: "column", sm: "row" }}>
           <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-            {[...mandatoryEmails.map((e) => e.email), ...additionalEmails].join(", ") || "Aucun courriel configuré"}
+            {[...mandatoryEmails.map((e) => e.email), ...additionalEmails].filter(Boolean).join(", ") ||
+              "Aucun courriel configuré"}
           </Typography>
           {!isFormDisabled && (
             <LinkButton type="button" onClick={() => setIsEditingEmail(true)}>
@@ -66,12 +78,12 @@ export const StateReportAlertsEmailInput = ({
 const MandatoryEmailsForm = ({
   initialValues,
   form,
-  name,
+  names,
   errors,
 }: {
   initialValues: { email: string; service: string }[];
   form: AlertSectionsForm;
-  name: AlertSectionName;
+  names: AlertSectionName[];
   errors: AlertErrors | null;
 }) => {
   const [values, setValues] = useState(initialValues);
@@ -79,7 +91,9 @@ const MandatoryEmailsForm = ({
   useDebounce(
     () => {
       const mandatory_emails = serializeMandatoryEmails(values);
-      form.setValue(`${name}.mandatory_emails`, mandatory_emails);
+      for (const name of names) {
+        form.setValue(`${name}.mandatory_emails`, mandatory_emails);
+      }
     },
     500,
     [values],
@@ -98,6 +112,7 @@ const MandatoryEmailsForm = ({
             key={index}
             label={val.service ? `Courriel ${val.service}*` : "Courriel"}
             nativeInputProps={{
+              autoComplete: `mandatory-email-${val.service}-${index}`,
               type: "text",
               value: val.email,
               onChange: (e) => {
@@ -116,17 +131,19 @@ const MandatoryEmailsForm = ({
 const AdditionalEmailsForm = ({
   initialValues,
   form,
-  name,
+  names,
 }: {
   initialValues: string[];
   form: AlertSectionsForm;
-  name: AlertSectionName;
+  names: AlertSectionName[];
 }) => {
   const [values, setValues] = useState(initialValues);
   useDebounce(
     () => {
       const additional_emails = values.join(",");
-      form.setValue(`${name}.additional_emails`, additional_emails);
+      for (const name of names) {
+        form.setValue(`${name}.additional_emails`, additional_emails);
+      }
     },
     500,
     [values],
@@ -140,6 +157,7 @@ const AdditionalEmailsForm = ({
           label={index === 0 ? "Courriels additionnels" : " "}
           sx={{ mb: "0 !important" }}
           nativeInputProps={{
+            autoComplete: `additional-email-${index}`,
             type: "text",
             value: val,
             onChange: (e) => {

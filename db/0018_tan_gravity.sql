@@ -1,0 +1,1 @@
+ALTER TABLE "state_report_alert" ADD COLUMN "should_send" boolean;

@@ -70,7 +70,6 @@ export const SectionPhotos = ({
 }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
   const user = useLiveUser()!;
-  const service = useService();
 
   const attachmentsQuery = useDbQuery(
     db
@@ -152,9 +151,13 @@ export const SectionPhotos = ({
   );
 };
 
-export const ShowInReportToggle = ({ form, name }: { name: AlertSectionName; form: AlertSectionsForm }) => {
-  const value = useWatch({ control: form.control, name: `${name}.show_in_report` });
-  const setValue = (val: boolean) => form.setValue(`${name}.show_in_report`, val as any);
+export const ShowInReportToggle = ({ form, names }: { names: AlertSectionName[]; form: AlertSectionsForm }) => {
+  const value = useWatch({ control: form.control, name: `${names[0]}.show_in_report` });
+  const setValue = (val: boolean) => {
+    for (const name of names) {
+      form.setValue(`${name}.show_in_report`, val ? 1 : 0);
+    }
+  };
 
   const isDisabled = useIsStateReportDisabled();
 
@@ -166,6 +169,28 @@ export const ShowInReportToggle = ({ form, name }: { name: AlertSectionName; for
       onChange={setValue}
       checked={!!value}
       label="Afficher dans le rapport"
+    />
+  );
+};
+
+export const ShouldSendToggle = ({ form, names }: { names: AlertSectionName[]; form: AlertSectionsForm }) => {
+  const value = useWatch({ control: form.control, name: `${names[0]}.should_send` });
+  const setValue = (val: boolean) => {
+    for (const name of names) {
+      form.setValue(`${name}.should_send`, val ? 1 : 0);
+    }
+  };
+
+  const isDisabled = useIsStateReportDisabled();
+
+  return (
+    <ToggleSwitch
+      inputTitle="Envoyer par courriel"
+      disabled={isDisabled}
+      showCheckedHint={false}
+      onChange={setValue}
+      checked={!!value}
+      label="Envoyer par courriel"
     />
   );
 };
