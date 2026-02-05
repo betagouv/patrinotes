@@ -22,6 +22,7 @@ import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { ButtonsSwitch } from "../WithReferencePop";
+import { chunk } from "pastable";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -80,25 +81,36 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
 
   const selectedSection = visitedSections?.find((vs) => vs.id === selectedSectionId) || null;
 
+  const isDesktop = useIsDesktop();
+  // display 2 per rows on desktop
+  const chunkedSections = chunk(defaultSections, isDesktop ? 2 : 1);
+
   return (
-    <Stack gap="8px" flexWrap="wrap" flexDirection="row">
+    <Stack gap="8px" flexDirection="column" justifyContent="space-between">
       <SectionModal
         isDisabled={isDisabled}
         selectedSection={selectedSection}
         onClose={() => setSelectedSectionId(null)}
       />
-      {defaultSections.map((section) => {
-        const visited = visitedSections?.find((vs) => vs.section === section);
-        const isVisited = visited && (visited.etat_general || visited.commentaires || visited.proportion_dans_cet_etat);
+      {chunkedSections.map((sectionChunk, index) => {
         return (
-          <SectionItem
-            key={section}
-            isVisited={!!isVisited}
-            section={section}
-            onClick={() => {
-              selectSectionMutation.mutate(section);
-            }}
-          />
+          <Flex flexDirection="row" justifyContent="space-between" width="100%" key={index} gap="8px">
+            {sectionChunk.map((section) => {
+              const visited = visitedSections?.find((vs) => vs.section === section);
+              const isVisited =
+                visited && (visited.etat_general || visited.commentaires || visited.proportion_dans_cet_etat);
+              return (
+                <SectionItem
+                  key={section}
+                  isVisited={!!isVisited}
+                  section={section}
+                  onClick={() => {
+                    selectSectionMutation.mutate(section);
+                  }}
+                />
+              );
+            })}
+          </Flex>
         );
       })}
     </Stack>
@@ -139,7 +151,7 @@ export const SectionItem = ({
       }}
       noIcon={!withIcon}
       sx={{
-        width: { xs: "100%", lg: "48%" },
+        width: "100%",
         py: isVisited ? "16px" : undefined,
       }}
     />
