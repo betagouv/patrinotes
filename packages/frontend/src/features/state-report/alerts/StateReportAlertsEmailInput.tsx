@@ -10,24 +10,36 @@ import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useDebounce } from "react-use";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { useForm } from "react-hook-form";
+import { useRefreshForm } from "../../../hooks/useFormWithFocus";
+import { useSyncForm } from "#components/SyncForm.tsx";
 
 export const StateReportAlertsEmailInput = ({
   mandatory_emails,
   additional_emails,
-  form,
-  name,
   errors,
   isEditingEmail,
   setIsEditingEmail,
+  saveEmails,
 }: {
   mandatory_emails?: string | null;
   additional_emails?: string | null;
-  form: AlertSectionsForm;
-  name: AlertSectionName;
   isEditingEmail: boolean;
   setIsEditingEmail: (isEditing: boolean) => void;
   errors: AlertErrors | null;
+  saveEmails: (mandatory_emails: string, additional_emails: string) => Promise<void>;
 }) => {
+  const form = useForm({ defaultValues: { mandatory_emails, additional_emails } });
+
+  useSyncForm({
+    form,
+    baseObject: { mandatory_emails, additional_emails },
+    syncObject: async (_, diff) => {
+      console.log("syncing emails with diff", diff);
+      await saveEmails(diff.mandatory_emails || "", diff.additional_emails || "");
+    },
+  });
+
   const mandatoryEmails = deserializeMandatoryEmails(mandatory_emails || "");
   const additionalEmails = additional_emails?.split(",").map((email) => email.trim()) || [];
 
@@ -44,8 +56,15 @@ export const StateReportAlertsEmailInput = ({
 
       {isEditingEmail ? (
         <Stack mt="16px" gap="8px">
-          <MandatoryEmailsForm initialValues={mandatoryEmails} form={form} name={name} errors={errors} />
-          <AdditionalEmailsForm initialValues={additionalEmails} form={form} name={name} />
+          <MandatoryEmailsForm
+            initialValues={mandatoryEmails}
+            saveMandatoryEmails={(str) => form.setValue("mandatory_emails", str)}
+            errors={errors}
+          />
+          <AdditionalEmailsForm
+            initialValues={additionalEmails}
+            saveAdditionalEmails={(str) => form.setValue("additional_emails", str)}
+          />
         </Stack>
       ) : (
         <Flex alignItems={{ xs: "start", lg: "center" }} flexDirection={{ xs: "column", sm: "row" }}>
@@ -65,21 +84,19 @@ export const StateReportAlertsEmailInput = ({
 
 const MandatoryEmailsForm = ({
   initialValues,
-  form,
-  name,
   errors,
+  saveMandatoryEmails,
 }: {
   initialValues: { email: string; service: string }[];
-  form: AlertSectionsForm;
-  name: AlertSectionName;
   errors: AlertErrors | null;
+  saveMandatoryEmails: (mandatory_emails: string) => void;
 }) => {
   const [values, setValues] = useState(initialValues);
 
   useDebounce(
     () => {
       const mandatory_emails = serializeMandatoryEmails(values);
-      form.setValue(`${name}.mandatory_emails`, mandatory_emails);
+      saveMandatoryEmails(mandatory_emails);
     },
     500,
     [values],
@@ -115,18 +132,19 @@ const MandatoryEmailsForm = ({
 
 const AdditionalEmailsForm = ({
   initialValues,
-  form,
-  name,
+  saveAdditionalEmails,
 }: {
   initialValues: string[];
-  form: AlertSectionsForm;
-  name: AlertSectionName;
+  saveAdditionalEmails: (additional_emails: string) => void;
 }) => {
   const [values, setValues] = useState(initialValues);
   useDebounce(
     () => {
-      const additional_emails = values.join(",");
-      form.setValue(`${name}.additional_emails`, additional_emails);
+      const additional_emails = values
+        .filter(Boolean)
+        .map((val) => val.trim())
+        .join(",");
+      saveAdditionalEmails(additional_emails);
     },
     500,
     [values],

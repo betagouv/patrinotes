@@ -36,41 +36,16 @@ export const StateReportAlertSectionForm = ({
   title,
   onClose,
   onBack,
-  alert,
-  name,
-  form,
 }: {
   title: string;
   onClose: () => void;
   onBack: (data?: StateReportAlert[]) => void;
-  alert: StateReportAlert;
-  name: AlertSectionName;
-  form: AlertSectionsForm;
 }) => {
   const constatId = routeApi.useParams().constatId;
   const isFormDisabled = useIsStateReportDisabled();
 
-  const { mandatory_emails, additional_emails } = alert;
-
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [errors, setErrors] = useState<AlertErrors | null>(null);
-
-  const saveAlertMutation = useMutation({
-    mutationFn: async () => {
-      const alert = form.getValues(name);
-      const errors = checkAlertErrors(alert);
-
-      if (errors.email.length && isEditingEmail) {
-        setErrors(errors);
-        return;
-      }
-
-      const { id, ...data } = alert;
-      await db.updateTable("state_report_alert").where("id", "=", alert.id).set(data).execute();
-
-      onBack([alert]);
-    },
-  });
 
   return (
     <Stack>
@@ -82,7 +57,7 @@ export const StateReportAlertSectionForm = ({
         Alerte : {title}
       </Typography>
 
-      <StateReportAlertsEmailInput
+      {/* <StateReportAlertsEmailInput
         form={form}
         name={name}
         mandatory_emails={mandatory_emails}
@@ -90,23 +65,23 @@ export const StateReportAlertSectionForm = ({
         isEditingEmail={isEditingEmail}
         setIsEditingEmail={setIsEditingEmail}
         errors={errors}
-      />
+      /> */}
 
-      <SectionCommentaires form={form} name={name} />
-      <SectionPhotos alertId={alert?.id} constatId={constatId} isDisabled={isFormDisabled} />
+      {/* <SectionCommentaires form={form} name={name} />
+      <SectionPhotos alertId={alert?.id} constatId={constatId} isDisabled={isFormDisabled} /> */}
 
       <Divider my="16px" />
 
-      <ShowInReportToggle form={form} name={name} />
+      {/* <ShowInReportToggle form={form} name={name} /> */}
 
-      <FullWidthButton
+      {/* <FullWidthButton
         type="button"
         onClick={() => saveAlertMutation.mutate()}
         disabled={saveAlertMutation.isPending || isFormDisabled}
         style={{ marginTop: "16px" }}
       >
         Enregistrer
-      </FullWidthButton>
+      </FullWidthButton> */}
     </Stack>
   );
 };

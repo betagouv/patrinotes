@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { db } from "../db/db";
-import { type UseFormReturn, useWatch } from "react-hook-form";
+import { FieldValues, type UseFormReturn, useWatch } from "react-hook-form";
 import useDebounce from "react-use/lib/useDebounce";
 import { Banner } from "./Banner";
 import { useNavigate } from "@tanstack/react-router";
@@ -14,7 +14,7 @@ import { Flex } from "./ui/Flex";
 import { Button, Center, Input } from "./MUIDsfr";
 import { useRef } from "react";
 
-export const useSyncForm = <T extends Report | StateReport | Service>({
+export const useSyncForm = <T extends FieldValues>({
   form,
   baseObject,
   disabled,
@@ -23,7 +23,7 @@ export const useSyncForm = <T extends Report | StateReport | Service>({
   form: UseFormReturn<T>;
   baseObject: T;
   disabled?: boolean;
-  syncObject: (id: string, diff: Partial<Report | StateReport>) => Promise<void>;
+  syncObject: (id: string, diff: Partial<T>) => Promise<void>;
 }) => {
   const newObject = useWatch({ control: form.control });
   const diff = disabled ? {} : getDiff(newObject, baseObject);

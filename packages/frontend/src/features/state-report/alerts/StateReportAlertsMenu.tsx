@@ -6,9 +6,9 @@ import { getRouteApi } from "@tanstack/react-router";
 import { useState } from "react";
 import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
 import { v7 } from "uuid";
-import { useLiveService } from "../../../contexts/AuthContext";
+import { useLiveService, useService } from "../../../contexts/AuthContext";
 import { StateReportAlert } from "../../../db/AppSchema";
-import { db } from "../../../db/db";
+import { db, useDbQuery } from "../../../db/db";
 import { MenuTitle } from "../../menu/MenuTitle";
 import { StateReportAlertModalContentProps } from "../StateReportSideMenu";
 import { SectionItem } from "../steps/ConstatDetaille";
@@ -17,6 +17,7 @@ import { StateReportAlertObjetSectionForm } from "./StateReportAlertObjetSection
 import { useStateReportAlerts } from "./StateReportAlerts.hook";
 import { StateReportAlertSectionForm } from "./StateReportAlertSectionForm";
 import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { useStateReportFormContext } from "../utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -24,8 +25,21 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
   const { constatId } = routeApi.useParams();
-  const existingSectionsQuery = useStateReportAlerts(constatId);
-  const existingSections = existingSectionsQuery.data ?? [];
+  const existingSectionsQuery = useDbQuery(
+    db
+      .selectFrom("state_report_alert")
+      .where("state_report_id", "=", constatId)
+      .where((eb) =>
+        eb.or([
+          eb("commentaires", "is not", null),
+          eb("objet_ou_mobilier", "is not", null),
+          eb("probleme", "is not", null),
+        ]),
+      )
+      .select(["alert"]),
+  );
+
+  const existingSections = existingSectionsQuery.data?.map((alert) => alert.alert!) ?? [];
 
   return (
     <Stack px={{ xs: "16px", lg: 0 }}>
@@ -55,7 +69,7 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
           </Box>
         ) : (
           <AlertSectionsList
-            alertSections={existingSections}
+            existingSections={existingSections}
             onClose={onClose}
             selectedSection={selectedSection}
             setSelectedSection={setSelectedSection}
@@ -70,48 +84,50 @@ export type AlertSectionsForm = UseFormReturn<{ alertSections: StateReportAlert[
 export type AlertSectionName = `alertSections.${number}`;
 
 const AlertSectionsList = ({
-  alertSections,
+  existingSections,
   onClose,
   selectedSection,
   setSelectedSection,
 }: {
-  alertSections: StateReportAlert[];
+  existingSections: string[];
   onClose: () => void;
   selectedSection: string | null;
   setSelectedSection: (section: string | null) => void;
 }) => {
   const constatId = routeApi.useParams().constatId;
-  const userService = useLiveService()!;
-  const sectionsForm = useForm<{ alertSections: StateReportAlert[] }>({
-    defaultValues: { alertSections },
-  });
-  const fieldArray = useFieldArray({ name: "alertSections", control: sectionsForm.control });
+
+  const userService = useService();
 
   const addAlertMutation = useMutation({
     mutationFn: async (title: string) => {
-      const emails = getEmailsForSection(title, userService);
+      const emails = getEmailsForSection(title, userService as any);
       const newAlert = await db
         .insertInto("state_report_alert")
         .values({
           id: v7(),
           alert: title,
           state_report_id: constatId,
-          commentaires: "",
+          commentaires: null,
           mandatory_emails: serializeMandatoryEmails(emails),
-          show_in_report: 0,
-          service_id: userService?.id ?? null,
+          show_in_report: 1,
+          service_id: userService.id,
         })
         .returningAll()
         .execute();
 
-      fieldArray.append(newAlert[0]);
+      return newAlert[0];
     },
   });
 
   const onSectionClick = async (title: string) => {
-    const sectionExists = fieldArray.fields.find((f) => f.alert === title);
+    const sections = await db
+      .selectFrom("state_report_alert")
+      .where("state_report_id", "=", constatId)
+      .where("alert", "=", title)
+      .selectAll()
+      .execute();
 
-    if (!sectionExists) {
+    if (!sections.length) {
       await addAlertMutation.mutateAsync(title);
     }
 
@@ -121,44 +137,26 @@ const AlertSectionsList = ({
   if (selectedSection) {
     const commonProps = {
       onClose: () => onClose(),
-      onBack: (data?: StateReportAlert[]) => {
-        // prevents forcing unallowed edits when going back
-        if (!data) sectionsForm.reset({ alertSections });
+      onBack: () => {
         setSelectedSection(null);
       },
-      form: sectionsForm,
       title: selectedSection,
     };
 
     if (selectedSection === OBJETS_MOBILIERS_SECTION) {
       const alerts = [] as { alert: StateReportAlert; name: AlertSectionName }[];
-      fieldArray.fields.forEach((field, index) => {
-        if (field.alert === OBJETS_MOBILIERS_SECTION) {
-          alerts.push({ alert: field, name: `alertSections.${index}` });
-        }
-      });
 
-      return (
-        <StateReportAlertObjetSectionForm
-          alerts={alerts}
-          {...commonProps}
-          appendAlert={() => addAlertMutation.mutateAsync(OBJETS_MOBILIERS_SECTION)}
-        />
-      );
+      return <StateReportAlertObjetSectionForm {...commonProps} />;
     }
 
-    const alertIndex = fieldArray.fields.findIndex((f) => f.alert === selectedSection);
-    const alert = sectionsForm.getValues(`alertSections.${alertIndex}`);
-
-    return <StateReportAlertSectionForm alert={alert} name={`alertSections.${alertIndex}`} {...commonProps} />;
+    return <StateReportAlertSectionForm {...commonProps} />;
   }
 
   return (
     <>
       {alertSectionStaticData.map(({ title, services }) => {
         // can have multiple elements if "Objets et mobiliers"
-        const matchingFields = fieldArray.fields.filter((f) => f.alert === title);
-        const isVisited = matchingFields.some(getIsAlertVisited);
+        const isVisited = existingSections.some((section) => section === title);
 
         return (
           <SectionItem

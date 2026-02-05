@@ -47,7 +47,7 @@ export function useFormWithFocus<TFieldValues extends FieldValues = FieldValues>
   return [form, () => focusedRef.current] as const;
 }
 
-export const useRefreshForm = <FormType extends Report | StateReport | Service>({
+export const useRefreshForm = <FormType extends FieldValues>({
   values,
   getFocused,
   form,

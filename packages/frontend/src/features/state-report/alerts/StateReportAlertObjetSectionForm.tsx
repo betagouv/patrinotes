@@ -8,9 +8,9 @@ import { Box, Stack, Typography } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Fragment, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { PopObjet, StateReportAlert } from "../../../db/AppSchema";
-import { db } from "../../../db/db";
+import { db, useDbQuery } from "../../../db/db";
 import { uppercaseFirstLetterIf } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
@@ -18,6 +18,9 @@ import { SectionCommentaires, SectionPhotos, ShowInReportToggle } from "./Sectio
 import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
+import { useMHObjetsQuery } from "./StateReportAlerts.hook";
+import { useFormWithFocus, useRefreshForm } from "../../../hooks/useFormWithFocus";
+import { useSyncForm } from "#components/SyncForm.tsx";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -25,68 +28,54 @@ export const StateReportAlertObjetSectionForm = ({
   title,
   onClose,
   onBack,
-  alerts,
-  form,
-  appendAlert,
 }: {
   title: string;
   onClose: () => void;
   onBack: (data?: StateReportAlert[]) => void;
-  alerts: { alert: StateReportAlert; name: AlertSectionName }[];
-  form: AlertSectionsForm;
-  appendAlert: () => Promise<void>;
 }) => {
   const isFormDisabled = useIsStateReportDisabled();
-  const stateReportForm = useStateReportFormContext();
+  const { constatId } = routeApi.useParams();
+  const mhObjetsQuery = useMHObjetsQuery(constatId);
 
-  const referencePop = useWatch({ control: stateReportForm.control, name: "reference_pop" });
+  const alertsQuery = useDbQuery(
+    db
+      .selectFrom("state_report_alert")
+      .where("state_report_id", "=", constatId)
+      .where("alert", "=", title)
+      .orderBy("id", "asc")
+      .select("id"),
+  );
 
-  const objetsQuery = useQuery({
-    queryKey: ["stateReportAlerts", "objets", referencePop],
-    enabled: !!referencePop,
-    queryFn: async () => {
-      const objets = await db
-        .selectFrom("pop_objets")
-        .select(["titre_editorial", "reference"])
-        .where("reference_a_une_notice_merimee_mh", "like", "%" + referencePop?.trim() + "%")
+  const emailsQuery = useDbQuery(
+    db
+      .selectFrom("state_report_alert")
+      .where("state_report_id", "=", constatId)
+      .where("alert", "=", title)
+      .select(["mandatory_emails", "additional_emails"]),
+  );
+
+  const saveEmailsMutation = useMutation({
+    mutationFn: async ({
+      mandatory_emails,
+      additional_emails,
+    }: {
+      mandatory_emails: string;
+      additional_emails: string;
+    }) => {
+      await db
+        .updateTable("state_report_alert")
+        .set({ mandatory_emails, additional_emails })
+        .where("state_report_id", "=", constatId)
+        .where("alert", "=", title)
         .execute();
-      return objets;
     },
-    refetchOnWindowFocus: false,
   });
+
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [errors, setErrors] = useState<AlertErrors | null>(null);
 
-  const saveAlertsMutation = useMutation({
-    mutationFn: async () => {
-      const firstAlert = form.getValues(alerts[0].name);
-      const errors = checkAlertErrors(firstAlert);
-
-      if (errors.email.length && isEditingEmail) {
-        setErrors(errors);
-        return;
-      }
-
-      // every 'objet et mobilier' alerts share the same emails
-      const { mandatory_emails, additional_emails } = firstAlert;
-
-      for (const { name } of alerts) {
-        const { id, ...data } = form.getValues(name);
-        await db
-          .updateTable("state_report_alert")
-          .where("id", "=", id)
-          .set({ ...data, mandatory_emails, additional_emails })
-          .execute();
-      }
-
-      onBack(alerts.map((alert) => alert.alert));
-    },
-  });
-
-  const { mandatory_emails, additional_emails } = alerts[0].alert;
-
   return (
-    <Stack>
+    <Stack component="form" onSubmit={(e) => console.log(e)}>
       <MenuTitle onClose={onClose} hideDivider>
         <ModalBackButton onClick={onBack} />
       </MenuTitle>
@@ -96,45 +85,28 @@ export const StateReportAlertObjetSectionForm = ({
       </Typography>
 
       <StateReportAlertsEmailInput
-        form={form}
-        name={alerts[0].name}
-        mandatory_emails={mandatory_emails}
-        additional_emails={additional_emails}
+        mandatory_emails={emailsQuery.data?.[0]?.mandatory_emails}
+        additional_emails={emailsQuery.data?.[0]?.additional_emails}
+        saveEmails={(mandatory_emails, additional_emails) =>
+          saveEmailsMutation.mutateAsync({ mandatory_emails, additional_emails })
+        }
         isEditingEmail={isEditingEmail}
         setIsEditingEmail={setIsEditingEmail}
         errors={errors}
       />
 
       <Stack mt="24px">
-        {objetsQuery.isLoading ? (
+        {mhObjetsQuery.isLoading ? (
           <Center mt="80px">
             <Spinner />
           </Center>
-        ) : (
-          alerts.map(({ alert, name }, index) => (
-            <Fragment key={alert.id}>
-              <AlertObjetForm form={form} name={name} objets={objetsQuery.data ?? []} />
-              {index < alerts.length - 1 && <Divider my="24px" />}
-            </Fragment>
-          ))
-        )}
+        ) : null}
 
         <Flex gap="8px" mb="16px">
           <FullWidthButton
             type="button"
-            iconId="ri-add-line"
-            onClick={() => appendAlert()}
-            disabled={isFormDisabled}
-            style={{ marginTop: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}
-            priority="secondary"
-          >
-            Ajouter objet ou mobilier
-          </FullWidthButton>
-
-          <FullWidthButton
-            type="button"
-            onClick={() => saveAlertsMutation.mutate()}
-            disabled={saveAlertsMutation.isPending || isFormDisabled}
+            // onClick={() => saveAlertsMutation.mutate()}
+            // disabled={saveAlertsMutation.isPending || isFormDisabled}
             style={{ marginTop: "16px" }}
           >
             Enregistrer
