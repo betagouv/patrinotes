@@ -40,7 +40,7 @@ const ServicePage = () => {
   };
 
   const activeSection = useActiveSection(sectionIds);
-  console.log("activeSection", activeSection);
+
   return (
     <Flex
       gap={{ xs: "0", lg: "40px" }}

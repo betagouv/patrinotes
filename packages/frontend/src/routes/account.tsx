@@ -182,7 +182,8 @@ const Profile = () => {
         <Button
           iconId="ri-save-3-line"
           iconPosition="left"
-          type="submit"
+          type="button"
+          onClick={() => saveUserMutation.mutate(userData)}
           disabled={!canSave || saveUserMutation.isPending}
         >
           Enregistrer
