@@ -32,10 +32,7 @@ export const ConstatDetaille = () => {
   );
 
   return (
-    <Stack mb={{ xs: "40px", lg: "80px" }} px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "44px" }}>
-      <Typography variant="h6" mb="32px" display={{ xs: "none", lg: "block" }}>
-        Constat détaillé
-      </Typography>
+    <Stack mb={{ xs: "40px", lg: "80px" }} px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "24px" }}>
       <Typography fontSize="14px" mb="16px">
         Renseignez vos observations pour chaque partie visitée. À défaut, chacune sera notée comme non-visitée.
       </Typography>
@@ -94,7 +91,7 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
       />
       {chunkedSections.map((sectionChunk, index) => {
         return (
-          <Flex flexDirection="row" justifyContent="space-between" width="100%" key={index} gap="8px">
+          <Flex flexDirection="row" justifyContent="space-between" width="100%" key={index} gap="24px">
             {sectionChunk.map((section) => {
               const visited = visitedSections?.find((vs) => vs.section === section);
               const isVisited =

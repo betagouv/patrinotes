@@ -7,7 +7,7 @@ import { scrollToTop, StateReportSummary } from "./StateReportSummary";
 import { Tabs } from "#components/Tabs.tsx";
 import { MonumentHistorique } from "./steps/MonumentHistorique";
 import { fr, FrIconClassName, RiIconClassName } from "@codegouvfr/react-dsfr";
-import { getRouteApi, UseNavigateResult } from "@tanstack/react-router";
+import { getRouteApi, useNavigate, UseNavigateResult } from "@tanstack/react-router";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { ContexteVisite } from "./steps/ContexteVisite";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
@@ -29,35 +29,92 @@ export const WithReferencePop = () => {
   const immeubleQuery = useDbQuery(db.selectFrom("pop_immeubles").selectAll().where("id", "=", referencePop));
 
   const { step } = routeApi.useSearch();
+  const navigate = routeApi.useNavigate();
 
   const hasReferencePop = !!referencePop;
   if (!hasReferencePop) return null;
+
+  const shouldShowTabs = isDesktop && ["constat-detaille", "constat-general"].includes(step);
 
   return (
     <>
       <Box width="100%" height="100%">
         {immeubleQuery.error && (
-          <div>Erreur lors du chargement de l'immeuble : {String(immeubleQuery.error.message)}</div>
+          <Box>Erreur lors du chargement de l'immeuble : {String(immeubleQuery.error.message)}</Box>
         )}
         {immeubleQuery.data && (
-          <Flex height="100%" width="100%" flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "24px" }}>
-            <Box minWidth="280px">
-              <StateReportSummary />
-            </Box>
-            <Box
-              borderLeft={{ xs: "none", lg: "1px solid" }}
-              borderColor={fr.colors.decisions.border.default.grey.default + " !important"}
-              flex="1"
-            >
-              <ContentSwitch />
-              {/* {isDesktop || step === "informations" ? null : <ButtonsSwitch />} */}
-            </Box>
+          <Flex flexDirection={"column"} height="100%" alignItems="center">
+            <Flex width="100%" mb="24px" flexDirection={{ xs: "column", lg: "row" }}>
+              <Box
+                minWidth="280px"
+                width={{ xs: "100%", lg: accordionWidth }}
+                marginLeft={{ xs: "0", lg: accordionMarginLeft }}
+                paddingX={{ xs: "0", lg: accordionPadding }}
+              >
+                <StateReportSummary />
+              </Box>
+              <Box
+                borderLeft={{ xs: "none", lg: "1px solid" }}
+                borderColor={fr.colors.decisions.border.default.grey.default + " !important"}
+                width={"100%"}
+              >
+                {shouldShowTabs ? (
+                  <Flex width="100%">
+                    <Tabs
+                      control={[step, (step: string) => navigate({ search: { step: step as any, mode: "view" } })]}
+                      options={[
+                        {
+                          component: null,
+                          id: "constat-detaille",
+                          label: "Constat détaille",
+                          props: {
+                            sx: {
+                              width: `calc(((${contentWidth} + 64px) / 2) - 24px)`,
+                              flex: "unset !important",
+                              height: "60px",
+                              fontWeight: 500,
+                              fontSize: "16px !important",
+                              color: fr.colors.decisions.text.actionHigh.blueFrance.default,
+                            },
+                            position: "absolute",
+                            left: "64px",
+                          },
+                        },
+                        {
+                          component: null,
+                          id: "constat-general",
+                          label: "Constat général",
+                          props: {
+                            sx: {
+                              pl: "24px",
+                              height: "60px",
+                              fontWeight: 500,
+                              fontSize: "16px !important",
+                              color: fr.colors.decisions.text.actionHigh.blueFrance.default,
+                            },
+                          },
+                        },
+                      ]}
+                    />
+                  </Flex>
+                ) : null}
+                <Box width={{ xs: "100%", lg: contentWidth }}>
+                  <ContentSwitch />
+                </Box>
+              </Box>
+            </Flex>
           </Flex>
         )}
       </Box>
     </>
   );
 };
+
+const fullWidth = "min(100%, 1200px)";
+const accordionWidth = "280px";
+const accordionPadding = "16px";
+const accordionMarginLeft = `calc((100% - ${fullWidth}) / 2)`;
+const contentWidth = `calc(${fullWidth} - ${accordionWidth} - 24px)`;
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -132,7 +189,7 @@ export const ButtonsSwitch = () => {
     scrollToTop();
   };
 
-  const { constatId } = routeApi.useParams();
+  const isDesktop = useIsDesktop();
 
   const buttons: Record<StateReportStep, ReactNode> = {
     informations: <InformationsButtons navigateToStep={navigateToStep} />,
@@ -145,7 +202,11 @@ export const ButtonsSwitch = () => {
     "constat-detaille": (
       <ButtonsContainer>
         <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
-        <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
+        {isDesktop ? (
+          <CreateButton />
+        ) : (
+          <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
+        )}
       </ButtonsContainer>
     ),
     "constat-general": (

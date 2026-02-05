@@ -25,14 +25,10 @@ import { ButtonsSwitch } from "../WithReferencePop";
 const routeApi = getRouteApi("/constat/$constatId");
 
 export const ConstatGeneral = () => {
-  const form = useStateReportFormContext();
   const isDisabled = useIsStateReportDisabled();
 
   return (
-    <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "44px" }} mb="60px">
-      <Typography variant="h6" mb="32px" display={{ xs: "none", lg: "block" }}>
-        Constat général
-      </Typography>
+    <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "24px" }} mb="60px">
       <MandatoryFieldReminder />
       <EtatGeneralRadioButtons isDisabled={isDisabled} />
       <ProportionsRadioButtons isDisabled={isDisabled} />
