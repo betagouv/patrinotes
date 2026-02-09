@@ -3,7 +3,7 @@ import { Flex } from "./ui/Flex";
 import Button from "@codegouvfr/react-dsfr/Button";
 import { createContext, useContext, useState } from "react";
 
-export const Tabs = ({ options, control }: TabsProps) => {
+export const Tabs = ({ options, control, ...boxProps }: TabsProps & BoxProps) => {
   const [value, setValue] = control ?? useState(options[0].id);
 
   const onClick = (option: TabOption) => {
@@ -12,7 +12,7 @@ export const Tabs = ({ options, control }: TabsProps) => {
 
   return (
     <TabContext.Provider value={{ value, setValue }}>
-      <Flex flex="1" flexDirection="column" pb={{ xs: "16px", lg: "0" }}>
+      <Flex flex="1" flexDirection="column" pb={{ xs: "16px", lg: "0" }} {...boxProps}>
         <Flex flex="1" flexDirection={"row"} justifyContent={"center"} width="100%" height="56px" overflow="hidden">
           {options.map((option) => (
             <TabButton

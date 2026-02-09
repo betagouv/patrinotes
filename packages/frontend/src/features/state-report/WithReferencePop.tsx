@@ -24,7 +24,6 @@ import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateRepor
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
-  const isDesktop = useIsDesktop();
   const referencePop = useWatch({ control: form.control, name: "reference_pop" });
   const immeubleQuery = useDbQuery(db.selectFrom("pop_immeubles").selectAll().where("id", "=", referencePop));
 
@@ -34,7 +33,7 @@ export const WithReferencePop = () => {
   const hasReferencePop = !!referencePop;
   if (!hasReferencePop) return null;
 
-  const shouldShowTabs = isDesktop && ["constat-detaille", "constat-general"].includes(step);
+  const shouldShowTabs = ["constat-detaille", "constat-general"].includes(step);
 
   return (
     <>
@@ -61,6 +60,7 @@ export const WithReferencePop = () => {
                 {shouldShowTabs ? (
                   <Flex width="100%">
                     <Tabs
+                      sx={{ pb: 0 }}
                       control={[step, (step: string) => navigate({ search: { step: step as any, mode: "view" } })]}
                       options={[
                         {
@@ -69,14 +69,14 @@ export const WithReferencePop = () => {
                           label: "Constat détaille",
                           props: {
                             sx: {
-                              width: `calc(((${contentWidth} + 64px) / 2) - 24px)`,
+                              width: { xs: "50%", lg: `calc(((${contentWidth} + 64px) / 2) - 24px)` },
                               flex: "unset !important",
                               height: "60px",
                               fontWeight: 500,
                               fontSize: "16px !important",
                               color: fr.colors.decisions.text.actionHigh.blueFrance.default,
                             },
-                            position: "absolute",
+                            position: { sx: "unset", lg: "absolute" },
                             left: "64px",
                           },
                         },
