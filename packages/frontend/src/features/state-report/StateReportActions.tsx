@@ -1,5 +1,5 @@
 import Button, { ButtonProps } from "@codegouvfr/react-dsfr/Button";
-import { forwardRef } from "react";
+import { forwardRef, ReactNode, useState } from "react";
 import { useUser } from "../../contexts/AuthContext";
 import { useMutation } from "@tanstack/react-query";
 import { downloadFile } from "../../utils";
@@ -14,8 +14,11 @@ import { getPDFInMailName } from "@cr-vif/pdf";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { useStyles } from "tss-react";
-import { styled } from "@mui/material";
+import { Box, Dialog, DialogTitle, styled } from "@mui/material";
 import { StateReport } from "../../db/AppSchema";
+import { ModalCloseButton } from "../menu/MenuTitle";
+import { ConfirmationModal } from "#components/ui/ConfirmationModal.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
 
 const getStateReportMailName = (stateReport: StateReport) => {
   return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
@@ -36,8 +39,12 @@ function cleanString(str: string): string {
 export const StateReportActions = forwardRef<HTMLDivElement, { report: StateReportWithUser }>(({ report }, ref) => {
   const user = useUser()!;
 
+  const navigate = useNavigate();
+
   const hasAccess = report.created_by === user.id;
   const isDraft = !report.attachment_id;
+
+  const [isDeleteWarningOpen, setIsDeleteWarningOpen] = useState(false);
   const deleteMutation = useDeleteMutation();
 
   const downloadPdfMutation = useMutation({
@@ -70,6 +77,23 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
 
   return (
     <Flex ref={ref} bgcolor="#ECECFE" gap="0" flexDirection="column">
+      {isDraft ? (
+        <>
+          <ReportAction
+            iconId="ri-edit-line"
+            label="Éditer"
+            onClick={() =>
+              navigate({
+                to: "/constat/$constatId",
+                params: { constatId: report.id },
+                search: { mode: "view", step: "constat-general" },
+              })
+            }
+          />
+          <Divider height="1px" color="#DDD" />
+        </>
+      ) : null}
+
       <ReportAction iconId="ri-file-add-line" label="Dupliquer" onClick={() => duplicateMutation.mutate()} />
 
       {!isDraft ? (
@@ -82,10 +106,28 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
       {hasAccess ? (
         <>
           <Divider height="1px" color="#DDD" />
+          {isDeleteWarningOpen ? (
+            <ConfirmationModal
+              title="Supprimer le document"
+              content={
+                <>
+                  <span>
+                    Êtes-vous sûr de vouloir supprimer le constat "<b>{report.titre_edifice}</b>" ?
+                  </span>
+                  <br />
+                  <span>Cette action est irréversible.</span>
+                </>
+              }
+              buttonLabel="Supprimer"
+              onConfirm={() => deleteMutation.mutate(report.id)}
+              onClose={() => setIsDeleteWarningOpen(false)}
+            />
+          ) : null}
           <ReportAction
             label="Supprimer"
-            onClick={() => deleteMutation.mutate(report.id)}
+            onClick={() => setIsDeleteWarningOpen(true)}
             iconId="ri-delete-bin-2-line"
+            color={fr.colors.decisions.text.actionHigh.redMarianne.default}
           />
         </>
       ) : null}
@@ -97,13 +139,15 @@ const ReportAction = ({
   iconId,
   label,
   onClick,
+  color,
 }: {
   iconId: ButtonProps["iconId"];
   label: string;
   onClick: () => void;
+  color?: string;
 }) => {
   return (
-    <ReportActionButton iconId={iconId as any} onClick={onClick} priority="tertiary no outline">
+    <ReportActionButton iconId={iconId as any} onClick={onClick} priority="tertiary no outline" sx={{ color }}>
       {label}
     </ReportActionButton>
   );

@@ -103,7 +103,7 @@ export const ImmeubleAutocomplete = () => {
               },
             }}
           >
-            <Box p="16px" width="800px">
+            <Box p="16px" width={"100%"}>
               <ModalCloseButton onClose={() => setIsWarningOpen(false)} />
               <DialogTitle>Changer de monument</DialogTitle>
               <Box p="24px">
