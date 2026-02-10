@@ -192,19 +192,22 @@ const SectionModal = ({
         </DialogTitle>
 
         {selectedSection ? (
-          <Stack gap="16px" px={{ xs: "0", lg: "16px" }}>
-            <SectionForm visitedSection={selectedSection} isDisabled={isDisabled} />
-            <FullWidthButton disabled={isDisabled} onClick={() => onClose()}>
-              Enregistrer
-            </FullWidthButton>
-          </Stack>
+          <SectionForm visitedSection={selectedSection} isDisabled={isDisabled} onClose={onClose} />
         ) : null}
       </Box>
     </Dialog>
   );
 };
 
-const SectionForm = ({ visitedSection, isDisabled }: { visitedSection: VisitedSection; isDisabled: boolean }) => {
+const SectionForm = ({
+  visitedSection,
+  isDisabled,
+  onClose,
+}: {
+  visitedSection: VisitedSection;
+  isDisabled: boolean;
+  onClose: () => void;
+}) => {
   const [values, setValues] = useState(visitedSection);
 
   const { isRecording, transcript, toggle } = useSpeechToTextV2({
@@ -251,42 +254,58 @@ const SectionForm = ({ visitedSection, isDisabled }: { visitedSection: VisitedSe
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
 
   return (
-    <Stack>
-      <SectionEtatGeneralRadioButtons
-        section={values}
-        onChange={(label) => setValues({ ...values, etat_general: label })}
-        disabled={isDisabled}
-      />
-      <SectionProportionsRadioButtons
-        section={values}
-        onChange={(label) => setValues({ ...values, proportion_dans_cet_etat: label })}
-        disabled={isDisabled}
-      />
-
-      <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
-
-      <Flex flexDirection="column" mt="24px">
-        <Input
-          sx={{ mb: "16px !important" }}
-          textArea
-          disabled={isDisabled || isRecording}
-          label="Commentaires"
-          nativeTextAreaProps={{
-            rows: 6,
-            ...textAreaProps,
-          }}
+    <Stack gap="16px" px={{ xs: "0", lg: "16px" }}>
+      <Stack>
+        <SectionEtatGeneralRadioButtons
+          section={values}
+          onChange={(label) => setValues({ ...values, etat_general: label })}
+          disabled={isDisabled}
         />
-        {isDisabled ? null : (
-          <Button
-            type="button"
-            priority={isRecording ? "primary" : "tertiary"}
-            iconId="ri-mic-fill"
-            onClick={() => toggle()}
-          >
-            {isRecording ? <>En cours</> : <>Dicter</>}
-          </Button>
-        )}
-      </Flex>
+        <SectionProportionsRadioButtons
+          section={values}
+          onChange={(label) => setValues({ ...values, proportion_dans_cet_etat: label })}
+          disabled={isDisabled}
+        />
+
+        <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
+
+        <Flex flexDirection="column" mt="24px">
+          <Input
+            sx={{ mb: "16px !important" }}
+            textArea
+            disabled={isDisabled || isRecording}
+            label="Commentaires"
+            nativeTextAreaProps={{
+              rows: 6,
+              ...textAreaProps,
+            }}
+          />
+          {isDisabled ? null : (
+            <Button
+              type="button"
+              priority={isRecording ? "primary" : "tertiary"}
+              iconId="ri-mic-fill"
+              onClick={() => toggle()}
+            >
+              {isRecording ? <>En cours</> : <>Dicter</>}
+            </Button>
+          )}
+        </Flex>
+      </Stack>
+      <FullWidthButton disabled={isDisabled} onClick={() => onClose()}>
+        Enregistrer
+      </FullWidthButton>
+      <FullWidthButton
+        disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}
+        onClick={() =>
+          setValues((values) => ({ ...values, commentaires: null, etat_general: null, proportion_dans_cet_etat: null }))
+        }
+        priority="tertiary no outline"
+        iconId="ri-arrow-go-back-line"
+        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        Effacer les informations
+      </FullWidthButton>
     </Stack>
   );
 };
