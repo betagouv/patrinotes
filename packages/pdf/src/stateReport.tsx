@@ -54,6 +54,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
                 {children}
               </View>
             ),
+            unbreakable: (props) => <View {...props} wrap={false} />,
           }}
           style={{
             fontSize: "10px",
@@ -481,7 +482,7 @@ const generateImagesTable = (images: (Image | undefined)[]) => {
 
 const generateImageCell = (image: Image | undefined) => {
   if (!image) return '<div class="column"></div>';
-  return `<div class="column">
+  return `<unbreakable class="column">
       ${
         image.title
           ? `<p>
@@ -496,7 +497,7 @@ const generateImageCell = (image: Image | undefined) => {
 
         </div>
       </div>
-  </div>`;
+  </unbreakable>`;
 };
 
 // format: option[:commentaire]/option[:commentaire]/...
