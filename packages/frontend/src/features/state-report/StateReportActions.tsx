@@ -78,6 +78,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
           <ReportAction label="Télécharger" onClick={() => downloadPdfMutation.mutate()} iconId="ri-download-line" />
         </>
       ) : null}
+
       {hasAccess ? (
         <>
           <Divider height="1px" color="#DDD" />

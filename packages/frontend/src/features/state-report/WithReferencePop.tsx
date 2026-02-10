@@ -66,7 +66,7 @@ export const WithReferencePop = () => {
                         {
                           component: null,
                           id: "constat-detaille",
-                          label: "Constat détaille",
+                          label: "Constat détaillé",
                           props: {
                             sx: {
                               width: { xs: "50%", lg: `calc(((${contentWidth} + 64px) / 2) - 24px)` },
