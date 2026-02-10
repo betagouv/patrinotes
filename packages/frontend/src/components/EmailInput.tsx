@@ -43,7 +43,6 @@ export const EmailInput = ({
     if (!value.includes(emailToAdd)) {
       onValueChange([...value, emailToAdd]);
     }
-
     send({ type: "CLEAR" });
   };
 
@@ -105,24 +104,6 @@ export const EmailInput = ({
             onKeyDown: handleKeyPress,
           }}
         />
-
-        {!single && isDesktop ? (
-          <Button
-            sx={{
-              zIndex: 1,
-              position: "absolute",
-              right: "0",
-              bottom: "1.5rem",
-              backgroundColor: "transparent !important",
-            }}
-            type="button"
-            priority="tertiary no outline"
-            iconId="ri-add-line"
-            onClick={onClick}
-          >
-            Ajouter
-          </Button>
-        ) : null}
 
         {isOpen ? (
           <Box
@@ -186,7 +167,7 @@ export const EmailInput = ({
         ) : null}
       </Box>
 
-      {!single && !isDesktop ? (
+      {!single ? (
         <Button
           sx={{
             zIndex: 1,
@@ -207,7 +188,7 @@ export const EmailInput = ({
           gap="8px"
           justifyContent="flex-start"
           alignItems="center"
-          mt={!single && !isDesktop ? "16px" : "-16px"}
+          mt={!single ? "16px" : "-16px"}
           width="100%"
           flexWrap="wrap"
         >

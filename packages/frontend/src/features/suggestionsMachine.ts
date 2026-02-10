@@ -73,6 +73,12 @@ export const createSuggestionMachine = <T extends any>({
       query: (input as any)?.query ?? "",
       suggestions: [],
     }),
+    on: {
+      CLEAR: {
+        target: ".idle",
+        actions: "clearQuery",
+      },
+    },
     states: {
       idle: {
         on: {
@@ -106,10 +112,6 @@ export const createSuggestionMachine = <T extends any>({
           TYPE: {
             actions: "updateQuery",
           },
-          CLEAR: {
-            target: "idle",
-            actions: "clearQuery",
-          },
           BLUR: "idle",
         },
       },
@@ -123,10 +125,6 @@ export const createSuggestionMachine = <T extends any>({
             actions: "updateQuery",
           },
           BLUR: "idle",
-          CLEAR: {
-            target: "idle",
-            actions: "clearQuery",
-          },
         },
       },
       fetching: {
@@ -148,10 +146,6 @@ export const createSuggestionMachine = <T extends any>({
             actions: "updateQuery",
           },
           BLUR: "idle",
-          CLEAR: {
-            target: "idle",
-            actions: "clearQuery",
-          },
         },
       },
       suggesting: {
@@ -165,10 +159,6 @@ export const createSuggestionMachine = <T extends any>({
             actions: "selectAddress",
           },
           BLUR: "idle",
-          CLEAR: {
-            target: "idle",
-            actions: "clearQuery",
-          },
           REMOVE: {
             actions: "removeSuggestion",
           },
@@ -180,10 +170,6 @@ export const createSuggestionMachine = <T extends any>({
             target: "editing",
             actions: "updateQuery",
           },
-          CLEAR: {
-            target: "idle",
-            actions: "clearQuery",
-          },
           BLUR: "idle",
         },
       },
@@ -192,10 +178,6 @@ export const createSuggestionMachine = <T extends any>({
           TYPE: {
             target: "editing",
             actions: "updateQuery",
-          },
-          CLEAR: {
-            target: "idle",
-            actions: "clearQuery",
           },
         },
       },
