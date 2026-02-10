@@ -66,7 +66,7 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
         <>
           <ReportAction
             iconId="ri-pencil-line"
-            label="Editer"
+            label="Éditer"
             onClick={() => navigate({ to: "/edit/$reportId", params: { reportId: report.id } })}
           />
           <Divider height="1px" color="#DDD" />
@@ -83,19 +83,21 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
         <>
           <Divider height="1px" color="#DDD" />
 
-          <ConfirmationModal
-            title="Supprimer le document"
-            content={
-              <>
-                <span>Êtes-vous sûr de vouloir supprimer {getReportToDeleteTitle(report)}</span>
-                <br />
-                <span>Cette action est irréversible.</span>
-              </>
-            }
-            buttonLabel="Supprimer"
-            onConfirm={() => deleteMutation.mutate(report.id)}
-            onClose={() => setIsDeleteWarningOpen(false)}
-          />
+          {isDeleteWarningOpen ? (
+            <ConfirmationModal
+              title="Supprimer le document"
+              content={
+                <>
+                  <span>Êtes-vous sûr de vouloir supprimer {getReportToDeleteTitle(report)}</span>
+                  <br />
+                  <span>Cette action est irréversible.</span>
+                </>
+              }
+              buttonLabel="Supprimer"
+              onConfirm={() => deleteMutation.mutate(report.id)}
+              onClose={() => setIsDeleteWarningOpen(false)}
+            />
+          ) : null}
           <ReportAction
             color={fr.colors.decisions.text.actionHigh.redMarianne.default}
             iconId="ri-delete-bin-2-line"
