@@ -7,12 +7,22 @@ import { AuthUser } from "../routes/authMiddleware";
 import { text } from "stream/consumers";
 import { OnNewImage } from "./uploadService";
 import { Selectable } from "kysely";
+import { ENV } from "../envVars";
 
 const debug = makeDebug("sync-service");
 
 export const Nullable = <T extends TSchema>(schema: T) => Type.Optional(Type.Union([schema, Type.Null()]));
 
 const blackListedTables = ["internal_user"];
+
+const getBlackListedTables = () => {
+  const base = [...blackListedTables];
+  if (!ENV.VITE_ALERTES_MH_ENABLED) {
+    base.push("state_report_alert", "state_report_alert_attachment");
+  }
+
+  return base;
+};
 
 export class SyncService {
   async applyCrud(operation: Static<typeof crudTSchema>, user: AuthUser) {
@@ -31,7 +41,7 @@ export class SyncService {
       })
       .execute();
 
-    if (blackListedTables.includes(operation.type)) {
+    if (getBlackListedTables().includes(operation.type)) {
       return { error: "Unauthorized" };
     }
 

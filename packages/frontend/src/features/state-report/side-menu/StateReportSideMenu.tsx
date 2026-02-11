@@ -10,6 +10,7 @@ import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { StateReportAlertsMenu } from "../alerts/StateReportAlertsMenu";
 import { createStore } from "@xstate/store";
 import { StateReportMenuStates, useSideMenu } from "./StateReportSideMenu.store";
+import { ENV } from "../../../envVars";
 
 export const StateReportSideMenu = () => {
   const [sideMenu, setSideMenu] = useSideMenu();
@@ -29,6 +30,7 @@ export const StateReportSideMenu = () => {
           onClick={() => setSideMenu("alerts")}
           sx={{ width: "254px", justifyContent: "center" }}
           iconId="ri-alarm-warning-fill"
+          disabled={!ENV.VITE_ALERTES_MH_ENABLED}
         >
           Alertes
         </Button>

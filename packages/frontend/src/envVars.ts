@@ -9,6 +9,8 @@ const envSchema = z.object({
   VITE_AUTH_URL: z.string(),
   VITE_AUTH_REALM: z.string(),
   VITE_AUTH_CLIENT_ID: z.string(),
+
+  VITE_ALERTES_MH_ENABLED: z.string().optional(),
 });
 
 const isSW = typeof window === "undefined";

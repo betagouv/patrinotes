@@ -41,6 +41,8 @@ const envSchema = z.object({
   AUTH_ADMIN_CLIENT_SECRET: z.string(),
   AUTH_CLIENT_SECRET: z.string(),
   // COLLECTIF_OBJETS_DATASETTE_URL: z.string(),
+
+  VITE_ALERTES_MH_ENABLED: z.string().optional(),
 });
 
 export const ENV = envSchema.parse(process.env);
