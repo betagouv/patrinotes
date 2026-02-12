@@ -10,7 +10,7 @@ export const SentConstatPdf = () => {
 
   return (
     <Center height="100%">
-      <Center flexDirection="column" width="100%" mt="24px">
+      <Center flexDirection="column" width="100%" mt="24px" mb={{ xs: "48px", lg: "80px" }}>
         <Box component="img" src={sentImage} alt="Courriel envoyé" width={{ xs: "80px", lg: "120px" }} />
         <Box mt="16px" color="text-title-blue-france" textAlign="center" fontSize={{ xs: "18px", lg: "24px" }}>
           Votre constat d'état a bien été envoyé !
