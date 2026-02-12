@@ -202,11 +202,7 @@ export const ButtonsSwitch = () => {
     "constat-detaille": (
       <ButtonsContainer>
         <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
-        {isDesktop ? (
-          <CreateButton />
-        ) : (
-          <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
-        )}
+        <CreateButton />
       </ButtonsContainer>
     ),
     "constat-general": (
