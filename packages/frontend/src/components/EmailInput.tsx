@@ -202,7 +202,6 @@ export const EmailInput = ({
                   onValueChange(value.filter((v) => v !== email));
                 },
               }}
-              small
             >
               {email}
             </Tag>
