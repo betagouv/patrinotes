@@ -28,7 +28,21 @@ export const ConstatGeneral = () => {
   const isDisabled = useIsStateReportDisabled();
 
   return (
-    <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "24px" }} mb="60px">
+    <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "14px" }} mb="60px">
+      <Typography
+        display={{
+          xs: "none",
+          lg: "block",
+        }}
+        fontSize="16px !important"
+        variant="h3"
+        fontWeight="500"
+        pt="0 !important"
+        mb="40px"
+        color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+      >
+        Constat général
+      </Typography>
       <MandatoryFieldReminder />
       <EtatGeneralRadioButtons isDisabled={isDisabled} />
       <ProportionsRadioButtons isDisabled={isDisabled} />

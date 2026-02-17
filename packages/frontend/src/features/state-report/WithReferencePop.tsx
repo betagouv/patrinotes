@@ -21,6 +21,7 @@ import { useStateReportAlerts } from "./alerts/StateReportAlerts.hook";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
 import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
+import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
@@ -43,7 +44,7 @@ export const WithReferencePop = () => {
         )}
         {immeubleQuery.data && (
           <Flex flexDirection={"column"} height="100%" alignItems="center">
-            <Flex width="100%" mb="24px" flexDirection={{ xs: "column", lg: "row" }}>
+            <Flex width="100%" mb={{ xs: "24px", lg: "0" }} flexDirection={{ xs: "column", lg: "row" }}>
               <Box
                 minWidth="280px"
                 width={{ xs: "100%", lg: accordionWidth }}
@@ -57,47 +58,6 @@ export const WithReferencePop = () => {
                 borderColor={fr.colors.decisions.border.default.grey.default + " !important"}
                 width={"100%"}
               >
-                {shouldShowTabs ? (
-                  <Flex width="100%">
-                    <Tabs
-                      sx={{ pb: 0 }}
-                      control={[step, (step: string) => navigate({ search: { step: step as any, mode: "view" } })]}
-                      options={[
-                        {
-                          component: null,
-                          id: "constat-detaille",
-                          label: "Constat détaillé",
-                          props: {
-                            sx: {
-                              width: { xs: "50%", lg: `calc(((${contentWidth} + 64px) / 2) - 24px)` },
-                              flex: "unset !important",
-                              height: "60px",
-                              fontWeight: 500,
-                              fontSize: "16px !important",
-                              color: fr.colors.decisions.text.actionHigh.blueFrance.default,
-                            },
-                            position: { sx: "unset", lg: "absolute" },
-                            left: "64px",
-                          },
-                        },
-                        {
-                          component: null,
-                          id: "constat-general",
-                          label: "Constat général",
-                          props: {
-                            sx: {
-                              pl: "24px",
-                              height: "60px",
-                              fontWeight: 500,
-                              fontSize: "16px !important",
-                              color: fr.colors.decisions.text.actionHigh.blueFrance.default,
-                            },
-                          },
-                        },
-                      ]}
-                    />
-                  </Flex>
-                ) : null}
                 <Box width={{ xs: "100%", lg: contentWidth }}>
                   <ContentSwitch />
                 </Box>
@@ -161,11 +121,12 @@ const RightButton = ({
   children,
   onClick,
   customIcon,
+  ...props
 }: {
   children: ReactNode;
   onClick: () => void;
   customIcon?: FrIconClassName | RiIconClassName;
-}) => {
+} & ButtonProps) => {
   return (
     <Button
       iconPosition="right"
@@ -175,6 +136,7 @@ const RightButton = ({
         onClick,
       }}
       sx={buttonSxProps}
+      {...props}
     >
       {children}
     </Button>
@@ -196,18 +158,37 @@ export const ButtonsSwitch = () => {
     "contexte-visite": (
       <ButtonsContainer>
         <LeftButton onClick={() => navigateToStep("informations")}>Informations du MH</LeftButton>
-        <RightButton onClick={() => navigateToStep("constat-general")}>Constat général</RightButton>
+        <RightButton onClick={() => navigateToStep("constat-detaille")}>Constat d'état</RightButton>
       </ButtonsContainer>
     ),
     "constat-detaille": (
       <ButtonsContainer>
-        <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
+        <Flex alignItems="center" gap="8px" flexDirection={{ xs: "column", lg: "row" }}>
+          <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
+          <RightButton
+            priority="secondary"
+            onClick={() => navigateToStep("constat-general")}
+            customIcon="fr-icon-edit-fill"
+          >
+            Constat général
+          </RightButton>
+        </Flex>
+
         <CreateButton />
       </ButtonsContainer>
     ),
     "constat-general": (
       <ButtonsContainer>
-        <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
+        <Flex alignItems="center" gap="8px" flexDirection={{ xs: "column", lg: "row" }}>
+          <LeftButton onClick={() => navigateToStep("contexte-visite")}>Contexte de la visite</LeftButton>
+          <RightButton
+            priority="secondary"
+            onClick={() => navigateToStep("constat-detaille")}
+            customIcon="fr-icon-edit-fill"
+          >
+            Constat détaillé
+          </RightButton>
+        </Flex>
         <CreateButton />
       </ButtonsContainer>
     ),

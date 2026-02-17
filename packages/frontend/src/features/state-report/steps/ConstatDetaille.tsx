@@ -32,8 +32,22 @@ export const ConstatDetaille = () => {
   );
 
   return (
-    <Stack mb={{ xs: "40px", lg: "80px" }} px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "24px" }}>
-      <Typography fontSize="14px" mb="16px">
+    <Stack mb={{ xs: "40px", lg: "80px" }} px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "14px" }}>
+      <Typography
+        display={{
+          xs: "none",
+          lg: "block",
+        }}
+        fontSize="16px !important"
+        variant="h3"
+        fontWeight="500"
+        pt="0 !important"
+        color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+      >
+        Constat détaillé
+      </Typography>
+
+      <Typography fontSize="14px" mb="32px" mt="40px">
         Renseignez vos observations pour chaque partie visitée. À défaut, chacune sera notée comme non-visitée.
       </Typography>
 

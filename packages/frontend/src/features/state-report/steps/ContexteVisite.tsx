@@ -14,6 +14,7 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { MandatoryFieldReminder } from "./ConstatGeneral";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ButtonsSwitch } from "../WithReferencePop";
+import { fr } from "@codegouvfr/react-dsfr";
 
 export const ContexteVisite = () => {
   const form = useStateReportFormContext();
@@ -23,7 +24,7 @@ export const ContexteVisite = () => {
     <Stack
       px="16px"
       pl={{ xs: "16px", lg: "64px" }}
-      pt={{ xs: "16px", lg: "44px" }}
+      pt={{ xs: "16px", lg: "14px" }}
       mb="40px"
       sx={{
         input: {
@@ -31,14 +32,24 @@ export const ContexteVisite = () => {
         },
       }}
     >
-      <Typography variant="h6" mb="32px" display={{ xs: "none", lg: "block" }}>
+      <Typography
+        display={{
+          xs: "none",
+          lg: "block",
+        }}
+        fontSize="16px !important"
+        variant="h3"
+        fontWeight="500"
+        pt="0 !important"
+        mb="40px"
+        color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+      >
         Contexte de la visite
       </Typography>
       <MandatoryFieldReminder />
       <NatureVisiteRadioButtons isDisabled={isDisabled} />
       <BilanQuinquennalRadioButtons isDisabled={isDisabled} />
       <Divider mb="16px" />
-
       <DateInput
         isDisabled={isDisabled}
         form={form}

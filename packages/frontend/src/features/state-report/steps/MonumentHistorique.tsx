@@ -42,7 +42,7 @@ export const MonumentHistorique = () => {
       <Flex
         flexDirection="column"
         px={{ xs: "16px", lg: "64px" }}
-        pt={{ xs: "24px", lg: "32px" }}
+        pt={{ xs: "24px", lg: "14px" }}
         gap={isEditing ? 0 : "16px"}
         sx={{
           ".fr-input-group": { width: "100%" },
@@ -50,6 +50,20 @@ export const MonumentHistorique = () => {
         width="100%"
         flex="1"
       >
+        <Typography
+          display={{
+            xs: "none",
+            lg: "block",
+          }}
+          fontSize="16px !important"
+          variant="h3"
+          fontWeight="500"
+          pt="0 !important"
+          mb="24px"
+          color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+        >
+          Informations
+        </Typography>
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
           <EditableField label="Nature de l'édifice" field="nature_edifice" isEditing={isEditing} isDisabled />
           <EditableField
