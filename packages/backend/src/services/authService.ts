@@ -212,7 +212,7 @@ export class AuthService {
       return this.loginUser({ email: userData.email, password: userData.password });
     } catch (error) {
       if (error instanceof FetchError) {
-        console.log(error.response);
+        console.log(error);
         throw new AppError(error.status || 500, `Authentication error: ${error.data?.errorMessage || error.message}`);
       }
       throw error;
