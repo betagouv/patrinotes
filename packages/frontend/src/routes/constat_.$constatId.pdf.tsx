@@ -118,6 +118,7 @@ const ConstatPdf = () => {
   useEffect(() => {
     if (!stateReport) return;
     if (userSettings.isLoading) return;
+    if (form.getValues("recipients").length > 0) return;
 
     const defaultRecipients = userSettings?.userSettings.default_emails?.split(",").map((email) => email.trim());
 
