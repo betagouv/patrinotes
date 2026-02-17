@@ -34,10 +34,12 @@ export const ConfirmationModal = ({
         <Box p="8px 24px 24px 24px">{content}</Box>
 
         <Flex justifyContent="flex-end" gap="16px" px="24px" pb="16px">
-          <Button priority="secondary" onClick={onClose}>
+          <Button priority="secondary" onClick={onClose} type="button">
             Annuler
           </Button>
-          <Button onClick={() => onConfirm()}>{buttonLabel}</Button>
+          <Button onClick={() => onConfirm()} type="button">
+            {buttonLabel}
+          </Button>
         </Flex>
       </Box>
     </Dialog>

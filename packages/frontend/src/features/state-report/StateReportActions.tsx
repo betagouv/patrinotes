@@ -124,7 +124,8 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
               content={
                 <>
                   <span>
-                    Êtes-vous sûr de vouloir supprimer le constat "<b>{report.titre_edifice}</b>" ?
+                    Êtes-vous sûr de vouloir supprimer le constat{" "}
+                    {report.titre_edifice ? <b>"{report.titre_edifice}"</b> : ""} ?
                   </span>
                   <br />
                   <span>Cette action est irréversible.</span>
