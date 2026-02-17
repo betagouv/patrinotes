@@ -132,7 +132,6 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
                 margin-top: 4px;
                 margin-bottom: 4px;
                 text-transform: uppercase;
-                max-width: 150px;
               }
 
 
@@ -241,7 +240,8 @@ const transformMarianneText = (text: string | null | undefined) => {
     .normalize("NFC")
     .replaceAll("\n", " ")
     .replaceAll("  ", " ")
-    .replace(/^(Préf[èe]te?\s+)/, "$1<br/>");
+    .replace(/^(Préf[èe]te?\s+)/, "$1<br/>")
+    .replace(/région /g, "région<br/>");
 
   return replaced;
 };
