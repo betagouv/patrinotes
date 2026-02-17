@@ -81,7 +81,7 @@ export const createAlertEmailContent = async ({
 
   <p>Ministère de la culture</p>
 
-  <p>(Envoi automatique depuis le service numérique Patrimoine Embarqué)</p>
+  <p>(Envoi automatique depuis le service numérique Patrinotes)</p>
   `;
 
   return { html, attachments: mailAttachments };

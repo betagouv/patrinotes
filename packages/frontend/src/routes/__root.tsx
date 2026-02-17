@@ -20,32 +20,32 @@ export const Route = createRootRouteWithContext<Partial<RouterOutputs<"/api/auth
 
 const getTitle = (pathname: string) => {
   if (pathname.startsWith("/edit/")) {
-    return "Patrimoine Embarqué | Compte rendu";
+    return "Patrinotes | Compte rendu";
   }
 
   if (pathname.startsWith("/constat/")) {
-    return "Patrimoine Embarqué | Constat d'état";
+    return "Patrinotes | Constat d'état";
   }
 
   if (pathname.startsWith("/pdf")) {
-    return "Patrimoine Embarqué | PDF";
+    return "Patrinotes | PDF";
   }
 
   if (pathname.startsWith("/connection")) {
-    return "Patrimoine Embarqué | Connexion";
+    return "Patrinotes | Connexion";
   }
 
   if (pathname.startsWith("/inscription")) {
-    return "Patrimoine Embarqué | Inscription";
+    return "Patrinotes | Inscription";
   }
 
   if (pathname.startsWith("/account")) {
-    return "Patrimoine Embarqué | Mon compte";
+    return "Patrinotes | Mon compte";
   }
 
   if (pathname.startsWith("/service")) {
-    return "Patrimoine Embarqué | Mon service";
+    return "Patrinotes | Mon service";
   }
 
-  return "Patrimoine Embarqué";
+  return "Patrinotes";
 };

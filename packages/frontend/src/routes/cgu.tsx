@@ -34,7 +34,7 @@ const CGU = () => {
 
       <Typography variant="body1">
         Les présentes conditions générales d’utilisation (dites « CGU ») fixent le cadre juridique de la Plateforme «
-        Patrimoine Embarqué » et définissent les conditions d’accès et d’utilisation des services par l’Utilisateur.
+        Patrinotes » et définissent les conditions d’accès et d’utilisation des services par l’Utilisateur.
       </Typography>
 
       <Typography variant="h2">Article 1 - Champ d’application</Typography>
@@ -45,14 +45,14 @@ const CGU = () => {
 
       <Typography variant="h2">Article 2 - Objet</Typography>
       <Typography variant="body1">
-        La Plateforme, dénommée « Patrimoine Embarqué » accompagne les agents dans la protection et la valorisation du
-        patrimoine culturel, en leur permettant de générer rapidement plusieurs types de documents pour tracer l’état du
-        patrimoine lors des rencontres sur le terrain.
+        La Plateforme, dénommée « Patrinotes » accompagne les agents dans la protection et la valorisation du patrimoine
+        culturel, en leur permettant de générer rapidement plusieurs types de documents pour tracer l’état du patrimoine
+        lors des rencontres sur le terrain.
       </Typography>
 
       <Typography variant="h2">Article 3 - Définitions</Typography>
       <Typography variant="body1">
-        - <b>« Plateforme » désigne le service numérique Patrimoine Embarqué.</b>
+        - <b>« Plateforme » désigne le service numérique Patrinotes.</b>
         <br />-{" "}
         <b>« Services » désigne les fonctionnalités offertes par la Plateforme pour répondre à ses finalités.</b>
         <br />- <b>« Utilisateur » est tout agents du ministère de la Culture qui utilise la Plateforme.</b>
@@ -64,14 +64,14 @@ const CGU = () => {
       <Typography variant="h3">Constat d’état</Typography>
       <Typography variant="body1">
         Le compte Utilisateur sur la Plateforme est créé au préalable à partir du mail de l’agent que ce dernier envoit
-        à l’équipe de Patrimoine Embarqué.
+        à l’équipe de Patrinotes.
       </Typography>
 
       <Typography variant="h3">Découverte du patrimoine du territoire (par département ou région)</Typography>
       <Typography variant="body1">
         La Plateforme permet d’accéder à une liste d’objets et de monuments sur un territoire donné, à l’échelle du
-        département ou de la région. Des statistiques sur le suivi global via Patrimoine Embarqué seront également
-        disponibles sur la Plateforme dans le futur.
+        département ou de la région. Des statistiques sur le suivi global via Patrinotes seront également disponibles
+        sur la Plateforme dans le futur.
       </Typography>
 
       <Typography variant="h3">Les informations récoltées pendant la rencontre sur le terrain</Typography>
@@ -150,8 +150,7 @@ const CGU = () => {
 
       <Typography variant="h2">Prise de contact</Typography>
       <Typography variant="body1">
-        Tout utilisateur peut contacter Patrimoine via l’adresse mail suivante :{" "}
-        <b>contact@patrimoine-embarque.beta.gouv.fr</b>
+        Tout utilisateur peut contacter Patrimoine via l’adresse mail suivante : <b>contact@patrinotes.beta.gouv.fr</b>
       </Typography>
     </Stack>
   );

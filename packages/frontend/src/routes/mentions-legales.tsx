@@ -75,7 +75,7 @@ const MentionLegales = () => {
       <Typography variant="body1">
         <Box mb="8px">
           Si vous rencontrez un défaut d'accessibilité vous empêchant d'accéder à un contenu ou une fonctionnalité du
-          site, merci de nous en faire part : <b>contact@patrimoine-embarque.beta.gouv.fr</b>
+          site, merci de nous en faire part : <b>contact@patrinotes.beta.gouv.fr</b>
         </Box>
         Si vous n'obtenez pas de réponse rapide de notre part, vous êtes en droit de faire parvenir vos doléances ou une
         demande de saisine au Défenseur des droits.

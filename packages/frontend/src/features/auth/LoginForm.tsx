@@ -132,7 +132,7 @@ export const LoginForm = () => {
             component="span"
             className="fr-link"
             onClick={() => {
-              navigator.clipboard.writeText("contact@patrimoine-embarque.beta.gouv.fr");
+              navigator.clipboard.writeText("contact@patrinotes.beta.gouv.fr");
             }}
             fontSize="14px"
             sx={{
@@ -141,7 +141,7 @@ export const LoginForm = () => {
             }}
             color="text-active-blue-france"
           >
-            contact@patrimoine-embarque.beta.gouv.fr
+            contact@patrinotes.beta.gouv.fr
           </Typography>
         </Typography>
       </Stack>

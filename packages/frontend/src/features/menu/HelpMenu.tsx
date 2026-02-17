@@ -81,7 +81,7 @@ export const HelpMenu = () => {
               component="span"
               className="fr-link"
               onClick={() => {
-                navigator.clipboard.writeText("contact@patrimoine-embarque.beta.gouv.fr");
+                navigator.clipboard.writeText("contact@patrinotes.beta.gouv.fr");
                 setShowClipboardSuccess(true);
               }}
               sx={{
@@ -91,7 +91,7 @@ export const HelpMenu = () => {
               }}
               color="text-active-blue-france"
             >
-              contact@patrimoine-embarque.beta.gouv.fr
+              contact@patrinotes.beta.gouv.fr
             </Typography>
             .
           </Box>

@@ -295,7 +295,7 @@ const assertEmailInWhitelist = async (email: string) => {
   if (!whitelist) {
     throw new AppError(
       403,
-      "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrimoine-embarque.beta.gouv.fr.",
+      "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrinotes.beta.gouv.fr.",
     );
   }
 };

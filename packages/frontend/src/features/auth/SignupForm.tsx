@@ -143,8 +143,8 @@ export const SignupForm = () => {
                     >
                       conditions générales d’utilisation (CGU)
                     </Link>{" "}
-                    du service Patrimoine Embarqué et consens à ce que mes données soient collectées, afin de garantir
-                    la bonne utilisation des services offerts.
+                    du service Patrinotes et consens à ce que mes données soient collectées, afin de garantir la bonne
+                    utilisation des services offerts.
                   </span>
                 ),
                 nativeInputProps: {
@@ -159,8 +159,8 @@ export const SignupForm = () => {
               {
                 label: (
                   <span>
-                    J’accepte de recevoir des actualités et conseils du service Patrimoine Embarqué. Vous pourrez vous
-                    désabonner à tout moment.
+                    J’accepte de recevoir des actualités et conseils du service Patrinotes. Vous pourrez vous désabonner
+                    à tout moment.
                   </span>
                 ),
                 nativeInputProps: {

@@ -186,7 +186,7 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
                     <div className="fr-header__service lg:d_unset">
                       <p className="fr-header__service-title">
                         <Flex alignItems="center" gap="24px">
-                          Patrimoine Embarqué{" "}
+                          Patrinotes{" "}
                           <Box>
                             <StatusBadge noProvider={noProvider} />
                           </Box>
