@@ -4,7 +4,6 @@ export const isDev = !z.boolean().parse(import.meta.env.PROD);
 
 const envSchema = z.object({
   VITE_BACKEND_URL: z.string(),
-  VITE_ELECTRIC_URL: z.string(),
   VITE_POWERSYNC_URL: z.string(),
   VITE_AUTH_URL: z.string(),
   VITE_AUTH_REALM: z.string(),
