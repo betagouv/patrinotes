@@ -132,7 +132,9 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
                 margin-top: 4px;
                 margin-bottom: 4px;
                 text-transform: uppercase;
+                max-width: 150px;
               }
+
 
               .right-texts {
                 text-align: right;
@@ -148,6 +150,11 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               .right-texts > div:first-child {
                 font-weight: bold;
                 margin-bottom: 8px;
+                max-width: 180px;
+              }
+              .right-texts > div:nth-child(2) {
+                max-width: 230px;
+                break-inside: avoid;
               }
 
                 
@@ -162,12 +169,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               <div class="marianne">
 
                 <div class="marianne-text">
-                  <strong>
-                ${service.marianne_text
-                  ?.split("\n")
-                  .map((s) => s.trim())
-                  .join("<br/>")}
-                  </strong>
+                ${transformMarianneText(service.marianne_text)}
                 </div>
                 <img class="marianne-footer-img" src="${images.marianneFooter}" />
 
@@ -175,16 +177,10 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
 
               <div class="right-texts">
                 <div>
-                      ${service.drac_text
-                        ?.split("\n")
-                        .map((s) => s.trim())
-                        .join("<br/>")}
+                      ${service.drac_text?.replaceAll("\n", " ")}
                 </div>
                 <div>
-                    ${service.service_text
-                      ?.split("\n")
-                      .map((s) => s.trim())
-                      .join("<br/>")}
+                    ${service.service_text?.replaceAll("\n", " ")}
                 </div>
               </div>
             </div>
@@ -236,6 +232,18 @@ export type MinimalAlert = Omit<
   "service_id" | "state_report_id" | "show_in_report" | "shouldSend"
 > & {
   show_in_report: any;
+};
+
+const transformMarianneText = (text: string | null | undefined) => {
+  if (!text) return null;
+
+  const replaced = text
+    .normalize("NFC")
+    .replaceAll("\n", " ")
+    .replaceAll("  ", " ")
+    .replace(/^(Préf[èe]te?\s+)/, "$1<br/>");
+
+  return replaced;
 };
 
 export const getStateReportHtmlString = ({
