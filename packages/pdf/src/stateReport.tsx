@@ -233,7 +233,7 @@ export type MinimalAlert = Omit<
   show_in_report: any;
 };
 
-const transformMarianneText = (text: string | null | undefined) => {
+export const transformMarianneText = (text: string | null | undefined) => {
   if (!text) return null;
 
   const replaced = text

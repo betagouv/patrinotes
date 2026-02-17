@@ -4,6 +4,7 @@ import { Html } from "react-pdf-html";
 import { Clause_v2, Report, Service, ServiceInstructeurs } from "../../frontend/src/db/AppSchema";
 import { MarianneHeader, processHtml, Pagination } from "./utils";
 import React from "react";
+import { transformMarianneText } from "./stateReport";
 
 export const getPDFInMailName = (report: Omit<Report, "disabled">) => {
   const { city, applicantName, meetDate } = report;
@@ -143,10 +144,7 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
 
                 <div class="marianne-text">
                   <strong>
-                ${service.marianne_text
-                  ?.split("\n")
-                  .map((s) => s.trim())
-                  .join("<br/>")}
+                ${transformMarianneText(service.marianne_text)}
                   </strong>
                 </div>
                 <img class="marianne-footer-img" src="${images.marianneFooter}" />

@@ -551,14 +551,11 @@ export const WithReport = ({
   report: Report & { pictures: PdfImage[] };
 }) => {
   const { editor } = useContext(TextEditorContext);
-  const [htmlString] = useState(initialHtmlString);
-
   useEffect(() => {
     if (!editor) return;
 
-    console.log("htmlString", htmlString);
-    editor.commands.setContent(htmlString);
-  }, [editor]);
+    editor.commands.setContent(initialHtmlString);
+  }, [editor, initialHtmlString]);
 
   const { service } = useUser()!;
 
