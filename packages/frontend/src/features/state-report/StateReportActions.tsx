@@ -60,16 +60,28 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
 
   const duplicateMutation = useMutation({
     mutationFn: async () => {
-      const payload = omit(report, ["id", "createdByName", "created_at", "created_by", "disabled"]);
+      const payload = omit(report, [
+        "id",
+        "created_at",
+        "created_by",
+        "disabled",
+        "redacted_by",
+        "service_id",
+        "attachment_id",
+      ]);
 
       return db
         .insertInto("state_report")
         .values({
           ...payload,
           id: v4(),
-          titre_edifice: `${report.titre_edifice ?? "Sans titre"} - copie`,
+          titre_edifice: `${report.titre_edifice ?? "Sans titre"}`,
           created_at: new Date().toISOString(),
           created_by: user.id,
+          disabled: 0,
+          service_id: user.service_id,
+          redacted_by: user.name,
+          date_visite: new Date().toISOString(),
         })
         .execute();
     },
