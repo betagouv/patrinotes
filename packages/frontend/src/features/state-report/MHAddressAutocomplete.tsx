@@ -1,20 +1,25 @@
-import { fr } from "@codegouvfr/react-dsfr";
-import { useMachine } from "@xstate/react";
+import { InputProps } from "@codegouvfr/react-dsfr/Input";
+import { useStateReportFormContext } from "./utils";
 import { useRef } from "react";
-import { useFormContext } from "react-hook-form";
+import { useMachine } from "@xstate/react";
 import { useClickAway } from "react-use";
-import { Report } from "../db/AppSchema";
-import { AddressSuggestion, searchAddress } from "../features/address";
-import { useIsFormDisabled } from "../features/DisabledContext";
-import { createSuggestionMachine } from "../features/suggestionsMachine";
-import { Box, Stack, Typography } from "@mui/material";
-import { Badge, Input } from "./MUIDsfr";
-import { Flex } from "./ui/Flex";
+import { createSuggestionMachine } from "../suggestionsMachine";
+import { AddressSuggestion, searchAddress } from "../address";
 import { fromPromise } from "xstate";
+import { Box, Stack, Typography } from "@mui/material";
+import { Input } from "#components/MUIDsfr.tsx";
+import { Flex } from "#components/ui/Flex.tsx";
+import { LoadingBadge } from "#components/SmartAddressInput.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
 
-export const SmartAddressInput = () => {
-  const form = useFormContext<Report>();
-  const isFormDisabled = useIsFormDisabled();
+export const MHAddressAutocomplete = ({
+  disabled,
+  inputProps,
+}: {
+  disabled?: boolean;
+  inputProps: InputProps["nativeInputProps"];
+}) => {
+  const form = useStateReportFormContext();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const [state, send] = useMachine(addressMachine, {});
@@ -27,13 +32,13 @@ export const SmartAddressInput = () => {
   const isLoading = state.matches("fetching");
   const suggestions = state.context.suggestions;
 
-  const inputProps = form.register("applicantAddress");
+  const props = form.register("adresse");
 
   return (
-    <Stack mb="28px">
+    <Stack width="100%">
       <Box ref={wrapperRef} position="relative" width="100%">
         <Input
-          sx={{ mb: "8px" }}
+          sx={{ width: "100%" }}
           label={
             <Flex flexDirection="row" alignItems="center">
               <Typography mr="12px">Adresse (numéro, voie)</Typography>
@@ -44,12 +49,12 @@ export const SmartAddressInput = () => {
               ) : null}
             </Flex>
           }
-          disabled={isFormDisabled}
+          disabled={disabled}
           nativeInputProps={{
             autoComplete: "new-password",
             ...inputProps,
             onChange: (e) => {
-              inputProps.onChange(e);
+              props.onChange(e);
               send({ type: "TYPE", value: e.target.value });
             },
             onFocus: () => send({ type: "FOCUS" }),
@@ -76,9 +81,9 @@ export const SmartAddressInput = () => {
                   <Box
                     key={item.label}
                     onClick={() => {
-                      form.setValue("applicantAddress", item?.address ?? "");
-                      form.setValue("zipCode", item?.zipCode ?? "");
-                      form.setValue("city", item?.city ?? "");
+                      form.setValue("adresse", item?.address ?? "");
+                      form.setValue("commune", item?.city ?? "");
+                      form.setValue("commune_historique", item?.city ?? "");
 
                       send({ type: "SELECT", item: item });
                     }}
@@ -106,33 +111,6 @@ export const SmartAddressInput = () => {
         </Box>
       ) : null}
     </Stack>
-  );
-};
-
-export const LoadingBadge = () => {
-  return (
-    <Badge
-      sx={{
-        display: "flex",
-        flexDir: "row",
-        alignItems: "center",
-        fontWeight: "normal",
-      }}
-      severity="info"
-      noIcon
-    >
-      <Box
-        className={fr.cx("fr-icon-refresh-line", "fr-icon--sm")}
-        component="i"
-        sx={{
-          "::before": {
-            verticalAlign: "middle",
-            mr: "4px",
-          },
-        }}
-      ></Box>
-      En cours
-    </Badge>
   );
 };
 

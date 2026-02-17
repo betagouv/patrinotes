@@ -24,6 +24,10 @@ a {
   overflow-y: auto;
 }
 
+textarea {
+  resize: vertical;
+}
+
 *,
 ::before,
 ::after {

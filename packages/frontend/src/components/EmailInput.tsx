@@ -11,6 +11,7 @@ import { Box, Stack } from "@mui/material";
 import { Button, Input } from "./MUIDsfr";
 import { Flex } from "./ui/Flex";
 import { useIsDesktop } from "../hooks/useIsDesktop";
+import { fromPromise } from "xstate";
 
 export const EmailInput = ({
   label,
@@ -214,13 +215,17 @@ export const EmailInput = ({
 
 export const emailMachine = createSuggestionMachine<EmailSuggestion>({
   minLength: 1,
-  fetchSuggestions: (query: string) =>
-    db
-      .selectFrom("suggested_email")
-      .where("email", "like", `%${query}%`)
-      .select(["email"])
-      .execute()
-      .then((res) => res.map((r) => r.email as string)),
+}).provide({
+  actors: {
+    fetchSuggestions: fromPromise(async ({ input }: { input: { query: string } }) =>
+      db
+        .selectFrom("suggested_email")
+        .where("email", "like", `%${input.query}%`)
+        .select(["email"])
+        .execute()
+        .then((res) => res.map((r) => r.email as string)),
+    ),
+  },
 });
 
 type EmailSuggestion = string;

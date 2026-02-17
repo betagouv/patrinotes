@@ -1,12 +1,6 @@
 import { fromPromise, setup } from "xstate";
 
-export const createSuggestionMachine = <T extends any>({
-  fetchSuggestions,
-  minLength = 3,
-}: {
-  fetchSuggestions: (query: string) => Promise<T[]>;
-  minLength?: number;
-}) => {
+export const createSuggestionMachine = <T extends any>({ minLength = 3 }: { minLength?: number }) => {
   return setup({
     types: {
       context: {} as {
@@ -60,9 +54,10 @@ export const createSuggestionMachine = <T extends any>({
       },
     },
     actors: {
-      fetchSuggestions: fromPromise(async ({ input }: { input: { query: string } }) => {
-        const suggestions = await fetchSuggestions(input.query);
-        return suggestions;
+      fetchSuggestions: fromPromise<T[], { query: string }>(async () => {
+        throw new Error("Not implemented");
+        // const suggestions = await fetchSuggestions(input.query);
+        // return suggestions;
       }),
     },
   }).createMachine({

@@ -31,6 +31,8 @@ export const WithReferencePop = () => {
   const hasReferencePop = !!referencePop;
   if (!hasReferencePop) return null;
 
+  console.log(referencePop);
+
   return (
     <>
       <Box width="100%" height="100%">
@@ -140,7 +142,7 @@ const RightButton = ({
   );
 };
 
-export const ButtonsSwitch = () => {
+export const ButtonsSwitch = ({ isCustom }: { isCustom?: boolean }) => {
   const { step } = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
   const navigateToStep = (step: StateReportStep) => {
@@ -151,7 +153,7 @@ export const ButtonsSwitch = () => {
   const isDesktop = useIsDesktop();
 
   const buttons: Record<StateReportStep, ReactNode> = {
-    informations: <InformationsButtons navigateToStep={navigateToStep} />,
+    informations: <InformationsButtons navigateToStep={navigateToStep} isCustom={isCustom} />,
     "contexte-visite": (
       <ButtonsContainer>
         <LeftButton onClick={() => navigateToStep("informations")}>Informations du MH</LeftButton>
@@ -431,7 +433,13 @@ const FormErrorModal = ({
     </Dialog>
   );
 };
-const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateReportStep) => void }) => {
+const InformationsButtons = ({
+  navigateToStep,
+  isCustom,
+}: {
+  navigateToStep: (step: StateReportStep) => void;
+  isCustom?: boolean;
+}) => {
   const [internalValues, setInternalValues] = useState<Partial<StateReportFormType>>({});
 
   const { mode } = routeApi.useSearch();
@@ -465,7 +473,7 @@ const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateR
       flexDirection={{ xs: "column", lg: "row" }}
       justifyContent="space-between"
     >
-      {isEditing ? (
+      {isCustom ? null : isEditing ? (
         <Flex alignItems="center" gap="8px" flexDirection={{ xs: "column", lg: "row" }}>
           <Button
             size="large"
@@ -505,12 +513,13 @@ const InformationsButtons = ({ navigateToStep }: { navigateToStep: (step: StateR
           Compléter les infos
         </Button>
       )}
+      {isCustom ? <div></div> : null}
       <Button
         iconPosition="right"
         iconId="ri-arrow-right-line"
         size="large"
-        sx={buttonSxProps}
-        disabled={isEditing}
+        sx={{ ...buttonSxProps }}
+        disabled={(isEditing && !isCustom) || isDisabled}
         nativeButtonProps={{
           onClick: () => navigateToStep("contexte-visite"),
         }}

@@ -1,6 +1,6 @@
 import { Autocomplete, Box, Dialog, DialogTitle, Typography } from "@mui/material";
 import { db, useDbQuery } from "../db/db";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStyles } from "tss-react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { PopImmeuble } from "../db/AppSchema";
@@ -12,7 +12,7 @@ import Highlighter from "react-highlight-words";
 import { Flex } from "#components/ui/Flex.tsx";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ModalCloseButton } from "./menu/MenuTitle";
-import { Button } from "#components/MUIDsfr.tsx";
+import { Alert, Button } from "#components/MUIDsfr.tsx";
 
 type FilterablePopImmeubles = Pick<
   PopImmeuble,
@@ -21,6 +21,8 @@ type FilterablePopImmeubles = Pick<
 const fuseOptions: IFuseOptions<FilterablePopImmeubles> = {
   keys: ["titre_editorial_de_la_notice", "commune_forme_editoriale", "id"],
   shouldSort: true,
+  distance: 1000,
+  threshold: 0.5,
 };
 
 export const immeubleMapping: Partial<Record<keyof PopImmeuble, keyof StateReportFormType>> = {
@@ -39,10 +41,15 @@ export const immeubleMapping: Partial<Record<keyof PopImmeuble, keyof StateRepor
 
 export const ImmeubleAutocomplete = () => {
   const [isChanging, setIsChanging] = useState(false);
+
+  const [areSuggestionsShown, setAreSuggestionsShown] = useState(false);
+
   const [isWarningOpen, setIsWarningOpen] = useState(false);
-  const [inputValue, setInputValue] = useState("");
+
   const form = useStateReportFormContext();
-  const [value] = useWatch({ control: form.control, name: ["reference_pop"] });
+  const [referencePop, titreEdifice] = useWatch({ control: form.control, name: ["reference_pop", "titre_edifice"] });
+  const [inputValue, setInputValue] = useState(titreEdifice || "");
+
   const { cx } = useStyles();
 
   const isDisabled = useIsStateReportDisabled();
@@ -58,7 +65,10 @@ export const ImmeubleAutocomplete = () => {
   const setValue = async (item: FilterablePopImmeubles | null) => {
     if (isDisabled) return;
     form.setValue("reference_pop", item ? item.id : null);
+
     setIsChanging(false);
+    setAreSuggestionsShown(false);
+
     if (!item) return;
     const immeubleDetails =
       item.id === "CUSTOM"
@@ -77,20 +87,39 @@ export const ImmeubleAutocomplete = () => {
     }
   };
 
-  const hasValue = !!value;
+  const hasValue = !!referencePop;
 
   const handleChanging = (changing: boolean) => {
     if (isDisabled) return;
+
     setIsChanging(changing);
+
     if (changing) {
       setIsWarningOpen(false);
       for (const formField of Object.values(immeubleMapping)) {
         form.setValue(formField as keyof StateReportFormType, null);
       }
+      setInputValue("");
     }
   };
 
-  if (hasValue && !isChanging)
+  const isCustom = referencePop === "CUSTOM";
+  const shouldShowUnlinkedButton = !referencePop;
+
+  const valueItem = useMemo(() => {
+    if (!referencePop) return null;
+    if (referencePop === "CUSTOM") {
+      return {
+        id: "CUSTOM",
+        reference: "CUSTOM",
+        titre_editorial_de_la_notice: inputValue,
+      } as FilterablePopImmeubles;
+    }
+
+    return rawItems.find((item) => item?.id == referencePop) || null;
+  }, [inputValue, rawItems]);
+
+  if (hasValue && !isChanging && !isCustom)
     return (
       <Flex flexDirection="column" flex="1">
         {isWarningOpen ? (
@@ -139,7 +168,9 @@ export const ImmeubleAutocomplete = () => {
 
   return (
     <Box
-      width={{ xs: "100%", lg: "792px" }}
+      width={{ xs: "100%", lg: "996px" }}
+      maxWidth="100%"
+      mr="84px"
       sx={{
         ".immeubles-autocomplete-no-options": {
           padding: "0 !important",
@@ -151,13 +182,15 @@ export const ImmeubleAutocomplete = () => {
           popper: "immeubles-autocomplete-popper",
           noOptions: "immeubles-autocomplete-no-options",
         }}
-        open
+        open={areSuggestionsShown}
         clearOnBlur={false}
         disablePortal
         options={rawItems}
         getOptionLabel={(item) => item.titre_editorial_de_la_notice || ""}
         getOptionKey={(item) => item.reference!}
-        value={value ? rawItems.find((item) => item.id == value) : null}
+        value={valueItem}
+        onOpen={() => setAreSuggestionsShown(true)}
+        onClose={() => setAreSuggestionsShown(false)}
         // TODO: use coordinates to sort results
         filterOptions={(x, state) => {
           if (!state.inputValue) return [];
@@ -167,25 +200,36 @@ export const ImmeubleAutocomplete = () => {
             .slice(0, 15);
 
           return [
-            {
-              commune_forme_editoriale: "",
-              id: "CUSTOM",
-              reference: "CUSTOM",
-              titre_editorial_de_la_notice: state.inputValue,
-            },
+            ...(isCustom
+              ? [
+                  {
+                    commune_forme_editoriale: "",
+                    id: "CUSTOM",
+                    reference: "CUSTOM",
+                    titre_editorial_de_la_notice: state.inputValue,
+                  },
+                ]
+              : []),
             ...searchResults,
           ];
         }}
         onChange={(_e, item) => {
+          // prevents clearing referencePop when emptying the input
+          // in order to keep it = CUSTOM and allow access to the form
+          if (isCustom && !item) return;
+
           setValue(item);
         }}
         inputValue={inputValue}
         onInputChange={(_e, newInputValue) => {
           setInputValue(newInputValue);
         }}
-        onFocus={() =>
-          document.getElementById("mh-autocomplete")?.scrollIntoView({ behavior: "smooth", block: "start" })
-        }
+        onFocus={() => {
+          setAreSuggestionsShown(true);
+          // prevent scroll to input on focus when the input is custom
+          if (isCustom) return;
+          document.getElementById("mh-autocomplete")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
         renderOption={({ key, ...props }, option, state, _ownerState) =>
           option === null ? (
             <Box>Aucun résultat !</Box>
@@ -203,7 +247,7 @@ export const ImmeubleAutocomplete = () => {
             >
               {option.id === "CUSTOM" ? (
                 <Box fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
-                  Nouveau titre :
+                  Titre de votre constat :
                 </Box>
               ) : null}
               <Box component="span" fontSize="16px">
@@ -253,9 +297,24 @@ export const ImmeubleAutocomplete = () => {
           </div>
         )}
         noOptionsText={
-          !value && inputValue ? <Box>{immeubleQuery.isLoading ? <Spinner size={20} /> : "Aucun résultat"}</Box> : null
+          !referencePop && inputValue ? (
+            <Box>{immeubleQuery.isLoading ? <Spinner size={20} /> : "Aucun résultat"}</Box>
+          ) : null
         }
       />
+
+      {shouldShowUnlinkedButton ? (
+        <Flex alignItems="center" gap="16px" mt="32px">
+          <Button priority="secondary" onClick={() => form.setValue("reference_pop", "CUSTOM")}>
+            Créer un constat sans lien MH
+          </Button>
+          <Alert
+            severity="info"
+            small
+            description="Vous pouvez commencer un constat d'état et le relier plus tard à un monument."
+          />
+        </Flex>
+      ) : null}
     </Box>
   );
 };

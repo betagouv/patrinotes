@@ -15,6 +15,7 @@ import { PopImage, PopObjet } from "../../../db/AppSchema";
 import { getRouteApi } from "@tanstack/react-router";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
+import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -24,11 +25,11 @@ export const MonumentHistorique = () => {
   const isDesktop = useIsDesktop();
 
   const { mode } = routeApi.useSearch();
-  const isEditing = mode === "edit";
 
   const referencePop = useWatch({ control: form.control, name: "reference_pop" });
   const isCustom = referencePop === "CUSTOM";
 
+  const isEditing = mode === "edit" || isCustom;
   return (
     <Flex
       flexDirection="column"
@@ -65,40 +66,51 @@ export const MonumentHistorique = () => {
           Informations
         </Typography>
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
-          <EditableField label="Nature de l'édifice" field="nature_edifice" isEditing={isEditing} isDisabled />
-          <EditableField
-            label="Référence POP"
-            field="reference_pop"
-            isEditing={isEditing}
-            isDisabled
-            renderInput={
-              isCustom
-                ? ({ label, disabled }) => renderBasicInput({ inputProps: {} as any, label: "Référence POP", disabled })
-                : undefined
-            }
-            renderValue={({ value }) => {
-              if (value === "CUSTOM") return null;
-              return (
-                <Typography
-                  mt="4px"
-                  className="fr-link"
-                  component="a"
-                  href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
-                  target="_blank"
-                  rel="noopener external"
-                >
-                  {value ?? "Non renseigné"}
-                </Typography>
-              );
-            }}
-          />
+          <Box flex="1">
+            <EditableField
+              label="Nature de l'édifice"
+              field="nature_edifice"
+              isEditing={isEditing}
+              isDisabled={!isCustom}
+            />
+          </Box>
+          <Box flex="1" mt={{ xs: isEditing ? "16px" : "0", lg: "0" }}>
+            {!isCustom ? (
+              <EditableField
+                label="Référence POP"
+                field="reference_pop"
+                isEditing={isEditing}
+                isDisabled
+                renderValue={({ value }) => {
+                  if (value === "CUSTOM") return null;
+                  return (
+                    <Typography
+                      mt="4px"
+                      className="fr-link"
+                      component="a"
+                      href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
+                      target="_blank"
+                      rel="noopener external"
+                    >
+                      {value ?? "Non renseigné"}
+                    </Typography>
+                  );
+                }}
+              />
+            ) : null}
+          </Box>
         </Flex>
 
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
         <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
-          <EditableField label="Adresse" field="adresse" isEditing={isEditing} />
-          <EditableField label="Commune" field="commune" isEditing={isEditing} />
+          <EditableField
+            label="Adresse"
+            field="adresse"
+            isEditing={isEditing}
+            renderInput={(props) => <MHAddressAutocomplete {...props} />}
+          />
+          {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
         </Flex>
 
         <Flex
@@ -107,22 +119,37 @@ export const MonumentHistorique = () => {
           gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
           mt={isEditing ? "16px" : 0}
         >
-          <EditableField label="Commune historique" field="commune_historique" isEditing={isEditing} />
+          {isCustom ? (
+            <EditableField label="Commune" field="commune" isEditing={isEditing} />
+          ) : (
+            <EditableField label="Commune historique" field="commune_historique" isEditing={isEditing} />
+          )}
           <EditableField label="Référence cadastrale" field="reference_cadastrale" isEditing={isEditing} />
         </Flex>
 
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
-        <Flex flexDirection={{ xs: "column", lg: "row" }} width="100%" gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}>
-          <EditableField label="Nature de la protection" field="nature_protection" isEditing={isEditing} />
-          <EditableField label="Période de construction" field="periode_construction" isEditing={isEditing} />
+        <Flex
+          flexDirection={{ xs: "column", lg: "row" }}
+          width="100%"
+          mt={isEditing ? "16px" : "0"}
+          gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
+        >
+          <Box flex="1">
+            <EditableField label="Nature de la protection" field="nature_protection" isEditing={isEditing} />
+          </Box>
+          <Box flex="1" mt={{ xs: isEditing ? "16px" : "0", lg: "0" }}>
+            {!isCustom ? (
+              <EditableField label="Période de construction" field="periode_construction" isEditing={isEditing} />
+            ) : null}
+          </Box>
         </Flex>
 
         <Flex
           width="100%"
           flexDirection={{ xs: "column", lg: isEditing ? "column" : "row" }}
           gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
-          mt={isEditing ? "16px" : "0"}
+          mt={isEditing ? "32px" : "0"}
         >
           <EditableField
             renderInput={renderTextAreaInput}
@@ -130,16 +157,18 @@ export const MonumentHistorique = () => {
             field="parties_protegees"
             isEditing={isEditing}
           />
-          <EditableField
-            renderInput={renderTextAreaInput}
-            label="Description de l'édifice"
-            field="description"
-            isEditing={isEditing}
-          />
+          {!isCustom ? (
+            <EditableField
+              renderInput={renderTextAreaInput}
+              label="Description de l'édifice"
+              field="description"
+              isEditing={isEditing}
+            />
+          ) : null}
         </Flex>
-        <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
-        <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box>
-        {isEditing ? (
+        {!isCustom ? <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} /> : null}
+        {!isCustom ? <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box> : null}
+        {isEditing && !isCustom ? (
           //@ts-ignore
           <Alert
             severity="info"
@@ -148,7 +177,7 @@ export const MonumentHistorique = () => {
             sx={{ mt: "16px" }}
           />
         ) : null}
-        {isDesktop ? <ButtonsSwitch /> : null}
+        {isDesktop ? <ButtonsSwitch isCustom={isCustom} /> : null}
       </Flex>
 
       <Box position="relative" height="60px" width="100%" mt={{ xs: "16px", lg: "32px" }}>
@@ -180,7 +209,7 @@ export const MonumentHistorique = () => {
         </Box>
       </Box>
 
-      {!isDesktop ? <ButtonsSwitch /> : null}
+      {!isDesktop ? <ButtonsSwitch isCustom={isCustom} /> : null}
     </Flex>
   );
 };
@@ -402,7 +431,7 @@ const EditableField = ({
   }
 
   return (
-    <Flex flexDirection="column" width="50%">
+    <Flex flexDirection="column" width="100%">
       <Typography variant="subtitle1" fontWeight="bold">
         {label}
       </Typography>
