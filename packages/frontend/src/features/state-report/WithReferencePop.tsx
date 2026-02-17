@@ -28,13 +28,8 @@ export const WithReferencePop = () => {
   const referencePop = useWatch({ control: form.control, name: "reference_pop" });
   const immeubleQuery = useDbQuery(db.selectFrom("pop_immeubles").selectAll().where("id", "=", referencePop));
 
-  const { step } = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
-
   const hasReferencePop = !!referencePop;
   if (!hasReferencePop) return null;
-
-  const shouldShowTabs = ["constat-detaille", "constat-general"].includes(step);
 
   return (
     <>
@@ -51,7 +46,9 @@ export const WithReferencePop = () => {
                 marginLeft={{ xs: "0", lg: accordionMarginLeft }}
                 paddingX={{ xs: "0", lg: accordionPadding }}
               >
-                <StateReportSummary />
+                <Box position={{ xs: "unset", lg: "sticky" }} top={{ xs: "0", lg: "14px" }}>
+                  <StateReportSummary />
+                </Box>
               </Box>
               <Box
                 borderLeft={{ xs: "none", lg: "1px solid" }}
