@@ -98,7 +98,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
               navigate({
                 to: "/constat/$constatId",
                 params: { constatId: report.id },
-                search: { mode: "view", step: "constat-general" },
+                search: { mode: "view", step: report.reference_pop ? "constat-general" : "informations" },
               })
             }
           />

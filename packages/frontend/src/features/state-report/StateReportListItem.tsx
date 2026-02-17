@@ -44,7 +44,7 @@ export const StateReportListItem = ({
         onClick={onClick}
         to={"/constat/$constatId"}
         params={{ constatId: report.id }}
-        search={{ step: "constat-general", mode: "view" }}
+        search={{ step: report.reference_pop ? "constat-general" : "informations", mode: "view" }}
       >
         <Box
           component="article"
