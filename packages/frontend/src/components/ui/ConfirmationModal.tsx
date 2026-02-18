@@ -21,11 +21,13 @@ export const ConfirmationModal = ({
     <Dialog
       open
       onClose={onClose}
+      disablePortal
       sx={{
         ".MuiPaper-root": {
           maxWidth: { xs: "100%", sm: "800px" },
           width: "800px",
         },
+        zIndex: 1400,
       }}
     >
       <Box p="16px" width={"100%"}>
