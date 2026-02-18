@@ -139,6 +139,8 @@ export class AuthService {
     } catch (error) {
       if (error instanceof FetchError) {
         console.log(error.message, error.cause, error.data);
+        console.log(error.data?.error_description);
+        throw convertFetchErrorToAppError(error);
       }
       throw error;
     }
@@ -298,4 +300,18 @@ const assertEmailInWhitelist = async (email: string) => {
       "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrinotes.beta.gouv.fr.",
     );
   }
+};
+
+const convertFetchErrorToAppError = (error: FetchError) => {
+  if (!(error instanceof FetchError)) return new AppError(500, "Une erreur s'est produite");
+  const description =
+    error.data?.error_description || error.data?.message || error.message || "Une erreur s'est produite";
+
+  const userFriendlyDescription = (descriptionMap as any)[description] || description;
+
+  return new AppError(error.status || 500, userFriendlyDescription);
+};
+
+const descriptionMap = {
+  "Invalid user credentials": "Courriel ou mot de passe incorrect",
 };
