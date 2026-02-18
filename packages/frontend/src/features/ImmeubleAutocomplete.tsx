@@ -70,14 +70,12 @@ export const ImmeubleAutocomplete = () => {
     setAreSuggestionsShown(false);
 
     if (!item) return;
-    const immeubleDetails =
-      item.id === "CUSTOM"
-        ? item
-        : await db
-            .selectFrom("pop_immeubles")
-            .selectAll()
-            .where("id", "=", item ? item.id : "")
-            .executeTakeFirst();
+    if (item.id === "CUSTOM") return;
+    const immeubleDetails = await db
+      .selectFrom("pop_immeubles")
+      .selectAll()
+      .where("id", "=", item ? item.id : "")
+      .executeTakeFirst();
     if (!immeubleDetails) return;
 
     for (const [key, formField] of Object.entries(immeubleMapping)) {
