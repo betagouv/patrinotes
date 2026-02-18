@@ -106,6 +106,10 @@ export const getIsAlertVisited = (alertSection: any) => {
   return !!alertSection.commentaires || !!alertSection.objet_ou_mobilier;
 };
 
+export const getIsSectionVisited = (section: any) => {
+  return section?.etat_general && section?.proportion_dans_cet_etat;
+};
+
 export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
 export const EDIFICE_EN_PERIL_SECTION = "Édifice en péril";
 export const ABORDS_DE_L_EDIFICE_SECTION = "Abords de l'édifice";

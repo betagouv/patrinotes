@@ -18,6 +18,7 @@ import {
   SECURITE_SECTION,
   SITE_CLASSE_OU_INSCRIT_SECTION,
   deserializeMandatoryEmails,
+  getIsSectionVisited,
   initFonts,
   processHtml,
 } from "./utils";
@@ -264,9 +265,7 @@ export const getStateReportHtmlString = ({
 
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 
-  const visitedSections = sections.filter((s) => {
-    return !!s.etat_general || !!s.proportion_dans_cet_etat;
-  });
+  const visitedSections = sections.filter(getIsSectionVisited);
 
   // accessibilité
   // h1 pour les deux premières lignes

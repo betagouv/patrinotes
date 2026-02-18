@@ -23,6 +23,7 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { chunk } from "pastable";
+import { getIsSectionVisited } from "@cr-vif/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -108,8 +109,7 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
           <Flex flexDirection="row" justifyContent="space-between" width="100%" key={index} gap="24px">
             {sectionChunk.map((section) => {
               const visited = visitedSections?.find((vs) => vs.section === section);
-              const isVisited =
-                visited && (visited.etat_general || visited.commentaires || visited.proportion_dans_cet_etat);
+              const isVisited = getIsSectionVisited(visited);
               return (
                 <SectionItem
                   key={section}
