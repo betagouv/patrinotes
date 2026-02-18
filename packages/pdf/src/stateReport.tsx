@@ -150,12 +150,8 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               .right-texts > div:first-child {
                 font-weight: bold;
                 margin-bottom: 8px;
-                max-width: 180px;
-                word-break: break-word;
               }
               .right-texts > div:nth-child(2) {
-                max-width: 230px;
-                word-break: break-word;
               }
 
                 
@@ -170,7 +166,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               <div class="marianne">
 
                 <div class="marianne-text">
-                ${transformMarianneText(service.marianne_text)}
+                  ${transformHeaderText(service.marianne_text)}
                 </div>
                 <img class="marianne-footer-img" src="${images.marianneFooter}" />
 
@@ -178,10 +174,10 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
 
               <div class="right-texts">
                 <div>
-                      ${service.drac_text?.replaceAll("\n", " ")}
+                  ${transformHeaderText(service.drac_text)}
                 </div>
                 <div>
-                    ${service.service_text?.replaceAll("\n", " ")}
+                  ${transformHeaderText(service.service_text)}
                 </div>
               </div>
             </div>
@@ -235,17 +231,43 @@ export type MinimalAlert = Omit<
   show_in_report: any;
 };
 
-export const transformMarianneText = (text: string | null | undefined) => {
+export const transformHeaderText = (text: string | null | undefined) => {
   if (!text) return null;
 
-  const replaced = text
-    .normalize("NFC")
-    .replaceAll("\n", " ")
-    .replaceAll("  ", " ")
-    .replace(/^(Préf[èe]te?\s+)/, "$1<br/>")
-    .replace(/région /g, "région<br/>");
+  const cleanString = text.normalize("NFC").replaceAll("\n", " ").replaceAll("  ", " ").trim();
 
-  return replaced;
+  if (cleanString.startsWith("Préfet") || cleanString.startsWith("Préfète")) {
+    return addBreaksAfterWords(cleanString, ["Préfet", "Préfète", "région"]);
+  }
+
+  if (cleanString.match(/Direction (régionale )?des affaires culturelles/)) {
+    return addBreaksAfterWords(cleanString, ["culturelles"]);
+  }
+
+  if (cleanString.startsWith("Unité départementale de")) {
+    console.log("matched");
+    return addBreaksAfterWords(cleanString, ["départementale de", "patrimoine"]);
+  }
+
+  if (cleanString.startsWith("Conservation régionale des monuments historiques")) {
+    return addBreaksAfterWords(cleanString, ["monuments"]);
+  }
+
+  return cleanString;
+};
+
+const addBreaksAfterWords = (str: string, words: string[]) => {
+  const pattern = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(\\s?)`, "gi");
+  const newStr = str.replace(pattern, "$1<br/>");
+
+  return newStr.replaceAll("<br/> ", "<br/>");
+};
+
+export const transformDracText = (text: string | null | undefined) => {
+  if (!text) return null;
+
+  const cleanString = text.normalize("NFC").replaceAll("\n", " ").replaceAll("  ", " ");
+  const [firstPart, lastPart] = cleanString.split(" affaires culturelles ");
 };
 
 export const getStateReportHtmlString = ({

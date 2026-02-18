@@ -4,7 +4,7 @@ import { Html } from "react-pdf-html";
 import { Clause_v2, Report, Service, ServiceInstructeurs } from "../../frontend/src/db/AppSchema";
 import { MarianneHeader, processHtml, Pagination } from "./utils";
 import React from "react";
-import { transformMarianneText } from "./stateReport";
+import { transformHeaderText } from "./stateReport";
 
 export const getPDFInMailName = (report: Omit<Report, "disabled">) => {
   const { city, applicantName, meetDate } = report;
@@ -114,19 +114,16 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
                 justify-content: flex-start;
                 font-size: 14px;
                 margin-right: 50px;
-                max-width: 250px;
+                max-width: 290px;
               }
 
               .right-texts > div:first-child {
                 font-weight: bold;
-                max-width: 180px;
-                word-break: break-word;
+                margin-bottom: 8px;
               }
 
               
               .right-texts > div:nth-child(2) {
-                max-width: 230px;
-                word-break: break-word;
               }
 
 
@@ -152,9 +149,7 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
               <div class="marianne">
 
                 <div class="marianne-text">
-                  <strong>
-                ${transformMarianneText(service.marianne_text)}
-                  </strong>
+                  ${transformHeaderText(service.marianne_text)}
                 </div>
                 <img class="marianne-footer-img" src="${images.marianneFooter}" />
 
@@ -162,16 +157,10 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
 
               <div class="right-texts">
                 <div>
-                      ${service.drac_text
-                        ?.split("\n")
-                        .map((s) => s.trim())
-                        .join("<br/>")}
+                  ${transformHeaderText(service.drac_text)}
                 </div>
                 <div>
-                    ${service.service_text
-                      ?.split("\n")
-                      .map((s) => s.trim())
-                      .join("<br/>")}
+                  ${transformHeaderText(service.service_text)}
                 </div>
               </div>
             </div>
