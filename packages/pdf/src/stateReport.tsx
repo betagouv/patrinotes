@@ -289,6 +289,13 @@ export const getStateReportHtmlString = ({
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 
   const visitedSections = sections.filter(getIsSectionVisited);
+  const address = [
+    stateReport.adresse,
+    stateReport.commune,
+    stateReport.code_postal ? `(${stateReport.code_postal})` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   // accessibilité
   // h1 pour les deux premières lignes
@@ -308,7 +315,7 @@ export const getStateReportHtmlString = ({
       <br/>
 
       <b>Parties visitées</b> : ${isPartielle ? stateReport.visite_partielle_details || "" : "Visite complète de l'édifice"}<br/>
-      <b>Adresse</b> : ${stateReport.adresse || "N/A"}<br/>
+      <b>Adresse</b> : ${address || "N/A"}<br/>
       <b>Référence cadastrale</b> : ${stateReport.reference_cadastrale || "N/A"}<br/>
       <b>Propriétaire</b> : ${stateReport.proprietaire ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})` : "N/A"}<br/>
       ${stateReport.proprietaire_representant ? `Représentant : ${stateReport.proprietaire_representant ? `${stateReport.proprietaire_representant} (${stateReport.proprietaire_representant_email})` : "N/A"}` : ""}
