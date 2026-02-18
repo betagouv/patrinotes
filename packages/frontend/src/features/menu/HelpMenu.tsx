@@ -36,12 +36,12 @@ export const HelpMenu = () => {
         <Stack px="16px">
           <TitleH3>Foire aux questions</TitleH3>
           <Box mt="8px">
-            À qui s’adresse compte rendu VIF ? Comment créer un nouveau compte-rendu ? Comment ajouter des photos...
-            Découvrez toutes les réponses sur la FAQ.
+            À qui s’adresse Patrinotes ? Comment créer un nouveau compte-rendu ? Comment ajouter des photos... Découvrez
+            toutes les réponses sur la FAQ.
           </Box>
           <Button
             sx={{ mt: "16px", bgcolor: fr.colors.decisions.text.actionHigh.blueFrance.default + " !important" }}
-            linkProps={{ target: "_blank", href: "https://compte-rendu-vif.beta.gouv.fr/faq" }}
+            linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/faq" }}
           >
             Consulter FAQ
           </Button>

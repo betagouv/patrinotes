@@ -671,9 +671,9 @@ const Activity = () => {
           textAlign="center"
         >
           <i className="fr-icon fr-icon-france-fill" style={{ fontSize: "48px", marginBottom: "8px" }}></i>
-          <div>CR envoyés par l'UDAP :</div>
+          <div>CR envoyés par le service :</div>
           <div>{crQuery.isLoading ? <Spinner /> : <div>{udapCrQuery.data?.[0]?.count as any}</div>}</div>
-          <Box mt="16px">CE envoyés par l'UDAP :</Box>
+          <Box mt="16px">CE envoyés par le service :</Box>
           <div>{ceQuery.isLoading ? <Spinner /> : <div>{udapCeQuery.data?.[0]?.count as any}</div>}</div>
         </Center>
       </Flex>
