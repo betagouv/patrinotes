@@ -226,8 +226,7 @@ const SectionForm = ({
 
   const { isRecording, transcript, toggle } = useSpeechToTextV2({
     onEnd: (text) => {
-      const currentValue = values.commentaires || "";
-      setValues({ ...values, commentaires: currentValue + " " + text });
+      setValues((values) => ({ ...values, commentaires: (values.commentaires || "") + " " + text }));
     },
   });
 
@@ -261,7 +260,7 @@ const SectionForm = ({
   };
   const isListeningProps = {
     ...isIdleProps,
-    value: values.commentaires + " " + transcript,
+    value: (values.commentaires || "") + " " + transcript,
     onChange: () => {},
   };
 
