@@ -67,7 +67,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const deletePictureMutation = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
       await attachmentStorage.deleteFile(id);
-      await db.deleteFrom("report_attachment").where("id", "=", id).execute();
+      await db.updateTable("report_attachment").set({ is_deprecated: 1 }).where("id", "=", id).execute();
     },
   });
 

@@ -15,7 +15,6 @@ import { Report } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
 import { useIsFormDisabled } from "./DisabledContext";
 import { ServiceInstructeurSelect } from "./ServiceInstructeurSelect";
-import { SpeechRecorder, useSpeechToText } from "./audio-record/SpeechRecorder";
 import { useSpeechToTextV2 } from "./audio-record/SpeechRecorder.hook";
 
 export const InfoForm = () => {
