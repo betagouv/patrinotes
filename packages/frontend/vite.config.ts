@@ -27,10 +27,10 @@ export default defineConfig({
 
       registerType: "autoUpdate",
       manifest: {
-        id: "gouv.beta.compte-rendu-vif",
+        id: "gouv.beta.patrinotes",
         orientation: "portrait",
-        short_name: "CR-VIF",
-        name: "Compte-rendu VIF",
+        short_name: "Patrinotes",
+        name: "Patrinotes",
         scope: "/",
         start_url: "/",
         lang: "fr",
