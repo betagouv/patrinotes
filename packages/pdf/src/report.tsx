@@ -119,7 +119,16 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
 
               .right-texts > div:first-child {
                 font-weight: bold;
+                max-width: 180px;
+                word-break: break-word;
               }
+
+              
+              .right-texts > div:nth-child(2) {
+                max-width: 230px;
+                word-break: break-word;
+              }
+
 
 
               .meeting-date {

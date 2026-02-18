@@ -151,10 +151,11 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
                 font-weight: bold;
                 margin-bottom: 8px;
                 max-width: 180px;
+                word-break: break-word;
               }
               .right-texts > div:nth-child(2) {
                 max-width: 230px;
-                break-inside: avoid;
+                word-break: break-word;
               }
 
                 
