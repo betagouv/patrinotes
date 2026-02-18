@@ -86,7 +86,7 @@ const ServicePage = () => {
         px={{ xs: "16px", lg: "0" }}
         textAlign="left"
       >
-        <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="32px">
+        <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="64px">
           Service
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
