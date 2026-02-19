@@ -24,7 +24,10 @@ export class Connector implements PowerSyncBackendConnector {
 
     for (const operation of batchTransactions.crud) {
       const payload = operation.toJSON();
-      if (!payload.data || Object.keys(payload.data).length === 0) {
+      const isPayloadEmpty = !payload.data || Object.keys(payload.data).length === 0;
+      const isDeletion = payload.op === "DELETE";
+
+      if (isPayloadEmpty && !isDeletion) {
         console.warn("skipping empty operation", payload);
         continue;
       }

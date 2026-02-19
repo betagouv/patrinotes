@@ -374,11 +374,21 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
   const user = useUser()!;
 
   const createMutation = useMutation({
-    mutationFn: (delegation: Omit<Delegation, "id">) =>
-      db
+    mutationFn: async (delegation: Omit<Delegation, "id">) => {
+      const existing = await db
+        .selectFrom("delegation")
+        .where("createdBy", "=", delegation.createdBy)
+        .where("delegatedTo", "=", delegation.delegatedTo)
+        .selectAll()
+        .executeTakeFirst();
+
+      if (existing) return;
+
+      await db
         .insertInto("delegation")
         .values({ ...delegation, id: v4() })
-        .execute(),
+        .execute();
+    },
   });
   const removeMutation = useMutation({
     mutationFn: (delegation: Delegation) => db.deleteFrom("delegation").where("id", "=", delegation.id).execute(),
