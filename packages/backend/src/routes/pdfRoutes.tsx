@@ -219,7 +219,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     );
 
     const service = request.user!.service as Service;
-    const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap, alerts });
+    const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap, alerts: alerts as any });
 
     const name = stateReportId + "/constat_d_etat_" + Math.round(Date.now() / 1000) + ".pdf";
     await request.services.upload.uploadAttachment({ buffer: pdf, filePath: name });
@@ -244,8 +244,9 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const recipients = request.body.recipients
       .replaceAll(";", ",")
       .split(",")
-      .map((r) => r.trim());
-    if (!recipients.includes(userMail)) recipients.push(userMail);
+      .map((r) => r.trim())
+      .map((r) => r.toLowerCase());
+    if (!recipients.includes(userMail.toLowerCase())) recipients.push(userMail.toLowerCase());
 
     const stateReport = stateReportQuery[0]! as Selectable<Database["state_report"]>;
     await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
@@ -257,17 +258,19 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         try {
           const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
           const additionalEmails = alert.additional_emails
-            ? alert.additional_emails.split(",").map((e) => e.trim())
+            ? alert.additional_emails.split(",").map((e) => e.trim().toLowerCase())
             : [];
 
-          const alertRecipients = Array.from(new Set([...mandatoryEmails.map((e) => e.email), ...additionalEmails]));
+          const alertRecipients = Array.from(
+            new Set([...mandatoryEmails.map((e) => e.email.toLowerCase()), ...additionalEmails]),
+          );
 
           const alertAttachments = alertsAttachmentsQuery.filter((a) => a.state_report_alert_id === alert.id);
 
           await sendAlertEmail({
             to: alertRecipients.join(","),
             stateReport: stateReport!,
-            alert: { ...alert, attachments: alertAttachments as any[] },
+            alert: { ...alert, attachments: alertAttachments as any[], should_send: 1 },
             user,
           });
 
