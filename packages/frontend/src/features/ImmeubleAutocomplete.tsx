@@ -221,6 +221,9 @@ export const ImmeubleAutocomplete = () => {
         inputValue={inputValue}
         onInputChange={(_e, newInputValue) => {
           setInputValue(newInputValue);
+          if (isCustom) {
+            form.setValue("titre_edifice", newInputValue);
+          }
         }}
         onFocus={() => {
           setAreSuggestionsShown(true);
