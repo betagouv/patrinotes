@@ -25,19 +25,19 @@ export const StateReportSideMenu = () => {
     <>
       <MenuModal menu={sideMenu} onClose={onClose} />
       <Stack mt={{ xs: "16px", lg: "0" }} gap="12px" flexDirection={{ xs: "row", lg: "column" }}>
-        <Button
+        {/* <Button
           priority="secondary"
           onClick={() => setSideMenu("alerts")}
           sx={{ width: "254px", justifyContent: "center" }}
           iconId="ri-alarm-warning-fill"
-          disabled={!ENV.VITE_ALERTES_MH_ENABLED}
+          disabled={false && !ENV.VITE_ALERTES_MH_ENABLED}
         >
           Alertes
-        </Button>
+        </Button> */}
         <Button
           priority="secondary"
           onClick={() => setSideMenu("notes")}
-          sx={{ width: "254px", justifyContent: "center" }}
+          sx={{ width: { xs: "100%", lg: "254px" }, justifyContent: "center" }}
           iconId="ri-draft-fill"
         >
           Notes
