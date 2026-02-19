@@ -69,10 +69,6 @@ export const LoginForm = () => {
               autoComplete: "current-password",
               ...form.register("password", {
                 required: "Le mot de passe est requis",
-                minLength: {
-                  value: 8,
-                  message: "Le mot de passe doit contenir au moins 8 caractères",
-                },
               }),
             }}
           />
