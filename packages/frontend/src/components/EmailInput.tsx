@@ -96,7 +96,7 @@ export const EmailInput = ({
           hintText={hintText}
           nativeInputProps={{
             ...nativeInputProps,
-            type: "email",
+            type: "text",
             value: state.context.query,
             onChange: (e) => {
               if (single) onValueChange([e.target.value]);
