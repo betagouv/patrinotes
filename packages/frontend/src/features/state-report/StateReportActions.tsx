@@ -68,6 +68,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
         "redacted_by",
         "service_id",
         "attachment_id",
+        "createdByName",
       ]);
 
       return db
@@ -106,7 +107,11 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
         </>
       ) : null}
 
-      <ReportAction iconId="ri-file-add-line" label="Dupliquer" onClick={() => duplicateMutation.mutate()} />
+      <ReportAction
+        iconId="ri-file-add-line"
+        label="Dupliquer"
+        onClick={() => duplicateMutation.mutate(undefined, { onError: (e) => console.error(e) })}
+      />
 
       {!isDraft ? (
         <>
