@@ -25,7 +25,7 @@ const serviceSections = [
   { linkProps: { href: "#service-informations" }, text: "Informations service" },
   { linkProps: { href: "#services-instructeurs" }, text: "Services instructeurs pour les CR" },
   { linkProps: { href: "#clauses-departementales" }, text: "Clauses départementales pour les CR" },
-  { linkProps: { href: "#alertes-mh" }, text: "Alertes visites Monuments Historiques" },
+  // { linkProps: { href: "#alertes-mh" }, text: "Alertes visites Monuments Historiques" },
   { linkProps: { href: "#rapport-activite" }, text: "Rapport d'activité" },
 ];
 
@@ -95,8 +95,8 @@ const ServicePage = () => {
         <ServicesList />
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
         <Clauses />
-        <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
-        <AlertesMH />
+        {/* <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" /> */}
+        {/* <AlertesMH /> */}
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
         <Activity />
       </Stack>
@@ -641,7 +641,7 @@ const Activity = () => {
 
   return (
     <Flex gap="16px" flexDirection="column" width="100%" maxWidth="690px">
-      <Title anchor="rapport-activite">5. Rapport d'activité</Title>
+      <Title anchor="rapport-activite">4. Rapport d'activité</Title>
 
       <DateRangePicker startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />
 
