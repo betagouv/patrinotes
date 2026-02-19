@@ -302,11 +302,18 @@ export const ImmeubleAutocomplete = () => {
       />
 
       {shouldShowUnlinkedButton ? (
-        <Flex alignItems="center" gap="16px" mt="32px">
-          <Button priority="secondary" onClick={() => form.setValue("reference_pop", "CUSTOM")}>
+        <Flex alignItems="center" gap="16px" mt="32px" flexDirection={{ xs: "column", lg: "row" }}>
+          <Button
+            priority="secondary"
+            sx={{ width: { xs: "100%", lg: "unset" }, justifyContent: { xs: "center", lg: "unset" } }}
+            onClick={() => form.setValue("reference_pop", "CUSTOM")}
+          >
             Créer un constat sans lien MH
           </Button>
           <Alert
+            sx={{
+              width: { xs: "100%", lg: "unset" },
+            }}
             severity="info"
             small
             description="Vous pouvez commencer un constat d'état et le relier plus tard à un monument."
