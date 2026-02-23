@@ -232,7 +232,7 @@ export type MinimalAlert = Omit<
 };
 
 export const transformHeaderText = (text: string | null | undefined) => {
-  if (!text) return null;
+  if (!text) return "";
 
   const cleanString = text.normalize("NFC").replaceAll("\n", " ").replaceAll("  ", " ").trim();
 
@@ -261,13 +261,6 @@ const addBreaksAfterWords = (str: string, words: string[]) => {
   const newStr = str.replace(pattern, "$1<br/>");
 
   return newStr.replaceAll("<br/> ", "<br/>");
-};
-
-export const transformDracText = (text: string | null | undefined) => {
-  if (!text) return null;
-
-  const cleanString = text.normalize("NFC").replaceAll("\n", " ").replaceAll("  ", " ");
-  const [firstPart, lastPart] = cleanString.split(" affaires culturelles ");
 };
 
 export const getStateReportHtmlString = ({
