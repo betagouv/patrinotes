@@ -2,7 +2,11 @@ import { config } from "dotenv";
 import { expand } from "dotenv-expand";
 import { z } from "zod";
 
-expand(config({ path: "../../.env" }));
+export const isDev = process.env.NODE_ENV === "development";
+export const isTest = process.env.NODE_ENV === "test";
+export const isProd = !isDev && !isTest;
+
+expand(config({ path: `../../${isTest ? ".env.test" : ".env"}` }));
 
 const stringOrNumberAsNumber = z.string().or(z.number()).transform(Number);
 
@@ -19,9 +23,6 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string(),
   NODE_ENV: z.string().default("development"),
   PORT: stringOrNumberAsNumber.default(3001),
-  AWS_BUCKET_NAME: z.string(),
-  AWS_REGION: z.string(),
-  AWS_ENDPOINT: z.string(),
   DEBUG: z.string().default("cr-vif:*"),
   FRONTEND_URL: z.string(),
   EMAIL_HOST: z.string(),
@@ -46,5 +47,3 @@ const envSchema = z.object({
 });
 
 export const ENV = envSchema.parse(process.env);
-export const isDev = ENV.NODE_ENV === "development";
-export const isTest = ENV.NODE_ENV === "test";

@@ -12,14 +12,6 @@ import { Transaction } from "kysely";
 
 const debug = makeDebug("upload");
 
-const attachmentClient = new S3({
-  credentials: {
-    accessKeyId: ENV.MINIO_ACCESS_KEY_ID,
-    secretAccessKey: ENV.MINIO_SECRET_KEY,
-  },
-  endpoint: ENV.MINIO_URL,
-  bucketEndpoint: true,
-});
 const client = new S3Client({
   endpoint: ENV.MINIO_URL,
   credentials: { accessKeyId: ENV.MINIO_ACCESS_KEY_ID, secretAccessKey: ENV.MINIO_SECRET_KEY },

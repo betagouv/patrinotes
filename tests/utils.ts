@@ -1,30 +1,45 @@
 import { Page } from "@playwright/test";
-import { db } from "../packages/backend/src/db/db";
+import { Database, db } from "../packages/backend/src/db/db";
+import type { Insertable, Selectable } from "kysely";
 
-export const mockUser1 = {
-  name: "Test runner 1",
-  email: "testrunner1@yopmail.com",
-  password: "Password123!",
-};
+export const mockServices: Insertable<Database["service"]>[] = [
+  {
+    name: "Service 1",
+    id: "service-1",
+    department: "00",
+    visible: true,
+  },
+];
 
-export const mockUser2 = {
-  name: "Test runner 2",
-  email: "testrunner2@yopmail.com",
-  password: "Password123!",
-};
+export const mockUsers = [
+  {
+    nom: "Test",
+    prenom: "Runner 1",
+    email: "testrunner1@yopmail.com",
+    job: "Testeur",
+    password: "Password123!",
+  },
+  {
+    nom: "Test",
+    prenom: "Runner 2",
+    email: "testrunner2@yopmail.com",
+    job: "Testeur",
+    password: "Password123!",
+  },
+];
 
-type User = typeof mockUser1;
+type User = (typeof mockUsers)[0];
 
-export const mockUsers = [mockUser1, mockUser2];
+export const signup = async ({ page, user, udap = mockServices[0].id }: { page: Page; user: User; udap?: string }) => {
+  await page.goto("./inscription");
 
-export const signup = async ({ page, user, udap = "udap-landes" }: { page: Page; user: User; udap?: string }) => {
-  await page.goto("./signup");
-
-  await page.fill("input[name=name]", user.name);
+  await page.fill("input[name=nom]", user.nom);
+  await page.fill("input[name=prenom]", user.prenom);
   await page.fill("input[name=email]", user.email);
   await page.fill("input[name=password]", user.password);
+  await page.fill("input[name=job]", user.job);
 
-  await page.selectOption("select[name=udap_id]", udap);
+  await page.selectOption("select[name=service_id]", udap);
 
   await page.click("button[type=submit]");
 

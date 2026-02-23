@@ -8,6 +8,7 @@
     "build": "tsup ./src/index.ts --publicDir --format esm",
     "start": "cross-env NODE_ENV=production node ./dist/index.js",
     "dev": "vite-node --watch ./src/index.ts",
+    "dev-test": "cross-env NODE_ENV=test vite-node --watch ./src/index.ts",
     "import-pop": "vite-node ./src/features/data/pop.ts --standalone",
     "check": "tsc --noEmit",
     "test": "vitest",

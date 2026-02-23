@@ -1,7 +1,7 @@
 import "./envVars";
 import { onHmr, registerViteHmrServerRestart } from "./hmr";
 
-import { ENV } from "./envVars";
+import { ENV, isTest } from "./envVars";
 import { generateOpenApi, initFastify } from "./router";
 import { makeDebug } from "./features/debug";
 import { fetchPopCSV, initPopImages, initPopImmeubles, initPopObjets } from "./features/data/pop";
@@ -12,8 +12,12 @@ const debug = makeDebug("index");
 const start = async () => {
   await registerViteHmrServerRestart();
   await initEmptyService();
-  await initPopImmeubles();
-  await initPopObjets();
+
+  if (!isTest) {
+    await initPopImmeubles();
+    await initPopObjets();
+  }
+
   // await initPopImages();
   debug("Starting fastify server in", ENV.NODE_ENV, "mode");
 

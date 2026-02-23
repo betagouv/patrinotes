@@ -1,0 +1,138 @@
+version: "3.1"
+
+name: patrinotes-test
+
+volumes:
+  pg_data:
+  minio_data:
+  mongo_storage:
+
+services:
+  pg:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+    command:
+      - -c
+      - listen_addresses=*
+      - -c
+      - wal_level=logical
+    ports:
+      - ${POSTGRES_PORT}:5432
+    restart: always
+    volumes:
+      - ./db/init/:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:7.0
+    command: --replSet rs0 --bind_ip_all --quiet
+    restart: unless-stopped
+
+  mongo-rs-init:
+    image: mongo:7.0
+    depends_on:
+      - mongo
+    restart: on-failure
+    entrypoint:
+      - bash
+      - -c
+      - 'mongosh --host mongo:27017 --eval ''try{rs.status().ok && quit(0)} catch {} rs.initiate({_id: "rs0", version:
+        1, members: [{ _id: 0, host : "mongo:27017" }]})'''
+
+  powersync:
+    restart: unless-stopped
+    depends_on:
+      mongo-rs-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      pg:
+        condition: service_healthy
+    image: journeyapps/powersync-service:latest
+    command: ["start", "-r", "unified"]
+    volumes:
+      - ./powersync-config.yaml:/config/config.yaml
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/config.yaml
+      PS_DATABASE_URL: ${PS_DATABASE_URL}
+      PS_JWT_SECRET: ${JWT_SECRET}
+      PS_PORT: ${POWERSYNC_PORT}
+    ports:
+      - ${POWERSYNC_PORT}:8080
+
+  minio:
+    image: minio/minio
+    ports:
+      - "${MINIO_SERVER_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASSWORD: ${MINIO_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY_ID}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    entrypoint: >
+      /bin/sh -c " mc alias set local http://minio:9000 $MINIO_USER $MINIO_PASSWORD; mc mb local/my-bucket
+      --ignore-existing; mc admin user add local $MINIO_ACCESS_KEY_ID $MINIO_SECRET_KEY; mc admin policy attach local
+      readwrite --user $MINIO_ACCESS_KEY_ID; exit 0; "
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.5
+    command: "start-dev --import-realm"
+    entrypoint: ["/opt/keycloak/entrypoint.sh"]
+    volumes:
+      - ./tests/realm-template.json:/opt/keycloak/data/import/realm-template.json
+      - ./tests/keycloak-entrypoint.sh:/opt/keycloak/entrypoint.sh
+    environment:
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT}
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HOSTNAME_STRICT_BACKCHANNEL: false
+      KC_HTTP_ENABLED: true
+      KC_LOG_LEVEL: info
+      KC_METRICS_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://pg:5432/${KEYCLOAK_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - ${KEYCLOAK_PORT}:8080
+    depends_on:
+      - pg
+
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "${SMTP_PORT}:1025"
+      - "${SMTP_WEB_PORT}:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
