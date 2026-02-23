@@ -18,7 +18,7 @@ La whitelist n'est pas active dans l'environnement de développement
 
 # Découverte du service, premiers pas
 
-// TODO quand les pages "Mon UDAP" et "Mon compte" seront livrées
+// TODO
 
 # Infrastructure
 
@@ -26,7 +26,7 @@ La whitelist n'est pas active dans l'environnement de développement
 graph TD
     subgraph VPS
         Backend[Node.js Backend] <--> DB[(PostgreSQL)]
-        Backend <--> MinIO[Stockage des images sur MinIO]
+        Backend <--> S3[Stockage des images et des PDF sur S3]
         PowerSync <--> DB
 
         subgraph PowerSync[PowerSync WS Server]
@@ -34,11 +34,28 @@ graph TD
         end
     end
 
-    Backend <--> S3[Stockage des pdf sur S3]
     Backend <--> SMTP[Scaleway SMTP]
 
     Frontend[PWA] <--> Backend
     Frontend <--> PowerSync
+```
+
+# Données
+
+```mermaid
+graph LR
+    Backend[Patrinotes Backend]
+    DataGouv[data.gouv.fr]
+    POP[POP]
+
+    DataGouv -->|monuments.csv| Backend
+    DataGouv -->|mobilier.csv| Backend
+    DataGouv -->|api-adresse| Backend
+
+    POP -->|scrap pictures| Backend
+
+    Backend -->|structured data| PatrinotesDB[Patrinotes Database]
+    Backend -->|pictures and pdf| PatrinotesS3[Patrinotes S3]
 ```
 
 # Framework et dépendances
@@ -63,7 +80,7 @@ L'application utilise le service [PowerSync](https://docs.powersync.com/intro/po
 synchronisation. Il est composé :
 
 - d'un serveur WebSocket connecté à un replica de la base de données
-- d'une base de données Mongo interne (qui n'a pas besoin d'être persistente)
+- d'une base de données Mongo interne (qui n'a pas besoin d'être persistante)
 
 Le workflow est le suivant :
 
@@ -76,15 +93,21 @@ Le workflow est le suivant :
 
 ### Migrations
 
-Les migrations sont écrites en SQL et placées dans le dossier `db/migrations`.
+Les migrations sont générées automatiquement grâce à la commande `pnpm migration:generate` après modification du fichier
+[schema.ts](./packages/backend/src/db/schema.ts).
 
-Elles sont exécutées grâce à la commande `pnpm migration:up`, qui utilise le package
-[@databases/pg-migrations](https://www.npmjs.com/package/@databases/pg-migrations).
+Lors du développement, il est possible d'utiliser `pnpm backend drizzle push` pour modifier la base de données locale
+sans générer de migrations, puis de générer les migrations avant de commit.
 
-### Types Typescript
+> [!WARNING]  
+> Si les migrations concernent des données accessibles en frontend, se référer à
+> ([la documentation Powersync](https://docs.powersync.com/maintenance-ops/deploying-schema-changes)), et vérifier :
+>
+> - que les nouvelles tables font partie de la publication SQL `powersync`
+> - que les nouvelles tables et ou données ont été ajoutées dans le
+>   [schéma frontend](./packages/frontend/src/db/AppSchema.ts)
 
-Après avoir effectué des migrations, `pnpm backend pull-types` génère les types typescript dans le fichier
-[db-types.d.ts](./packages/backend/src/db-types.d.ts)
+Pour exécuter les migrations : `pnpm migration:up`.
 
 ## API
 
@@ -99,3 +122,7 @@ Le RPC se génère grâce à la commande `pnpm client:generate`, qui
 
 - `clearDb.sh` clears local postgres db
 - `frontend/createEnvFile.ts` used in prod to inject env vars starting with VITE\_ at runtime
+
+```
+
+```
