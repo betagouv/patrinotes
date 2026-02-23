@@ -26,7 +26,7 @@ export const createBordereauMailContent = ({
 <p>Le constat réalisé lors de cette visite, accompagné de la couverture photographique établie à cette occasion, n'est que visuel. Il rend compte de l'état apparent du bien protégé, sans mise en œuvre d'aucune technologie. Cette visite s’inscrit dans le cadre de la vérification périodique de l’état des monuments historiques et des conditions de leur conservation de façon que leur pérennité soit assurée, en application du contrôle scientifique et technique des services chargés des monuments historiques.
 Outre l’établissement de l’état de conservation, cette visite permet d’identifier et de prévenir les risques. Les données sont enregistrées dans les applications du ministère de la Culture afin de réaliser les synthèses territoriales et la comparaison dans le temps et de mettre à jour les données existantes et, le cas échéant, la protection juridique.</p>
 
-<p>Le constat joint permet de préconiser des interventions suivantes :</p>
+<p>Le constat joint permet de préconiser les interventions suivantes :</p>
 
 <p>
 ${preconisations.map(({ preconisation, commentaire }) => {
