@@ -12,7 +12,7 @@ import { useStatus } from "@powersync/react";
 
 export const Layout = ({ children }: PropsWithChildren) => {
   const location = useLocation();
-  const noProvider = ["/connection", "/inscription"].includes(location.pathname);
+  const noProvider = ["/connexion", "/inscription"].includes(location.pathname);
   const shouldFooterTakeFullheight = location.pathname.startsWith("/constat/");
 
   return (

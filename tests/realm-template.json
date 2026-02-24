@@ -1,6 +1,7 @@
 {
   "id": "6ee3622c-0b65-4fd1-882d-7fcb023d4c40",
   "realm": "master",
+
   "displayName": "Keycloak",
   "displayNameHtml": "<div class=\"kc-logo-text\"><span>Keycloak</span></div>",
   "notBefore": 0,
@@ -150,6 +151,24 @@
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": ["web-origins", "service_account", "acr", "roles", "profile", "basic", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access", "organization", "microprofile-jwt"]
+    }
+  ],
+  "users": [
+    {
+      "id": "1cb0b1fe-5f95-47db-a307-3065392c5fb5",
+      "username": "service-account-${AUTH_CLIENT_ID}",
+      "enabled": true,
+      "serviceAccountClientId": "${AUTH_CLIENT_ID}"
+    },
+    {
+      "id": "282fa5b3-9dd0-4023-a5f6-3b956f2a40b9",
+      "username": "service-account-${AUTH_ADMIN_CLIENT_ID}",
+      "enabled": true,
+      "serviceAccountClientId": "${AUTH_ADMIN_CLIENT_ID}",
+      "clientRoles": {
+        "master-realm": ["manage-authorization", "view-users", "query-users", "manage-users"],
+        "account": ["manage-account"]
+      }
     }
   ],
   "clientScopes": [

@@ -2,11 +2,6 @@ version: "3.1"
 
 name: patrinotes-test
 
-volumes:
-  pg_data:
-  minio_data:
-  mongo_storage:
-
 services:
   pg:
     image: postgres:14-alpine
@@ -106,6 +101,11 @@ services:
       - ./tests/realm-template.json:/opt/keycloak/data/import/realm-template.json
       - ./tests/keycloak-entrypoint.sh:/opt/keycloak/entrypoint.sh
     environment:
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      AUTH_ADMIN_CLIENT_ID: ${AUTH_ADMIN_CLIENT_ID}
+      AUTH_ADMIN_CLIENT_SECRET: ${AUTH_ADMIN_CLIENT_SECRET}
+
       KC_HOSTNAME: localhost
       KC_HOSTNAME_PORT: ${KEYCLOAK_PORT}
       KC_HOSTNAME_STRICT: false
@@ -125,6 +125,17 @@ services:
       - ${KEYCLOAK_PORT}:8080
     depends_on:
       - pg
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection:
+          close\r\n\r\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   mailpit:
     image: axllent/mailpit

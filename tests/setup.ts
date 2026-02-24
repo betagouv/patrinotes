@@ -43,6 +43,8 @@ export default async function setup() {
 
   console.log("Setting up database...");
 
+  await db.deleteFrom("internal_user").execute();
+  await db.deleteFrom("user").execute();
   await db
     .deleteFrom("service")
     .where(
@@ -51,15 +53,25 @@ export default async function setup() {
       mockServices.map((s) => s.id),
     )
     .execute();
-  await db.deleteFrom("internal_user").execute();
   await db.deleteFrom("whitelist").execute();
-  await db.deleteFrom("user").execute();
 
   await db.insertInto("service").values(mockServices).execute();
   await db
     .insertInto("whitelist")
     .values(mockUsers.map((u) => ({ email: u.email })))
     .execute();
+
+  const usersCount = await db
+    .selectFrom("user")
+    .select((eb) => eb.fn.count("id").as("count"))
+    .executeTakeFirstOrThrow();
+  console.log(`Users count: ${usersCount.count}`);
+
+  const servicesCount = await db
+    .selectFrom("service")
+    .select((eb) => eb.fn.count("id").as("count"))
+    .executeTakeFirstOrThrow();
+  console.log(`Services count: ${servicesCount.count}`);
 
   console.log("Database setup completed");
 }

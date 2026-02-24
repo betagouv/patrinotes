@@ -7,7 +7,7 @@ export const EnsureUser = ({ children }: PropsWithChildren) => {
 
   if (!user) {
     const href = window.location.pathname;
-    return <Navigate to="/connection" search={{ redirect: href }} />;
+    return <Navigate to="/connexion" search={{ redirect: href }} />;
   }
 
   return <>{children}</>;

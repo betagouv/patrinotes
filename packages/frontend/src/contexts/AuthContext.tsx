@@ -93,7 +93,7 @@ export const useLogout = () => {
   return () => {
     menuActor.send({ type: "CLOSE" });
     setAuth({ ...auth, accessToken: null, user: null, refreshToken: null, expiresAt: null });
-    navigate({ to: "/connection" });
+    navigate({ to: "/connexion" });
   };
 };
 

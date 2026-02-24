@@ -1,9 +1,17 @@
 import { test, expect, type Route } from "@playwright/test";
-import { db } from "../packages/backend/src/db/db";
+import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 import { cleanupDb, mockUsers, signup } from "./utils";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./");
+});
+
+test.beforeAll(async () => {
+  for (const user of mockUsers) {
+    try {
+      await deleteUserByEmail(user.email);
+    } catch {}
+  }
 });
 
 test.afterAll(async () => {});
@@ -11,7 +19,7 @@ test.afterAll(async () => {});
 test.describe("Create user", () => {
   test("should be redirected to the login page", async ({ page }) => {
     await page.waitForURL((url) => url.pathname === "/connexion");
-    expect(page.url()).toContain("login");
+    expect(page.url()).toContain("connexion");
   });
 
   test("should go to signup page", async ({ page }) => {
@@ -24,16 +32,14 @@ test.describe("Create user", () => {
     expect(page.url()).toContain("inscription");
   });
 
-  test.only("should create a new user", async ({ page }) => {
+  test("should create a new user", async ({ page }) => {
     await signup({ page, user: mockUsers[0] });
     expect(page.url()).toContain("/");
-
-    await page.click("button[data-test-id=settings-menu]");
 
     const button = await page.waitForSelector("[data-test-id=logout]");
     await button.click();
     await page.waitForURL((url) => url.pathname === "/connexion");
-    expect(page.url()).toContain("login");
+    expect(page.url()).toContain("connexion");
   });
 
   test("should login", async ({ page }) => {

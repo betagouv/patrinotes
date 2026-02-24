@@ -71,14 +71,6 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: [
-    // {
-    //   command: `docker compose -p patrinotes-test -f docker-compose.test.yaml --env-file ./.env.test up --wait && pnpm migration:up && pnpm backend dev`,
-    //   reuseExistingServer: false,
-    //   url: `http://localhost:${process.env.BACKEND_PORT}/health`,
-    //   env: {
-    //     NODE_ENV: "test",
-    //   },
-    // },
     {
       command: `pnpm frontend dev --mode test --port ${process.env.FRONTEND_PORT}`,
       url: `http://localhost:${process.env.FRONTEND_PORT}`,

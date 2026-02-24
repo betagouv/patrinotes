@@ -41,6 +41,8 @@ export const signup = async ({ page, user, udap = mockServices[0].id }: { page: 
 
   await page.selectOption("select[name=service_id]", udap);
 
+  await page.check("input[name=cgu]", { force: true });
+
   await page.click("button[type=submit]");
 
   await page.waitForURL((url) => url.pathname === "/");

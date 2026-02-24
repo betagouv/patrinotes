@@ -18,7 +18,7 @@ const LoginPage = () => {
   );
 };
 
-export const Route = createFileRoute("/connection")({
+export const Route = createFileRoute("/connexion")({
   component: () => {
     return (
       <RedirectIfUser>
