@@ -35,7 +35,7 @@ const AppFooter = () => {
       <div className="fr-container">
         <div className="fr-footer__body">
           <div className="fr-footer__brand fr-enlarge-link">
-            <a className="active" title="Compte rendu vif" href="/" data-status="active">
+            <a className="active" title="Patrinotes" href="/" data-status="active">
               <p className="fr-logo">
                 Ministère
                 <br /> de la culture
@@ -164,7 +164,7 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
               width="100%"
               margin="0"
             >
-              <Link style={{ textWrap: "nowrap" }} to="/" title="Compte rendu vif" search={{ document: "constats" }}>
+              <Link style={{ textWrap: "nowrap" }} to="/" title="Patrinotes" search={{ document: "constats" }}>
                 <Box
                   className="fr-header__brand"
                   sx={{

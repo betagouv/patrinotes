@@ -29,8 +29,8 @@ export const initFastify = async () => {
     openapi: {
       openapi: "3.1.0",
       info: {
-        title: "CR VIF API",
-        description: "CR VIF API Documentation",
+        title: "Patrinotes API",
+        description: "Patrinotes API Documentation",
         version: "1.0",
       },
     },

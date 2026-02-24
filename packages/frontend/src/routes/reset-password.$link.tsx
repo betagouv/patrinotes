@@ -28,7 +28,7 @@ const ResetPasswordAction = () => {
   return (
     <Center mt="20px" mb="80px">
       <Flex flexDirection="column" width="484px" p="16px">
-        <Typography variant="h4">Récupération de mot de passe pour Compte-rendu VIF</Typography>
+        <Typography variant="h4">Récupération de mot de passe pour Patrinotes</Typography>
         <p>Veuillez saisir votre nouveau mot de passe</p>
 
         <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>

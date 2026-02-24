@@ -324,7 +324,7 @@ const Share = () => {
           small={false}
           severity="info"
           description={
-            "Aucun autre utilisateur de votre UDAP n'est enregistré sur Compte rendu VIF. Vous ne pouvez donc pas autoriser d'autres personnes à créer, modifier et supprimer vos CR."
+            "Aucun autre utilisateur de votre UDAP n'est enregistré sur Patrinotes. Vous ne pouvez donc pas autoriser d'autres personnes à créer, modifier et supprimer vos CR."
           }
         />
       )}

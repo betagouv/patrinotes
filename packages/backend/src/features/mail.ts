@@ -81,7 +81,7 @@ export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string;
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: email,
-    subject: "CR VIF - Réinitialisation de mot de passe",
+    subject: "Patrinotes - Réinitialisation de mot de passe",
     text: `Voici le lien de réinitialisation de votre mot de passe : ${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`,
   });
 };
