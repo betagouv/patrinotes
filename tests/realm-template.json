@@ -1,0 +1,64 @@
+{
+  "realm": "master",
+  "enabled": true,
+  "accessTokenLifespan": 60,
+  "registrationEmailAsUsername": true,
+  "clients": [
+    {
+      "clientId": "${AUTH_ADMIN_CLIENT_ID}",
+      "secret": "${AUTH_ADMIN_CLIENT_SECRET}",
+      "enabled": true,
+      "redirectUris": ["/*"],
+      "webOrigins": ["/*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": ["web-origins", "service_account", "acr", "roles", "profile", "basic", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "organization", "microprofile-jwt"]
+    },
+    {
+      "enabled": true,
+      "clientId": "${AUTH_CLIENT_ID}",
+      "clientAuthenticatorType": "client-secret-jwt",
+      "secret": "${AUTH_CLIENT_SECRET}",
+      "redirectUris": ["/*"],
+      "webOrigins": ["/*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "attributes": {
+        "jwks.url": "http://localhost:${KC_HOSTNAME_PORT}/realms/master/protocol/openid-connect/certs",
+        "use.jwks.url": "true"
+      },
+      "defaultClientScopes": ["web-origins", "service_account", "acr", "roles", "profile", "basic", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "organization", "microprofile-jwt"]
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "service-account-${AUTH_CLIENT_ID}",
+      "enabled": true,
+      "serviceAccountClientId": "${AUTH_CLIENT_ID}"
+    },
+    {
+      "username": "service-account-${AUTH_ADMIN_CLIENT_ID}",
+      "enabled": true,
+      "serviceAccountClientId": "${AUTH_ADMIN_CLIENT_ID}",
+      "clientRoles": {
+        "master-realm": ["manage-authorization", "view-users", "query-users", "manage-users"],
+        "account": ["manage-account"]
+      }
+    }
+  ]
+}

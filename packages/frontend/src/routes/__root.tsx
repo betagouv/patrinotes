@@ -31,7 +31,7 @@ const getTitle = (pathname: string) => {
     return "Patrinotes | PDF";
   }
 
-  if (pathname.startsWith("/connection")) {
+  if (pathname.startsWith("/connexion")) {
     return "Patrinotes | Connexion";
   }
 

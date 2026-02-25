@@ -14,7 +14,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiceRouteImport } from './routes/service'
 import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as InscriptionRouteImport } from './routes/inscription'
-import { Route as ConnectionRouteImport } from './routes/connection'
+import { Route as ConnexionRouteImport } from './routes/connexion'
 import { Route as CguRouteImport } from './routes/cgu'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
@@ -41,9 +41,9 @@ const InscriptionRoute = InscriptionRouteImport.update({
   path: '/inscription',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConnectionRoute = ConnectionRouteImport.update({
-  id: '/connection',
-  path: '/connection',
+const ConnexionRoute = ConnexionRouteImport.update({
+  id: '/connexion',
+  path: '/connexion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CguRoute = CguRouteImport.update({
@@ -98,7 +98,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/cgu': typeof CguRoute
-  '/connection': typeof ConnectionRoute
+  '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
@@ -113,7 +113,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/cgu': typeof CguRoute
-  '/connection': typeof ConnectionRoute
+  '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
@@ -129,7 +129,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/cgu': typeof CguRoute
-  '/connection': typeof ConnectionRoute
+  '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
@@ -146,7 +146,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/cgu'
-    | '/connection'
+    | '/connexion'
     | '/inscription'
     | '/mentions-legales'
     | '/service'
@@ -161,7 +161,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/cgu'
-    | '/connection'
+    | '/connexion'
     | '/inscription'
     | '/mentions-legales'
     | '/service'
@@ -176,7 +176,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/cgu'
-    | '/connection'
+    | '/connexion'
     | '/inscription'
     | '/mentions-legales'
     | '/service'
@@ -192,7 +192,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   CguRoute: typeof CguRoute
-  ConnectionRoute: typeof ConnectionRoute
+  ConnexionRoute: typeof ConnexionRoute
   InscriptionRoute: typeof InscriptionRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
   ServiceRoute: typeof ServiceRoute
@@ -227,11 +227,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InscriptionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/connection': {
-      id: '/connection'
-      path: '/connection'
-      fullPath: '/connection'
-      preLoaderRoute: typeof ConnectionRouteImport
+    '/connexion': {
+      id: '/connexion'
+      path: '/connexion'
+      fullPath: '/connexion'
+      preLoaderRoute: typeof ConnexionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cgu': {
@@ -304,7 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   CguRoute: CguRoute,
-  ConnectionRoute: ConnectionRoute,
+  ConnexionRoute: ConnexionRoute,
   InscriptionRoute: InscriptionRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
   ServiceRoute: ServiceRoute,

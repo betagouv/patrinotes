@@ -2,17 +2,14 @@ import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 import { expand } from "dotenv-expand";
 
-expand(dotenv.config({ path: "./.env" }));
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
+expand(dotenv.config({ path: "./.env.test" }));
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
+  globalSetup: "./tests/setup.ts",
+  globalTeardown: "./tests/teardown.ts",
   testDir: "./tests",
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -21,13 +18,13 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:5177",
+    baseURL: `http://localhost:${process.env.FRONTEND_PORT}`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -73,9 +70,37 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: "pnpm frontend dev --port 5177",
-    url: "http://localhost:5177",
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: "docker compose -p patrinotes-test -f docker-compose.test.yaml --env-file ./.env.test up --wait",
+      url: `http://localhost:${process.env.HEALTHCHECK_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+      },
+    },
+    {
+      command: `pnpm migration:up`,
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+      },
+    },
+    {
+      command: "pnpm backend dev",
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+      },
+    },
+    {
+      command: `pnpm frontend dev --mode test --port ${process.env.FRONTEND_PORT}`,
+      url: `http://localhost:${process.env.FRONTEND_PORT}`,
+      env: {
+        NODE_ENV: "test",
+      },
+      reuseExistingServer: false,
+    },
+  ],
 });

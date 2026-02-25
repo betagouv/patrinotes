@@ -96,6 +96,7 @@ export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
               onClick={() => logout()}
               priority="tertiary no outline"
               iconId="fr-icon-logout-box-r-line"
+              data-test-id="logout"
             >
               <Typography
                 sx={{

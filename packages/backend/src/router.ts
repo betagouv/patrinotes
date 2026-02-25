@@ -45,6 +45,10 @@ export const initFastify = async () => {
     request.services = getServices();
   });
 
+  fastifyInstance.get("/health", async (_, reply) => {
+    reply.status(200).send({ status: "ok" });
+  });
+
   fastifyInstance.register(
     async (instance) => {
       instance.setErrorHandler((error, request, reply) => {

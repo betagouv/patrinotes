@@ -27,6 +27,19 @@ export const getKeycloakAdminTokens = async () => {
   return tokenResponse;
 };
 
+export const deleteUserByEmail = async (email: string) => {
+  const users = await adminAuthApi(`/users?email=${encodeURIComponent(email)}&exact=true`, {
+    method: "GET",
+  });
+
+  const user = users?.[0];
+  if (!user?.id) throw new Error(`User not found for email: ${email}`);
+
+  await adminAuthApi(`/users/${user.id}`, {
+    method: "DELETE",
+  });
+};
+
 type KeycloakTokens = {
   access_token: string;
   refresh_token: string;

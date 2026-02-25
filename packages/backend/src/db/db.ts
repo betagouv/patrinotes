@@ -5,18 +5,22 @@ import { Kyselify } from "drizzle-orm/kysely";
 
 import * as tables from "./schema";
 
-const pool = new pg.Pool({
-  connectionString: ENV.DATABASE_URL,
-  ssl: false,
-});
+export const makeDb = ({ connectionString }: { connectionString: string }) => {
+  const pool = new pg.Pool({
+    connectionString,
+    ssl: false,
+  });
 
-const dialect = new PostgresDialect({
-  pool,
-});
+  const dialect = new PostgresDialect({
+    pool,
+  });
 
-export const db = new Kysely<Database>({
-  dialect,
-});
+  return new Kysely<Database>({
+    dialect,
+  });
+};
+
+export const db = makeDb({ connectionString: ENV.DATABASE_URL });
 
 export type Database = {
   user: Kyselify<typeof tables.user>;
