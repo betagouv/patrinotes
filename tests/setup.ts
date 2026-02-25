@@ -1,10 +1,19 @@
 import { exec, execSync, spawnSync } from "child_process";
 import { db, makeDb } from "../packages/backend/src/db/db";
 import { mockServices, mockUsers } from "./utils";
+import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
 export default async function setup() {
   console.log("Setting up database...");
 
+  // delete keycloak users
+  for (const user of mockUsers) {
+    try {
+      await deleteUserByEmail(user.email);
+    } catch {}
+  }
+
+  // delete and re-insert test data
   await db.deleteFrom("internal_user").execute();
   await db.deleteFrom("user").execute();
   await db

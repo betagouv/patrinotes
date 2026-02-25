@@ -6,16 +6,6 @@ test.beforeEach(async ({ page }) => {
   await page.goto("./");
 });
 
-test.beforeAll(async () => {
-  for (const user of mockUsers) {
-    try {
-      await deleteUserByEmail(user.email);
-    } catch {}
-  }
-});
-
-test.afterAll(async () => {});
-
 test.describe("Create user", () => {
   test("should be redirected to the login page", async ({ page }) => {
     await page.waitForURL((url) => url.pathname === "/connexion");
