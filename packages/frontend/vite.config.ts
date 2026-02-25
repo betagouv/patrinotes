@@ -73,6 +73,7 @@ export default defineConfig({
       "app.compte-rendu-vif.beta.gouv.fr",
       "compte-rendu-vif.incubateur.net",
       ".compte-rendu-vif.incubateur.net",
+      "patrinotes.incubateur.net",
     ],
   },
   build: {
