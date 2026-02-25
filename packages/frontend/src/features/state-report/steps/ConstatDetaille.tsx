@@ -92,7 +92,7 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
   });
 
   const selectedSection = visitedSections?.find((vs) => vs.id === selectedSectionId) || null;
-  const customSections = visitedSections?.filter((vs) => !defaultSections.includes(vs.section!)) || [];
+  const customSections = visitedSections?.filter((vs) => !defaultSections.includes(vs.section!) && !!vs.section) || [];
 
   const newCustomSection = "Autre...";
 
@@ -236,8 +236,12 @@ const SectionForm = ({
   isDisabled: boolean;
   onClose: () => void;
 }) => {
-  const isTitleEditable = !defaultSections.includes(visitedSection?.section || "");
-  const [values, setValues] = useState(visitedSection);
+  const isCustom = !defaultSections.includes(visitedSection?.section || "");
+  const [values, setValues] = useState(
+    isCustom
+      ? { ...visitedSection, section: visitedSection?.section === "Autre..." ? "" : visitedSection?.section }
+      : visitedSection,
+  );
 
   const { isRecording, transcript, toggle } = useSpeechToTextV2({
     onEnd: (text) => {
@@ -257,7 +261,7 @@ const SectionForm = ({
           etat_general: values.etat_general,
           proportion_dans_cet_etat: values.proportion_dans_cet_etat,
           commentaires: values.commentaires,
-          ...(isTitleEditable ? { section: values.section } : {}),
+          ...(isCustom ? { section: values.section } : {}),
         })
         .where("id", "=", visitedSection.id)
         .returningAll()
@@ -285,7 +289,7 @@ const SectionForm = ({
   return (
     <Stack gap="16px" px={{ xs: "0", lg: "16px" }}>
       <Stack>
-        {isTitleEditable ? (
+        {isCustom ? (
           <Input
             label="Partie visitée"
             nativeInputProps={{
@@ -330,13 +334,24 @@ const SectionForm = ({
           )}
         </Flex>
       </Stack>
-      <FullWidthButton disabled={isDisabled} onClick={() => onClose()}>
+      <FullWidthButton
+        disabled={isDisabled}
+        onClick={() => {
+          syncMutation.mutate();
+          onClose();
+        }}
+      >
         Enregistrer
       </FullWidthButton>
       <FullWidthButton
         disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}
         onClick={() =>
-          setValues((values) => ({ ...values, commentaires: null, etat_general: null, proportion_dans_cet_etat: null }))
+          setValues((values) => ({
+            ...values,
+            commentaires: null,
+            etat_general: null,
+            proportion_dans_cet_etat: null,
+          }))
         }
         priority="tertiary no outline"
         iconId="ri-arrow-go-back-line"
