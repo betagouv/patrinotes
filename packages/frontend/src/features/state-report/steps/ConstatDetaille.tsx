@@ -92,10 +92,20 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
   });
 
   const selectedSection = visitedSections?.find((vs) => vs.id === selectedSectionId) || null;
+  const customSections = visitedSections?.filter((vs) => !defaultSections.includes(vs.section!)) || [];
+
+  const newCustomSection = "Autre...";
+
+  const displayedSections = [...defaultSections, ...customSections.map((vs) => vs.section!)];
+  if (!customSections.map((cs) => cs.section).includes(newCustomSection)) {
+    displayedSections.push(newCustomSection);
+  }
+  const fullSections = [...visitedSections, ...customSections];
 
   const isDesktop = useIsDesktop();
+
   // display 2 per rows on desktop
-  const chunkedSections = chunk(defaultSections, isDesktop ? 2 : 1);
+  const chunkedSections = chunk(displayedSections, isDesktop ? 2 : 1);
 
   return (
     <Stack gap="8px" flexDirection="column" justifyContent="space-between">
@@ -108,8 +118,10 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
         return (
           <Flex flexDirection="row" justifyContent="space-between" width="100%" key={index} gap="24px">
             {sectionChunk.map((section) => {
-              const visited = visitedSections?.find((vs) => vs.section === section);
+              const visited = fullSections?.find((vs) => vs.section === section);
               const isVisited = getIsSectionVisited(visited);
+              const isCustom = customSections.map((cs) => cs.section).includes(section) || section === newCustomSection;
+
               return (
                 <SectionItem
                   key={section}
@@ -178,6 +190,8 @@ const SectionModal = ({
   onClose: () => void;
   isDisabled: boolean;
 }) => {
+  const isCustom = selectedSection && !defaultSections.includes(selectedSection.section!);
+
   return (
     <Dialog
       open={selectedSection !== null}
@@ -202,7 +216,7 @@ const SectionModal = ({
           }}
           whiteSpace="wrap"
         >
-          {selectedSection?.section}
+          {isCustom ? "Autre..." : selectedSection?.section}
         </DialogTitle>
 
         {selectedSection ? (
@@ -222,6 +236,7 @@ const SectionForm = ({
   isDisabled: boolean;
   onClose: () => void;
 }) => {
+  const isTitleEditable = !defaultSections.includes(visitedSection?.section || "");
   const [values, setValues] = useState(visitedSection);
 
   const { isRecording, transcript, toggle } = useSpeechToTextV2({
@@ -242,6 +257,7 @@ const SectionForm = ({
           etat_general: values.etat_general,
           proportion_dans_cet_etat: values.proportion_dans_cet_etat,
           commentaires: values.commentaires,
+          ...(isTitleEditable ? { section: values.section } : {}),
         })
         .where("id", "=", visitedSection.id)
         .returningAll()
@@ -269,6 +285,15 @@ const SectionForm = ({
   return (
     <Stack gap="16px" px={{ xs: "0", lg: "16px" }}>
       <Stack>
+        {isTitleEditable ? (
+          <Input
+            label="Partie visitée"
+            nativeInputProps={{
+              value: values.section || "",
+              onChange: (e) => setValues({ ...values, section: e.target.value }),
+            }}
+          />
+        ) : null}
         <SectionEtatGeneralRadioButtons
           section={values}
           onChange={(label) => setValues({ ...values, etat_general: label })}
