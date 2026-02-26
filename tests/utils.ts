@@ -2,12 +2,29 @@ import { Page } from "@playwright/test";
 import { Database, db } from "../packages/backend/src/db/db";
 import type { Insertable, Selectable } from "kysely";
 
+export const mockPopImmeuble = {
+  departement_format_numerique: "00",
+  reference: "TEST00001",
+  id: "TEST00001",
+  titre_editorial_de_la_notice: "Château de Test",
+  commune_forme_editoriale: "Paris",
+  commune_forme_index: "Paris",
+  denomination_de_l_edifice: "Château",
+  adresse_forme_editoriale: "1 rue de la Paix, Paris",
+  cadastre: "AB 12",
+  siecle_de_la_campagne_principale_de_construction: "17e siècle",
+  typologie_de_la_protection: "Classé MH",
+  precision_de_la_protection: "Façades et toitures",
+  description_de_l_edifice: "Monument historique de test",
+} satisfies Insertable<Database["pop_immeubles"]>;
+
 export const mockServices: Insertable<Database["service"]>[] = [
   {
     name: "Service 1",
     id: "service-1",
     department: "00",
     visible: true,
+    dept_numbers: "00",
   },
 ];
 

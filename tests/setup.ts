@@ -1,10 +1,17 @@
 import { exec, execSync, spawnSync } from "child_process";
 import { db, makeDb } from "../packages/backend/src/db/db";
-import { mockServices, mockUsers } from "./utils";
+import { mockPopImmeuble, mockServices, mockUsers } from "./utils";
 import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
 export default async function setup() {
   console.log("Setting up database...");
+
+  // Delete child tables first to satisfy foreign key constraints
+  await db.deleteFrom("visited_section_attachment").execute();
+  await db.deleteFrom("visited_section").execute();
+  await db.deleteFrom("state_report_attachment").execute();
+  await db.deleteFrom("state_report_sent_email").execute();
+  await db.deleteFrom("state_report").execute();
 
   // delete keycloak users
   for (const user of mockUsers) {
@@ -27,6 +34,12 @@ export default async function setup() {
   await db.deleteFrom("whitelist").execute();
 
   await db.insertInto("service").values(mockServices).execute();
+
+  await db.deleteFrom("pop_immeubles").where("reference", "=", mockPopImmeuble.reference).execute();
+  await db
+    .insertInto("pop_immeubles")
+    .values(mockPopImmeuble as any)
+    .execute();
   await db
     .insertInto("whitelist")
     .values(mockUsers.map((u) => ({ email: u.email })))
@@ -43,6 +56,12 @@ export default async function setup() {
     .select((eb) => eb.fn.count("id").as("count"))
     .executeTakeFirstOrThrow();
   console.log(`Services count: ${servicesCount.count}`);
+
+  const immeublesCount = await db
+    .selectFrom("pop_immeubles")
+    .select((eb) => eb.fn.count("id").as("count"))
+    .executeTakeFirstOrThrow();
+  console.log(`Immeubles count: ${immeublesCount.count}`);
 
   console.log("Database setup completed");
 }
