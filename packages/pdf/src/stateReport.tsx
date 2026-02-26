@@ -301,7 +301,7 @@ export const getStateReportHtmlString = ({
       ${stateReport.titre_edifice ? `<span style="font-size: 20pt"><b>${stateReport.titre_edifice}</b></span><br/><br/>` : ""}
     </p>
     <p>
-      Constat dressé par <b>${stateReport.createdByName}</b> suite à la visite  ${isPartielle ? "partielle" : ""}
+      Constat dressé par <b>${stateReport.createdByName}</b> suite à la visite  ${isPartielle ? " partielle" : ""}
       ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}.
 
       <br/>
