@@ -3,15 +3,17 @@ import { db, makeDb } from "../packages/backend/src/db/db";
 import { mockPopImmeuble, mockServices, mockUsers } from "./utils";
 import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
-export default async function setup() {
-  console.log("Setting up database...");
-
+export const resetDatabase = async () => {
   // Delete child tables first to satisfy foreign key constraints
   await db.deleteFrom("visited_section_attachment").execute();
   await db.deleteFrom("visited_section").execute();
   await db.deleteFrom("state_report_attachment").execute();
   await db.deleteFrom("state_report_sent_email").execute();
   await db.deleteFrom("state_report").execute();
+
+  await db.deleteFrom("report_attachment").execute();
+  await db.deleteFrom("sent_email").execute();
+  await db.deleteFrom("report").execute();
 
   // delete keycloak users
   for (const user of mockUsers) {
@@ -44,6 +46,12 @@ export default async function setup() {
     .insertInto("whitelist")
     .values(mockUsers.map((u) => ({ email: u.email })))
     .execute();
+};
+
+export default async function setup() {
+  console.log("Setting up database...");
+
+  await resetDatabase();
 
   const usersCount = await db
     .selectFrom("user")

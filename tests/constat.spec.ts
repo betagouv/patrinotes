@@ -1,7 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { mockUsers, signup } from "./utils";
+import { resetDatabase } from "./setup";
 
 test.describe("Constat d'état flow", () => {
+  test.beforeAll(async () => {
+    await resetDatabase();
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto("./");
   });

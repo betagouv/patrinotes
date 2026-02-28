@@ -1,12 +1,17 @@
 import { test, expect, type Route } from "@playwright/test";
 import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 import { cleanupDb, mockUsers, signup } from "./utils";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("./");
-});
+import { resetDatabase } from "./setup";
 
 test.describe("Create user", () => {
+  test.beforeAll(async () => {
+    await resetDatabase();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("./");
+  });
+
   test("should be redirected to the login page", async ({ page }) => {
     await page.waitForURL((url) => url.pathname === "/connexion");
     expect(page.url()).toContain("connexion");
