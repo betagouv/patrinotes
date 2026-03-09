@@ -171,7 +171,6 @@ const Profile = () => {
       <Input
         label="Nom complet"
         nativeInputProps={{ value: userData.name, onChange: (e) => setUserData({ ...userData, name: e.target.value }) }}
-        disabled
         sx={{ mb: "24px" }}
       />
       <Input
