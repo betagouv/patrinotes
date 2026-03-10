@@ -26,6 +26,13 @@ export const mockServices: Insertable<Database["service"]>[] = [
     visible: true,
     dept_numbers: "00",
   },
+  {
+    name: "Service Multi Dept",
+    id: "service-multi-dept",
+    department: "01",
+    visible: true,
+    dept_numbers: "01,02,03",
+  },
 ];
 
 export const mockUsers = [
