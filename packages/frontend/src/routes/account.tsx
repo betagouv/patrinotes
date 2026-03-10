@@ -197,6 +197,8 @@ const DefaultRecipient = () => {
   const { userSettings, isLoading: isUserSettingsLoading, existing } = useUserSettings();
 
   const [defaultEmails, setDefaultEmails] = useState<string[]>([]);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [inputKey, setInputKey] = useState(0);
 
   useEffect(() => {
     if (!userSettings?.default_emails) return;
@@ -235,7 +237,7 @@ const DefaultRecipient = () => {
     },
   });
 
-  const canSave = defaultEmails.join(",") !== userSettings?.default_emails;
+  const canSave = defaultEmails.join(",") !== userSettings?.default_emails || !!pendingEmail;
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
@@ -247,10 +249,12 @@ const DefaultRecipient = () => {
       ) : (
         <Stack>
           <EmailInput
+            key={inputKey}
             label="Courriel en copie par défaut :"
             hintText="Pour tous mes CRs envoyés"
             value={defaultEmails}
             onValueChange={(e) => setDefaultEmails(e)}
+            onQueryChange={(q) => setPendingEmail(q)}
           />
 
           <Flex gap="16px" justifyContent="flex-end" width="100%" mt="24px">
@@ -259,7 +263,14 @@ const DefaultRecipient = () => {
               iconPosition="left"
               type="button"
               onClick={() => {
-                saveEmailsMutation.mutate(defaultEmails);
+                const emailsToSave =
+                  pendingEmail && !defaultEmails.includes(pendingEmail)
+                    ? [...defaultEmails, pendingEmail]
+                    : defaultEmails;
+                setDefaultEmails(emailsToSave);
+                setInputKey((k) => k + 1);
+                setPendingEmail("");
+                saveEmailsMutation.mutate(emailsToSave);
               }}
               disabled={!canSave || saveEmailsMutation.isPending}
             >

@@ -19,11 +19,13 @@ export const EmailInput = ({
   nativeInputProps,
   value,
   onValueChange,
+  onQueryChange,
   single,
 }: Partial<InputProps> & {
   value: string[];
   single?: boolean;
   onValueChange: (value: string[]) => void;
+  onQueryChange?: (query: string) => void;
 }) => {
   const [state, send] = useMachine(emailMachine, {
     input: {
@@ -45,6 +47,7 @@ export const EmailInput = ({
       onValueChange([...value, emailToAdd]);
     }
     send({ type: "CLEAR" });
+    onQueryChange?.("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -101,6 +104,7 @@ export const EmailInput = ({
             onChange: (e) => {
               if (single) onValueChange([e.target.value]);
               send({ type: "TYPE", value: e.target.value });
+              onQueryChange?.(e.target.value);
             },
             onKeyDown: handleKeyPress,
           }}
