@@ -84,7 +84,7 @@ services:
       POWERSYNC_CONFIG_PATH: /config/config.yaml
       PS_DATABASE_URL: ${PS_DATABASE_URL}
       PS_JWT_SECRET: ${JWT_SECRET}
-      PS_PORT: ${POWERSYNC_PORT}
+      PS_PORT: 8080
     ports:
       - ${POWERSYNC_PORT}:8080
     healthcheck:
@@ -93,8 +93,8 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://localhost:${POWERSYNC_PORT}/probes/liveness').then(r => r.ok ? process.exit(0) :
-          process.exit(1)).catch(() => process.exit(1))",
+          "fetch('http://localhost:8080/probes/liveness').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(()
+          => process.exit(1))",
         ]
       interval: 5s
       timeout: 1s

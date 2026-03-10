@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(pnpm e2e constat -- --headless)",
+      "Bash(pnpm e2e constat)"
     ]
   }
 }

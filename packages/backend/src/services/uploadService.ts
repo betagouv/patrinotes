@@ -14,6 +14,7 @@ const debug = makeDebug("upload");
 
 const client = new S3Client({
   endpoint: ENV.MINIO_URL,
+  region: "us-east-1",
   credentials: { accessKeyId: ENV.MINIO_ACCESS_KEY_ID, secretAccessKey: ENV.MINIO_SECRET_KEY },
   bucketEndpoint: true,
   forcePathStyle: true,

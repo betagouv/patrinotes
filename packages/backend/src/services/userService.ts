@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { sendPasswordResetMail } from "../features/mail";
 import { Selectable } from "kysely";
 import { adminAuthApi } from "../features/auth/keycloak";
+import { transactions } from "../db/schema";
 
 const debug = makeDebug("user_service");
 export class UserService {
@@ -19,14 +20,15 @@ export class UserService {
 
     await db.updateTable("user").set({ service_id: serviceId }).where("id", "=", userId).execute();
 
-    const deptNumber = service[0].dept_numbers?.split(",")[0];
+    const deptNumbers = service[0].dept_numbers?.split(",").map((num) => num.trim());
 
-    await db.deleteFrom("user_dept").where("user_id", "=", userId).execute();
-    if (deptNumber) {
-      const numbers = deptNumber.split(",").map((num) => num.trim());
-      for (const deptNumber of numbers) {
-        await db.insertInto("user_dept").values({ user_id: userId, dept_number: deptNumber }).execute();
-      }
+    if (deptNumbers && deptNumbers.length) {
+      await db.transaction().execute(async (trx) => {
+        await trx.deleteFrom("user_dept").where("user_id", "=", userId).execute();
+        for (const deptNumber of deptNumbers) {
+          await trx.insertInto("user_dept").values({ user_id: userId, dept_number: deptNumber }).execute();
+        }
+      });
     }
     return { message: "Le service a été changé avec succès" };
   }
