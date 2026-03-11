@@ -5,7 +5,7 @@ vite.config.ts.timestamp*
 node_modules
 /.pnp
 .pnp.js
-
+minio-data
 # testing
 /coverage
 

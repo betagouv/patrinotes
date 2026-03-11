@@ -660,16 +660,26 @@ export const PdfCanvas = ({ blob }: { blob: Blob }) => {
   );
 };
 
-const PdfCanvasPage = ({ file, page }: { file: string; page: number }) => {
+const ActivePdfPage = ({ file, page, onHeight }: { file: string; page: number; onHeight: (h: number) => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   usePdf({
     scale: 1.2,
     file,
-    page: page,
+    page,
     canvasRef,
     workerSrc: "/pdfjs/build/pdf.worker.min.mjs",
   });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ro = new ResizeObserver(() => {
+      if (canvas.offsetHeight > 0) onHeight(canvas.offsetHeight);
+    });
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, [onHeight]);
 
   return (
     <Box
@@ -679,6 +689,30 @@ const PdfCanvasPage = ({ file, page }: { file: string; page: number }) => {
       my="16px"
       boxShadow="0px 10.18px 30.54px 0px #00001229"
     />
+  );
+};
+
+const PdfCanvasPage = ({ file, page }: { file: string; page: number }) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(page <= 2);
+  const [height, setHeight] = useState(900);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
+      root: null,
+      rootMargin: "400px 0px",
+      threshold: 0,
+    });
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <Box ref={wrapperRef} minHeight={isVisible ? undefined : `${height}px`}>
+      {isVisible ? <ActivePdfPage file={file} page={page} onHeight={setHeight} /> : null}
+    </Box>
   );
 };
 

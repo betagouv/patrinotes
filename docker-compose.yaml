@@ -86,6 +86,27 @@ services:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
     command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASSWORD: ${MINIO_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY_ID}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    entrypoint: >
+      /bin/sh -c " mc alias set local http://minio:9000 $MINIO_USER $MINIO_PASSWORD; mc mb local/$MINIO_BUCKET
+      --ignore-existing; mc admin user add local $MINIO_ACCESS_KEY_ID $MINIO_SECRET_KEY; mc admin policy attach local
+      readwrite --user $MINIO_ACCESS_KEY_ID; exit 0; "
 
   minio-console:
     image: opens3/console:latest

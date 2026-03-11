@@ -60,7 +60,8 @@ export class AttachmentStorage implements StorageAdapter {
 
     if (!content || content === undefined || content === null) {
       console.error("File not found in readFile:", fileUri);
-      throw new Error(`File not found: ${fileUri}`);
+
+      return new ArrayBuffer(0);
     }
 
     // Convert Uint8Array to ArrayBuffer
