@@ -192,10 +192,13 @@ export const ImmeubleAutocomplete = () => {
         // TODO: use coordinates to sort results
         filterOptions={(x, state) => {
           if (!state.inputValue) return [];
+
+          const isReferenceSearch = /^PA\d{8}$/.test(state.inputValue.trim());
+
           const searchResults = searchEngine
             .search(state.inputValue)
             .map((result) => result.item)
-            .slice(0, 15);
+            .slice(0, isReferenceSearch ? 1 : 15);
 
           return [
             ...(isCustom
