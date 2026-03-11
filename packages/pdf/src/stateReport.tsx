@@ -240,7 +240,10 @@ export const transformHeaderText = (text: string | null | undefined) => {
     return addBreaksAfterWords(cleanString, ["Préfet", "Préfète", "région"]);
   }
 
-  if (cleanString.match(/Direction (régionale )?des affaires culturelles/)) {
+  if (
+    cleanString.startsWith("Direction des affaires culturelles") ||
+    cleanString.startsWith("Direction régionale des affaires culturelles")
+  ) {
     return addBreaksAfterWords(cleanString, ["culturelles"]);
   }
 

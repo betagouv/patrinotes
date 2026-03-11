@@ -198,7 +198,7 @@ export const ImmeubleAutocomplete = () => {
           const searchResults = searchEngine
             .search(state.inputValue)
             .map((result) => result.item)
-            .slice(0, isReferenceSearch ? 1 : 15);
+            .slice(0, 15);
 
           return [
             ...(isCustom

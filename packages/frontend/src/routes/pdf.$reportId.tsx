@@ -622,6 +622,21 @@ export const PdfCanvas = ({ blob }: { blob: Blob }) => {
 
   const nbPages = pdfDocument?.numPages;
 
+  useEffect(() => {
+    // @ts-ignore
+    window.dlpdf = () => {
+      const link = document.createElement("a");
+      link.href = file;
+      link.download = "report.pdf";
+      link.click();
+    };
+
+    return () => {
+      // @ts-ignore
+      delete window.dlpdf;
+    };
+  }, []);
+
   return (
     <>
       {isDev ? (
