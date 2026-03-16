@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@cr-vif/pdf/constat";
 import { pdf, BlobProvider, PDFViewer } from "@react-pdf/renderer";
@@ -31,18 +31,36 @@ const View = (props: StateReportPDFDocumentProps) =>
   supportsPromiseWithResolvers ? <ModernView {...props} /> : <LegacyView {...props} />;
 
 const ModernView = (props: StateReportPDFDocumentProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(window.innerHeight);
 
   useEffect(() => {
-    const onResize = () => setHeight(window.innerHeight);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const iframe = containerRef.current?.querySelector<HTMLIFrameElement>("iframe");
+    if (!iframe) return;
+
+    let resizeObserver: ResizeObserver | null = null;
+
+    const handleLoad = () => {
+      const body = iframe.contentDocument?.body;
+      if (!body) return;
+      body.style.overflow = "hidden";
+      resizeObserver = new ResizeObserver(() => setHeight(body.scrollHeight));
+      resizeObserver.observe(body);
+    };
+
+    iframe.addEventListener("load", handleLoad);
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      resizeObserver?.disconnect();
+    };
   }, []);
 
   return (
-    <PDFViewer width="100%" height={height} showToolbar={false}>
-      <StateReportPDFDocument {...props} />
-    </PDFViewer>
+    <div ref={containerRef}>
+      <PDFViewer width="100%" height={height} showToolbar={false}>
+        <StateReportPDFDocument {...props} />
+      </PDFViewer>
+    </div>
   );
 };
 
