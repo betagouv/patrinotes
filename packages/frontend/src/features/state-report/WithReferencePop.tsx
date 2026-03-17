@@ -329,6 +329,13 @@ const FormErrorModal = ({
   const navigate = routeApi.useNavigate();
   const navigateToField = (field: string) => {
     (formErrorsNavigate as any)[field]?.({ navigate });
+
+    const element = document.querySelector(`[name="${field}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      (element as HTMLElement).focus();
+    }
+
     onClose();
   };
 
@@ -433,6 +440,7 @@ const FormErrorModal = ({
     </Dialog>
   );
 };
+
 const InformationsButtons = ({
   navigateToStep,
   isCustom,
