@@ -107,7 +107,7 @@ export const getIsAlertVisited = (alertSection: any) => {
 };
 
 export const getIsSectionVisited = (section: any) => {
-  return section?.etat_general && section?.proportion_dans_cet_etat;
+  return (section?.etat_general && section?.proportion_dans_cet_etat) || section?.attachments?.length;
 };
 
 export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
