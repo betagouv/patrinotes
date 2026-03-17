@@ -31,36 +31,18 @@ const View = (props: StateReportPDFDocumentProps) =>
   supportsPromiseWithResolvers ? <ModernView {...props} /> : <LegacyView {...props} />;
 
 const ModernView = (props: StateReportPDFDocumentProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(window.innerHeight);
 
   useEffect(() => {
-    const iframe = containerRef.current?.querySelector<HTMLIFrameElement>("iframe");
-    if (!iframe) return;
-
-    let resizeObserver: ResizeObserver | null = null;
-
-    const handleLoad = () => {
-      const body = iframe.contentDocument?.body;
-      if (!body) return;
-      body.style.overflow = "hidden";
-      resizeObserver = new ResizeObserver(() => setHeight(body.scrollHeight));
-      resizeObserver.observe(body);
-    };
-
-    iframe.addEventListener("load", handleLoad);
-    return () => {
-      iframe.removeEventListener("load", handleLoad);
-      resizeObserver?.disconnect();
-    };
+    const onResize = () => setHeight(window.innerHeight);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   return (
-    <div ref={containerRef}>
-      <PDFViewer width="100%" height={height} showToolbar={false}>
-        <StateReportPDFDocument {...props} />
-      </PDFViewer>
-    </div>
+    <PDFViewer width="100%" height={height} showToolbar={false}>
+      <StateReportPDFDocument {...props} />
+    </PDFViewer>
   );
 };
 
