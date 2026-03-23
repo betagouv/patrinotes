@@ -319,6 +319,42 @@ export namespace Endpoints {
       copyright?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
+  export type get_ApiconstatValidationToken = {
+    method: "GET";
+    path: "/api/constat-validation/{token}";
+    parameters: {
+      path: { token: string };
+    };
+    response: {
+      stateReport: {
+        id: string;
+        titre_edifice: string | null;
+        commune: string | null;
+        date_visite: string | null;
+      };
+      pdfUrl: string;
+      status: string;
+      comment: string | null;
+    };
+  };
+  export type post_ApiconstatValidationTokenAccept = {
+    method: "POST";
+    path: "/api/constat-validation/{token}/accept";
+    parameters: {
+      path: { token: string };
+      body: { comment?: string };
+    };
+    response: { message: string };
+  };
+  export type post_ApiconstatValidationTokenDecline = {
+    method: "POST";
+    path: "/api/constat-validation/{token}/decline";
+    parameters: {
+      path: { token: string };
+      body: { comment: string };
+    };
+    response: { message: string };
+  };
   export type post_ApiuploadData = {
     method: "POST";
     path: "/api/upload-data";
@@ -352,6 +388,8 @@ export type EndpointByMethod = {
     "/api/upload/picture/{pictureId}/lines": Endpoints.post_ApiuploadpicturePictureIdlines;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
+    "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenAccept;
+    "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokenDecline;
     "/api/upload-data": Endpoints.post_ApiuploadData;
   };
   get: {
@@ -360,6 +398,7 @@ export type EndpointByMethod = {
     "/api/pdf/report": Endpoints.get_Apipdfreport;
     "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
     "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
+    "/api/constat-validation/{token}": Endpoints.get_ApiconstatValidationToken;
   };
 };
 

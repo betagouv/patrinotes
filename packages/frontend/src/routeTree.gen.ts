@@ -22,6 +22,7 @@ import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$
 import { Route as PdfReportIdRouteImport } from './routes/pdf.$reportId'
 import { Route as EditReportIdRouteImport } from './routes/edit.$reportId'
 import { Route as ConstatConstatIdRouteImport } from './routes/constat.$constatId'
+import { Route as ConstatValidationTokenRouteImport } from './routes/constat-validation.$token'
 import { Route as ConstatConstatIdPdfRouteImport } from './routes/constat_.$constatId.pdf'
 
 const ResetPasswordIndexLazyRouteImport = createFileRoute('/reset-password/')()
@@ -88,6 +89,11 @@ const ConstatConstatIdRoute = ConstatConstatIdRouteImport.update({
   path: '/constat/$constatId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConstatValidationTokenRoute = ConstatValidationTokenRouteImport.update({
+  id: '/constat-validation/$token',
+  path: '/constat-validation/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConstatConstatIdPdfRoute = ConstatConstatIdPdfRouteImport.update({
   id: '/constat_/$constatId/pdf',
   path: '/constat/$constatId/pdf',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
+  '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
+  '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
+  '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/inscription'
     | '/mentions-legales'
     | '/service'
+    | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/inscription'
     | '/mentions-legales'
     | '/service'
+    | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/inscription'
     | '/mentions-legales'
     | '/service'
+    | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   InscriptionRoute: typeof InscriptionRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
   ServiceRoute: typeof ServiceRoute
+  ConstatValidationTokenRoute: typeof ConstatValidationTokenRoute
   ConstatConstatIdRoute: typeof ConstatConstatIdRoute
   EditReportIdRoute: typeof EditReportIdRoute
   PdfReportIdRoute: typeof PdfReportIdRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConstatConstatIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/constat-validation/$token': {
+      id: '/constat-validation/$token'
+      path: '/constat-validation/$token'
+      fullPath: '/constat-validation/$token'
+      preLoaderRoute: typeof ConstatValidationTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/constat_/$constatId/pdf': {
       id: '/constat_/$constatId/pdf'
       path: '/constat/$constatId/pdf'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   InscriptionRoute: InscriptionRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
   ServiceRoute: ServiceRoute,
+  ConstatValidationTokenRoute: ConstatValidationTokenRoute,
   ConstatConstatIdRoute: ConstatConstatIdRoute,
   EditReportIdRoute: EditReportIdRoute,
   PdfReportIdRoute: PdfReportIdRoute,

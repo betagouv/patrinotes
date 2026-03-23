@@ -298,6 +298,22 @@ export const userSettings = pgTable("user_settings", {
   userId: text("user_id"),
   defaultEmails: text("default_emails"),
   serviceId: text("service_id"),
+  validationEnabled: boolean("validation_enabled").default(false),
+  validationEmail: text("validation_email"),
+});
+
+export const constatValidation = pgTable("constat_validation", {
+  id: text().primaryKey().notNull(),
+  stateReportId: text("state_report_id"),
+  token: text().notNull(),
+  tokenExpiresAt: text("token_expires_at").notNull(),
+  validatorEmail: text("validator_email").notNull(),
+  status: text().notNull().default("pending"),
+  comment: text(),
+  recipients: text().notNull(),
+  pdfPath: text("pdf_path").notNull(),
+  createdAt: text("created_at").notNull(),
+  serviceId: text("service_id"),
 });
 
 export const merimee = pgTable(

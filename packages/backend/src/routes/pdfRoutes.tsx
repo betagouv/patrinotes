@@ -4,7 +4,8 @@ import { ReportPDFDocument } from "@cr-vif/pdf";
 import { StateReportPDFDocument } from "@cr-vif/pdf/constat";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
-import { sendReportMail, sendStateReportMail, sendAlertEmail } from "../features/mail";
+import { sendReportMail, sendStateReportMail, sendAlertEmail, sendValidationRequestMail } from "../features/mail";
+import { addDays } from "date-fns";
 import { generatePresignedUrl, getPDFName } from "../services/uploadService";
 import { Service, StateReportAlert } from "../../../frontend/src/db/AppSchema";
 import path from "path";
@@ -249,6 +250,43 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     if (!recipients.includes(userMail.toLowerCase())) recipients.push(userMail.toLowerCase());
 
     const stateReport = stateReportQuery[0]! as Selectable<Database["state_report"]>;
+
+    const userSettingsResult = await db
+      .selectFrom("user_settings")
+      .where("user_id", "=", user.id)
+      .where("service_id", "=", user.service_id)
+      .selectAll()
+      .executeTakeFirst();
+
+    if (userSettingsResult?.validation_enabled && userSettingsResult?.validation_email) {
+      const token = v4();
+      await db
+        .insertInto("constat_validation")
+        .values({
+          id: v4(),
+          state_report_id: stateReportId,
+          token,
+          token_expires_at: addDays(new Date(), 7).toISOString(),
+          validator_email: userSettingsResult.validation_email,
+          status: "pending",
+          recipients: recipients.join(","),
+          pdf_path: name,
+          created_at: new Date().toISOString(),
+          service_id: user.service_id,
+        })
+        .execute();
+
+      await sendValidationRequestMail({
+        validatorEmail: userSettingsResult.validation_email,
+        stateReport,
+        validationToken: token,
+        creatorName: user.name,
+      });
+
+      const url = await generatePresignedUrl("attachment/" + name);
+      return url;
+    }
+
     await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
 
     if (request.body.alerts && request.body.alerts.length > 0) {

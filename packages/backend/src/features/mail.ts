@@ -86,6 +86,60 @@ export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string;
   });
 };
 
+export const sendValidationRequestMail = ({
+  validatorEmail,
+  stateReport,
+  validationToken,
+  creatorName,
+}: {
+  validatorEmail: string;
+  stateReport: Selectable<Database["state_report"]>;
+  validationToken: string;
+  creatorName: string;
+}) => {
+  const link = `${ENV.FRONTEND_URL}/constat-validation/${validationToken}`;
+  const title = stateReport.titre_edifice ? ` : ${stateReport.titre_edifice}` : "";
+
+  return transporter.sendMail({
+    from: ENV.EMAIL_EMITTER,
+    to: validatorEmail,
+    subject: `[Validation requise] Constat d'état${title}`,
+    html: `<p>Bonjour,</p>
+<p>${creatorName} vous soumet un constat d'état${title} pour validation.</p>
+<p>Veuillez consulter le document et l'accepter ou le refuser en cliquant sur le lien ci-dessous :</p>
+<p><a href="${link}">${link}</a></p>
+<p>Ce lien est valable 7 jours.</p>
+<p>Cordialement</p>`,
+  });
+};
+
+export const sendValidationResultMail = ({
+  creatorEmail,
+  stateReport,
+  accepted,
+  comment,
+  validatorEmail,
+}: {
+  creatorEmail: string;
+  stateReport: Selectable<Database["state_report"]>;
+  accepted: boolean;
+  comment?: string | null;
+  validatorEmail: string;
+}) => {
+  const title = stateReport.titre_edifice ? ` : ${stateReport.titre_edifice}` : "";
+  const decision = accepted ? "accepté" : "refusé";
+
+  return transporter.sendMail({
+    from: ENV.EMAIL_EMITTER,
+    to: creatorEmail,
+    subject: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"} par le validateur`,
+    html: `<p>Bonjour,</p>
+<p>Votre constat d'état${title} a été <strong>${decision}</strong> par ${validatorEmail}.</p>
+${comment ? `<p>Commentaire : ${comment}</p>` : ""}
+<p>Cordialement</p>`,
+  });
+};
+
 export const sendAlertEmail = async ({
   to,
   stateReport,
