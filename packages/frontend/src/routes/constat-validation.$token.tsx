@@ -50,7 +50,7 @@ function ConstatValidationPage() {
     onSuccess: () => query.refetch(),
   });
 
-  if (query.isLoading) {
+  if (query.isPending) {
     return (
       <Center mt="40px">
         <Spinner size={80} />
@@ -74,8 +74,33 @@ function ConstatValidationPage() {
     );
   }
 
+  const submittedComment = form.getValues("comment");
+
+  if (acceptMutation.isSuccess) {
+    return (
+      <Center mt="40px">
+        <Stack maxWidth="600px" textAlign="center" gap="16px">
+          <Typography variant="h4">Constat accepté</Typography>
+          <Typography>Ce constat a été accepté et envoyé aux destinataires.</Typography>
+          {submittedComment && <Typography>Commentaire : {submittedComment}</Typography>}
+        </Stack>
+      </Center>
+    );
+  }
+
+  if (declineMutation.isSuccess) {
+    return (
+      <Center mt="40px">
+        <Stack maxWidth="600px" textAlign="center" gap="16px">
+          <Typography variant="h4">Constat refusé</Typography>
+          {submittedComment && <Typography>Commentaire : {submittedComment}</Typography>}
+        </Stack>
+      </Center>
+    );
+  }
+
   const { stateReport, pdfUrl, status, comment } = query.data!;
-  const title = stateReport.titre_edifice ?? "Constat d'état";
+  const title = stateReport?.titre_edifice ?? "Constat d'état";
 
   if (status === "accepted") {
     return (
@@ -107,7 +132,7 @@ function ConstatValidationPage() {
       <Typography variant="h4" alignSelf="flex-start">
         Validation du constat d'état : {title}
       </Typography>
-      {stateReport.commune && (
+      {stateReport?.commune && (
         <Typography alignSelf="flex-start" color="text.secondary">
           {stateReport.commune}
         </Typography>
