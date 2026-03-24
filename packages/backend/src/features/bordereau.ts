@@ -1,6 +1,7 @@
 import { Selectable } from "kysely";
 import { Database } from "../db/db";
 import { deserializePreconisations } from "@cr-vif/pdf/constat";
+import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
 
 export const createBordereauMailContent = ({
   stateReport,
@@ -10,7 +11,10 @@ export const createBordereauMailContent = ({
   user: Selectable<Database["user"]>;
 }) => {
   const preconisations = deserializePreconisations(stateReport.preconisations || "");
-  return `<p><b>Madame, Monsieur,</b></p>
+  const title = stateReport.titre_edifice
+    ? `Constat d'état : ${stateReport.titre_edifice}`
+    : "Constat d'état";
+  const inner = `<p><b>Madame, Monsieur,</b></p>
 
 <p>Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée, en date du ${
     stateReport.date_visite
@@ -66,4 +70,5 @@ Références réglementaires et ressources :  <br />
 - <a href="https://www.legifrance.gouv.fr/download/pdf/circ?id=30077">Circulaire n° 2009-024 du 1er décembre 2009 relative au contrôle scientifique et technique des services de l'État sur la conservation des monuments historiques classés et inscrits</a>  <br />
 - <a href="https://www.culture.gouv.fr/thematiques/monuments-sites/ressources/les-essentiels/glossaire-des-termes-relatifs-aux-interventions-sur-les-monuments-historiques">Glossaire des termes relatifs aux interventions sur les monuments historiques</a>  <br />
 </p>`;
+  return wrapWithDsfrMail({ title, content: inner });
 };

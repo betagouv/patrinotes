@@ -1,6 +1,7 @@
 import { Selectable } from "kysely";
 import { Database } from "../../db/db";
 import { MinimalAlert } from "@cr-vif/pdf/constat";
+import { wrapWithDsfrMail } from "./dsfrMailWrapper";
 import {
   ABORDS_DE_L_EDIFICE_SECTION,
   ARCHEOLOGIE_SECTION,
@@ -59,7 +60,7 @@ export const createAlertEmailContent = async ({
     }),
   );
 
-  const html = `
+  const innerHtml = `
     <p>Madame, Monsieur,</p>
     <p>Dans le cadre d’un constat d’état réalisé sur le monument historique <b>${uppercaseFirstLetter(stateReport.titre_edifice!)}</b>${stateReport.commune ? `, situé à ${stateReport.commune}` : ``},
   ${getProblemDescription({ alert, user })} l’agent ${getServicePronom(user.service.name!)}, en charge du contrôle scientifique et technique, ${user.name} :</p>
@@ -78,11 +79,12 @@ export const createAlertEmailContent = async ({
   <b>${user.email}</b>
   </p>
   <p>Merci,</p>
-
-  <p>Ministère de la culture</p>
-
-  <p>(Envoi automatique depuis le service numérique Patrinotes)</p>
   `;
+
+  const html = wrapWithDsfrMail({
+    title: `Alerte ${alert.alert}${stateReport.titre_edifice ? ` — ${stateReport.titre_edifice}` : ""}`,
+    content: innerHtml,
+  });
 
   return { html, attachments: mailAttachments };
 };

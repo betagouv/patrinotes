@@ -8,6 +8,7 @@ import { Selectable } from "kysely";
 import { getStateReportMailName, MinimalAlert } from "@cr-vif/pdf/constat";
 import { createBordereauMailContent } from "./bordereau";
 import { getAlertMailSubject, createAlertEmailContent } from "./mail/alertMail";
+import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
 import { AuthUser } from "../routes/authMiddleware";
 
 const transporter = createTransport({
@@ -63,11 +64,10 @@ export const sendReportMail = ({
     from: ENV.EMAIL_EMITTER,
     to: recipients,
     subject: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
-    text: `Bonjour,
-
-Vous trouverez ci-joint le compte-rendu de notre rendez-vous.
-
-Cordialement`,
+    html: wrapWithDsfrMail({
+      title: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
+      content: `<p>Bonjour,</p><p>Vous trouverez ci-joint le compte-rendu de notre rendez-vous.</p><p>Cordialement</p>`,
+    }),
     attachments: [
       {
         filename: getPDFInMailName(report),
@@ -78,11 +78,15 @@ Cordialement`,
 };
 
 export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string; temporaryLink: string }) => {
+  const resetLink = `${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`;
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: email,
     subject: "Patrinotes - Réinitialisation de mot de passe",
-    text: `Voici le lien de réinitialisation de votre mot de passe : ${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`,
+    html: wrapWithDsfrMail({
+      title: "Réinitialisation de mot de passe",
+      content: `<p>Voici le lien de réinitialisation de votre mot de passe :</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+    }),
   });
 };
 
@@ -104,12 +108,15 @@ export const sendValidationRequestMail = ({
     from: ENV.EMAIL_EMITTER,
     to: validatorEmail,
     subject: `[Validation requise] Constat d'état${title}`,
-    html: `<p>Bonjour,</p>
+    html: wrapWithDsfrMail({
+      title: `Validation requise — Constat d'état${title}`,
+      content: `<p>Bonjour,</p>
 <p>${creatorName} vous soumet un constat d'état${title} pour validation.</p>
 <p>Veuillez consulter le document et l'accepter ou le refuser en cliquant sur le lien ci-dessous :</p>
 <p><a href="${link}">${link}</a></p>
 <p>Ce lien est valable 7 jours.</p>
 <p>Cordialement</p>`,
+    }),
   });
 };
 
@@ -133,10 +140,13 @@ export const sendValidationResultMail = ({
     from: ENV.EMAIL_EMITTER,
     to: creatorEmail,
     subject: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"} par le validateur`,
-    html: `<p>Bonjour,</p>
+    html: wrapWithDsfrMail({
+      title: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"}`,
+      content: `<p>Bonjour,</p>
 <p>Votre constat d'état${title} a été <strong>${decision}</strong> par ${validatorEmail}.</p>
 ${comment ? `<p>Commentaire : ${comment}</p>` : ""}
 <p>Cordialement</p>`,
+    }),
   });
 };
 
