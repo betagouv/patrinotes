@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const assetsDir = path.join(__dirname, "../../assets");
+const assetsDir = __dirname;
 
 const marianneLightBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Light@2x.png"));
 const marianneDarkBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Dark@2x.png"));
