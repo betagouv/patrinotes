@@ -27,8 +27,8 @@ export const ViewConstatPdf = () => {
   );
 };
 
-const View = (props: StateReportPDFDocumentProps) =>
-  supportsPromiseWithResolvers ? <ModernView {...props} /> : <LegacyView {...props} />;
+const View = (props: StateReportPDFDocumentProps) => <LegacyView {...props} />;
+// supportsPromiseWithResolvers ? <ModernView {...props} /> : <LegacyView {...props} />;
 
 const ModernView = (props: StateReportPDFDocumentProps) => {
   const [height, setHeight] = useState(window.innerHeight);
