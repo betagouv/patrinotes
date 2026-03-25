@@ -276,6 +276,12 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         })
         .execute();
 
+      await db
+        .updateTable("state_report")
+        .set({ validation_status: "pending" })
+        .where("id", "=", stateReportId)
+        .execute();
+
       await sendValidationRequestMail({
         validatorEmail: userSettingsResult.validation_email,
         stateReport,

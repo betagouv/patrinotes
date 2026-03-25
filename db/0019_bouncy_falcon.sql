@@ -16,5 +16,3 @@ ALTER TABLE "user_settings"
 ADD COLUMN "validation_enabled" boolean DEFAULT false;
 --> statement-breakpoint
 ALTER TABLE "user_settings" ADD COLUMN "validation_email" text;
-
-ALTER PUBLICATION powersync ADD TABLE "constat_validation";

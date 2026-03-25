@@ -1,0 +1,1 @@
+ALTER TABLE "state_report" ADD COLUMN "validation_status" text;

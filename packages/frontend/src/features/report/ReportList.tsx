@@ -6,7 +6,7 @@ import { useState } from "react";
 import welcomeImage from "../../assets/welcome.svg?url";
 import { useLiveUser, useUser } from "../../contexts/AuthContext";
 import { Report, StateReport } from "../../db/AppSchema";
-import { db, useDbQuery } from "../../db/db";
+import { useDbQuery } from "../../db/db";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { ReportListItem } from "./ReportListItem";
 import { getRouteApi } from "@tanstack/react-router";
@@ -244,10 +244,9 @@ export const StateReportList = ({
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
 
-  const pendingValidationsQuery = useDbQuery(
-    db.selectFrom("constat_validation").where("status", "=", "pending").select(["state_report_id"]),
+  const pendingValidationIds = new Set(
+    reports.filter((r) => r.validation_status === "pending").map((r) => r.id),
   );
-  const pendingValidationIds = new Set(pendingValidationsQuery.data?.map((v) => v.state_report_id) ?? []);
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">

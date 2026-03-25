@@ -77,7 +77,7 @@ export const StateReportListItem = ({
             {byText}
           </Box>
           <Box mt="8px" mb={whereText ? "0" : "24px"}>
-            <ReportBadge status={isDraft ? "draft" : isPendingValidation ? "pending_validation" : "published"} />
+            <ReportBadge status={isPendingValidation ? "pending_validation" : isDraft ? "draft" : "published"} />
           </Box>
         </Box>
       </Link>
