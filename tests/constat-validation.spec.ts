@@ -118,7 +118,7 @@ test.describe("Constat validation flow", () => {
     // 5b. Navigate home and check the list badge shows "En attente de validation"
     await page.getByRole("button", { name: "Accueil" }).click();
     await page.waitForURL((url) => url.pathname === "/");
-    await expect(page.getByText("En attente de validation")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("En attente de validation").first()).toBeVisible({ timeout: 15_000 });
 
     // -------------------------------------------------------------------------
     // 6. Verify the validation email was sent to the validator — NOT the recipient
@@ -278,7 +278,7 @@ test.describe("Constat validation flow", () => {
     // Check the list badge shows "En attente de validation"
     await page.getByRole("button", { name: "Accueil" }).click();
     await page.waitForURL((url) => url.pathname === "/");
-    await expect(page.getByText("En attente de validation")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("En attente de validation").first()).toBeVisible({ timeout: 15_000 });
 
     // Navigate back to get the validation link
     await page.goBack();
