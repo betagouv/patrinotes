@@ -33,14 +33,15 @@ export const sendStateReportMail = ({
 }) => {
   sentry?.captureMessage("Sending state report mail", { extra: { recipients, stateReport } });
 
-  const content = createBordereauMailContent({ stateReport, user });
+  const { html, attachments } = createBordereauMailContent({ stateReport, user });
 
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: recipients,
     subject: "Constat d'état " + (stateReport?.titre_edifice ? ` : ${stateReport.titre_edifice}` : ""),
-    html: content,
+    html,
     attachments: [
+      ...attachments,
       {
         filename: getStateReportMailName(stateReport),
         content: pdfBuffer,
@@ -60,15 +61,18 @@ export const sendReportMail = ({
 }) => {
   sentry?.captureMessage("Sending report mail", { extra: { recipients, report } });
 
+  const { html: reportHtml, attachments: reportAttachments } = wrapWithDsfrMail({
+    title: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
+    content: `<p>Bonjour,</p><p>Vous trouverez ci-joint le compte-rendu de notre rendez-vous.</p><p>Cordialement</p>`,
+  });
+
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: recipients,
     subject: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
-    html: wrapWithDsfrMail({
-      title: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
-      content: `<p>Bonjour,</p><p>Vous trouverez ci-joint le compte-rendu de notre rendez-vous.</p><p>Cordialement</p>`,
-    }),
+    html: reportHtml,
     attachments: [
+      ...reportAttachments,
       {
         filename: getPDFInMailName(report),
         content: pdfBuffer,
@@ -79,14 +83,16 @@ export const sendReportMail = ({
 
 export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string; temporaryLink: string }) => {
   const resetLink = `${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`;
+  const { html: resetHtml, attachments: resetAttachments } = wrapWithDsfrMail({
+    title: "Réinitialisation de mot de passe",
+    content: `<p>Voici le lien de réinitialisation de votre mot de passe :</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+  });
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: email,
     subject: "Patrinotes - Réinitialisation de mot de passe",
-    html: wrapWithDsfrMail({
-      title: "Réinitialisation de mot de passe",
-      content: `<p>Voici le lien de réinitialisation de votre mot de passe :</p><p><a href="${resetLink}">${resetLink}</a></p>`,
-    }),
+    html: resetHtml,
+    attachments: resetAttachments,
   });
 };
 
@@ -104,19 +110,22 @@ export const sendValidationRequestMail = ({
   const link = `${ENV.FRONTEND_URL}/constat-validation/${validationToken}`;
   const title = stateReport.titre_edifice ? ` : ${stateReport.titre_edifice}` : "";
 
-  return transporter.sendMail({
-    from: ENV.EMAIL_EMITTER,
-    to: validatorEmail,
-    subject: `[Validation requise] Constat d'état${title}`,
-    html: wrapWithDsfrMail({
-      title: `Validation requise — Constat d'état${title}`,
-      content: `<p>Bonjour,</p>
+  const { html: validationReqHtml, attachments: validationReqAttachments } = wrapWithDsfrMail({
+    title: `Validation requise — Constat d'état${title}`,
+    content: `<p>Bonjour,</p>
 <p>${creatorName} vous soumet un constat d'état${title} pour validation.</p>
 <p>Veuillez consulter le document et l'accepter ou le refuser en cliquant sur le lien ci-dessous :</p>
 <p><a href="${link}">${link}</a></p>
 <p>Ce lien est valable 7 jours.</p>
 <p>Cordialement</p>`,
-    }),
+  });
+
+  return transporter.sendMail({
+    from: ENV.EMAIL_EMITTER,
+    to: validatorEmail,
+    subject: `[Validation requise] Constat d'état${title}`,
+    html: validationReqHtml,
+    attachments: validationReqAttachments,
   });
 };
 
@@ -136,17 +145,20 @@ export const sendValidationResultMail = ({
   const title = stateReport.titre_edifice ? ` : ${stateReport.titre_edifice}` : "";
   const decision = accepted ? "accepté" : "refusé";
 
+  const { html: validationResHtml, attachments: validationResAttachments } = wrapWithDsfrMail({
+    title: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"}`,
+    content: `<p>Bonjour,</p>
+<p>Votre constat d'état${title} a été <strong>${decision}</strong> par ${validatorEmail}.</p>
+${comment ? `<p>Commentaire : ${comment}</p>` : ""}
+<p>Cordialement</p>`,
+  });
+
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: creatorEmail,
     subject: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"} par le validateur`,
-    html: wrapWithDsfrMail({
-      title: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"}`,
-      content: `<p>Bonjour,</p>
-<p>Votre constat d'état${title} a été <strong>${decision}</strong> par ${validatorEmail}.</p>
-${comment ? `<p>Commentaire : ${comment}</p>` : ""}
-<p>Cordialement</p>`,
-    }),
+    html: validationResHtml,
+    attachments: validationResAttachments,
   });
 };
 

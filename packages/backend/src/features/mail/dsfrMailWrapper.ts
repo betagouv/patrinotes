@@ -3,11 +3,24 @@ import path from "path";
 
 const assetsDir = path.join(__dirname, "../../assets");
 
-const marianneLightBase64 = fs.readFileSync(path.join(assetsDir, "Marianne-Light@2x.png")).toString("base64");
-const marianneDarkBase64 = fs.readFileSync(path.join(assetsDir, "Marianne-Dark@2x.png")).toString("base64");
+const marianneLightBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Light@2x.png"));
+const marianneDarkBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Dark@2x.png"));
 
-const marianneLightSrc = `data:image/png;base64,${marianneLightBase64}`;
-const marianneDarkSrc = `data:image/png;base64,${marianneDarkBase64}`;
+const MARIANNE_LIGHT_CID = "marianne-light@patrinotes";
+const MARIANNE_DARK_CID = "marianne-dark@patrinotes";
+
+export type DsfrMailAttachment = {
+  cid: string;
+  filename: string;
+  content: Buffer;
+  contentDisposition: "inline";
+  contentType: string;
+};
+
+const MARIANNE_ATTACHMENTS: DsfrMailAttachment[] = [
+  { cid: MARIANNE_LIGHT_CID, filename: "Marianne-Light.png", content: marianneLightBuffer, contentDisposition: "inline", contentType: "image/png" },
+  { cid: MARIANNE_DARK_CID,  filename: "Marianne-Dark.png",  content: marianneDarkBuffer,  contentDisposition: "inline", contentType: "image/png" },
+];
 
 const DSFR_CSS = `
   .hide-white {
@@ -128,8 +141,8 @@ export function wrapWithDsfrMail({
   preheader?: string;
   content: string;
   serviceName?: string;
-}): string {
-  return `<!doctype html>
+}): { html: string; attachments: DsfrMailAttachment[] } {
+  const html = `<!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -173,10 +186,10 @@ export function wrapWithDsfrMail({
                       <table style="border-collapse:collapse;" width="100%" cellspacing="0" cellpadding="0" role="presentation" border="0" align="left" bgcolor="#ffffff" class="darkmode">
                         <tr><td height="12" style="height:12px; line-height:12px; font-size:12px;">&nbsp;</td></tr>
                         <tr><td class="hide-black" align="left">
-                          <img src="${marianneLightSrc}" alt="République française" style="display:block; height:auto; width:76px;" width="76" border="0" class="hide-black">
+                          <img src="cid:${MARIANNE_LIGHT_CID}" alt="République française" style="display:block; height:auto; width:76px;" width="76" border="0" class="hide-black">
                         </td></tr>
                         <tr><td class="hide-white" align="left">
-                          <img src="${marianneDarkSrc}" alt="République française" style="display:block; height:auto; width:76px;" width="76" border="0" class="hide-white">
+                          <img src="cid:${MARIANNE_DARK_CID}" alt="République française" style="display:block; height:auto; width:76px;" width="76" border="0" class="hide-white">
                         </td></tr>
                         <tr><td height="12" style="height:12px; line-height:12px; font-size:12px;">&nbsp;</td></tr>
                       </table>
@@ -250,6 +263,7 @@ export function wrapWithDsfrMail({
 
 </body>
 </html>`;
+  return { html, attachments: MARIANNE_ATTACHMENTS };
 }
 
 function escapeHtml(str: string): string {

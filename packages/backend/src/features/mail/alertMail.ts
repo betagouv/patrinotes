@@ -81,12 +81,12 @@ export const createAlertEmailContent = async ({
   <p>Merci,</p>
   `;
 
-  const html = wrapWithDsfrMail({
+  const { html, attachments: dsfrAttachments } = wrapWithDsfrMail({
     title: `Alerte ${alert.alert}${stateReport.titre_edifice ? ` — ${stateReport.titre_edifice}` : ""}`,
     content: innerHtml,
   });
 
-  return { html, attachments: mailAttachments };
+  return { html, attachments: [...dsfrAttachments, ...mailAttachments] };
 };
 
 const getServicePronom = (serviceName: string) => {
