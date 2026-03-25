@@ -122,7 +122,7 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
 
         await trx
           .updateTable("state_report")
-          .set({ validation_status: "accepted" })
+          .set({ validation_status: "accepted", attachment_id: validation.pdf_path })
           .where("id", "=", validation.state_report_id!)
           .execute();
       });

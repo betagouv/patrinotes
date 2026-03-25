@@ -157,7 +157,7 @@ const ConstatPdf = () => {
   // propagate isDisabled to children
   useEffect(() => {
     if (!stateReport) return;
-    const isStateReportDisabled = getIsStateReportDisabled({ attachment_id: stateReport.attachment_id });
+    const isStateReportDisabled = getIsStateReportDisabled({ ...stateReport });
     form.setValue("isStateReportDisabled", isStateReportDisabled);
   }, [stateReport]);
 

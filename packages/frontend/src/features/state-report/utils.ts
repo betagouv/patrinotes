@@ -21,10 +21,16 @@ export type StateReportStep = z.infer<typeof stateReportStepSchema>;
 
 export const useIsStateReportDisabled = () => {
   const form = useStateReportFormContext();
-  const hasAttachment = useWatch({ control: form.control, name: "attachment_id" });
-  return getIsStateReportDisabled({ attachment_id: hasAttachment });
+  const [hasAttachment, validationStatus] = useWatch({
+    control: form.control,
+    name: ["attachment_id", "validation_status"],
+  });
+  return getIsStateReportDisabled({ attachment_id: hasAttachment, validation_status: validationStatus });
 };
 
-export const getIsStateReportDisabled = (stateReport: { attachment_id: string | null }) => {
-  return !!stateReport.attachment_id;
+export const getIsStateReportDisabled = (stateReport: {
+  attachment_id: string | null;
+  validation_status: string | null;
+}) => {
+  return !!stateReport.attachment_id && stateReport.validation_status !== "declined";
 };

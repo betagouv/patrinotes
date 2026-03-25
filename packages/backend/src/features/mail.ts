@@ -116,8 +116,7 @@ export const sendValidationRequestMail = ({
 <p>${creatorName} vous soumet un constat d'état${title} pour validation.</p>
 <p>Veuillez consulter le document et l'accepter ou le refuser en cliquant sur le lien ci-dessous :</p>
 <p><a href="${link}">${link}</a></p>
-<p>Ce lien est valable 7 jours.</p>
-<p>Cordialement</p>`,
+<p>Ce lien est valable 7 jours.</p>`,
   });
 
   return transporter.sendMail({
@@ -149,8 +148,7 @@ export const sendValidationResultMail = ({
     title: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"}`,
     content: `<p>Bonjour,</p>
 <p>Votre constat d'état${title} a été <strong>${decision}</strong> par ${validatorEmail}.</p>
-${comment ? `<p>Commentaire : ${comment}</p>` : ""}
-<p>Cordialement</p>`,
+${comment ? `<p>Commentaire : ${comment}</p>` : ""}`,
   });
 
   return transporter.sendMail({
