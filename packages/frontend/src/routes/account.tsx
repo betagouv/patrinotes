@@ -238,7 +238,7 @@ const DefaultRecipient = () => {
     },
   });
 
-  const canSave = defaultEmails.join(",") !== userSettings?.default_emails;
+  const canSave = defaultEmails.join(",") !== userSettings?.default_emails?.replaceAll(" ", "");
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
@@ -421,7 +421,12 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
   );
 };
 
-type ConstatValidationForm = { validationEnabled: boolean; validationEmail: string };
+type ConstatValidationForm = {
+  validationEnabled: boolean;
+  validationEmail: string;
+  validationNom: string;
+  validationPrenom: string;
+};
 
 const ConstatValidation = () => {
   const user = useUser()!;
@@ -431,6 +436,8 @@ const ConstatValidation = () => {
     values: {
       validationEnabled: !!userSettings?.validation_enabled,
       validationEmail: userSettings?.validation_email ?? "",
+      validationNom: userSettings?.validation_nom ?? "",
+      validationPrenom: userSettings?.validation_prenom ?? "",
     },
   });
 
@@ -450,6 +457,8 @@ const ConstatValidation = () => {
       const values = {
         validation_enabled: data.validationEnabled ? 1 : 0,
         validation_email: data.validationEnabled ? data.validationEmail : null,
+        validation_nom: data.validationEnabled ? data.validationNom : null,
+        validation_prenom: data.validationEnabled ? data.validationPrenom : null,
       };
 
       if (doesExist) {
@@ -480,14 +489,31 @@ const ConstatValidation = () => {
         showCheckedHint={false}
       />
       {validationEnabled && (
-        <Input
-          label="Courriel du validateur"
-          nativeInputProps={{
-            type: "email",
-            ...form.register("validationEmail"),
-          }}
-          sx={{ mt: "16px" }}
-        />
+        <Stack mt="16px">
+          <Flex gap="8px" alignItems="center" mt="16px">
+            <Box flex="1">
+              <Input label="Nom" nativeInputProps={{ ...form.register("validationNom") }} />
+            </Box>
+            <Box flex="1">
+              <Input label="Prénom" nativeInputProps={{ ...form.register("validationPrenom") }} />
+            </Box>
+          </Flex>
+          <Input
+            label="Courriel du validateur"
+            state={form.formState.errors.validationEmail ? "error" : "default"}
+            stateRelatedMessage={form.formState.errors.validationEmail?.message}
+            nativeInputProps={{
+              type: "email",
+              ...form.register("validationEmail", {
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "Veuillez saisir une adresse courriel valide",
+                },
+              }),
+            }}
+            sx={{ mt: "16px" }}
+          />
+        </Stack>
       )}
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
         <Button

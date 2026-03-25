@@ -300,6 +300,8 @@ export const userSettings = pgTable("user_settings", {
   serviceId: text("service_id"),
   validationEnabled: boolean("validation_enabled").default(false),
   validationEmail: text("validation_email"),
+  validationNom: text("validation_nom"),
+  validationPrenom: text("validation_prenom"),
 });
 
 export const constatValidation = pgTable("constat_validation", {

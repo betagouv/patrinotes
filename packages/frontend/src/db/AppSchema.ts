@@ -134,6 +134,8 @@ const user_settings = new Table({
   service_id: column.text,
   validation_enabled: column.integer,
   validation_email: column.text,
+  validation_nom: column.text,
+  validation_prenom: column.text,
 });
 
 const pop_immeubles = new Table({
