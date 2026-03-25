@@ -14,5 +14,5 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "../../db",
   dialect: "postgresql",
-  dbCredentials: { ...config, ssl: isProd },
+  dbCredentials: { ...config, ssl: false },
 });
