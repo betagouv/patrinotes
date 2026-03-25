@@ -112,11 +112,20 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         throw { statusCode: 410, message: "Ce lien de validation a expiré" };
       }
 
-      await db
-        .updateTable("constat_validation")
-        .set({ status: "accepted", comment: comment ?? null })
-        .where("token", "=", token)
-        .execute();
+      console.log("Accepting validation", { token, validation });
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .updateTable("constat_validation")
+          .set({ status: "accepted", comment: comment ?? null })
+          .where("token", "=", token)
+          .execute();
+
+        await trx
+          .updateTable("state_report")
+          .set({ validation_status: "accepted" })
+          .where("id", "=", validation.state_report_id!)
+          .execute();
+      });
 
       const stateReport = await db
         .selectFrom("state_report")
@@ -192,11 +201,19 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         throw { statusCode: 410, message: "Ce lien de validation a expiré" };
       }
 
-      await db
-        .updateTable("constat_validation")
-        .set({ status: "declined", comment })
-        .where("token", "=", token)
-        .execute();
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .updateTable("constat_validation")
+          .set({ status: "declined", comment })
+          .where("token", "=", token)
+          .execute();
+
+        await trx
+          .updateTable("state_report")
+          .set({ validation_status: "declined" })
+          .where("id", "=", validation.state_report_id!)
+          .execute();
+      });
 
       const stateReport = await db
         .selectFrom("state_report")

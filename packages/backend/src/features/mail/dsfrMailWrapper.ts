@@ -1,9 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const assetsDir = __dirname;
+const assetsDir = path.join(process.cwd(), "public");
 
 const marianneLightBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Light@2x.png"));
 const marianneDarkBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Dark@2x.png"));

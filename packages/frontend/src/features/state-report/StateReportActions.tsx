@@ -69,6 +69,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
         "service_id",
         "attachment_id",
         "createdByName",
+        "validation_status",
       ]);
 
       return db
