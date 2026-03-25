@@ -26,7 +26,7 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const file = await request.file();
     if (!file) throw new AppError(400, "No file provided");
 
-    request.services.upload.uploadAttachment({
+    await request.services.upload.uploadAttachment({
       filePath: (request.query as any)?.filePath ?? file.filename,
       buffer: await file.toBuffer(),
     });

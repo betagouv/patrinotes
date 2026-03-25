@@ -9,6 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import path from "path";
 import { Prettify } from "pastable";
 import { Transaction } from "kysely";
+import { sentry } from "../features/sentry";
 
 const debug = makeDebug("upload");
 
@@ -33,7 +34,12 @@ export class UploadService {
       Body: buffer,
       Key: addAttachmentPrefix(filePath),
     });
-    await client.send(command);
+    try {
+      await client.send(command);
+    } catch (error) {
+      sentry?.captureException(error, { extra: { filePath } });
+      throw error;
+    }
   }
 
   async getAttachment({ filePath }: { filePath: string }) {
@@ -53,7 +59,12 @@ export class UploadService {
       Body: buffer,
       Key: name,
     });
-    await client.send(command);
+    try {
+      await client.send(command);
+    } catch (error) {
+      sentry?.captureException(error, { extra: { reportId, name } });
+      throw error;
+    }
 
     const url = `https://${bucketUrl}/${name}`;
     debug(url);
@@ -98,7 +109,13 @@ export class UploadService {
 
     const pictureUrl = await generatePresignedUrl(addAttachmentPrefix(pictureId));
 
-    const buffer = await applyLinesToPicture({ pictureUrl: pictureUrl, lines });
+    let buffer: Buffer;
+    try {
+      buffer = await applyLinesToPicture({ pictureUrl: pictureUrl, lines });
+    } catch (error) {
+      sentry?.captureException(error, { extra: { pictureId } });
+      throw error;
+    }
 
     const name = getPictureName(pictureId, Math.round(Date.now() / 1000));
 

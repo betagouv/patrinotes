@@ -13,6 +13,7 @@ import { v4 } from "uuid";
 import React from "react";
 import { Selectable } from "kysely";
 import { getServices } from "../services/services";
+import { sentry } from "../features/sentry";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
 import { deserializeMandatoryEmails } from "@cr-vif/pdf/utils";
@@ -276,7 +277,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
           debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.join(",")}`);
         } catch (alertError) {
-          debug(`Failed to send alert email for alert ${alert.id}: ${alertError}`);
+          sentry?.captureException(alertError, { extra: { alertId: alert.id } });
           console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
         }
       }

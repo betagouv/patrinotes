@@ -19,7 +19,7 @@ const transporter = createTransport({
   },
 });
 
-export const sendStateReportMail = ({
+export const sendStateReportMail = async ({
   recipients,
   pdfBuffer,
   stateReport,
@@ -34,21 +34,26 @@ export const sendStateReportMail = ({
 
   const content = createBordereauMailContent({ stateReport, user });
 
-  return transporter.sendMail({
-    from: ENV.EMAIL_EMITTER,
-    to: recipients,
-    subject: "Constat d'état " + (stateReport?.titre_edifice ? ` : ${stateReport.titre_edifice}` : ""),
-    html: content,
-    attachments: [
-      {
-        filename: getStateReportMailName(stateReport),
-        content: pdfBuffer,
-      },
-    ],
-  });
+  try {
+    return await transporter.sendMail({
+      from: ENV.EMAIL_EMITTER,
+      to: recipients,
+      subject: "Constat d'état " + (stateReport?.titre_edifice ? ` : ${stateReport.titre_edifice}` : ""),
+      html: content,
+      attachments: [
+        {
+          filename: getStateReportMailName(stateReport),
+          content: pdfBuffer,
+        },
+      ],
+    });
+  } catch (error) {
+    sentry?.captureException(error, { extra: { recipients, stateReportId: stateReport.id } });
+    throw error;
+  }
 };
 
-export const sendReportMail = ({
+export const sendReportMail = async ({
   recipients,
   pdfBuffer,
   report,
@@ -59,31 +64,41 @@ export const sendReportMail = ({
 }) => {
   sentry?.captureMessage("Sending report mail", { extra: { recipients, report } });
 
-  return transporter.sendMail({
-    from: ENV.EMAIL_EMITTER,
-    to: recipients,
-    subject: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
-    text: `Bonjour,
+  try {
+    return await transporter.sendMail({
+      from: ENV.EMAIL_EMITTER,
+      to: recipients,
+      subject: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
+      text: `Bonjour,
 
 Vous trouverez ci-joint le compte-rendu de notre rendez-vous.
 
 Cordialement`,
-    attachments: [
-      {
-        filename: getPDFInMailName(report),
-        content: pdfBuffer,
-      },
-    ],
-  });
+      attachments: [
+        {
+          filename: getPDFInMailName(report),
+          content: pdfBuffer,
+        },
+      ],
+    });
+  } catch (error) {
+    sentry?.captureException(error, { extra: { recipients, reportId: report.id } });
+    throw error;
+  }
 };
 
-export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string; temporaryLink: string }) => {
-  return transporter.sendMail({
-    from: ENV.EMAIL_EMITTER,
-    to: email,
-    subject: "Patrinotes - Réinitialisation de mot de passe",
-    text: `Voici le lien de réinitialisation de votre mot de passe : ${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`,
-  });
+export const sendPasswordResetMail = async ({ email, temporaryLink }: { email: string; temporaryLink: string }) => {
+  try {
+    return await transporter.sendMail({
+      from: ENV.EMAIL_EMITTER,
+      to: email,
+      subject: "Patrinotes - Réinitialisation de mot de passe",
+      text: `Voici le lien de réinitialisation de votre mot de passe : ${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`,
+    });
+  } catch (error) {
+    sentry?.captureException(error, { extra: { email } });
+    throw error;
+  }
 };
 
 export const sendAlertEmail = async ({
@@ -101,14 +116,19 @@ export const sendAlertEmail = async ({
     extra: { to, alertType: alert.alert, monumentName: stateReport.titre_edifice || "" },
   });
 
-  const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
-  const subject = getAlertMailSubject(alert.alert!, stateReport.titre_edifice || "");
+  try {
+    const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
+    const subject = getAlertMailSubject(alert.alert!, stateReport.titre_edifice || "");
 
-  return transporter.sendMail({
-    from: ENV.EMAIL_EMITTER,
-    to,
-    subject,
-    html,
-    attachments,
-  });
+    return await transporter.sendMail({
+      from: ENV.EMAIL_EMITTER,
+      to,
+      subject,
+      html,
+      attachments,
+    });
+  } catch (error) {
+    sentry?.captureException(error, { extra: { to, alertType: alert.alert, monumentName: stateReport.titre_edifice || "" } });
+    throw error;
+  }
 };
