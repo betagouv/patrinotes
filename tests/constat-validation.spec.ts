@@ -5,6 +5,7 @@ import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
 
 const mailpitPort = process.env.MAILPIT_WEB_PORT ?? "3018";
+const backendPort = process.env.BACKEND_PORT ?? "3011";
 const validatorEmail = "validator@example.com";
 
 test.describe("Constat validation flow", () => {
@@ -151,6 +152,12 @@ test.describe("Constat validation flow", () => {
     await expect(page.getByRole("button", { name: "Accepter" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refuser" })).toBeVisible();
 
+    const validationToken = new URL(validationUrl).pathname.split("/").pop()!;
+    const pdfResp = await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${validationToken}/pdf`);
+    expect(pdfResp.ok(), "PDF proxy endpoint should return 200").toBeTruthy();
+    const pdfBody = await pdfResp.body();
+    expect(pdfBody.length, "PDF should not be empty").toBeGreaterThan(0);
+
     // -------------------------------------------------------------------------
     // 9. Accept with a comment
     // -------------------------------------------------------------------------
@@ -283,6 +290,12 @@ test.describe("Constat validation flow", () => {
     // -------------------------------------------------------------------------
     await page.goto(validationUrl);
     await expect(page.getByText(/Validation du constat d'état/)).toBeVisible();
+
+    const validationToken = new URL(validationUrl).pathname.split("/").pop()!;
+    const pdfResp = await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${validationToken}/pdf`);
+    expect(pdfResp.ok(), "PDF proxy endpoint should return 200").toBeTruthy();
+    const pdfBody = await pdfResp.body();
+    expect(pdfBody.length, "PDF should not be empty").toBeGreaterThan(0);
 
     await page.locator("input[name=comment]").fill("Document incomplet, merci de corriger.");
     await page.getByRole("button", { name: "Refuser" }).click();

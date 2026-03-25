@@ -53,6 +53,37 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
     },
   );
 
+  fastify.get(
+    "/constat-validation/:token/pdf",
+    {
+      schema: {
+        params: Type.Object({ token: Type.String() }),
+      },
+    },
+    async (request, reply) => {
+      const { token } = request.params;
+
+      const validation = await db
+        .selectFrom("constat_validation")
+        .where("token", "=", token)
+        .selectAll()
+        .executeTakeFirst();
+
+      if (!validation) {
+        throw { statusCode: 404, message: "Lien de validation introuvable" };
+      }
+
+      if (new Date(validation.token_expires_at) < new Date() && validation.status === "pending") {
+        throw { statusCode: 410, message: "Ce lien de validation a expiré" };
+      }
+
+      const pdfBuffer = await request.services.upload.getAttachment({ filePath: validation.pdf_path });
+
+      reply.header("Content-Type", "application/pdf");
+      return reply.send(pdfBuffer);
+    },
+  );
+
   fastify.post(
     "/constat-validation/:token/accept",
     {

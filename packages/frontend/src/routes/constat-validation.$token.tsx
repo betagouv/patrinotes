@@ -99,7 +99,7 @@ function ConstatValidationPage() {
     );
   }
 
-  const { stateReport, pdfUrl, status, comment } = query.data!;
+  const { stateReport, status, comment } = query.data!;
   const title = stateReport?.titre_edifice ?? "Constat d'état";
 
   if (status === "accepted") {
@@ -139,7 +139,12 @@ function ConstatValidationPage() {
       )}
 
       <Box width="100%" height={{ xs: "60vh", lg: "75vh" }} border="1px solid #ccc">
-        <iframe src={pdfUrl} width="100%" height="100%" title="Constat d'état" />
+        <iframe
+          src={`${ENV.VITE_BACKEND_URL}/api/constat-validation/${token}/pdf`}
+          width="100%"
+          height="100%"
+          title="Constat d'état"
+        />
       </Box>
 
       <Stack width="100%" maxWidth="690px" gap="16px">
