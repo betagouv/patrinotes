@@ -17,10 +17,12 @@ import { StateReportActions } from "./StateReportActions";
 export const StateReportListItem = ({
   report,
   isLast,
+  isPendingValidation,
   onClick,
 }: {
   report: StateReportWithUser;
   isLast?: boolean;
+  isPendingValidation?: boolean;
   onClick?: () => void;
 }) => {
   const ref = useRef<HTMLButtonElement>(null);
@@ -75,7 +77,7 @@ export const StateReportListItem = ({
             {byText}
           </Box>
           <Box mt="8px" mb={whereText ? "0" : "24px"}>
-            <ReportBadge status={isDraft ? "draft" : "published"} />
+            <ReportBadge status={isDraft ? "draft" : isPendingValidation ? "pending_validation" : "published"} />
           </Box>
         </Box>
       </Link>
@@ -166,8 +168,13 @@ const MenuMobileModalContent = ({ onClose, report }: MenuProps) => {
 
 type MenuProps = { onClose: (e: Event) => void; report: StateReportWithUser };
 
-type ReportStatus = "draft" | "published";
+type ReportStatus = "draft" | "pending_validation" | "published";
 const ReportBadge = ({ status }: { status: ReportStatus }) => {
+  const labels: Record<ReportStatus, string> = {
+    draft: "Brouillon",
+    pending_validation: "En attente de validation",
+    published: "Envoyé",
+  };
   return (
     <Badge
       severity={status === "draft" ? "info" : "success"}
@@ -190,7 +197,7 @@ const ReportBadge = ({ status }: { status: ReportStatus }) => {
         }}
       />
       <Typography ml="4px" fontSize="12px" fontWeight="bold">
-        {status === "draft" ? "Brouillon" : "Envoyé"}
+        {labels[status]}
       </Typography>
     </Badge>
   );
@@ -198,10 +205,12 @@ const ReportBadge = ({ status }: { status: ReportStatus }) => {
 
 const icons: Record<ReportStatus, string> = {
   draft: "ri-timer-fill",
+  pending_validation: "ri-time-line",
   published: "ri-send-plane-fill",
 };
 
 const colors: Record<ReportStatus, [string, string]> = {
   draft: ["#716043", "#FEECC2"] as const,
+  pending_validation: ["#695240", "#FFE9E6"] as const,
   published: ["#18753C", "#D1F1D9"] as const,
 };

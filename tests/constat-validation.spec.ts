@@ -111,7 +111,14 @@ test.describe("Constat validation flow", () => {
     // 5. Sent confirmation screen
     // -------------------------------------------------------------------------
     await page.waitForURL((url) => url.search.includes("mode=sent"));
-    await expect(page.getByText("Votre constat d'état a bien été envoyé !")).toBeVisible();
+    await expect(
+      page.getByText("Votre constat a été transmis pour validation. Il sera envoyé aux destinataires après approbation."),
+    ).toBeVisible();
+
+    // 5b. Navigate home and check the list badge shows "En attente de validation"
+    await page.getByRole("button", { name: "Accueil" }).click();
+    await page.waitForURL((url) => url.pathname === "/");
+    await expect(page.getByText("En attente de validation")).toBeVisible({ timeout: 15_000 });
 
     // -------------------------------------------------------------------------
     // 6. Verify the validation email was sent to the validator — NOT the recipient
@@ -266,6 +273,15 @@ test.describe("Constat validation flow", () => {
     await emailInput.press("Enter");
     await page.getByText(recipientEmail).waitFor();
     await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=sent"));
+
+    // Check the list badge shows "En attente de validation"
+    await page.getByRole("button", { name: "Accueil" }).click();
+    await page.waitForURL((url) => url.pathname === "/");
+    await expect(page.getByText("En attente de validation")).toBeVisible({ timeout: 15_000 });
+
+    // Navigate back to get the validation link
+    await page.goBack();
     await page.waitForURL((url) => url.search.includes("mode=sent"));
 
     // Get validation link

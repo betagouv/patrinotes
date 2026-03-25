@@ -412,6 +412,12 @@ const state_report_alert_attachment = new Table({
   service_id: column.text,
 });
 
+const constat_validation = new Table({
+  state_report_id: column.text,
+  status: column.text,
+  service_id: column.text,
+});
+
 export const AppSchema = new Schema({
   report,
   service,
@@ -437,6 +443,7 @@ export const AppSchema = new Schema({
   pop_images,
   state_report_alert,
   state_report_alert_attachment,
+  constat_validation,
   attachments: new AttachmentTable({
     name: "attachments",
   }),

@@ -243,6 +243,12 @@ export const StateReportList = ({
   const error = reports.length === 0 ? <NoReport /> : null;
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
+
+  const pendingValidationsQuery = useDbQuery(
+    db.selectFrom("constat_validation").where("status", "=", "pending").select(["state_report_id"]),
+  );
+  const pendingValidationIds = new Set(pendingValidationsQuery.data?.map((v) => v.state_report_id) ?? []);
+
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
       <Center mb="40px">
@@ -262,6 +268,7 @@ export const StateReportList = ({
                     onClick={onClick}
                     key={report.id}
                     report={report}
+                    isPendingValidation={pendingValidationIds.has(report.id)}
                     isLast={
                       isDesktop
                         ? index === reports.length - 1
