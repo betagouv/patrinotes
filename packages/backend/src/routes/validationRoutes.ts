@@ -44,7 +44,7 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
           id: stateReport?.id,
           titre_edifice: stateReport?.titre_edifice,
           commune: stateReport?.commune,
-          date_visite: stateReport?.dateVisite,
+          date_visite: stateReport?.date_visite,
         },
         pdfUrl,
         status: validation.status,
