@@ -50,6 +50,9 @@ importers:
       typed-openapi:
         specifier: ^0.4.1
         version: 0.4.1(@types/node@20.19.37)(openapi-types@12.1.3)(react@18.3.1)(xstate@5.29.0)
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.0
       vite-node:
         specifier: ^1.4.0
         version: 1.6.1(@types/node@20.19.37)(terser@5.46.1)
@@ -2347,7 +2350,6 @@ packages:
       pdfjs-dist: 4.2.67
       react: ^18.2.0
       react-dom: ^18.2.0
-    bundledDependencies: []
 
   '@mui/core-downloads-tracker@5.18.0':
     resolution: {integrity: sha512-jbhwoQ1AY200PSSOrNXmrFCaSDSJWP7qk6urkTmIirvRXDROkqe+QwcLlUiw/PrREwsIF/vm3/dAXvjlMHF0RA==}

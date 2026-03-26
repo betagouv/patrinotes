@@ -1,8 +1,8 @@
 import { EnsureUser } from "#components/EnsureUser";
-import { SyncFormBanner } from "#components/SyncForm";
+import { SyncFormBanner, useSyncForm, syncObject } from "#components/SyncForm";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import { FormProvider, UseFormReturn } from "react-hook-form";
+import { FormProvider } from "react-hook-form";
 import { InfoForm } from "../features/InfoForm";
 import { NotesForm } from "../features/NotesForm";
 import { DisabledContext } from "../features/DisabledContext";
@@ -41,6 +41,12 @@ const WithReport = ({ report }: { report: Report }) => {
   });
 
   const canEdit = useCanEditReport(report);
+  const { newObject, syncMutation, cancelSync } = useSyncForm({
+    form,
+    baseObject: report,
+    disabled: !canEdit,
+    syncObject,
+  });
 
   const navigate = useNavigate();
 
@@ -79,7 +85,9 @@ const WithReport = ({ report }: { report: Report }) => {
 
   useRefreshForm<Report>({ values: report, getFocused, form });
 
-  const onSubmit = (_values: Report) => {
+  const onSubmit = async (_values: Report) => {
+    cancelSync();
+    await syncMutation.mutateAsync();
     navigate({ to: "/pdf/$reportId", params: { reportId: report.id }, search: { mode: "view" } });
   };
 
@@ -88,7 +96,7 @@ const WithReport = ({ report }: { report: Report }) => {
       <Flex flexDirection="column">
         <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <SyncFormBanner form={form} baseObject={report} />
+            <SyncFormBanner newObject={newObject} />
             <Tabs control={[tab ?? "info", setTab]} options={options} />
           </form>
         </FormProvider>

@@ -271,7 +271,7 @@ test.describe("Constat with alerts flow", () => {
   });
 });
 
-test.describe.only("Alerts with validation flow", () => {
+test.describe("Alerts with validation flow", () => {
   const mailpitPort = process.env.MAILPIT_WEB_PORT ?? "3018";
   const validatorEmail = "validator-alerts@example.com";
 
