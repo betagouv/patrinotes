@@ -30,23 +30,23 @@ export const powerSyncDb = new PowerSyncDatabase({
 });
 
 export const attachmentLocalStorage = new IndexDBFileSystemStorageAdapter("crvif-attachments");
-export const attachmentRemoteStorage: RemoteStorageAdapter = {
-  deleteFile: async (attachment: AttachmentRecord) => {
+export const attachmentRemoteStorage = {
+  deleteFile: async (attachment: { id: string }) => {
     console.log("deleteFile called for attachment", attachment.id, "is not configured");
   },
-  downloadFile: async (attachment: AttachmentRecord) => {
+  downloadFile: async (attachment: { id: string }) => {
     const data = (await api.get("/api/upload/attachment", {
       query: { filePath: attachment.id },
     } as any)) as ArrayBuffer;
 
     return data;
   },
-  uploadFile: async (data: ArrayBuffer, attachment: AttachmentRecord) => {
+  uploadFile: async (data: ArrayBuffer, attachment: { id: string }) => {
     const formData = new FormData();
     formData.append("file", new Blob([data]), attachment.id);
     await api.post("/api/upload/attachment", { body: formData, query: { filePath: attachment.id } } as any);
   },
-};
+} satisfies RemoteStorageAdapter;
 
 export const attachmentQueue = new AttachmentQueue({
   db: powerSyncDb,

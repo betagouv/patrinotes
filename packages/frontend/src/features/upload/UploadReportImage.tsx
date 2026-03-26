@@ -8,7 +8,14 @@ import { useFormContext } from "react-hook-form";
 import { createModal } from "@codegouvfr/react-dsfr/Modal";
 import { ImageCanvas, Line } from "./DrawingCanvas";
 import { api } from "../../api";
-import { attachmentQueue, attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../../db/db";
+import {
+  attachmentQueue,
+  attachmentLocalStorage,
+  db,
+  getAttachmentUrl,
+  useDbQuery,
+  attachmentRemoteStorage,
+} from "../../db/db";
 import { Pictures, Report, ReportAttachment } from "../../db/AppSchema";
 import imageCompression from "browser-image-compression";
 import { Box, Grid, Stack, Typography } from "@mui/material";
@@ -105,21 +112,40 @@ export const PictureThumbnail = ({
   onDelete: (props: { id: string }) => void;
   isDisabled?: boolean;
 }) => {
-  const idbStatusQuery = useDbQuery(db.selectFrom("attachments").where("id", "=", picture.id).select("state"));
-  const status = idbStatusQuery.data?.[0]?.state;
   const bgUrlQuery = useQuery({
-    queryKey: ["picture", picture.local_uri, status],
+    queryKey: ["picture", picture.local_uri, picture.state],
     queryFn: async () => {
+      // if (!(await attachmentLocalStorage.fileExists(picture.local_uri!))) {
+      //   await attachmentRemoteStorage.downloadFile
+      // }
+      if (picture?.state !== AttachmentState.SYNCED) {
+        // force download
+        await attachmentRemoteStorage.downloadFile({
+          id: picture.local_uri!,
+        });
+
+        throw new Error("File not available locally yet");
+      }
+
       const buffer = await attachmentLocalStorage.readFile(picture.local_uri!);
       const blob = new Blob([buffer], { type: picture.mediaType || "image/png" });
       const usableUrl = URL.createObjectURL(blob);
       return usableUrl;
     },
     refetchOnWindowFocus: false,
-    enabled: !!picture.local_uri,
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  const bgUrl = bgUrlQuery.data;
+  const bgUrlRef = useRef<string | null>(null);
+  if (bgUrlQuery.data && bgUrlQuery.data !== bgUrlRef.current) {
+    bgUrlRef.current = bgUrlQuery.data ?? null;
+  } else {
+    console.log("ALERTE", "tried to load picture but got no url", picture.local_uri, picture.state);
+    console.log(bgUrlQuery.error);
+  }
+
+  const bgUrl = bgUrlRef.current;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const pictureLines = useDbQuery(db.selectFrom("picture_lines").where("attachmentId", "=", picture.id).selectAll());
@@ -184,13 +210,19 @@ export const PictureThumbnail = ({
       });
     };
   };
-  const finalStatus = idbStatusQuery.data?.[0]?.state ?? AttachmentState.QUEUED_UPLOAD;
+  const finalStatus = picture.state;
 
   return (
     <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
       <ReportStatus status={finalStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
-        <Box ref={canvasRef} component="canvas" flex="1" data-picture-id={picture.id}></Box>
+        <Box
+          ref={canvasRef}
+          component="canvas"
+          flex="1"
+          data-state={picture.state}
+          data-picture-id={picture.local_uri}
+        ></Box>
         {/* <Box component="img" src={bgUrl!} width="200px" height="200px" display={bgUrl ? "block" : "none"} /> */}
         <Flex
           display={isDisabled ? "none" : "flex"}
