@@ -79,7 +79,6 @@ export const attachmentQueue = new AttachmentQueue({
               })),
             ) ?? [];
 
-          console.log("ATTACHMENTS UPDATE", attachments);
           await onUpdate(attachments);
         },
         onError: (error) => {
