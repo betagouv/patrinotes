@@ -7,4 +7,5 @@ export default defineConfig({
       tsconfig: "packages/backend/tsconfig.json",
     },
   },
+  publicDir: "public",
 });

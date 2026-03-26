@@ -135,7 +135,7 @@ const ConstatPdf = () => {
   // sync alerts with form since they can be edited in the alert accordion
   useEffect(() => {
     if (!alerts) return;
-    const alertsWithShouldSend = alerts.map((alert) => ({ ...alert, shouldSend: true }));
+    const alertsWithShouldSend = alerts.map((alert) => ({ ...alert, shouldSend: alert.should_send !== 0 }));
 
     form.setValue("alerts", alertsWithShouldSend);
 

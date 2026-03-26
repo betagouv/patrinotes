@@ -1,12 +1,14 @@
 import { exec, execSync, spawnSync } from "child_process";
 import { db, makeDb } from "../packages/backend/src/db/db";
-import { mockPopImmeuble, mockServices, mockUsers } from "./utils";
+import { mockPopImmeuble, mockPopObjets, mockServices, mockUsers } from "./utils";
 import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
 export const resetDatabase = async () => {
   // Delete child tables first to satisfy foreign key constraints
   await db.deleteFrom("visited_section_attachment").execute();
   await db.deleteFrom("visited_section").execute();
+  await db.deleteFrom("state_report_alert_attachment").execute();
+  await db.deleteFrom("state_report_alert").execute();
   await db.deleteFrom("state_report_attachment").execute();
   await db.deleteFrom("state_report_sent_email").execute();
   await db.deleteFrom("constat_validation").execute();
@@ -44,6 +46,17 @@ export const resetDatabase = async () => {
     .insertInto("pop_immeubles")
     .values(mockPopImmeuble as any)
     .execute();
+
+  await db
+    .deleteFrom("pop_objets")
+    .where(
+      "reference",
+      "in",
+      mockPopObjets.map((o) => o.reference as string),
+    )
+    .execute();
+  await db.insertInto("pop_objets").values(mockPopObjets as any).execute();
+
   await db
     .insertInto("whitelist")
     .values(mockUsers.map((u) => ({ email: u.email })))

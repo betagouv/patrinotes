@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { expand } from "dotenv-expand";
 
 expand(dotenv.config({ path: "./.env.test" }));
+process.env.NODE_ENV = "test";
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -83,14 +84,9 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm migration:up`,
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-      },
-    },
-    {
-      command: "pnpm backend dev",
+      command: "pnpm migration:up && pnpm backend dev",
+      reuseExistingServer: false,
+      url: `http://localhost:${process.env.BACKEND_PORT}/health`,
       env: {
         ...process.env,
         NODE_ENV: "test",

@@ -2,6 +2,23 @@ import { Page } from "@playwright/test";
 import { Database, db } from "../packages/backend/src/db/db";
 import type { Insertable, Selectable } from "kysely";
 
+export const mockPopObjets: Insertable<Database["pop_objets"]>[] = [
+  {
+    reference: "OBJ00001",
+    id: "OBJ00001",
+    titre_editorial: "Table de test",
+    reference_a_une_notice_merimee_mh: "TEST00001",
+    departement_format_numerique: "00",
+  },
+  {
+    reference: "OBJ00002",
+    id: "OBJ00002",
+    titre_editorial: "Tableau de test",
+    reference_a_une_notice_merimee_mh: "TEST00001",
+    departement_format_numerique: "00",
+  },
+];
+
 export const mockPopImmeuble = {
   departement_format_numerique: "00",
   reference: "TEST00001",

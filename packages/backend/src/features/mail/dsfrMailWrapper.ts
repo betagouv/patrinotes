@@ -1,10 +1,6 @@
 import fs from "fs";
 import path from "path";
-
-const assetsDir = path.join(process.cwd(), "public");
-
-const marianneLightBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Light@2x.png"));
-const marianneDarkBuffer = fs.readFileSync(path.join(assetsDir, "Marianne-Dark@2x.png"));
+import { isDev, isProd, isTest } from "../../envVars";
 
 const MARIANNE_LIGHT_CID = "marianne-light@patrinotes";
 const MARIANNE_DARK_CID = "marianne-dark@patrinotes";
@@ -17,10 +13,28 @@ export type DsfrMailAttachment = {
   contentType: string;
 };
 
-const MARIANNE_ATTACHMENTS: DsfrMailAttachment[] = [
-  { cid: MARIANNE_LIGHT_CID, filename: "Marianne-Light.png", content: marianneLightBuffer, contentDisposition: "inline", contentType: "image/png" },
-  { cid: MARIANNE_DARK_CID,  filename: "Marianne-Dark.png",  content: marianneDarkBuffer,  contentDisposition: "inline", contentType: "image/png" },
-];
+let _marianneAttachments: DsfrMailAttachment[] | null = null;
+function getMarianneAttachments(): DsfrMailAttachment[] {
+  if (_marianneAttachments) return _marianneAttachments;
+  const assetsDir = path.join(process.cwd(), "public");
+  _marianneAttachments = [
+    {
+      cid: MARIANNE_LIGHT_CID,
+      filename: "Marianne-Light.png",
+      content: fs.readFileSync(path.join(assetsDir, "Marianne-Light@2x.png")),
+      contentDisposition: "inline",
+      contentType: "image/png",
+    },
+    {
+      cid: MARIANNE_DARK_CID,
+      filename: "Marianne-Dark.png",
+      content: fs.readFileSync(path.join(assetsDir, "Marianne-Dark@2x.png")),
+      contentDisposition: "inline",
+      contentType: "image/png",
+    },
+  ];
+  return _marianneAttachments;
+}
 
 const DSFR_CSS = `
   .hide-white {
@@ -263,7 +277,7 @@ export function wrapWithDsfrMail({
 
 </body>
 </html>`;
-  return { html, attachments: MARIANNE_ATTACHMENTS };
+  return { html, attachments: getMarianneAttachments() };
 }
 
 function escapeHtml(str: string): string {
