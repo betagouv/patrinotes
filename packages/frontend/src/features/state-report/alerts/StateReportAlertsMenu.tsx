@@ -30,6 +30,7 @@ import { useAlertErrors, useSelectedAlertSection } from "../side-menu/StateRepor
 import { chunk, pick } from "pastable";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { Flex } from "#components/ui/Flex.tsx";
+import { Center } from "#components/MUIDsfr.tsx";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -105,7 +106,7 @@ const AlertSectionsForm = ({
     defaultValues: { alertSections },
   });
   const fieldArray = useFieldArray({ name: "alertSections", control: sectionsForm.control });
-
+  console.log("AlertSectionsForm render", { alertSections, selectedSection });
   return (
     <>
       <AlertSectionSync form={sectionsForm} baseAlerts={alertSections} />
@@ -158,6 +159,8 @@ const AlertSectionsList = ({
         .returningAll()
         .execute();
 
+      console.log("Created new alert", newAlert);
+
       fieldArray.append(newAlert[0]);
     },
   });
@@ -205,7 +208,12 @@ const AlertSectionsList = ({
 
     const alertIndex = fieldArray.fields.findIndex((f) => f.alert === selectedSection);
     const alert = sectionsForm.getValues(`alertSections.${alertIndex}`);
-
+    if (!alert)
+      return (
+        <Center>
+          <Spinner />
+        </Center>
+      );
     return (
       <StateReportAlertSectionForm
         alert={alert}

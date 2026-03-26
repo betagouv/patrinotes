@@ -60,6 +60,14 @@ export const StateReportAlertObjetSectionForm = ({
 
   const [isEditingEmail, setIsEditingEmail] = useIsEditingAlertEmail();
 
+  if (!alerts || alerts.length === 0) {
+    return (
+      <Center>
+        <Spinner />
+      </Center>
+    );
+  }
+
   const { mandatory_emails, additional_emails } = alerts[0].alert;
 
   return (
