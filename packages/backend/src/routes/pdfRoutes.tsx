@@ -260,7 +260,9 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .selectAll()
       .executeTakeFirst();
 
-    if (request.body.alerts && request.body.alerts.length > 0) {
+    const alertsAlreadySent = !!stateReportQuery?.alerts_sent;
+
+    if (!alertsAlreadySent && request.body.alerts && request.body.alerts.length > 0) {
       for (const alert of request.body.alerts) {
         if (!alert.shouldSend) continue;
 
@@ -289,6 +291,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
           console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
         }
       }
+
+      await db.updateTable("state_report").set({ alerts_sent: true }).where("id", "=", stateReportId).execute();
     }
 
     if (userSettingsResult?.validation_enabled && userSettingsResult?.validation_email) {

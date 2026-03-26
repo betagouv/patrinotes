@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
+import { db } from "../packages/backend/src/db/db";
+import { v4 } from "uuid";
 
 test.describe("Constat with alerts flow", () => {
   test.beforeAll(async () => {
@@ -20,7 +22,6 @@ test.describe("Constat with alerts flow", () => {
     await signup({ page, user: mockUsers[0] });
 
     // add delay
-    await page.waitForTimeout(1000);
     // ---------------------------------------------------------------------------
     // Step 2: Configure alert emails on the service page
     // ---------------------------------------------------------------------------
@@ -199,6 +200,7 @@ test.describe("Constat with alerts flow", () => {
     await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
 
     // Finalize
+    await page.waitForTimeout(1000);
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
     await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
 
@@ -266,5 +268,222 @@ test.describe("Constat with alerts flow", () => {
     const objetsTos = (objetsMail.To as { Address: string }[]).map((t) => t.Address).join(",");
     expect(objetsTos, "Objets email should go to caoa-alert@test.com").toContain("caoa-alert@test.com");
     expect(objetsTos, "Objets email should also go to crmh-alert@test.com").toContain("crmh-alert@test.com");
+  });
+});
+
+test.describe.only("Alerts with validation flow", () => {
+  const mailpitPort = process.env.MAILPIT_WEB_PORT ?? "3018";
+  const validatorEmail = "validator-alerts@example.com";
+
+  test.beforeAll(async () => {
+    await resetDatabase();
+  });
+
+  test("should send alerts on first submission and not resend after validator refusal", async ({ page, request }) => {
+    test.setTimeout(120_000);
+
+    // -------------------------------------------------------------------------
+    // 1. Sign up and inject validation settings via DB
+    // -------------------------------------------------------------------------
+    await page.goto("./");
+    await signup({ page, user: mockUsers[2] });
+
+    const dbUser = await db
+      .selectFrom("user")
+      .where("email", "=", mockUsers[2].email)
+      .select(["id", "service_id"])
+      .executeTakeFirstOrThrow();
+
+    await db
+      .insertInto("user_settings")
+      .values({
+        id: v4(),
+        user_id: dbUser.id,
+        service_id: dbUser.service_id,
+        default_emails: null,
+        validation_enabled: true,
+        validation_email: validatorEmail,
+      })
+      .execute();
+
+    // -------------------------------------------------------------------------
+    // 2. Configure alert email on the service page
+    // -------------------------------------------------------------------------
+    await page.goto("./service");
+    await page.waitForURL((url) => url.pathname === "/service");
+    await page.locator("#alertes-mh").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    await page.getByLabel("Courriel CRMH").fill("crmh-alert-validation@test.com");
+
+    const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
+    await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
+    await page.waitForResponse((response) => response.url().includes("/upload-data") && response.status() === 200);
+
+    // -------------------------------------------------------------------------
+    // 3. Create a constat
+    // -------------------------------------------------------------------------
+    await page.goto("./");
+    await page.getByText("Créer un constat d'état").click();
+    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
+    const constatBaseUrl = page.url().split("?")[0];
+
+    const autocomplete = page.getByLabel("Nom ou référence du monument");
+    await autocomplete.waitFor();
+    await autocomplete.fill("Château de Test");
+    await page.getByRole("option", { name: /Château de Test/ }).click();
+    await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
+    await page.getByRole("button", { name: "Contexte de la visite" }).click();
+    await page.waitForURL((url) => url.search.includes("contexte-visite"));
+
+    await page.locator("input[id=nature-visite-0]").check({ force: true });
+    await page.getByLabel("Date de la visite").fill("2024-03-01");
+    await page.fill("input[name=redacted_by]", "Agent Test");
+    await page.fill("input[name=proprietaire]", "Jean Dupont");
+    await page.fill("input[name=proprietaire_email]", "jean.dupont@example.com");
+    await page.getByRole("button", { name: /Constat d'état/ }).click();
+    await page.waitForURL((url) => url.search.includes("constat-detaille"));
+
+    // Fill one section
+    await page.getByRole("button", { name: "Couverture" }).click();
+    const sectionDialog = page.getByRole("dialog");
+    await sectionDialog.waitFor();
+    await sectionDialog.getByRole("radio", { name: "Bon" }).check({ force: true });
+    await sectionDialog.getByRole("radio", { name: "50%" }).check({ force: true });
+    await sectionDialog.locator("textarea").fill("Bon état général.");
+    await sectionDialog.getByRole("button", { name: "Enregistrer" }).click();
+    await sectionDialog.waitFor({ state: "hidden" });
+
+    // -------------------------------------------------------------------------
+    // 4. Add an alert (Édifice en péril)
+    // -------------------------------------------------------------------------
+    await page.getByRole("button", { name: "Alertes" }).click();
+    const drawer = page.locator(".MuiDrawer-paper");
+    await drawer.waitFor();
+
+    await drawer.getByRole("button", { name: /Édifice en péril/ }).click();
+    await drawer.locator("textarea").waitFor();
+    await drawer.locator("textarea").fill("Fissures importantes sur la façade.");
+    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
+
+    await page.waitForTimeout(500);
+    await page.keyboard.press("Escape");
+
+    await drawer.waitFor({ state: "hidden" });
+
+    // -------------------------------------------------------------------------
+    // 5. Finalize and go to send mode
+    // -------------------------------------------------------------------------
+    await page.getByRole("button", { name: "Constat général" }).click();
+    await page.waitForURL((url) => url.search.includes("constat-general"));
+    await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
+    await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
+    await page.waitForTimeout(1000);
+    await page.getByRole("button", { name: "Finaliser le constat" }).click();
+
+    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await page.getByRole("button", { name: "Continuer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=send"));
+
+    const mailId = new Date().getTime();
+    const recipientEmail = `recipient+${mailId}@example.com`;
+    const emailInput = page.locator('input[type="text"]').first();
+    await emailInput.waitFor();
+    await emailInput.fill(recipientEmail);
+    await emailInput.press("Enter");
+    await page.getByText(recipientEmail).waitFor();
+
+    // Clear mailbox right before sending so we only capture emails from this submission
+    await request.delete(`http://localhost:${mailpitPort}/api/v1/messages`);
+
+    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=sent"));
+
+    // -------------------------------------------------------------------------
+    // 6. Verify alert email was sent on first submission (even with validation)
+    // -------------------------------------------------------------------------
+    const firstSubmitMessages = await (await request.get(`http://localhost:${mailpitPort}/api/v1/messages`)).json();
+
+    const alertMailFirst = firstSubmitMessages.messages.find((m: any) =>
+      (m.Subject as string)?.includes("Édifice en péril"),
+    );
+    expect(
+      alertMailFirst,
+      "Alert email should be sent immediately on first submission, before validator acts",
+    ).toBeDefined();
+
+    // Constat email should NOT have reached the recipient yet (pending validation)
+    const recipientMailFirst = firstSubmitMessages.messages.find((m: any) =>
+      m.To.some((r: { Address: string }) => r.Address === recipientEmail),
+    );
+    expect(recipientMailFirst, "Constat email should not reach recipient until validator approves").toBeUndefined();
+
+    // -------------------------------------------------------------------------
+    // 7. Validator declines via API (avoids page navigation that would break auth)
+    // -------------------------------------------------------------------------
+    const validationMail = firstSubmitMessages.messages.find((m: any) =>
+      m.To.some((r: { Address: string }) => r.Address === validatorEmail),
+    );
+    expect(validationMail, "Validation email should have been sent to the validator").toBeDefined();
+
+    const messageResp = await request.get(`http://localhost:${mailpitPort}/api/v1/message/${validationMail.ID}`);
+    const messageData = await messageResp.json();
+    const emailHtml: string = messageData.HTML ?? messageData.Text ?? "";
+    const urlMatch = emailHtml.match(/https?:\/\/[^\s"<>]+constat-validation\/([^/\s"<>?]+)/);
+    expect(urlMatch, "Validation email should contain a validation link").not.toBeNull();
+    const validationToken = urlMatch![1];
+
+    const backendPort = process.env.BACKEND_PORT ?? "3011";
+    const declineResp = await request.post(
+      `http://localhost:${backendPort}/api/constat-validation/${validationToken}/decline`,
+      { data: { comment: "Document à corriger." } },
+    );
+    expect(declineResp.ok(), "Decline API call should succeed").toBeTruthy();
+
+    // -------------------------------------------------------------------------
+    // 8. Clear mailbox and user re-submits (page is still on the main app)
+    // -------------------------------------------------------------------------
+    await request.delete(`http://localhost:${mailpitPort}/api/v1/messages`);
+
+    // Navigate to constat-general directly (reference_pop exists → home list also lands here)
+    await page.goto(`${constatBaseUrl}?step=constat-general&mode=view`);
+    await page.waitForURL((url) => url.search.includes("constat-general"));
+    await page.waitForTimeout(1000);
+
+    await page.getByRole("button", { name: "Finaliser le constat" }).click();
+    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await page.getByRole("button", { name: "Continuer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=send"));
+
+    const emailInput2 = page.locator('input[type="text"]').first();
+    await emailInput2.waitFor();
+    await emailInput2.fill(recipientEmail);
+    await emailInput2.press("Enter");
+    await page.getByText(recipientEmail).waitFor();
+
+    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=sent"));
+
+    // -------------------------------------------------------------------------
+    // 9. Verify alert was NOT resent on the second submission
+    // -------------------------------------------------------------------------
+    const secondSubmitMessages = await (await request.get(`http://localhost:${mailpitPort}/api/v1/messages`)).json();
+
+    const alertMailSecond = secondSubmitMessages.messages?.find((m: any) =>
+      (m.Subject as string)?.includes("Édifice en péril"),
+    );
+    expect(
+      alertMailSecond,
+      "Alert email should NOT be resent on re-submission after validator refusal",
+    ).toBeUndefined();
+
+    // Validation email should have been sent again (new validation cycle)
+    const validationMailSecond = secondSubmitMessages.messages?.find((m: any) =>
+      m.To.some((r: { Address: string }) => r.Address === validatorEmail),
+    );
+    expect(
+      validationMailSecond,
+      "A new validation email should be sent to the validator on re-submission",
+    ).toBeDefined();
   });
 });

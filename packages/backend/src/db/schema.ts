@@ -681,6 +681,7 @@ export const stateReport = pgTable(
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     disabled: boolean(),
     validationStatus: text("validation_status"),
+    alertsSent: boolean("alerts_sent").default(false),
   },
   (table) => [
     foreignKey({

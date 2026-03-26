@@ -36,7 +36,7 @@ export const useSyncForm = <T extends Report | StateReport | Service>({
 
   useDebounce(() => syncMutation.mutate(), 500, [diff]);
 
-  return { newObject };
+  return { newObject, syncMutation };
 };
 
 export function SyncFormBanner({ form, baseObject }: { form: UseFormReturn<Report>; baseObject: Report }) {

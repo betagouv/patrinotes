@@ -67,6 +67,13 @@ export const mockUsers = [
     job: "Testeur",
     password: "Password123!",
   },
+  {
+    nom: "Test",
+    prenom: "Runner 3",
+    email: "testrunner3@yopmail.com",
+    job: "Testeur",
+    password: "Password123!",
+  },
 ];
 
 type User = (typeof mockUsers)[0];
@@ -87,6 +94,8 @@ export const signup = async ({ page, user, udap = mockServices[0].id }: { page: 
   await page.click("button[type=submit]");
 
   await page.waitForURL((url) => url.pathname === "/");
+
+  await page.waitForTimeout(1000);
 };
 
 export const cleanupDb = async () => {
