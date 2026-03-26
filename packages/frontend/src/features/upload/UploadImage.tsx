@@ -5,7 +5,7 @@ import { v7 } from "uuid";
 import { PictureThumbnail, processImage } from "./UploadReportImage";
 import { attachmentQueue, db } from "../../db/db";
 
-export const UploadImage = ({ onFiles, attachments, multiple, onClick, onDelete, isDisabled }: UploadImageProps) => {
+export const UploadImage = ({ onFiles, attachments, multiple, onClick, onDelete, isDisabled, imageTable }: UploadImageProps) => {
   const attachment = attachments.length > 0 ? attachments[0] : null;
   const hideButton = !multiple && !!attachment;
 
@@ -30,6 +30,7 @@ export const UploadImage = ({ onFiles, attachments, multiple, onClick, onDelete,
                 onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
                 key={attachment.id}
                 isDisabled={isDisabled}
+                imageTable={imageTable}
               />
             ))
           : null}
@@ -45,6 +46,7 @@ type UploadImageProps = {
   onClick?: (attachment: MinimalAttachment) => void;
   onDelete?: (props: { id: string }) => void;
   isDisabled?: boolean;
+  imageTable: string;
 };
 
 export type MinimalAttachment = {

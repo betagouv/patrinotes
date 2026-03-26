@@ -1,84 +1,23 @@
-import { useState, useRef, ChangeEvent, useEffect, RefObject } from "react";
-import { v4, v7 } from "uuid";
-import { deleteImageFromIdb, getPicturesStore, getUploadStatusStore } from "../idb";
-import { InputGroup } from "#components/InputGroup.tsx";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { del, get, set } from "idb-keyval";
-import { useFormContext } from "react-hook-form";
-import { createModal } from "@codegouvfr/react-dsfr/Modal";
-import { ImageCanvas, Line } from "./DrawingCanvas";
-import { api } from "../../api";
-import { attachmentQueue, attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../../db/db";
-import { Pictures, Report, ReportAttachment } from "../../db/AppSchema";
+import { useState, useRef } from "react";
 import imageCompression from "browser-image-compression";
-import { Box, Grid, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Badge, Button, Center } from "#components/MUIDsfr.tsx";
-import { useLiveUser } from "../../contexts/AuthContext";
+import { Badge, Button } from "#components/MUIDsfr.tsx";
 import { AttachmentState } from "@powersync/web";
-import { UploadImageButton, UploadImageModal, UploadImageWithEditModal } from "./UploadImageButton";
+import { UploadImageModal } from "./UploadImageButton";
 import { fr } from "@codegouvfr/react-dsfr";
 import { MinimalAttachment, UploadImage } from "./UploadImage";
+import { useImageBlobUrl } from "./hooks/useImageBlobUrl";
+import { usePictureLines } from "./hooks/usePictureLines";
+import { useThumbnailCanvas } from "./hooks/useThumbnailCanvas";
+import { useAttachmentImages } from "./hooks/useAttachmentImages";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
-  const form = useFormContext<Report>();
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
-  const user = useLiveUser();
-
-  const addImageFileMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const attachmentId = `${reportId}/images/${v7()}.jpg`;
-      const processedFile = await processImage(file);
-
-      await attachmentQueue.saveFile({
-        id: attachmentId,
-        fileExtension: "jpg",
-        data: processedFile,
-        mediaType: "image/jpeg",
-      });
-
-      await db
-        .insertInto("report_attachment")
-        .values({
-          id: attachmentId,
-          attachment_id: attachmentId,
-          report_id: reportId,
-          service_id: user!.service_id,
-          created_at: new Date().toISOString(),
-          is_deprecated: 0,
-        })
-        .execute();
-
-      return attachmentId;
-    },
-  });
-
-  const picturesQuery = useDbQuery(
-    db
-      .selectFrom("report_attachment")
-      .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
-      .where("report_attachment.is_deprecated", "=", 0)
-      .where("report_attachment.attachment_id", "like", "%.jpg")
-      .where("report_attachment.report_id", "=", reportId)
-      .select((eb) => [
-        "report_attachment.id",
-        "report_attachment.attachment_id",
-        "report_attachment.created_at",
-        "attachments.local_uri",
-        "attachments.state",
-        eb.ref("attachments.media_type").as("mediaType"),
-      ])
-      .orderBy("report_attachment.created_at", "asc"),
+  const { attachments, addMutation, deleteMutation } = useAttachmentImages(
+    { table: "report_attachment", fkColumn: "report_id", fkValue: reportId },
+    reportId,
   );
-
-  const pictures = picturesQuery.data ?? [];
-
-  const deletePictureMutation = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
-      await attachmentLocalStorage.deleteFile(id);
-      await db.updateTable("report_attachment").set({ is_deprecated: 1 }).where("id", "=", id).execute();
-    },
-  });
 
   return (
     <Box flex="1">
@@ -90,11 +29,12 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         hideLabelInput
       />
       <UploadImage
-        onFiles={async (files) => addImageFileMutation.mutateAsync(files[0])}
+        onFiles={async (files) => addMutation.mutateAsync(files[0])}
         multiple
-        attachments={pictures}
-        onDelete={({ id }) => deletePictureMutation.mutate({ id })}
+        attachments={attachments}
+        onDelete={({ id }) => deleteMutation.mutate({ id })}
         onClick={(attachment) => setSelectedAttachment(attachment)}
+        imageTable="report_attachment"
       />
     </Box>
   );
@@ -106,101 +46,20 @@ export const PictureThumbnail = ({
   onEdit,
   onDelete,
   isDisabled,
+  imageTable,
 }: {
   picture: MinimalAttachment;
   label: string;
   onEdit: (props: { id: string; url: string }) => void;
   onDelete: (props: { id: string }) => void;
   isDisabled?: boolean;
+  imageTable: string;
 }) => {
-  console.log(picture);
-  const bgUrlQuery = useQuery({
-    queryKey: ["picture", picture.local_uri, picture.state],
-    queryFn: async () => {
-      // if (!(await attachmentLocalStorage.fileExists(picture.local_uri!))) {
-      //   await attachmentRemoteStorage.downloadFile
-      // }
-
-      const buffer = await attachmentLocalStorage.readFile(picture.local_uri!);
-      const blob = new Blob([buffer], { type: picture.mediaType || "image/png" });
-      const usableUrl = URL.createObjectURL(blob);
-      return usableUrl;
-    },
-    refetchOnWindowFocus: false,
-    retry: false,
-    enabled: !!picture.local_uri && picture.state === AttachmentState.SYNCED,
-  });
-
-  const bgUrlRef = useRef<string | null>(null);
-  if (bgUrlQuery.data && bgUrlQuery.data !== bgUrlRef.current) {
-    bgUrlRef.current = bgUrlQuery.data ?? null;
-  }
-
-  const bgUrl = bgUrlRef.current;
+  const bgUrl = useImageBlobUrl(picture.local_uri, picture.mediaType, picture.state);
+  const lines = usePictureLines(picture.id, imageTable);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  useThumbnailCanvas(canvasRef, bgUrl, lines);
 
-  const pictureLines = useDbQuery(db.selectFrom("picture_lines").where("attachmentId", "=", picture.id).selectAll());
-
-  useEffect(() => {
-    drawCanvas();
-  }, [pictureLines.data, bgUrl]);
-
-  const drawCanvas = () => {
-    if (!canvasRef.current) return;
-    if (!bgUrl) return;
-    if (!pictureLines.data) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d")!;
-
-    const rect = canvas.getBoundingClientRect();
-    const displayWidth = rect.width;
-    const displayHeight = rect.height;
-
-    const image = new Image();
-    image.src = bgUrl!;
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-
-    ctx.scale(dpr, dpr);
-
-    image.onload = () => {
-      const scaleX = displayWidth / image.width;
-      const scaleY = displayHeight / image.height;
-      const initialScale = Math.max(scaleX, scaleY);
-
-      const xOffset = (displayWidth - image.width * initialScale) / 2;
-      const yOffset = (displayHeight - image.height * initialScale) / 2;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-
-      ctx.translate(xOffset, yOffset);
-      ctx.scale(initialScale, initialScale);
-
-      ctx.drawImage(image, 0, 0, image.width, image.height);
-
-      const lines = JSON.parse(pictureLines.data?.[0]?.lines ?? "[]");
-
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      lines.forEach((line: any) => {
-        ctx.beginPath();
-        ctx.strokeStyle = line.color;
-        if (line.points.length > 0) {
-          ctx.moveTo(line.points[0].x, line.points[0].y);
-          for (let i = 1; i < line.points.length; i++) {
-            ctx.lineTo(line.points[i].x, line.points[i].y);
-          }
-          ctx.stroke();
-        }
-      });
-    };
-  };
   const finalStatus = picture.state;
 
   return (
@@ -210,11 +69,10 @@ export const PictureThumbnail = ({
         <Box
           ref={canvasRef}
           component="canvas"
-          flex="1"
+          sx={{ width: "100%", height: "160px", display: "block" }}
           data-state={picture.state}
           data-picture-id={picture.local_uri}
         ></Box>
-        {/* <Box component="img" src={bgUrl!} width="200px" height="200px" display={bgUrl ? "block" : "none"} /> */}
         <Flex
           display={isDisabled ? "none" : "flex"}
           bgcolor="white"

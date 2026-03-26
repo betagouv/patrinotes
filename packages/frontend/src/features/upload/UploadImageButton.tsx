@@ -1,11 +1,12 @@
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Box, BoxProps } from "@mui/material";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { ChangeEvent, ComponentProps, RefObject, useRef, useState } from "react";
-import { attachmentLocalStorage, db, getAttachmentUrl } from "../../db/db";
+import { Box } from "@mui/material";
+import { useMutation } from "@tanstack/react-query";
+import { ChangeEvent, useRef } from "react";
 import { ImageCanvas } from "./DrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
+import { useImageBlobUrl } from "./hooks/useImageBlobUrl";
+import { usePictureLines } from "./hooks/usePictureLines";
 
 type UploadImageButtonProps = {
   addImage: ({ files }: { files: File[] }) => Promise<void>;
@@ -93,30 +94,8 @@ export const UploadImageModal = ({
   imageTable?: string;
   hideLabelInput?: boolean;
 }) => {
-  const urlQuery = useQuery({
-    queryKey: ["attachment-url", selectedAttachment?.local_uri],
-    queryFn: async () => {
-      const file = await attachmentLocalStorage.readFile(selectedAttachment!.local_uri!);
-      const url = URL.createObjectURL(new Blob([file], { type: selectedAttachment?.mediaType || "image/png" }));
-      return url;
-    },
-    enabled: !!selectedAttachment,
-  });
-
-  const linesQuery = useQuery({
-    queryKey: ["lines", selectedAttachment?.id],
-    queryFn: async () => {
-      const linesQuery = await db
-        .selectFrom("picture_lines")
-        .where("attachmentId", "=", selectedAttachment!.id)
-        .selectAll()
-        .execute();
-
-      return JSON.parse(linesQuery?.[0]?.lines ?? "[]");
-    },
-    enabled: !!selectedAttachment,
-  });
-
+  const url = useImageBlobUrl(selectedAttachment?.local_uri, selectedAttachment?.mediaType, selectedAttachment?.state);
+  const lines = usePictureLines(selectedAttachment?.id, imageTable);
   const containerRef = useRef<HTMLDivElement>(null);
   return (
     <Box
@@ -140,15 +119,15 @@ export const UploadImageModal = ({
           height={{ xs: "auto", lg: "792px" }}
           maxHeight={{ xs: "100vh", lg: "100vh" }}
         >
-          {urlQuery.data && selectedAttachment ? (
+          {url && selectedAttachment ? (
             <ImageCanvas
               imageTable={imageTable}
               attachment={selectedAttachment}
               closeModal={() => onClose()}
               onSave={onSave}
-              url={urlQuery.data!}
+              url={url}
               containerRef={containerRef}
-              lines={linesQuery.data}
+              lines={lines}
               hideLabelInput={hideLabelInput}
             />
           ) : null}

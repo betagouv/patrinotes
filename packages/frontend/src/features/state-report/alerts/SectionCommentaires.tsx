@@ -2,16 +2,12 @@ import { Button, Input } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 import { Box, Stack } from "@mui/material";
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
-import { v7 } from "uuid";
-import { useLiveUser, useService } from "../../../contexts/AuthContext";
-import { attachmentQueue, attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
-import { processImage } from "../../upload/UploadReportImage";
+import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
 import { useIsStateReportDisabled } from "../utils";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 
@@ -69,92 +65,28 @@ export const SectionPhotos = ({
   isDisabled: boolean;
 }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
-  const user = useLiveUser()!;
-
-  const attachmentsQuery = useDbQuery(
-    db
-      .selectFrom("state_report_alert_attachment")
-      .leftJoin("attachments", "attachments.id", "state_report_alert_attachment.attachment_id")
-      .select([
-        "state_report_alert_attachment.id",
-        "state_report_alert_attachment.attachment_id",
-        "state_report_alert_attachment.label",
-        "attachments.local_uri",
-        "attachments.state",
-        "attachments.media_type",
-      ])
-      .where("state_report_alert_id", "=", alertId ?? "")
-      .where("is_deprecated", "=", 0)
-      .orderBy("created_at", "asc"),
+  const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
+    { table: "state_report_alert_attachment", fkColumn: "state_report_alert_id", fkValue: alertId ?? "" },
+    constatId,
   );
-
-  const attachments = attachmentsQuery.data ?? [];
-
-  const onClose = () => setSelectedAttachment(null);
-  const onDelete = async (attachment: { id: string }) => {
-    await attachmentLocalStorage.deleteFile(attachment.id);
-    await db
-      .updateTable("state_report_alert_attachment")
-      .set({ is_deprecated: 1 })
-      .where("id", "=", attachment.id)
-      .execute();
-  };
-
-  const addPhotoMutation = useMutation({
-    mutationFn: async ({ file }: { file: File }) => {
-      let currentAlertId = alertId;
-
-      const processedFile = await processImage(file);
-      const attachmentId = `${constatId}/images/${v7()}.jpg`;
-
-      await attachmentQueue.saveFile({
-        id: attachmentId,
-        fileExtension: "jpg",
-        data: processedFile,
-        mediaType: "image/jpeg",
-      });
-
-      await db
-        .insertInto("state_report_alert_attachment")
-        .values({
-          id: attachmentId,
-          state_report_alert_id: currentAlertId,
-          attachment_id: attachmentId,
-          label: "",
-          service_id: user.service_id,
-          created_at: new Date().toISOString(),
-          is_deprecated: 0,
-        })
-        .execute();
-
-      return attachmentId;
-    },
-  });
-
-  const onLabelChange = async (attachmentId: string, newLabel: string) => {
-    await db
-      .updateTable("state_report_alert_attachment")
-      .set({ label: newLabel })
-      .where("id", "=", attachmentId)
-      .execute();
-  };
 
   return (
     <Box width="100%" mt="16px">
       <UploadImageModal
         selectedAttachment={selectedAttachment}
-        onClose={onClose}
+        onClose={() => setSelectedAttachment(null)}
         imageTable="state_report_alert_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
 
       <UploadImage
-        onFiles={async (files) => addPhotoMutation.mutateAsync({ file: files[0] })}
+        onFiles={async (files) => addMutation.mutateAsync(files[0])}
         multiple
         attachments={attachments}
         onClick={(a) => setSelectedAttachment(a!)}
-        onDelete={(attachment) => onDelete(attachment)}
+        onDelete={(attachment) => deleteMutation.mutate(attachment)}
         isDisabled={isDisabled}
+        imageTable="state_report_alert_attachment"
       />
     </Box>
   );

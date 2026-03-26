@@ -150,7 +150,6 @@ export const ImageCanvas = ({
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-    console.log({ clientX, clientY });
     const x = ((clientX - rect.left) * (canvas.width / rect.width / dpr) - offset.x) / scale;
     const y = ((clientY - rect.top) * (canvas.height / rect.height / dpr) - offset.y) / scale;
 

@@ -148,6 +148,7 @@ const PlanSituation = ({
         onClick={() => setSelectedAttachment(attachment!)}
         onDelete={() => deletePlanSituationFileMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
+        imageTable="state_report_attachment"
       />
     </Box>
   );
@@ -193,6 +194,7 @@ const PlanEdifice = ({
         onClick={() => setSelectedAttachment(attachment!)}
         onDelete={() => deletePlanEdificeFileMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
+        imageTable="state_report_attachment"
       />
     </Box>
   );
@@ -267,6 +269,7 @@ const VuesGenerales = ({
         onClick={(attachment) => setSelectedAttachment(attachment!)}
         onDelete={(attachment) => deleteVueGeneraleFileMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
+        imageTable="state_report_attachment"
       />
     </Box>
   );

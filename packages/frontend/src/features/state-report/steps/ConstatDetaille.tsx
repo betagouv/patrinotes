@@ -8,13 +8,13 @@ import { useMutation } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { useState } from "react";
 import useDebounce from "react-use/lib/useDebounce";
-import { v4, v7 } from "uuid";
-import { useLiveUser, useUser } from "../../../contexts/AuthContext";
+import { v4 } from "uuid";
+import { useUser } from "../../../contexts/AuthContext";
 import { VisitedSection } from "../../../db/AppSchema";
-import { attachmentQueue, attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
+import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
-import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
+import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
 import { defaultSections } from "@cr-vif/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
@@ -366,86 +366,28 @@ const SectionForm = ({
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
   const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
   const { constatId } = routeApi.useParams();
-  const user = useLiveUser()!;
-
-  const sectionAttachmentQuery = useDbQuery(
-    db
-      .selectFrom("visited_section_attachment")
-      .leftJoin("attachments", "attachments.id", "visited_section_attachment.attachment_id")
-      .select([
-        "visited_section_attachment.id",
-        "visited_section_attachment.attachment_id",
-        "visited_section_attachment.label",
-        "attachments.local_uri",
-        "attachments.state",
-        "attachments.media_type",
-      ])
-      .where("visited_section_id", "=", section.id)
-      .where("is_deprecated", "=", 0)
-      .orderBy("created_at", "asc"),
+  const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
+    { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
+    constatId,
   );
-
-  const sectionAttachments = sectionAttachmentQuery.data || [];
-
-  const onClose = () => setSelectedAttachment(null);
-  const onEdit = (image: { id: string; url: string }) => setSelectedAttachment(image);
-  const onDelete = async (section: { id: string }) => {
-    await attachmentLocalStorage.deleteFile(section.id);
-    await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", section.id).execute();
-  };
-
-  const addSectionAttachmentMutation = useMutation({
-    mutationFn: async ({ file }: { file: File }) => {
-      const processedFile = await processImage(file);
-      const attachmentId = `${constatId}/images/${v7()}.jpg`;
-      await attachmentQueue.saveFile({
-        data: processedFile,
-        id: attachmentId,
-        mediaType: "image/jpeg",
-        fileExtension: "jpg",
-      });
-
-      await db
-        .insertInto("visited_section_attachment")
-        .values({
-          id: attachmentId,
-          visited_section_id: section.id,
-          attachment_id: attachmentId,
-          label: "",
-          service_id: user.service_id,
-          created_at: new Date().toISOString(),
-          is_deprecated: 0,
-        })
-        .execute();
-
-      return attachmentId;
-    },
-  });
-
-  const onLabelChange = async (attachmentId: string, newLabel: string) => {
-    await db
-      .updateTable("visited_section_attachment")
-      .set({ label: newLabel })
-      .where("id", "=", attachmentId)
-      .execute();
-  };
 
   return (
     <Box width="100%">
       <UploadImageModal
         selectedAttachment={selectedAttachment}
-        onClose={onClose}
+        onClose={() => setSelectedAttachment(null)}
         imageTable="visited_section_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
 
       <UploadImage
-        onFiles={async (files) => addSectionAttachmentMutation.mutateAsync({ file: files[0] })}
+        onFiles={async (files) => addMutation.mutateAsync(files[0])}
         multiple
-        attachments={sectionAttachments}
+        attachments={attachments}
         onClick={(a) => setSelectedAttachment(a!)}
-        onDelete={(section) => onDelete(section)}
+        onDelete={(section) => deleteMutation.mutate(section)}
         isDisabled={isDisabled}
+        imageTable="visited_section_attachment"
       />
     </Box>
   );
