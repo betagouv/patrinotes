@@ -25,7 +25,7 @@ export const UploadImage = ({ onFiles, attachments, multiple, onClick, onDelete,
           ? attachments.map((attachment) => (
               <PictureThumbnail
                 label={attachment.label || ""}
-                picture={{ id: attachment.id }}
+                picture={attachment}
                 onEdit={() => onClick?.(attachment)}
                 onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
                 key={attachment.id}
@@ -50,6 +50,9 @@ type UploadImageProps = {
 export type MinimalAttachment = {
   id: string;
   label?: string | null;
+  local_uri?: string | null;
+  state?: number | null;
+  mediaType?: string | null;
 };
 
 export const onStateReportFile = async ({
@@ -61,20 +64,21 @@ export const onStateReportFile = async ({
   serviceId: string;
   file: File;
 }) => {
-  const picId = `${constatId}/images/${v7()}.jpg`;
-  const buffer = await processImage(file);
+  const attachmentId = `${constatId}/images/${v7()}.jpg`;
+  const processedFile = await processImage(file);
 
-  await attachmentQueue.saveAttachment({
-    attachmentId: picId,
-    buffer,
+  await attachmentQueue.saveFile({
+    id: attachmentId,
+    fileExtension: "jpg",
+    data: processedFile,
     mediaType: "image/jpeg",
   });
 
   const attachment = await db
     .insertInto("state_report_attachment")
     .values({
-      id: picId,
-      attachment_id: picId,
+      id: attachmentId,
+      attachment_id: attachmentId,
       state_report_id: constatId,
       service_id: serviceId,
       created_at: new Date().toISOString(),

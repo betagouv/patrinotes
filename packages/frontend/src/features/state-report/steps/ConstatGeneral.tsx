@@ -13,7 +13,7 @@ import { useWatch } from "react-hook-form";
 import { v7 } from "uuid";
 import { useLiveUser } from "../../../contexts/AuthContext";
 import { StateReport } from "../../../db/AppSchema";
-import { attachmentQueue, attachmentStorage, db } from "../../../db/db";
+import { attachmentQueue, attachmentLocalStorage, db } from "../../../db/db";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
@@ -157,7 +157,7 @@ const useDeleteAttachmentMutation = (property: keyof StateReport) => {
   const { constatId } = routeApi.useParams();
   return useMutation({
     mutationFn: async (attachmentId: string) => {
-      await attachmentStorage.deleteFile(attachmentId);
+      await attachmentLocalStorage.deleteFile(attachmentId);
       await db
         .updateTable("state_report")
         .set({ [property]: null })
@@ -179,7 +179,7 @@ const PlanEdifice = ({
 
   const attachmentQuery = useStateReportAttachmentQuery(value);
   const attachment = attachmentQuery.data;
-
+  console.log("attachment plan edifice", attachment);
   const addPlanEdificeFileMutation = useAddStateReportFileMutation("plan_edifice");
   const deletePlanEdificeFileMutation = useDeleteAttachmentMutation("plan_edifice");
 
@@ -216,7 +216,18 @@ const VuesGenerales = ({
     queryFn: async () => {
       if (!value) return [];
       const ids = value.split(";");
-      return db.selectFrom("state_report_attachment").where("id", "in", ids).selectAll().execute();
+      return db
+        .selectFrom("state_report_attachment")
+        .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
+        .where("state_report_attachment.id", "in", ids)
+        .select([
+          "state_report_attachment.id",
+          "state_report_attachment.label",
+          "attachments.local_uri",
+          "attachments.state",
+          "attachments.media_type",
+        ])
+        .execute();
     },
   });
 
@@ -236,7 +247,7 @@ const VuesGenerales = ({
 
   const deleteVueGeneraleFileMutation = useMutation({
     mutationFn: async (attachmentId: string) => {
-      await attachmentStorage.deleteFile(attachmentId);
+      await attachmentLocalStorage.deleteFile(attachmentId);
       const newValue = value
         ?.split(";")
         .filter((id) => id !== attachmentId)
@@ -265,7 +276,26 @@ const useStateReportAttachmentQuery = (attachmentId: string | null) => {
   return useQuery({
     queryKey: ["attachment", attachmentId],
     queryFn: async () => {
-      return db.selectFrom("state_report_attachment").where("id", "=", attachmentId).selectAll().executeTakeFirst();
+      console.log("Fetching attachment with id", attachmentId);
+
+      const attachment = await db
+        .selectFrom("attachments")
+        .where("id", "=", attachmentId)
+        .selectAll()
+        .executeTakeFirst();
+      const stateReportAttachment = await db
+        .selectFrom("state_report_attachment")
+        .where("id", "=", attachmentId)
+        .select(["state_report_attachment.id", "state_report_attachment.label"])
+        .executeTakeFirst();
+
+      return {
+        id: attachmentId!,
+        local_uri: attachment?.local_uri,
+        label: stateReportAttachment?.label || null,
+        state: attachment?.state,
+        mediaType: attachment?.media_type || null,
+      };
     },
     enabled: !!attachmentId,
   });
@@ -330,11 +360,12 @@ const useUpdateImageMutation = ({
     mutationFn: async ({ files }: { files: File[] }) => {
       for (const file of files) {
         const attachmentId = `${constatId}/images/${v7()}.jpg`;
-        const buffer = await processImage(file);
+        const processedFile = await processImage(file);
 
-        await attachmentQueue.saveAttachment({
-          attachmentId: attachmentId,
-          buffer,
+        await attachmentQueue.saveFile({
+          id: attachmentId,
+          fileExtension: "jpg",
+          data: processedFile,
           mediaType: "image/jpeg",
         });
 
@@ -358,11 +389,12 @@ const useUpdateImageMutation = ({
 
 const uploadFile = async ({ constatId, serviceId, file }: { constatId: string; serviceId: string; file: File }) => {
   const attachmentId = `${constatId}/images/${v7()}.jpg`;
-  const buffer = await processImage(file);
+  const processedFile = await processImage(file);
 
-  await attachmentQueue.saveAttachment({
-    attachmentId: attachmentId,
-    buffer,
+  await attachmentQueue.saveFile({
+    id: attachmentId,
+    fileExtension: "jpg",
+    data: processedFile,
     mediaType: "image/jpeg",
   });
 

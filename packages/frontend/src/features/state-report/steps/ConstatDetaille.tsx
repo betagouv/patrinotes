@@ -11,7 +11,7 @@ import useDebounce from "react-use/lib/useDebounce";
 import { v4, v7 } from "uuid";
 import { useLiveUser, useUser } from "../../../contexts/AuthContext";
 import { VisitedSection } from "../../../db/AppSchema";
-import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
+import { attachmentQueue, attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
 import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
@@ -371,7 +371,15 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
   const sectionAttachmentQuery = useDbQuery(
     db
       .selectFrom("visited_section_attachment")
-      .selectAll()
+      .leftJoin("attachments", "attachments.id", "visited_section_attachment.attachment_id")
+      .select([
+        "visited_section_attachment.id",
+        "visited_section_attachment.attachment_id",
+        "visited_section_attachment.label",
+        "attachments.local_uri",
+        "attachments.state",
+        "attachments.media_type",
+      ])
       .where("visited_section_id", "=", section.id)
       .where("is_deprecated", "=", 0)
       .orderBy("created_at", "asc"),
@@ -382,7 +390,7 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
   const onClose = () => setSelectedAttachment(null);
   const onEdit = (image: { id: string; url: string }) => setSelectedAttachment(image);
   const onDelete = async (section: { id: string }) => {
-    await attachmentStorage.deleteFile(section.id);
+    await attachmentLocalStorage.deleteFile(section.id);
     await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", section.id).execute();
   };
 
@@ -390,10 +398,11 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
     mutationFn: async ({ file }: { file: File }) => {
       const processedFile = await processImage(file);
       const attachmentId = `${constatId}/images/${v7()}.jpg`;
-      await attachmentQueue.saveAttachment({
-        attachmentId,
-        buffer: processedFile,
+      await attachmentQueue.saveFile({
+        data: processedFile,
+        id: attachmentId,
         mediaType: "image/jpeg",
+        fileExtension: "jpg",
       });
 
       await db

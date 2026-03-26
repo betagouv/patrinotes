@@ -1,4 +1,4 @@
-import { Schema, Table, column } from "@powersync/web";
+import { AttachmentRecord, AttachmentTable, AttachmentTableOptions, Schema, Table, column } from "@powersync/web";
 
 const report = new Table({
   title: column.text,
@@ -440,9 +440,19 @@ export const AppSchema = new Schema({
   pop_images,
   state_report_alert,
   state_report_alert_attachment,
-  attachments: new AttachmentTable({
-    name: "attachments",
-  }),
+  attachments: new AttachmentTable() as any as typeof _attachmentTable,
+});
+
+const _attachmentTable = new Table({
+  id: column.text,
+  filename: column.text,
+  local_uri: column.text,
+  timestamp: column.integer,
+  size: column.integer,
+  media_type: column.text,
+  state: column.integer,
+  has_synced: column.integer,
+  meta_data: column.text,
 });
 
 export type Database = (typeof AppSchema)["types"];
@@ -472,7 +482,6 @@ export type StateReportAlert = Database["state_report_alert"];
 export type StateReportAlertAttachment = Database["state_report_alert_attachment"];
 
 import type { Database as BackendDatabase } from "../../../backend/src/db/db";
-import { AttachmentTable } from "@powersync/attachments";
 
 type SharedTables = Extract<keyof Database, keyof BackendDatabase> & Extract<keyof BackendDatabase, keyof Database>;
 type CheckTables = {

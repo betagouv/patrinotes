@@ -39,7 +39,7 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const { filePath } = request.query as any;
     if (!filePath) throw new AppError(400, "No filePath provided");
     try {
-      const fileBuffer = await request.services.upload.getAttachment({ filePath: filePath });
+      const fileBuffer = await request.services.upload.getAttachment({ filePath: decodeURIComponent(filePath) });
 
       reply.send(fileBuffer);
     } catch (error) {

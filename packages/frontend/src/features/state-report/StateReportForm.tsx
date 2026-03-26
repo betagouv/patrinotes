@@ -7,7 +7,7 @@ import { WithReferencePop } from "./WithReferencePop";
 import { Box, Typography } from "@mui/material";
 import { useBannerBgColor } from "#components/Banner.tsx";
 import { useSyncForm } from "#components/SyncForm.tsx";
-import { db } from "../../db/db";
+import { db, useDbQuery } from "../../db/db";
 import { useFormWithFocus, useRefreshForm } from "../../hooks/useFormWithFocus";
 import { StateReportSideMenu } from "./side-menu/StateReportSideMenu";
 
@@ -126,4 +126,5 @@ const emptyStateReport: StateReport = {
   bilan_quinquennal: null,
   visite_partielle_details: null,
   attachment_id: null,
+  validation_status: null,
 };

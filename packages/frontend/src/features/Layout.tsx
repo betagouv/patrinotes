@@ -184,14 +184,12 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
                   </div>
                   {isDesktop ? (
                     <div className="fr-header__service lg:d_unset">
-                      <p className="fr-header__service-title">
-                        <Flex alignItems="center" gap="24px">
-                          Patrinotes{" "}
-                          <Box>
-                            <StatusBadge noProvider={noProvider} />
-                          </Box>
-                        </Flex>
-                      </p>
+                      <Flex alignItems="center" gap="24px" className="fr-header__service-title">
+                        Patrinotes{" "}
+                        <Box>
+                          <StatusBadge noProvider={noProvider} />
+                        </Box>
+                      </Flex>
                     </div>
                   ) : undefined}
                 </Box>

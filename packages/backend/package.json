@@ -73,7 +73,6 @@
     "pastable": "^2.2.1",
     "pg": "^8.13.1",
     "postgres": "^3.4.4",
-    "puppeteer": "^24.30.0",
     "react": "^18.2.0",
     "react-pdf-html": "^2.0.4",
     "reflect-metadata": "^0.2.1",

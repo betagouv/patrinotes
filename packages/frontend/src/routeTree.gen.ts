@@ -113,7 +113,7 @@ export interface FileRoutesByFullPath {
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
-  '/reset-password': typeof ResetPasswordIndexLazyRoute
+  '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
 export interface FileRoutesByTo {
@@ -164,7 +164,7 @@ export interface FileRouteTypes {
     | '/edit/$reportId'
     | '/pdf/$reportId'
     | '/reset-password/$link'
-    | '/reset-password'
+    | '/reset-password/'
     | '/constat/$constatId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -271,7 +271,7 @@ declare module '@tanstack/react-router' {
     '/reset-password/': {
       id: '/reset-password/'
       path: '/reset-password'
-      fullPath: '/reset-password'
+      fullPath: '/reset-password/'
       preLoaderRoute: typeof ResetPasswordIndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }

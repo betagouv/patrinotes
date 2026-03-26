@@ -8,14 +8,14 @@ import { useFormContext } from "react-hook-form";
 import { createModal } from "@codegouvfr/react-dsfr/Modal";
 import { ImageCanvas, Line } from "./DrawingCanvas";
 import { api } from "../../api";
-import { attachmentQueue, attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../../db/db";
+import { attachmentQueue, attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../../db/db";
 import { Pictures, Report, ReportAttachment } from "../../db/AppSchema";
 import imageCompression from "browser-image-compression";
 import { Box, Grid, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Badge, Button, Center } from "#components/MUIDsfr.tsx";
 import { useLiveUser } from "../../contexts/AuthContext";
-import { AttachmentState } from "@powersync/attachments";
+import { AttachmentState } from "@powersync/web";
 import { UploadImageButton, UploadImageModal, UploadImageWithEditModal } from "./UploadImageButton";
 import { fr } from "@codegouvfr/react-dsfr";
 import { MinimalAttachment, UploadImage } from "./UploadImage";
@@ -28,11 +28,12 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const addImageFileMutation = useMutation({
     mutationFn: async (file: File) => {
       const attachmentId = `${reportId}/images/${v7()}.jpg`;
-      const buffer = await processImage(file);
+      const processedFile = await processImage(file);
 
-      await attachmentQueue.saveAttachment({
-        attachmentId,
-        buffer,
+      await attachmentQueue.saveFile({
+        id: attachmentId,
+        fileExtension: "jpg",
+        data: processedFile,
         mediaType: "image/jpeg",
       });
 
@@ -66,7 +67,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
 
   const deletePictureMutation = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      await attachmentStorage.deleteFile(id);
+      await attachmentLocalStorage.deleteFile(id);
       await db.updateTable("report_attachment").set({ is_deprecated: 1 }).where("id", "=", id).execute();
     },
   });
@@ -91,49 +92,6 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   );
 };
 
-const useReportAttachmentQuery = (attachmentId: string | null) => {
-  return useQuery({
-    queryKey: ["report-attachment", attachmentId],
-    queryFn: async () => {
-      return db.selectFrom("report_attachment").where("id", "=", attachmentId).selectAll().executeTakeFirst();
-    },
-    enabled: !!attachmentId,
-  });
-};
-const ReportPictures = ({
-  onEdit,
-  onDelete,
-  pictures,
-}: {
-  onEdit: (props: { id: string; url: string }) => void;
-  onDelete: (props: { id: string }) => void;
-  pictures: ReportAttachment[];
-}) => {
-  if (!pictures?.length) return null;
-
-  return (
-    <Flex flexDirection="column" width="100%" my="40px">
-      <InputGroup>
-        <Grid
-          display="grid"
-          gap="16px"
-          gridTemplateColumns={{ xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" }}
-        >
-          {pictures?.map((picture, index) => (
-            <PictureThumbnail
-              key={picture.id}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              picture={picture}
-              label={`N° ${index + 1}`}
-            />
-          ))}
-        </Grid>
-      </InputGroup>
-    </Flex>
-  );
-};
-
 export const PictureThumbnail = ({
   picture,
   label,
@@ -141,7 +99,7 @@ export const PictureThumbnail = ({
   onDelete,
   isDisabled,
 }: {
-  picture: { id: string };
+  picture: MinimalAttachment;
   label: string;
   onEdit: (props: { id: string; url: string }) => void;
   onDelete: (props: { id: string }) => void;
@@ -150,26 +108,29 @@ export const PictureThumbnail = ({
   const idbStatusQuery = useDbQuery(db.selectFrom("attachments").where("id", "=", picture.id).select("state"));
   const status = idbStatusQuery.data?.[0]?.state;
   const bgUrlQuery = useQuery({
-    queryKey: ["picture", picture.id, status],
+    queryKey: ["picture", picture.local_uri, status],
     queryFn: async () => {
-      const buffer = await getAttachmentUrl(picture.id);
-      return buffer;
+      const buffer = await attachmentLocalStorage.readFile(picture.local_uri!);
+      const blob = new Blob([buffer], { type: picture.mediaType || "image/png" });
+      const usableUrl = URL.createObjectURL(blob);
+      return usableUrl;
     },
     refetchOnWindowFocus: false,
-    enabled: status === AttachmentState.SYNCED || status === AttachmentState.QUEUED_UPLOAD,
+    enabled: !!picture.local_uri,
   });
 
+  const bgUrl = bgUrlQuery.data;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const pictureLines = useDbQuery(db.selectFrom("picture_lines").where("attachmentId", "=", picture.id).selectAll());
 
   useEffect(() => {
     drawCanvas();
-  }, [pictureLines.data, bgUrlQuery.data]);
+  }, [pictureLines.data, bgUrl]);
 
   const drawCanvas = () => {
     if (!canvasRef.current) return;
-    if (!bgUrlQuery.data) return;
+    if (!bgUrl) return;
     if (!pictureLines.data) return;
 
     const canvas = canvasRef.current;
@@ -180,7 +141,7 @@ export const PictureThumbnail = ({
     const displayHeight = rect.height;
 
     const image = new Image();
-    image.src = bgUrlQuery.data!;
+    image.src = bgUrl!;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = displayWidth * dpr;
@@ -229,7 +190,8 @@ export const PictureThumbnail = ({
     <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
       <ReportStatus status={finalStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
-        <Box ref={canvasRef} component="canvas" flex="1"></Box>
+        <Box ref={canvasRef} component="canvas" flex="1" data-picture-id={picture.id}></Box>
+        {/* <Box component="img" src={bgUrl!} width="200px" height="200px" display={bgUrl ? "block" : "none"} /> */}
         <Flex
           display={isDisabled ? "none" : "flex"}
           bgcolor="white"
@@ -241,7 +203,7 @@ export const PictureThumbnail = ({
           {isDisabled ? null : (
             <Box
               onClick={() => {
-                onEdit({ id: picture.id, url: bgUrlQuery.data! });
+                onEdit({ id: picture.id, url: bgUrl! });
               }}
               borderRight="1px solid"
               borderColor={fr.colors.decisions.border.default.grey.default}
@@ -340,7 +302,7 @@ const statusData: Record<AttachmentState, any> = {
   },
   [AttachmentState.SYNCED]: { label: "Ok", bgColor: "#B8FEC9", color: "#18753C", icon: "fr-icon-success-line" },
   [AttachmentState.ARCHIVED]: { label: "Erreur", bgColor: "#FEC9C9", color: "#853C3C", icon: "fr-icon-warning-line" },
-  [AttachmentState.QUEUED_SYNC]: {
+  [AttachmentState.QUEUED_DELETE]: {
     label: "En cours",
     bgColor: "#FEE7FC",
     color: "#855080",

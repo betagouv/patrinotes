@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useWatch } from "react-hook-form";
 import { v7 } from "uuid";
 import { useLiveUser, useService } from "../../../contexts/AuthContext";
-import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
+import { attachmentQueue, attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
@@ -74,7 +74,15 @@ export const SectionPhotos = ({
   const attachmentsQuery = useDbQuery(
     db
       .selectFrom("state_report_alert_attachment")
-      .selectAll()
+      .leftJoin("attachments", "attachments.id", "state_report_alert_attachment.attachment_id")
+      .select([
+        "state_report_alert_attachment.id",
+        "state_report_alert_attachment.attachment_id",
+        "state_report_alert_attachment.label",
+        "attachments.local_uri",
+        "attachments.state",
+        "attachments.media_type",
+      ])
       .where("state_report_alert_id", "=", alertId ?? "")
       .where("is_deprecated", "=", 0)
       .orderBy("created_at", "asc"),
@@ -84,7 +92,7 @@ export const SectionPhotos = ({
 
   const onClose = () => setSelectedAttachment(null);
   const onDelete = async (attachment: { id: string }) => {
-    await attachmentStorage.deleteFile(attachment.id);
+    await attachmentLocalStorage.deleteFile(attachment.id);
     await db
       .updateTable("state_report_alert_attachment")
       .set({ is_deprecated: 1 })
@@ -99,9 +107,10 @@ export const SectionPhotos = ({
       const processedFile = await processImage(file);
       const attachmentId = `${constatId}/images/${v7()}.jpg`;
 
-      await attachmentQueue.saveAttachment({
-        attachmentId,
-        buffer: processedFile,
+      await attachmentQueue.saveFile({
+        id: attachmentId,
+        fileExtension: "jpg",
+        data: processedFile,
         mediaType: "image/jpeg",
       });
 

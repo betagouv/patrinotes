@@ -10,7 +10,7 @@ import {
   VisitedSection,
   VisitedSectionAttachment,
 } from "../db/AppSchema";
-import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
 import { useMutation, useQuery, UseMutationResult, useMutationState } from "@tanstack/react-query";
 import {
   SendConstatForm,
@@ -110,6 +110,7 @@ const ConstatPdf = () => {
   const sectionsQuery = useQuery(constatPdfQueries.sections({ constatId }));
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
 
+  console.log("stateReportQuery", stateReportQuery);
   const stateReport = stateReportQuery.data;
   const sections = sectionsQuery.data;
   const alerts = alertsQuery.data;
@@ -144,11 +145,14 @@ const ConstatPdf = () => {
 
   // generate html string (only once since displaying it is a heavy operation)
   const isSetRef = useRef(false);
+
+  console.log(sections, stateReport, alerts);
+
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
-
     const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
+    console.log("HTML STRING GENERATED", htmlString);
     form.setValue("htmlString", htmlString);
 
     isSetRef.current = true;
