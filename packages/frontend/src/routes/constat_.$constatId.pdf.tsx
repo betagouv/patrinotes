@@ -151,7 +151,7 @@ const ConstatPdf = () => {
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
-    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
+    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections as any, alerts });
     console.log("HTML STRING GENERATED", htmlString);
     form.setValue("htmlString", htmlString);
 

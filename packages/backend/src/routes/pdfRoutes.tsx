@@ -146,9 +146,9 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .select(["user.name as createdByName"])
       .where("state_report.id", "=", stateReportId)
       .limit(1)
-      .execute();
+      .executeTakeFirst();
 
-    if (stateReportQuery.length === 0) {
+    if (!stateReportQuery) {
       return "State report not found";
     }
 
@@ -160,10 +160,17 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .execute();
 
     const stateReportAttachments = await Promise.all(
-      stateReportAttachmentsQuery.map(async (attachment) => {
-        const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return { ...attachment, url };
-      }),
+      [
+        ...stateReportAttachmentsQuery.map((attachment) => attachment.attachment_id),
+        stateReportQuery.plan_edifice,
+        stateReportQuery.plan_situation,
+        ...(stateReportQuery.vue_generale?.split(";").filter((id) => id.trim() !== "") || []),
+      ]
+        .filter(Boolean)
+        .map(async (id) => {
+          const url = await generatePresignedUrl("attachment/" + id);
+          return { id: id!, url };
+        }),
     );
 
     const visitedSections = await db
@@ -188,7 +195,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const visitedSectionsAttachments = await Promise.all(
       visitedSectionsAttachmentsQuery.map(async (attachment) => {
         const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return { ...attachment, url };
+        return { id: attachment.id, url };
       }),
     );
 
@@ -208,16 +215,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const alertsAttachments = await Promise.all(
       alertsAttachmentsQuery.map(async (attachment) => {
         const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return { ...attachment, url };
+        return { id: attachment.id, url };
       }),
     );
 
-    const attachmentsUrlMap = [...stateReportAttachments, ...visitedSectionsAttachments, ...alertsAttachments].map(
-      (attachment) => ({
-        id: attachment.id,
-        url: attachment.url,
-      }),
-    );
+    const attachmentsUrlMap = [...stateReportAttachments, ...visitedSectionsAttachments, ...alertsAttachments];
 
     const service = request.user!.service as Service;
     const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap, alerts: alerts as any });
@@ -249,7 +251,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .map((r) => r.toLowerCase());
     if (!recipients.includes(userMail.toLowerCase())) recipients.push(userMail.toLowerCase());
 
-    const stateReport = stateReportQuery[0]! as Selectable<Database["state_report"]>;
+    const stateReport = stateReportQuery as Selectable<Database["state_report"]>;
 
     const userSettingsResult = await db
       .selectFrom("user_settings")
@@ -257,6 +259,37 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .where("service_id", "=", user.service_id)
       .selectAll()
       .executeTakeFirst();
+
+    if (request.body.alerts && request.body.alerts.length > 0) {
+      for (const alert of request.body.alerts) {
+        if (!alert.shouldSend) continue;
+
+        try {
+          const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+          const additionalEmails = alert.additional_emails
+            ? alert.additional_emails.split(",").map((e) => e.trim().toLowerCase())
+            : [];
+
+          const alertRecipients = Array.from(
+            new Set([...mandatoryEmails.map((e) => e.email.toLowerCase()), ...additionalEmails]),
+          );
+
+          const alertAttachments = alertsAttachmentsQuery.filter((a) => a.state_report_alert_id === alert.id);
+
+          await sendAlertEmail({
+            to: alertRecipients.join(","),
+            stateReport: stateReport!,
+            alert: { ...alert, attachments: alertAttachments as any[], should_send: 1 },
+            user,
+          });
+
+          debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.join(",")}`);
+        } catch (alertError) {
+          debug(`Failed to send alert email for alert ${alert.id}: ${alertError}`);
+          console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
+        }
+      }
+    }
 
     if (userSettingsResult?.validation_enabled && userSettingsResult?.validation_email) {
       const token = v4();
@@ -294,37 +327,6 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     }
 
     await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
-
-    if (request.body.alerts && request.body.alerts.length > 0) {
-      for (const alert of request.body.alerts) {
-        if (!alert.shouldSend) continue;
-
-        try {
-          const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
-          const additionalEmails = alert.additional_emails
-            ? alert.additional_emails.split(",").map((e) => e.trim().toLowerCase())
-            : [];
-
-          const alertRecipients = Array.from(
-            new Set([...mandatoryEmails.map((e) => e.email.toLowerCase()), ...additionalEmails]),
-          );
-
-          const alertAttachments = alertsAttachmentsQuery.filter((a) => a.state_report_alert_id === alert.id);
-
-          await sendAlertEmail({
-            to: alertRecipients.join(","),
-            stateReport: stateReport!,
-            alert: { ...alert, attachments: alertAttachments as any[], should_send: 1 },
-            user,
-          });
-
-          debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.join(",")}`);
-        } catch (alertError) {
-          debug(`Failed to send alert email for alert ${alert.id}: ${alertError}`);
-          console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
-        }
-      }
-    }
 
     // update mandatory emails since they might have been filled before sending
     await db.transaction().execute(async (tx) => {
