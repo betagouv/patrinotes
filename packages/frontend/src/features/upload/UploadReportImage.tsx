@@ -8,14 +8,7 @@ import { useFormContext } from "react-hook-form";
 import { createModal } from "@codegouvfr/react-dsfr/Modal";
 import { ImageCanvas, Line } from "./DrawingCanvas";
 import { api } from "../../api";
-import {
-  attachmentQueue,
-  attachmentLocalStorage,
-  db,
-  getAttachmentUrl,
-  useDbQuery,
-  attachmentRemoteStorage,
-} from "../../db/db";
+import { attachmentQueue, attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../../db/db";
 import { Pictures, Report, ReportAttachment } from "../../db/AppSchema";
 import imageCompression from "browser-image-compression";
 import { Box, Grid, Stack, Typography } from "@mui/material";
@@ -63,11 +56,19 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const picturesQuery = useDbQuery(
     db
       .selectFrom("report_attachment")
-      .where("is_deprecated", "=", 0)
-      .where("attachment_id", "like", "%.jpg")
-      .where("report_id", "=", reportId)
-      .selectAll()
-      .orderBy("created_at", "asc"),
+      .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
+      .where("report_attachment.is_deprecated", "=", 0)
+      .where("report_attachment.attachment_id", "like", "%.jpg")
+      .where("report_attachment.report_id", "=", reportId)
+      .select((eb) => [
+        "report_attachment.id",
+        "report_attachment.attachment_id",
+        "report_attachment.created_at",
+        "attachments.local_uri",
+        "attachments.state",
+        eb.ref("attachments.media_type").as("mediaType"),
+      ])
+      .orderBy("report_attachment.created_at", "asc"),
   );
 
   const pictures = picturesQuery.data ?? [];
@@ -112,20 +113,13 @@ export const PictureThumbnail = ({
   onDelete: (props: { id: string }) => void;
   isDisabled?: boolean;
 }) => {
+  console.log(picture);
   const bgUrlQuery = useQuery({
     queryKey: ["picture", picture.local_uri, picture.state],
     queryFn: async () => {
       // if (!(await attachmentLocalStorage.fileExists(picture.local_uri!))) {
       //   await attachmentRemoteStorage.downloadFile
       // }
-      if (picture?.state !== AttachmentState.SYNCED) {
-        // force download
-        await attachmentRemoteStorage.downloadFile({
-          id: picture.local_uri!,
-        });
-
-        throw new Error("File not available locally yet");
-      }
 
       const buffer = await attachmentLocalStorage.readFile(picture.local_uri!);
       const blob = new Blob([buffer], { type: picture.mediaType || "image/png" });
@@ -133,16 +127,13 @@ export const PictureThumbnail = ({
       return usableUrl;
     },
     refetchOnWindowFocus: false,
-    retry: 3,
-    retryDelay: 1000,
+    retry: false,
+    enabled: !!picture.local_uri && picture.state === AttachmentState.SYNCED,
   });
 
   const bgUrlRef = useRef<string | null>(null);
   if (bgUrlQuery.data && bgUrlQuery.data !== bgUrlRef.current) {
     bgUrlRef.current = bgUrlQuery.data ?? null;
-  } else {
-    console.log("ALERTE", "tried to load picture but got no url", picture.local_uri, picture.state);
-    console.log(bgUrlQuery.error);
   }
 
   const bgUrl = bgUrlRef.current;
