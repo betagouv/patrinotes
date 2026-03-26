@@ -1,5 +1,5 @@
 import { useDbQuery, db } from "../../../db/db";
-import { Line } from "../DrawingCanvas";
+import { Line } from "../types";
 
 export function usePictureLines(
   attachmentId: string | null | undefined,

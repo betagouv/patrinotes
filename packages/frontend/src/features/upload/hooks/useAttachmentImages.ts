@@ -16,8 +16,11 @@ function buildQuery(config: AttachmentTableConfig) {
       return db
         .selectFrom("report_attachment")
         .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
+        .leftJoin("picture_lines", "picture_lines.attachmentId", "report_attachment.id")
         .where("report_attachment.report_id", "=", config.fkValue)
-        .where("report_attachment.is_deprecated", "=", 0)
+        .where((eb) =>
+          eb.or([eb("report_attachment.is_deprecated", "=", 0), eb("picture_lines.id", "is not", null)]),
+        )
         .select((eb) => [
           "report_attachment.id",
           eb.val(null).as("label"),
@@ -31,8 +34,14 @@ function buildQuery(config: AttachmentTableConfig) {
       return db
         .selectFrom("visited_section_attachment")
         .leftJoin("attachments", "attachments.id", "visited_section_attachment.attachment_id")
+        .leftJoin("picture_lines", "picture_lines.attachmentId", "visited_section_attachment.id")
         .where("visited_section_attachment.visited_section_id", "=", config.fkValue)
-        .where("visited_section_attachment.is_deprecated", "=", 0)
+        .where((eb) =>
+          eb.or([
+            eb("visited_section_attachment.is_deprecated", "=", 0),
+            eb("picture_lines.id", "is not", null),
+          ]),
+        )
         .select((eb) => [
           "visited_section_attachment.id",
           "visited_section_attachment.label",
@@ -46,8 +55,14 @@ function buildQuery(config: AttachmentTableConfig) {
       return db
         .selectFrom("state_report_alert_attachment")
         .leftJoin("attachments", "attachments.id", "state_report_alert_attachment.attachment_id")
+        .leftJoin("picture_lines", "picture_lines.attachmentId", "state_report_alert_attachment.id")
         .where("state_report_alert_attachment.state_report_alert_id", "=", config.fkValue)
-        .where("state_report_alert_attachment.is_deprecated", "=", 0)
+        .where((eb) =>
+          eb.or([
+            eb("state_report_alert_attachment.is_deprecated", "=", 0),
+            eb("picture_lines.id", "is not", null),
+          ]),
+        )
         .select((eb) => [
           "state_report_alert_attachment.id",
           "state_report_alert_attachment.label",

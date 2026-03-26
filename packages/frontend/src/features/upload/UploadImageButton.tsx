@@ -3,7 +3,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Box } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { ChangeEvent, useRef } from "react";
-import { ImageCanvas } from "./DrawingCanvas";
+import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
 import { useImageBlobUrl } from "./hooks/useImageBlobUrl";
 import { usePictureLines } from "./hooks/usePictureLines";

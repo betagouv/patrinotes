@@ -157,6 +157,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .selectAll()
       .where("state_report_id", "=", stateReportId)
       .where("is_deprecated", "=", false)
+      .where("is_ignored", "=", false)
       .execute();
 
     const stateReportAttachments = await Promise.all(
@@ -189,6 +190,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
             visitedSections.map((vs) => vs.id),
           )
           .where("is_deprecated", "=", false)
+          .where("is_ignored", "=", false)
           .execute()
       : [];
 
@@ -209,6 +211,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
             alerts.map((a) => a.id),
           )
           .where("is_deprecated", "=", false)
+          .where("is_ignored", "=", false)
           .execute()
       : [];
 

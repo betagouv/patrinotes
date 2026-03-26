@@ -41,6 +41,7 @@ export const constatPdfQueries = {
             "state_report_attachment.created_at",
             "state_report_attachment.service_id",
             "state_report_attachment.is_deprecated",
+            "state_report_attachment.is_ignored",
             "state_report_attachment.state_report_id",
           ])
           .where("state_report_attachment.is_deprecated", "=", 0)
@@ -96,6 +97,7 @@ export const constatPdfQueries = {
             "visited_section_attachment.label",
             "visited_section_attachment.visited_section_id",
             "visited_section_attachment.is_deprecated",
+            "visited_section_attachment.is_ignored",
             "visited_section_attachment.created_at",
             "visited_section_attachment.service_id",
             "attachments.local_uri",
@@ -159,6 +161,7 @@ export const constatPdfQueries = {
             "attachments.state",
             "attachments.media_type",
             "state_report_alert_attachment.is_deprecated",
+            "state_report_alert_attachment.is_ignored",
             "state_report_alert_attachment.created_at",
             "state_report_alert_attachment.service_id",
           ])

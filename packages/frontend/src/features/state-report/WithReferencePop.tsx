@@ -22,6 +22,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
 import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
 import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
+import { useUnsyncedAttachments } from "./hooks/useUnsyncedAttachments";
+import { ImageSyncModal } from "./ImageSyncModal";
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
@@ -233,6 +235,7 @@ const CreateButton = () => {
   const [alertErrors, setAlertErrors] = useAlertErrors();
 
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const [isImageSyncModalOpen, setIsImageSyncModalOpen] = useState(false);
 
   const { constatId } = routeApi.useParams();
   const navigate = routeApi.useNavigate();
@@ -241,6 +244,15 @@ const CreateButton = () => {
   const isDisabled = useIsStateReportDisabled();
 
   const alertsQuery = useStateReportAlerts(constatId);
+  const unsyncedAttachments = useUnsyncedAttachments(constatId);
+
+  const proceedToFinalize = () => {
+    navigate({
+      to: "/constat/$constatId/pdf",
+      params: { constatId },
+      search: { mode: "view" },
+    });
+  };
 
   const onSubmit = () => {
     const values = form.getValues();
@@ -261,21 +273,19 @@ const CreateButton = () => {
       })
       .filter((alertErrors) => alertErrors.errors.email.length);
 
-    if (!missingFields.length && !alertErrors?.length) {
-      navigate({
-        to: "/constat/$constatId/pdf",
-        params: {
-          constatId,
-        },
-        search: { mode: "view" },
-      });
+    if (missingFields.length || alertErrors?.length) {
+      setAlertErrors(alertErrors ?? []);
+      setMissingFields(missingFields);
+      setIsErrorModalOpen(true);
       return;
     }
 
-    setAlertErrors(alertErrors ?? []);
-    setMissingFields(missingFields);
+    if (unsyncedAttachments.length > 0) {
+      setIsImageSyncModalOpen(true);
+      return;
+    }
 
-    setIsErrorModalOpen(true);
+    proceedToFinalize();
   };
 
   const formErrors = {
@@ -286,6 +296,16 @@ const CreateButton = () => {
   return (
     <>
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
+      {isImageSyncModalOpen ? (
+        <ImageSyncModal
+          unsyncedAttachments={unsyncedAttachments}
+          onClose={() => setIsImageSyncModalOpen(false)}
+          onIgnoreAll={() => {
+            setIsImageSyncModalOpen(false);
+            proceedToFinalize();
+          }}
+        />
+      ) : null}
       <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
         {isDisabled ? "Voir le constat" : "Finaliser le constat"}
       </RightButton>

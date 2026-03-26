@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -7,9 +7,8 @@ import { AttachmentState } from "@powersync/web";
 import { UploadImageModal } from "./UploadImageButton";
 import { fr } from "@codegouvfr/react-dsfr";
 import { MinimalAttachment, UploadImage } from "./UploadImage";
-import { useImageBlobUrl } from "./hooks/useImageBlobUrl";
+import { useImageBlobUrl, useImageBlobUrlDirect } from "./hooks/useImageBlobUrl";
 import { usePictureLines } from "./hooks/usePictureLines";
-import { useThumbnailCanvas } from "./hooks/useThumbnailCanvas";
 import { useAttachmentImages } from "./hooks/useAttachmentImages";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
@@ -55,24 +54,77 @@ export const PictureThumbnail = ({
   isDisabled?: boolean;
   imageTable: string;
 }) => {
-  const bgUrl = useImageBlobUrl(picture.local_uri, picture.mediaType, picture.state);
+  // Layer A: always loads local image for pending/transitioning display
+  const localBlobUrl = useImageBlobUrlDirect(picture.local_uri, picture.mediaType);
+  // Layer B: only resolves when SYNCED — this is the backend-processed snapshot
+  const snapshotBlobUrl = useImageBlobUrl(picture.local_uri, picture.mediaType, picture.state);
   const lines = usePictureLines(picture.id, imageTable);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useThumbnailCanvas(canvasRef, bgUrl, lines);
+  const hasLines = lines.length > 0;
 
-  const finalStatus = picture.state;
+  // Natural image size for SVG viewBox
+  const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!localBlobUrl) return;
+    const img = new Image();
+    img.onload = () => setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = localBlobUrl;
+  }, [localBlobUrl]);
+
+  // Show "En cours" badge while picture_lines exist (backend is processing)
+  const isPending = hasLines;
+  const displayStatus = isPending ? AttachmentState.QUEUED_UPLOAD : picture.state;
 
   return (
     <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
-      <ReportStatus status={finalStatus as any} />
+      <ReportStatus status={displayStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
-        <Box
-          ref={canvasRef}
-          component="canvas"
-          sx={{ width: "100%", height: "160px", display: "block" }}
-          data-state={picture.state}
-          data-picture-id={picture.local_uri}
-        ></Box>
+        {/* Two-layer thumbnail with SVG overlay and crossfade */}
+        <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
+          {/* Layer A: local image + SVG lines overlay */}
+          {localBlobUrl && (
+            <>
+              <Box
+                component="img"
+                src={localBlobUrl}
+                sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+              {hasLines && imageSize && (
+                <Box
+                  component="svg"
+                  viewBox={`0 0 ${imageSize.w} ${imageSize.h}`}
+                  preserveAspectRatio="xMidYMid slice"
+                  sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+                >
+                  {lines.map((line, i) => (
+                    <polyline
+                      key={i}
+                      points={line.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                      stroke={line.color}
+                      strokeWidth={5}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                </Box>
+              )}
+            </>
+          )}
+          {/* Layer B: snapshot crossfades in once locally available */}
+          <Box
+            component="img"
+            src={snapshotBlobUrl ?? undefined}
+            sx={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: snapshotBlobUrl ? 1 : 0,
+              transition: "opacity 0.4s ease-in-out",
+            }}
+          />
+        </Box>
         <Flex
           display={isDisabled ? "none" : "flex"}
           bgcolor="white"
@@ -84,7 +136,7 @@ export const PictureThumbnail = ({
           {isDisabled ? null : (
             <Box
               onClick={() => {
-                onEdit({ id: picture.id, url: bgUrl! });
+                onEdit({ id: picture.id, url: localBlobUrl! });
               }}
               borderRight="1px solid"
               borderColor={fr.colors.decisions.border.default.grey.default}
