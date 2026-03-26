@@ -3,7 +3,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChangeEvent, ComponentProps, RefObject, useRef, useState } from "react";
-import { db, getAttachmentUrl } from "../../db/db";
+import { attachmentLocalStorage, db, getAttachmentUrl } from "../../db/db";
 import { ImageCanvas } from "./DrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
 
@@ -94,9 +94,10 @@ export const UploadImageModal = ({
   hideLabelInput?: boolean;
 }) => {
   const urlQuery = useQuery({
-    queryKey: ["attachment-url", selectedAttachment?.id],
+    queryKey: ["attachment-url", selectedAttachment?.local_uri],
     queryFn: async () => {
-      const url = await getAttachmentUrl(selectedAttachment!.id);
+      const file = await attachmentLocalStorage.readFile(selectedAttachment!.local_uri!);
+      const url = URL.createObjectURL(new Blob([file], { type: selectedAttachment?.mediaType || "image/png" }));
       return url;
     },
     enabled: !!selectedAttachment,
