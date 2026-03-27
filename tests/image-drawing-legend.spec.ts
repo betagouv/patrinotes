@@ -71,6 +71,7 @@ test.describe("Image upload — drawing and légende", () => {
     // ---------------------------------------------------------------------------
     // Step 6: Constat général — upload to Plan de situation with drawing + légende
     // ---------------------------------------------------------------------------
+    await page.getByRole("button", { name: /Constat d'état/ }).click();
     await page.waitForTimeout(500);
     await page.getByRole("button", { name: "Constat général" }).click();
     await page.waitForURL((url) => url.search.includes("constat-general"));
