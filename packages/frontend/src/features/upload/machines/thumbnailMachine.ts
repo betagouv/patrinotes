@@ -7,6 +7,7 @@ type ThumbnailContext = {
   hasLines: boolean;
   blobUrl: string | null;
   error: string | null;
+  retryCount: number;
 };
 
 type ThumbnailEvent =
@@ -60,6 +61,12 @@ export const thumbnailMachine = setup({
         return err instanceof Error ? err.message : "Failed to load image";
       },
     }),
+    incrementRetry: assign({
+      retryCount: ({ context }) => context.retryCount + 1,
+    }),
+  },
+  delays: {
+    BLOB_RETRY_DELAY: ({ context }) => (context.retryCount === 0 ? 100 : 5000),
   },
   guards: {
     hasLocalUri: ({ context }) => !!context.attachment.local_uri,
@@ -77,6 +84,7 @@ export const thumbnailMachine = setup({
     hasLines: input.hasLines,
     blobUrl: null,
     error: null,
+    retryCount: 0,
   }),
   initial: "init",
   states: {
@@ -135,12 +143,15 @@ export const thumbnailMachine = setup({
       },
     },
     /** Blob load failed; shows grey placeholder with retry button.
-     *  Auto-retries every 5 s — covers the startup race where setupPowersync()
-     *  hasn't finished opening the IndexedDB storage adapter yet when the
-     *  component first mounts (setupPowersync is fire-and-forget in main.tsx). */
+     *  First failure retries after 100 ms — covers the IndexedDB write-transaction
+     *  commit race that occurs when a freshly-uploaded file is read back immediately
+     *  (the write may have succeeded at the request level but the transaction
+     *  hasn't committed yet). Subsequent failures retry after 5 s, which covers
+     *  the startup race where setupPowersync() hasn't opened the storage adapter yet. */
     blobError: {
+      entry: "incrementRetry",
       after: {
-        5000: { target: "loadingBlob" },
+        BLOB_RETRY_DELAY: { target: "loadingBlob" },
       },
       on: {
         RETRY: { target: "loadingBlob" },

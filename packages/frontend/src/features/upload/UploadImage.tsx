@@ -5,9 +5,19 @@ import { v7 } from "uuid";
 import { PictureThumbnail, processImage } from "./UploadReportImage";
 import { attachmentQueue, db } from "../../db/db";
 
-export const UploadImage = ({ onFiles, attachments, multiple, onClick, onDelete, isDisabled, imageTable }: UploadImageProps) => {
+export const UploadImage = ({
+  onFiles,
+  attachments,
+  multiple,
+  onClick,
+  onDelete,
+  isDisabled,
+  imageTable,
+}: UploadImageProps) => {
   const attachment = attachments.length > 0 ? attachments[0] : null;
   const hideButton = !multiple && !!attachment;
+
+  console.log(imageTable, attachments);
 
   return (
     <Box>

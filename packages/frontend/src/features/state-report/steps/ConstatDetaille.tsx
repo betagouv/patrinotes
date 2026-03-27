@@ -381,7 +381,7 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
       />
 
       <UploadImage
-        onFiles={async (files) => addMutation.mutateAsync(files[0])}
+        onFiles={async (files) => { for (const file of files) await addMutation.mutateAsync(file); }}
         multiple
         attachments={attachments}
         onClick={(a) => setSelectedAttachment(a!)}

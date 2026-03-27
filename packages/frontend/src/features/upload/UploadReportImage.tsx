@@ -82,12 +82,15 @@ export const PictureThumbnail = ({
     };
   }, []);
 
-  const { blobUrl, attachment, error: loadError } = snapshot.context;
+  const { blobUrl, attachment, error: loadError, retryCount } = snapshot.context;
   const machineState = snapshot.value;
 
   const isLoading =
     machineState === "init" || machineState === "waitingForUri" || machineState === "loadingBlob";
-  const hasError = machineState === "blobError";
+  // Only show the error state after the first silent retry (retryCount > 1).
+  // The first failure (retryCount === 1) is a known IndexedDB write-commit race
+  // on fresh uploads — it resolves in ~100 ms and should not flash "Erreur".
+  const hasError = machineState === "blobError" && retryCount > 1;
 
   // Natural image size for SVG viewBox — only needed when lines exist.
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);

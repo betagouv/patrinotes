@@ -3,7 +3,7 @@ import { db } from "../db/db";
 import { type UseFormReturn, useFormContext, useWatch } from "react-hook-form";
 import useDebounce from "react-use/lib/useDebounce";
 import { Banner } from "./Banner";
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { fr } from "@codegouvfr/react-dsfr";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
 import { Report, Service, StateReport } from "../db/AppSchema";
@@ -11,7 +11,7 @@ import { useAppStatus } from "../hooks/useAppStatus";
 import { Box, BoxProps, styled, Typography } from "@mui/material";
 import { Flex } from "./ui/Flex";
 import { Button, Center, Input } from "./MUIDsfr";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export const useSyncForm = <T extends Report | StateReport | Service>({
   form,
@@ -26,6 +26,14 @@ export const useSyncForm = <T extends Report | StateReport | Service>({
 }) => {
   const newObject = useWatch({ control: form.control });
   const diff = disabled ? {} : getDiff(newObject, baseObject);
+
+  // Sync when unmounting so no data is lost
+  useEffect(() => {
+    return () => {
+      syncMutation.mutate();
+    };
+  }, []);
+
   const syncMutation = useMutation({
     mutationFn: async () => {
       if (Object.keys(diff).length === 0) return;
