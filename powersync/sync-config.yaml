@@ -1,0 +1,58 @@
+config:
+  edition: 3
+
+# Specify sync streams
+streams:
+  global_stream:
+    auto_subscribe: true
+    priority: 1
+    queries:
+      - SELECT * FROM clause_v2 WHERE service_id = 'ALL'
+      - SELECT * FROM pictures
+
+  service_stream:
+    auto_subscribe: true
+    priority: 1
+    with:
+      current_service: SELECT service_id FROM "user" WHERE id = auth.user_id()
+    queries:
+      - SELECT * FROM service WHERE id IN current_service
+      - SELECT id, name, service_id FROM "user" WHERE service_id IN current_service
+      - SELECT * FROM service_instructeurs WHERE service_id IN current_service
+      - SELECT * FROM clause_v2 WHERE service_id IN current_service
+      - SELECT * FROM sent_email WHERE service_id IN current_service
+      - SELECT * FROM suggested_email WHERE service_id IN current_service
+
+  user_stream:
+    auto_subscribe: true
+    priority: 2
+    queries:
+      - SELECT * FROM delegation WHERE "createdBy" = auth.user_id() OR "delegatedTo" = auth.user_id()
+      - SELECT * FROM pdf_snapshot WHERE user_id = auth.user_id()
+      - SELECT * FROM user_settings WHERE user_id = auth.user_id()
+
+  reports_stream:
+    auto_subscribe: true
+    priority: 2
+    with:
+      current_service: SELECT service_id FROM "user" WHERE id = auth.user_id()
+    queries:
+      - SELECT * FROM report WHERE service_id IN current_service
+      - SELECT * FROM state_report WHERE service_id IN current_service
+      - SELECT * FROM visited_section WHERE service_id IN current_service
+      - SELECT * FROM visited_section_attachment WHERE service_id IN current_service
+      - SELECT * FROM report_attachment WHERE service_id IN current_service
+      - SELECT * FROM state_report_attachment WHERE service_id IN current_service
+      - SELECT * FROM picture_lines WHERE service_id IN current_service
+      - SELECT * FROM state_report_alert WHERE service_id IN current_service
+      - SELECT * FROM state_report_alert_attachment WHERE service_id IN current_service
+      - SELECT id, state_report_id, status, service_id FROM constat_validation WHERE service_id IN current_service
+
+  pop_stream:
+    auto_subscribe: true
+    priority: 3
+    with:
+      my_depts: SELECT dept_number FROM "user_dept" WHERE user_id = auth.user_id()
+    queries:
+      - SELECT * FROM pop_immeubles WHERE departement_format_numerique IN my_depts
+      - SELECT * FROM pop_objets WHERE departement_format_numerique IN my_depts

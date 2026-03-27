@@ -15,6 +15,8 @@ import { StateReportListItem } from "../state-report/StateReportListItem";
 import { AppDocument } from "../../utils";
 import { DocumentTypeSelector } from "#components/DocumentTypeSelector.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
+import { useStatus, useSyncStream } from "@powersync/react";
+import { Spinner } from "#components/Spinner.tsx";
 
 export type ReportWithUser = Report & { createdByName: string | null };
 export type StateReportWithUser = StateReport & { createdByName: string | null };
@@ -29,16 +31,22 @@ export const MyReports = () => {
   const reports = baseQuery.data;
 
   const reportsCount = countQuery.data?.[0]?.count as number;
-
   const hasError = baseQuery.error || countQuery.error;
   const isLoading = baseQuery.isLoading || countQuery.isLoading;
+
+  const reportsSynced = useSyncStream({ name: "reports_stream" })?.subscription.hasSynced;
 
   if (hasError) {
     console.error(baseQuery.error, countQuery.error);
     return <Center>Une erreur s'est produite</Center>;
   }
 
-  if (isLoading) return null;
+  if (!reportsSynced || isLoading)
+    return (
+      <Center height="180px">
+        <Spinner size={60} />
+      </Center>
+    );
 
   if (document === "compte-rendus") {
     return (
@@ -71,12 +79,19 @@ export const AllReports = () => {
   const hasError = baseQuery.error || countQuery.error;
   const isLoading = baseQuery.isLoading || countQuery.isLoading;
 
+  const reportsSynced = useSyncStream({ name: "reports_stream" })?.subscription.hasSynced;
+
   if (hasError) {
     console.error(baseQuery.error, countQuery.error);
     return <Center>Une erreur s'est produite</Center>;
   }
 
-  if (isLoading) return null;
+  if (!reportsSynced || isLoading)
+    return (
+      <Center>
+        <Spinner size={60} />
+      </Center>
+    );
 
   if (document === "compte-rendus") {
     return (
@@ -244,10 +259,6 @@ export const StateReportList = ({
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
 
-  const pendingValidationIds = new Set(
-    reports.filter((r) => r.validation_status === "pending").map((r) => r.id),
-  );
-
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
       <Center mb="40px">
@@ -267,7 +278,6 @@ export const StateReportList = ({
                     onClick={onClick}
                     key={report.id}
                     report={report}
-                    isPendingValidation={pendingValidationIds.has(report.id)}
                     isLast={
                       isDesktop
                         ? index === reports.length - 1

@@ -79,7 +79,8 @@ services:
     image: journeyapps/powersync-service:latest
     command: ["start", "-r", "unified"]
     volumes:
-      - ./powersync-config.yaml:/config/config.yaml
+      - ./powersync/powersync-config.yaml:/config/config.yaml
+      - ./powersync/sync-config.yaml:/config/sync-config.yaml
     environment:
       POWERSYNC_CONFIG_PATH: /config/config.yaml
       PS_DATABASE_URL: ${PS_DATABASE_URL}

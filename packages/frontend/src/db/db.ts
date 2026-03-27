@@ -19,10 +19,20 @@ import { api } from "../api";
 const browser = Bowser.getParser(window.navigator.userAgent);
 const isFirefox = browser.getBrowser().name === "Firefox";
 
+// useWebWorker requires OPFS (Origin Private File System) + crypto.randomUUID (Chrome 92+)
+const supportsWebWorker =
+  typeof navigator.storage?.getDirectory === "function" && typeof crypto.randomUUID === "function";
+
+// enableMultiTabs requires SharedWorker (unsupported on all iOS browsers)
+const supportsMultiTabs = typeof SharedWorker !== "undefined";
+
+console.log("Browser support - Web Worker:", supportsWebWorker, "Multi Tabs:", supportsMultiTabs);
+
 export const powerSyncDb = new PowerSyncDatabase({
   schema: AppSchema,
   flags: {
-    useWebWorker: false,
+    useWebWorker: supportsWebWorker,
+    enableMultiTabs: supportsMultiTabs,
   },
   database: {
     dbFilename: "crvif-sync.db",
@@ -100,11 +110,7 @@ export const useDbQuery = useQuery;
 export const setupPowersync = async () => {
   const connector = new Connector();
   await powerSyncDb.init();
-  await powerSyncDb.connect(connector, {
-    params: {
-      schema_version: 1,
-    },
-  });
+  await powerSyncDb.connect(connector);
   await attachmentQueue.startSync();
   // Trigger an immediate download pass so referenced files are available right away
   // instead of waiting for the first syncIntervalMs tick (30 s).
