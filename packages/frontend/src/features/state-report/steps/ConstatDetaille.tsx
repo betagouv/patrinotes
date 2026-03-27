@@ -15,7 +15,7 @@ import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
-import { defaultSections } from "@cr-vif/pdf/constat";
+import { defaultSections } from "@patrinotes/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
@@ -23,7 +23,7 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { chunk } from "pastable";
-import { getIsSectionVisited } from "@cr-vif/pdf/utils";
+import { getIsSectionVisited } from "@patrinotes/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -382,7 +382,9 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
       />
 
       <UploadImage
-        onFiles={async (files) => { for (const file of files) await addMutation.mutateAsync(file); }}
+        onFiles={async (files) => {
+          for (const file of files) await addMutation.mutateAsync(file);
+        }}
         multiple
         attachments={attachments}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}

@@ -9,7 +9,7 @@ import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useDebounce } from "react-use";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
-import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { useWatch } from "react-hook-form";
 
 export const StateReportAlertsEmailInput = ({

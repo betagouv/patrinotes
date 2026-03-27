@@ -1,5 +1,5 @@
 {
-  "name": "@cr-vif/backend",
+  "name": "@patrinotes/backend",
   "version": "1.0.0",
   "description": "",
   "type": "module",
@@ -21,7 +21,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@cr-vif/pdf": "workspace:*",
+    "@patrinotes/pdf": "workspace:*",
     "@types/better-sqlite3": "^7.6.9",
     "@types/debug": "^4.1.12",
     "@types/jsdom": "^27.0.0",

@@ -4,7 +4,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import Checkbox from "@codegouvfr/react-dsfr/Checkbox";
 import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
-import { deserializePreconisations, serializePreconisations } from "@cr-vif/pdf/constat";
+import { deserializePreconisations, serializePreconisations } from "@patrinotes/pdf/constat";
 import { Box, BoxProps, Stack, Typography } from "@mui/material";
 import { getRouteApi } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
@@ -302,9 +302,18 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
         imageTable="state_report_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
-      <PlanSituation setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })} isDisabled={isDisabled} />
-      <PlanEdifice setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })} isDisabled={isDisabled} />
-      <VuesGenerales setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })} isDisabled={isDisabled} />
+      <PlanSituation
+        setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
+        isDisabled={isDisabled}
+      />
+      <PlanEdifice
+        setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
+        isDisabled={isDisabled}
+      />
+      <VuesGenerales
+        setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
+        isDisabled={isDisabled}
+      />
     </Flex>
   );
 };

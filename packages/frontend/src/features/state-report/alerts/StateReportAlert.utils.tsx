@@ -1,6 +1,6 @@
-import { alertSectionStaticData } from "@cr-vif/pdf/constat";
+import { alertSectionStaticData } from "@patrinotes/pdf/constat";
 import { Service, StateReportAlert } from "../../../db/AppSchema";
-import { deserializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
 
 export const getEmailsForSection = (sectionTitle: string, service: Service) => {
   const sectionStaticData = alertSectionStaticData.find((s) => s.title === sectionTitle);

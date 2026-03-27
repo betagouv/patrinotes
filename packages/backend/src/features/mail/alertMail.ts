@@ -1,6 +1,6 @@
 import { Selectable } from "kysely";
 import { Database } from "../../db/db";
-import { MinimalAlert } from "@cr-vif/pdf/constat";
+import { MinimalAlert } from "@patrinotes/pdf/constat";
 import { wrapWithDsfrMail } from "./dsfrMailWrapper";
 import {
   ABORDS_DE_L_EDIFICE_SECTION,
@@ -10,7 +10,7 @@ import {
   OBJETS_MOBILIERS_SECTION,
   SECURITE_SECTION,
   SITE_CLASSE_OU_INSCRIT_SECTION,
-} from "@cr-vif/pdf/utils";
+} from "@patrinotes/pdf/utils";
 import { AuthUser } from "../../routes/authMiddleware";
 import { getServices } from "../../services/services";
 

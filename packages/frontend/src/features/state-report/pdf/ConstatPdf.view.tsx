@@ -1,4 +1,4 @@
-import { getStateReportHtmlString, StateReportPDFDocument } from "@cr-vif/pdf/constat";
+import { getStateReportHtmlString, StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { PDFViewer } from "@react-pdf/renderer";
 import { useMemo } from "react";
 import { useUser } from "../../../contexts/AuthContext";

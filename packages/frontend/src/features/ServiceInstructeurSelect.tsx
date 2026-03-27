@@ -1,4 +1,4 @@
-// import { serviceInstructeurs } from "@cr-vif/pdf";
+// import { serviceInstructeurs } from "@patrinotes/pdf";
 import { Autocomplete, Box } from "@mui/material";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useStyles } from "tss-react";

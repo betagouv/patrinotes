@@ -10,7 +10,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { api } from "../../api";
 import { useCanEditReport } from "../../hooks/useCanEditReport";
 import { db } from "../../db/db";
-import { getPDFInMailName } from "@cr-vif/pdf";
+import { getPDFInMailName } from "@patrinotes/pdf";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { useStyles } from "tss-react";
