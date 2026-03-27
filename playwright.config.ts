@@ -100,5 +100,13 @@ export default defineConfig({
       },
       reuseExistingServer: false,
     },
+    {
+      command: `pnpm admin dev --mode test --port ${process.env.ADMIN_PORT}`,
+      url: `http://localhost:${process.env.ADMIN_PORT}`,
+      env: {
+        NODE_ENV: "test",
+      },
+      reuseExistingServer: false,
+    },
   ],
 });

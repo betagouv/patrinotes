@@ -17,6 +17,7 @@ import { authPlugin } from "./routes/authRoutes";
 import { isDev } from "./envVars";
 import { stateReportPlugin } from "./routes/stateReportRoutes";
 import { validationPlugin } from "./routes/validationRoutes";
+import { adminPlugin } from "./routes/adminRoutes";
 
 const debug = makeDebug("fastify");
 
@@ -73,6 +74,7 @@ export const initFastify = async () => {
       await instance.register(stateReportPlugin, { prefix: "/state-report" });
       await instance.register(validationPlugin);
       await instance.register(syncPlugin);
+      await instance.register(adminPlugin, { prefix: "/admin" });
     },
     { prefix: "/api" },
   );
