@@ -252,7 +252,11 @@ const AdminPage = () => {
     return (
       <Center flexDirection="column" gap="1.5rem" height="50vh">
         <Alert severity="error" title={message} />
-        <Button iconId="ri-arrow-left-line" iconPosition="left" onClick={() => navigate({ to: "/" })}>
+        <Button
+          iconId="ri-arrow-left-line"
+          iconPosition="left"
+          onClick={() => navigate({ to: "/", search: { document: "constats" } })}
+        >
           Retour à l'accueil
         </Button>
       </Center>
