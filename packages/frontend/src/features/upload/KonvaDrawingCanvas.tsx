@@ -41,7 +41,6 @@ export const ImageCanvas = ({
   const [internalLabel, setInternalLabel] = useState<string>(attachment.label ?? "");
   const user = useUser()!;
 
-  const [tool, setTool] = useState<"draw" | "move" | "eraser">("draw");
   const [lines, setLines] = useState<Line[]>([]);
   const [activeColor, setActiveColor] = useState(colors[0]);
 
@@ -59,9 +58,6 @@ export const ImageCanvas = ({
   // Drawing state
   const isDrawingRef = useRef(false);
   const stageRef = useRef<Konva.Stage>(null);
-
-  // Pan state
-  const panStartRef = useRef<{ x: number; y: number; offX: number; offY: number } | null>(null);
 
   // Pinch state
   const lastDistRef = useRef<number | null>(null);
@@ -132,31 +128,15 @@ export const ImageCanvas = ({
   };
 
   const handleMouseDown = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (tool === "move") {
-      const pos = getStagePos();
-      if (!pos) return;
-      panStartRef.current = { x: pos.x, y: pos.y, offX: layerOffset.x, offY: layerOffset.y };
-      return;
-    }
     const pos = getStagePos();
     if (!pos) return;
     const imgPos = stageToImage(pos);
     if (!isWithinBounds(imgPos)) return;
     isDrawingRef.current = true;
-    const color = tool === "eraser" ? "white" : activeColor;
-    setLines((prev) => [...prev, { points: [imgPos], color }]);
+    setLines((prev) => [...prev, { points: [imgPos], color: activeColor }]);
   };
 
   const handleMouseMove = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (tool === "move" && panStartRef.current) {
-      const pos = getStagePos();
-      if (!pos) return;
-      setLayerOffset({
-        x: panStartRef.current.offX + (pos.x - panStartRef.current.x),
-        y: panStartRef.current.offY + (pos.y - panStartRef.current.y),
-      });
-      return;
-    }
     if (!isDrawingRef.current) return;
     const pos = getStagePos();
     if (!pos) return;
@@ -174,7 +154,6 @@ export const ImageCanvas = ({
 
   const handleMouseUp = () => {
     isDrawingRef.current = false;
-    panStartRef.current = null;
   };
 
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -208,16 +187,6 @@ export const ImageCanvas = ({
       return;
     }
     if (touches.length === 1) {
-      if (tool === "move") {
-        const touch = touches[0];
-        panStartRef.current = {
-          x: touch.clientX,
-          y: touch.clientY,
-          offX: layerOffset.x,
-          offY: layerOffset.y,
-        };
-        return;
-      }
       const stage = stageRef.current;
       if (!stage) return;
       const rect = stage.container().getBoundingClientRect();
@@ -225,8 +194,7 @@ export const ImageCanvas = ({
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
       isDrawingRef.current = true;
-      const color = tool === "eraser" ? "white" : activeColor;
-      setLines((prev) => [...prev, { points: [imgPos], color }]);
+      setLines((prev) => [...prev, { points: [imgPos], color: activeColor }]);
     }
   };
 
@@ -235,10 +203,7 @@ export const ImageCanvas = ({
     const touches = e.evt.touches;
 
     if (touches.length === 2) {
-      const newDist = Math.hypot(
-        touches[0].clientX - touches[1].clientX,
-        touches[0].clientY - touches[1].clientY,
-      );
+      const newDist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
       const newMid = {
         x: (touches[0].clientX + touches[1].clientX) / 2,
         y: (touches[0].clientY + touches[1].clientY) / 2,
@@ -260,14 +225,6 @@ export const ImageCanvas = ({
     }
 
     if (touches.length === 1) {
-      if (tool === "move" && panStartRef.current) {
-        const touch = touches[0];
-        setLayerOffset({
-          x: panStartRef.current.offX + (touch.clientX - panStartRef.current.x),
-          y: panStartRef.current.offY + (touch.clientY - panStartRef.current.y),
-        });
-        return;
-      }
       if (!isDrawingRef.current) return;
       const stage = stageRef.current;
       if (!stage) return;
@@ -288,9 +245,20 @@ export const ImageCanvas = ({
 
   const handleTouchEnd = () => {
     isDrawingRef.current = false;
-    panStartRef.current = null;
     lastDistRef.current = null;
     lastMidRef.current = null;
+  };
+
+  const handleZoom = (direction: "in" | "out") => {
+    const scaleBy = 1.2;
+    const newScale = direction === "in" ? layerScale * scaleBy : layerScale / scaleBy;
+    const clamped = clamp(newScale, 0.1, 20);
+    const center = { x: stageSize.width / 2, y: stageSize.height / 2 };
+    setLayerOffset({
+      x: center.x - (center.x - layerOffset.x) * (clamped / layerScale),
+      y: center.y - (center.y - layerOffset.y) * (clamped / layerScale),
+    });
+    setLayerScale(clamped);
   };
 
   const handleUndo = () => setLines((prev) => prev.slice(0, -1));
@@ -331,34 +299,40 @@ export const ImageCanvas = ({
   return (
     <Box display="flex" flexDirection="column" width="100%" height="100%">
       {/* Toolbar row — in normal flow so the canvas never overlaps it */}
-      <Flex alignItems="center" justifyContent="flex-end" gap="18px" px="16px" py="8px" flexShrink={0} bgcolor="white">
+      <Flex
+        sx={{
+          "button::before": {
+            marginRight: "0 !important",
+          },
+        }}
+        alignItems="center"
+        justifyContent="flex-end"
+        gap="18px"
+        px="16px"
+        py="8px"
+        flexShrink={0}
+        bgcolor="white"
+      >
+        <Button type="button" priority="primary" iconId="ri-pencil-line" title="Dessiner">
+          {null}
+        </Button>
         <Button
+          sx={{ bgcolor: "white !important" }}
           type="button"
-          priority={tool === "draw" ? "primary" : "secondary"}
-          iconId="ri-pencil-line"
-          onClick={() => setTool("draw")}
-          sx={{ bgcolor: tool !== "draw" ? "white !important" : undefined }}
-          title="Dessiner"
+          priority="secondary"
+          iconId="ri-zoom-in-line"
+          onClick={() => handleZoom("in")}
+          title="Zoom avant"
         >
           {null}
         </Button>
         <Button
+          sx={{ bgcolor: "white !important" }}
           type="button"
-          priority={tool === "eraser" ? "primary" : "secondary"}
-          iconId="ri-eraser-line"
-          onClick={() => setTool("eraser")}
-          sx={{ bgcolor: tool !== "eraser" ? "white !important" : undefined }}
-          title="Gomme"
-        >
-          {null}
-        </Button>
-        <Button
-          type="button"
-          priority={tool === "move" ? "primary" : "secondary"}
-          iconId="ri-drag-move-line"
-          onClick={() => setTool("move")}
-          sx={{ bgcolor: tool !== "move" ? "white !important" : undefined }}
-          title="Déplacer"
+          priority="secondary"
+          iconId="ri-zoom-out-line"
+          onClick={() => handleZoom("out")}
+          title="Zoom arrière"
         >
           {null}
         </Button>
@@ -377,12 +351,7 @@ export const ImageCanvas = ({
       </Flex>
 
       {/* Canvas area */}
-      <Box
-        ref={canvasAreaRef}
-        flex="1"
-        overflow="hidden"
-        sx={{ cursor: tool === "move" ? "grab" : "crosshair" }}
-      >
+      <Box ref={canvasAreaRef} flex="1" overflow="hidden" sx={{ cursor: "crosshair" }}>
         <Stage
           ref={stageRef}
           width={stageSize.width}
@@ -430,17 +399,14 @@ export const ImageCanvas = ({
         )}
         <Stack gap="14px" flexDirection="row" justifyContent="center" alignItems="center" p="18px">
           {colors.map((color) => {
-            const isActive = activeColor === color && tool === "draw";
+            const isActive = activeColor === color;
             const size = isActive ? 40 : 20;
             return (
               <Box
                 key={color}
                 component="button"
                 type="button"
-                onClick={() => {
-                  setActiveColor(color);
-                  if (tool !== "move") setTool("draw");
-                }}
+                onClick={() => setActiveColor(color)}
                 sx={{
                   display: "flex",
                   justifyContent: "center",
