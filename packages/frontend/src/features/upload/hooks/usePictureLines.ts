@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useDbQuery, db } from "../../../db/db";
 import { Line } from "../types";
 
@@ -13,7 +14,10 @@ export function usePictureLines(
       .selectAll(),
   );
 
-  if (!attachmentId || !imageTable) return [];
+  const rawLines = result.data?.[0]?.lines ?? "[]";
 
-  return JSON.parse(result.data?.[0]?.lines ?? "[]") as Line[];
+  return useMemo(() => {
+    if (!attachmentId || !imageTable) return [];
+    return JSON.parse(rawLines) as Line[];
+  }, [attachmentId, imageTable, rawLines]);
 }

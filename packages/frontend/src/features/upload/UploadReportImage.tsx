@@ -31,7 +31,11 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         hideLabelInput
       />
       <UploadImage
-        onFiles={async (files) => addMutation.mutateAsync(files[0])}
+        onFiles={async (files) => {
+          for (const file of files) {
+            await addMutation.mutateAsync(file);
+          }
+        }}
         multiple
         attachments={attachments}
         onDelete={({ id }) => deleteMutation.mutate({ id })}

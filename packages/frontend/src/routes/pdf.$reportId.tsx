@@ -19,7 +19,7 @@ import { EmailInput } from "../components/EmailInput";
 import { getDiff } from "../components/SyncForm";
 import { useUser } from "../contexts/AuthContext";
 import { Clause_v2, Pictures, Report, Service } from "../db/AppSchema";
-import { attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, db, useDbQuery } from "../db/db";
 import { useChipOptions } from "../features/chips/useChipOptions";
 import { transformBold } from "../features/menu/ClauseMenu";
 import { TextEditor } from "../features/text-editor/TextEditor";
@@ -62,15 +62,32 @@ export const PDF = () => {
       const reportQuery = await db.selectFrom("report").where("id", "=", reportId).selectAll().execute();
       const picturesQuery = await db
         .selectFrom("report_attachment")
-        .where("report_id", "=", reportId)
-        .where("is_deprecated", "=", 0)
-        .orderBy("created_at", "asc")
-        .selectAll()
+        .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
+        .where("report_attachment.report_id", "=", reportId)
+        .where("report_attachment.is_deprecated", "=", 0)
+        .where("attachments.media_type", "like", "image/%")
+        .orderBy("report_attachment.created_at", "asc")
+        .select([
+          "report_attachment.attachment_id",
+          "attachments.local_uri",
+          "attachments.media_type",
+        ])
         .execute();
 
-      const pictures = await Promise.all(
-        picturesQuery.map((pic) => getAttachmentUrl(pic.attachment_id!).then((url) => ({ ...pic, url }))),
-      );
+      const pictures = (
+        await Promise.allSettled(
+          picturesQuery
+            .filter((pic) => pic.local_uri)
+            .map((pic) =>
+              attachmentLocalStorage.readFile(pic.local_uri!).then((buffer) => ({
+                ...pic,
+                url: URL.createObjectURL(new Blob([buffer], { type: pic.media_type ?? "image/jpeg" })),
+              })),
+            ),
+        )
+      )
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+        .map((r) => r.value);
 
       const report = reportQuery?.[0];
 

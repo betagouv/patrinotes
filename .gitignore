@@ -67,3 +67,5 @@ packages/backend/data/attachments/*
 keycloak-theme/*
 
 *.csv
+
+.playwright-mcp

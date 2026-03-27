@@ -34,6 +34,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .selectFrom("report_attachment")
       .where("report_id", "=", reportId)
       .where("is_deprecated", "=", false)
+      .where("attachment_id", "like", "%/images/%")
       .orderBy("created_at", "asc")
       .selectAll()
       .execute();

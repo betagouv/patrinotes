@@ -1,20 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup } from "./utils";
+import { mockClauses, mockServiceInstructeur, mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
 import * as fs from "fs";
 import * as path from "path";
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures");
-const TEST_IMAGE_PATH = path.join(FIXTURE_DIR, "test-image.png");
-
-// Minimal 1×1 transparent PNG — valid image that browser-image-compression can process
-const MINIMAL_PNG_B64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+const TEST_IMAGE_PATH = path.join(FIXTURE_DIR, "test-image.jpg");
 
 test.describe("Image upload — compte-rendu flow", () => {
   test.beforeAll(async () => {
     fs.mkdirSync(FIXTURE_DIR, { recursive: true });
-    fs.writeFileSync(TEST_IMAGE_PATH, Buffer.from(MINIMAL_PNG_B64, "base64"));
     await resetDatabase();
   });
 
@@ -44,11 +39,22 @@ test.describe("Image upload — compte-rendu flow", () => {
     await page.getByLabel("Date").fill("2024-03-20");
     await page.getByLabel("Horaire").fill("10:30");
 
+    // Select service instructeur via autocomplete
+    const siInput = page.getByLabel("Service instructeur");
+    await siInput.fill(mockServiceInstructeur.short_name);
+    await page.getByRole("option", { name: mockServiceInstructeur.short_name }).click();
+
+    // Select projectSpaceType chip (button label = chip.value)
+    await page.getByRole("button", { name: mockClauses.find((c) => c.key === "type-espace")!.value }).click();
+
     // ---------------------------------------------------------------------------
     // Step 4: Navigate to Bilan (notes) tab
     // ---------------------------------------------------------------------------
     await page.getByRole("button", { name: "Rédiger le bilan" }).click();
     await page.waitForURL((url) => url.search.includes("tab=notes"));
+
+    // Select decision chip (button label = chip.value)
+    await page.getByRole("button", { name: mockClauses.find((c) => c.key === "decision")!.value }).click();
 
     // Fill required précisions textarea
     await page.locator("textarea[id=precisions]").fill("Projet conforme aux prescriptions architecturales.");
@@ -67,24 +73,53 @@ test.describe("Image upload — compte-rendu flow", () => {
     await expect(page.locator("canvas[data-picture-id]")).toHaveCount(2, { timeout: 15_000 });
 
     // Verify the thumbnail canvas has actual pixel content (not blank)
-    const canvasHasContent = await page.locator("canvas[data-picture-id]").first().evaluate((canvas: HTMLCanvasElement) => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx || canvas.width === 0 || canvas.height === 0) return false;
-      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i] > 0 || data[i + 1] > 0 || data[i + 2] > 0 || data[i + 3] > 0) return true;
-      }
-      return false;
-    });
+    const canvasHasContent = await page
+      .locator("canvas[data-picture-id]")
+      .first()
+      .evaluate((canvas: HTMLCanvasElement) => {
+        const ctx = canvas.getContext("2d");
+        if (!ctx || canvas.width === 0 || canvas.height === 0) return false;
+        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > 0 || data[i + 1] > 0 || data[i + 2] > 0 || data[i + 3] > 0) return true;
+        }
+        return false;
+      });
     expect(canvasHasContent).toBe(true);
 
     // Button stays visible (multiple=true)
     await expect(page.getByRole("button", { name: "Ajouter photo" })).toBeVisible();
 
     // ---------------------------------------------------------------------------
-    // Step 6: Submit — verify PDF is generated without errors
+    // Step 6: Intercept POST /api/pdf/report, then submit
     // ---------------------------------------------------------------------------
+    let capturedHtmlString = "";
+    await page.route("**/api/pdf/report", async (route) => {
+      capturedHtmlString = route.request().postDataJSON()?.htmlString ?? "";
+      await route.continue();
+    });
+
+    await page.waitForTimeout(2000);
+
     await page.getByRole("button", { name: "Créer le CR" }).click();
     await page.waitForURL((url) => url.pathname.startsWith("/pdf/") && url.search.includes("mode=view"));
+
+    // ---------------------------------------------------------------------------
+    // Step 7: Navigate to send mode, submit, and assert htmlString content
+    // ---------------------------------------------------------------------------
+    await page.waitForTimeout(1000);
+    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=send"));
+
+    const emailInput = page.locator('input[type="text"]').first();
+    await emailInput.waitFor();
+    await emailInput.fill("test-report@example.com");
+    await emailInput.press("Enter");
+    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.waitForResponse((r) => r.url().includes("/api/pdf/report"));
+
+    expect(capturedHtmlString).toContain(mockClauses.find((c) => c.key === "decision")!.text);
+    expect(capturedHtmlString).toContain(mockServiceInstructeur.full_name);
+    expect(capturedHtmlString).toContain(mockServiceInstructeur.email!);
   });
 });

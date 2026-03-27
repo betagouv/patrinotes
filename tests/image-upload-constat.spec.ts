@@ -86,29 +86,28 @@ test.describe("Image upload — constat flow", () => {
     let fcPromise = page.waitForEvent("filechooser");
     await dialog.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(dialog.locator('img[src^="blob:"]')).toHaveCount(1, { timeout: 15_000 });
+    await expect(dialog.locator("canvas[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
 
     // Upload image 2
     fcPromise = page.waitForEvent("filechooser");
     await dialog.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(dialog.locator('img[src^="blob:"]')).toHaveCount(2, { timeout: 15_000 });
+    await expect(dialog.locator("canvas[data-picture-id]")).toHaveCount(2, { timeout: 15_000 });
 
     // Verify the uploaded image has actual pixel content (not blank)
-    const imgHasContent = await dialog.locator('img[src^="blob:"]').first().evaluate((img: HTMLImageElement) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-      if (canvas.width === 0 || canvas.height === 0) return false;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return false;
-      ctx.drawImage(img, 0, 0);
-      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i] > 0 || data[i + 1] > 0 || data[i + 2] > 0 || data[i + 3] > 0) return true;
-      }
-      return false;
-    });
+    const imgHasContent = await dialog
+      .locator("canvas[data-picture-id]")
+      .first()
+      .evaluate((canvas: HTMLCanvasElement) => {
+        if (canvas.width === 0 || canvas.height === 0) return false;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return false;
+        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > 0 || data[i + 1] > 0 || data[i + 2] > 0 || data[i + 3] > 0) return true;
+        }
+        return false;
+      });
     expect(imgHasContent).toBe(true);
 
     // Button stays visible (multiple=true)
@@ -136,7 +135,7 @@ test.describe("Image upload — constat flow", () => {
     fcPromise = page.waitForEvent("filechooser");
     await addPhotoBtn.click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(drawer.locator('img[src^="blob:"]')).toHaveCount(1, { timeout: 15_000 });
+    await expect(drawer.locator("canvas[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
 
     await drawer.getByRole("button", { name: "Enregistrer" }).click();
     await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
@@ -165,7 +164,7 @@ test.describe("Image upload — constat flow", () => {
     fcPromise = page.waitForEvent("filechooser");
     await planSituationSection.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(planSituationSection.locator('img[src^="blob:"]')).toHaveCount(1, { timeout: 15_000 });
+    await expect(planSituationSection.locator("canvas[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
     // Button disappears after single upload
     await expect(planSituationSection.getByRole("button", { name: "Ajouter photo" })).toHaveCount(0);
 
@@ -173,19 +172,19 @@ test.describe("Image upload — constat flow", () => {
     fcPromise = page.waitForEvent("filechooser");
     await planEdificeSection.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(planEdificeSection.locator('img[src^="blob:"]')).toHaveCount(1, { timeout: 15_000 });
+    await expect(planEdificeSection.locator("canvas[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
     await expect(planEdificeSection.getByRole("button", { name: "Ajouter photo" })).toHaveCount(0);
 
     // ---- VuesGenerales (multiple=true) ----
     fcPromise = page.waitForEvent("filechooser");
     await vuesGeneralesSection.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(vuesGeneralesSection.locator('img[src^="blob:"]')).toHaveCount(1, { timeout: 15_000 });
+    await expect(vuesGeneralesSection.locator("canvas[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
 
     fcPromise = page.waitForEvent("filechooser");
     await vuesGeneralesSection.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(vuesGeneralesSection.locator('img[src^="blob:"]')).toHaveCount(2, { timeout: 15_000 });
+    await expect(vuesGeneralesSection.locator("canvas[data-picture-id]")).toHaveCount(2, { timeout: 15_000 });
 
     // Button stays visible (multiple=true)
     await expect(vuesGeneralesSection.getByRole("button", { name: "Ajouter photo" })).toBeVisible();
@@ -223,7 +222,5 @@ test.describe("Image upload — constat flow", () => {
       (m.To as { Address: string }[])?.some((t) => t.Address.includes(`image-constat+${mailId}`)),
     );
     expect(sentMail, "Email with constat PDF should be received in Mailpit").toBeTruthy();
-
-    await page.pause();
   });
 });
