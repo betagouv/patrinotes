@@ -125,7 +125,7 @@ const PlanSituation = ({
   setSelectedAttachment,
   isDisabled,
 }: {
-  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  setSelectedAttachment: (attachment: MinimalAttachment, blobUrl: string) => void;
   isDisabled: boolean;
 }) => {
   const { constatId } = routeApi.useParams();
@@ -153,7 +153,7 @@ const PlanSituation = ({
         onFiles={async (files) => addMutation.mutateAsync(files[0])}
         attachments={attachment ? [attachment] : []}
         multiple={false}
-        onClick={() => setSelectedAttachment(attachment!)}
+        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={() => deleteMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
         imageTable="state_report_attachment"
@@ -166,7 +166,7 @@ const PlanEdifice = ({
   setSelectedAttachment,
   isDisabled,
 }: {
-  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  setSelectedAttachment: (attachment: MinimalAttachment, blobUrl: string) => void;
   isDisabled: boolean;
 }) => {
   const { constatId } = routeApi.useParams();
@@ -194,7 +194,7 @@ const PlanEdifice = ({
         onFiles={async (files) => addMutation.mutateAsync(files[0])}
         attachments={attachment ? [attachment] : []}
         multiple={false}
-        onClick={() => setSelectedAttachment(attachment!)}
+        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={() => deleteMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
         imageTable="state_report_attachment"
@@ -207,7 +207,7 @@ const VuesGenerales = ({
   setSelectedAttachment,
   isDisabled,
 }: {
-  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  setSelectedAttachment: (attachment: MinimalAttachment, blobUrl: string) => void;
   isDisabled: boolean;
 }) => {
   const { constatId } = routeApi.useParams();
@@ -260,7 +260,7 @@ const VuesGenerales = ({
         }}
         attachments={attachments}
         multiple
-        onClick={(attachment) => setSelectedAttachment(attachment!)}
+        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={({ id }) => deleteMutation.mutate(id)}
         isDisabled={isDisabled}
         imageTable="state_report_attachment"
@@ -287,11 +287,7 @@ const useStateReportAttachmentQuery = (attachmentId: string | null) => {
 };
 
 const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
-
-  const onClose = () => {
-    setSelectedAttachment(null);
-  };
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
 
   const onLabelChange = async (attachmentId: string, newLabel: string) => {
     await db.updateTable("state_report_attachment").set({ label: newLabel }).where("id", "=", attachmentId).execute();
@@ -300,14 +296,15 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
   return (
     <Flex width="100%" flexWrap="wrap" gap={{ xs: "20px", lg: "16px" }} flexDirection={{ xs: "column", lg: "column" }}>
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={onClose}
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
         imageTable="state_report_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
-      <PlanSituation setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
-      <PlanEdifice setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
-      <VuesGenerales setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
+      <PlanSituation setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })} isDisabled={isDisabled} />
+      <PlanEdifice setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })} isDisabled={isDisabled} />
+      <VuesGenerales setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })} isDisabled={isDisabled} />
     </Flex>
   );
 };

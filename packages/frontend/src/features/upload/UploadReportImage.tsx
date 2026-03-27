@@ -11,9 +11,10 @@ import { useActor } from "@xstate/react";
 import { thumbnailMachine } from "./machines/thumbnailMachine";
 import { usePictureLines } from "./hooks/usePictureLines";
 import { useAttachmentImages } from "./hooks/useAttachmentImages";
+import { useThumbnailCanvas } from "./hooks/useThumbnailCanvas";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { attachments, addMutation, deleteMutation } = useAttachmentImages(
     { table: "report_attachment", fkColumn: "report_id", fkValue: reportId },
     reportId,
@@ -22,8 +23,9 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   return (
     <Box flex="1">
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={() => setSelectedAttachment(null)}
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
         imageTable="report_attachment"
         onSave={() => {}}
         hideLabelInput
@@ -33,7 +35,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         multiple
         attachments={attachments}
         onDelete={({ id }) => deleteMutation.mutate({ id })}
-        onClick={(attachment) => setSelectedAttachment(attachment)}
+        onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
         imageTable="report_attachment"
       />
     </Box>
@@ -50,7 +52,7 @@ export const PictureThumbnail = ({
 }: {
   picture: MinimalAttachment;
   label: string;
-  onEdit: (props: { id: string; url: string }) => void;
+  onEdit: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete: (props: { id: string }) => void;
   isDisabled?: boolean;
   imageTable: string;
@@ -92,14 +94,8 @@ export const PictureThumbnail = ({
   // on fresh uploads — it resolves in ~100 ms and should not flash "Erreur".
   const hasError = machineState === "blobError" && retryCount > 1;
 
-  // Natural image size for SVG viewBox — only needed when lines exist.
-  const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
-  useEffect(() => {
-    if (!blobUrl) return;
-    const img = new Image();
-    img.onload = () => setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = blobUrl;
-  }, [blobUrl]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useThumbnailCanvas(canvasRef, blobUrl ?? null, lines);
 
   const badgeStatus = (() => {
     if (hasError) return AttachmentState.ARCHIVED;
@@ -129,33 +125,12 @@ export const PictureThumbnail = ({
               </Button>
             </Flex>
           ) : blobUrl ? (
-            <>
-              <Box
-                component="img"
-                src={blobUrl}
-                sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              />
-              {hasLines && imageSize && (
-                <Box
-                  component="svg"
-                  viewBox={`0 0 ${imageSize.w} ${imageSize.h}`}
-                  preserveAspectRatio="xMidYMid slice"
-                  sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
-                >
-                  {lines.map((line, i) => (
-                    <polyline
-                      key={i}
-                      points={line.points.map((p) => `${p.x},${p.y}`).join(" ")}
-                      stroke={line.color}
-                      strokeWidth={5}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  ))}
-                </Box>
-              )}
-            </>
+            <Box
+              component="canvas"
+              ref={canvasRef}
+              data-picture-id={picture.id}
+              sx={{ width: "100%", height: "100%", display: "block" }}
+            />
           ) : null /* grey background shows during loading */}
         </Box>
         <Flex
@@ -167,17 +142,15 @@ export const PictureThumbnail = ({
           height="40px"
         >
           {isDisabled ? null : (
-            <Box
-              onClick={() => {
-                if (blobUrl) onEdit({ id: picture.id, url: blobUrl });
-              }}
-              borderRight="1px solid"
-              borderColor={fr.colors.decisions.border.default.grey.default}
-            >
+            <Box borderRight="1px solid" borderColor={fr.colors.decisions.border.default.grey.default}>
               <Button
                 type="button"
                 iconId="ri-pencil-fill"
                 priority="tertiary no outline"
+                nativeButtonProps={{
+                  "aria-label": "Annoter",
+                  onClick: () => { if (blobUrl) onEdit(picture, blobUrl); },
+                }}
                 sx={{
                   "::before": {
                     marginRight: "0 !important",

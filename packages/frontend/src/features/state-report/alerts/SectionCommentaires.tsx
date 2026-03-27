@@ -64,7 +64,7 @@ export const SectionPhotos = ({
   constatId: string;
   isDisabled: boolean;
 }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
     { table: "state_report_alert_attachment", fkColumn: "state_report_alert_id", fkValue: alertId ?? "" },
     constatId,
@@ -73,8 +73,9 @@ export const SectionPhotos = ({
   return (
     <Box width="100%" mt="16px">
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={() => setSelectedAttachment(null)}
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
         imageTable="state_report_alert_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
@@ -83,7 +84,7 @@ export const SectionPhotos = ({
         onFiles={async (files) => { for (const file of files) await addMutation.mutateAsync(file); }}
         multiple
         attachments={attachments}
-        onClick={(a) => setSelectedAttachment(a!)}
+        onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
         onDelete={(attachment) => deleteMutation.mutate(attachment)}
         isDisabled={isDisabled}
         imageTable="state_report_alert_attachment"

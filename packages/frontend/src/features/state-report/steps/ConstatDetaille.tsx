@@ -13,7 +13,7 @@ import { useUser } from "../../../contexts/AuthContext";
 import { VisitedSection } from "../../../db/AppSchema";
 import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
-import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
+import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
 import { defaultSections } from "@cr-vif/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
@@ -364,7 +364,7 @@ const SectionForm = ({
 };
 
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { constatId } = routeApi.useParams();
   const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
     { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
@@ -374,8 +374,9 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
   return (
     <Box width="100%">
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={() => setSelectedAttachment(null)}
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
         imageTable="visited_section_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
@@ -384,7 +385,7 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         onFiles={async (files) => { for (const file of files) await addMutation.mutateAsync(file); }}
         multiple
         attachments={attachments}
-        onClick={(a) => setSelectedAttachment(a!)}
+        onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
         onDelete={(section) => deleteMutation.mutate(section)}
         isDisabled={isDisabled}
         imageTable="visited_section_attachment"

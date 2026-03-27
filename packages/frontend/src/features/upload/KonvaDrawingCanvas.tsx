@@ -1,5 +1,5 @@
 import { fr } from "@codegouvfr/react-dsfr";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { v7 } from "uuid";
 import { db } from "../../db/db";
 import { Box, Stack } from "@mui/material";
@@ -24,14 +24,12 @@ export const ImageCanvas = ({
   url,
   attachment,
   lines: dbLines,
-  containerRef,
   imageTable,
   onSave,
   closeModal,
   hideLabelInput,
 }: {
   attachment: MinimalAttachment;
-  containerRef: React.RefObject<HTMLDivElement>;
   url: string;
   lines: Array<Line>;
   imageTable?: string;
@@ -74,17 +72,19 @@ export const ImageCanvas = ({
     if (dbLines) setLines(dbLines);
   }, [dbLines]);
 
-  // Measure container
+  const canvasAreaRef = useRef<HTMLDivElement>(null);
+
+  // Measure the canvas area div (not the full modal container)
   useEffect(() => {
     const measure = () => {
-      const rect = containerRef?.current?.getBoundingClientRect();
+      const rect = canvasAreaRef.current?.getBoundingClientRect();
       if (rect) setStageSize({ width: rect.width, height: rect.height });
     };
     measure();
     const observer = new ResizeObserver(measure);
-    if (containerRef?.current) observer.observe(containerRef.current);
+    if (canvasAreaRef.current) observer.observe(canvasAreaRef.current);
     return () => observer.disconnect();
-  }, [containerRef]);
+  }, []);
 
   // Load image
   useEffect(() => {
@@ -329,9 +329,9 @@ export const ImageCanvas = ({
   const strokeWidth = 5 / layerScale;
 
   return (
-    <Box display="flex" flexDirection="column" width="100%" height="100%" maxHeight="100vh">
-      <Stack position="absolute" top="26px" right={{ xs: "16px" }} gap="18px" flexDirection="row" alignItems="center">
-        {/* Tool buttons */}
+    <Box display="flex" flexDirection="column" width="100%" height="100%">
+      {/* Toolbar row — in normal flow so the canvas never overlaps it */}
+      <Flex alignItems="center" justifyContent="flex-end" gap="18px" px="16px" py="8px" flexShrink={0} bgcolor="white">
         <Button
           type="button"
           priority={tool === "draw" ? "primary" : "secondary"}
@@ -374,9 +374,15 @@ export const ImageCanvas = ({
         <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
           OK
         </Button>
-      </Stack>
+      </Flex>
 
-      <Box flex="1" borderRadius="0.25rem" overflow="hidden" sx={{ cursor: tool === "move" ? "grab" : "crosshair" }}>
+      {/* Canvas area */}
+      <Box
+        ref={canvasAreaRef}
+        flex="1"
+        overflow="hidden"
+        sx={{ cursor: tool === "move" ? "grab" : "crosshair" }}
+      >
         <Stage
           ref={stageRef}
           width={stageSize.width}
@@ -408,9 +414,10 @@ export const ImageCanvas = ({
         </Stage>
       </Box>
 
-      <Flex justifyContent="center" alignItems="center" flexDirection="column" mt="16px">
+      {/* Legend + color swatches */}
+      <Flex justifyContent="center" alignItems="center" flexDirection="column" flexShrink={0} bgcolor="white">
         {hideLabelInput ? null : (
-          <Flex px="16px" width="100%">
+          <Flex px="16px" width="100%" pt="8px">
             <Input
               sx={{ width: "100%" }}
               label="Légende"
@@ -422,44 +429,55 @@ export const ImageCanvas = ({
           </Flex>
         )}
         <Stack gap="14px" flexDirection="row" justifyContent="center" alignItems="center" p="18px">
-          {colors.map((color) => (
-            <Button
-              type="button"
-              key={color}
-              priority="tertiary no outline"
-              onClick={() => {
-                setActiveColor(color);
-                if (tool !== "move") setTool("draw");
-              }}
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                width: "40px",
-                height: "40px",
-              }}
-            >
+          {colors.map((color) => {
+            const isActive = activeColor === color && tool === "draw";
+            const size = isActive ? 40 : 20;
+            return (
               <Box
+                key={color}
+                component="button"
+                type="button"
+                onClick={() => {
+                  setActiveColor(color);
+                  if (tool !== "move") setTool("draw");
+                }}
                 sx={{
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  borderRadius: "50%",
-                  width: activeColor === color && tool === "draw" ? "40px" : "20px",
-                  height: activeColor === color && tool === "draw" ? "40px" : "20px",
-                  bgcolor: color,
-                  border: color === "white" ? "1px solid black" : "none",
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  flexShrink: 0,
                 }}
               >
                 <Box
-                  className={fr.cx("fr-icon--md", "ri-pencil-line")}
-                  component="i"
-                  style={{ display: activeColor === color && tool === "draw" ? "block" : "none" }}
-                  color={blackPenColors.includes(color) ? "black" : "white"}
-                />
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderRadius: "50%",
+                    width: size,
+                    height: size,
+                    bgcolor: color,
+                    border: color === "white" ? "1px solid black" : "none",
+                    transition: "width 0.1s, height 0.1s",
+                  }}
+                >
+                  {isActive && (
+                    <Box
+                      className={fr.cx("fr-icon--md", "ri-pencil-line")}
+                      component="i"
+                      color={blackPenColors.includes(color) ? "black" : "white"}
+                    />
+                  )}
+                </Box>
               </Box>
-            </Button>
-          ))}
+            );
+          })}
         </Stack>
       </Flex>
     </Box>

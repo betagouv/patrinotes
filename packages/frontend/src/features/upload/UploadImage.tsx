@@ -1,6 +1,5 @@
 import { Box } from "@mui/material";
 import { UploadImageButton } from "./UploadImageButton";
-import { useState } from "react";
 import { v7 } from "uuid";
 import { PictureThumbnail, processImage } from "./UploadReportImage";
 import { attachmentQueue, db } from "../../db/db";
@@ -36,7 +35,7 @@ export const UploadImage = ({
               <PictureThumbnail
                 label={attachment.label || ""}
                 picture={attachment}
-                onEdit={() => onClick?.(attachment)}
+                onEdit={(a, blobUrl) => onClick?.(a, blobUrl)}
                 onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
                 key={attachment.id}
                 isDisabled={isDisabled}
@@ -53,7 +52,7 @@ type UploadImageProps = {
   attachments: MinimalAttachment[];
   onFiles: (files: File[]) => any | Promise<any>;
   multiple?: boolean;
-  onClick?: (attachment: MinimalAttachment) => void;
+  onClick?: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete?: (props: { id: string }) => void;
   isDisabled?: boolean;
   imageTable: string;

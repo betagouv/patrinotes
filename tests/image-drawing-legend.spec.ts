@@ -89,10 +89,11 @@ test.describe("Image upload — drawing and légende", () => {
     await fileChooser.setFiles(TEST_IMAGE_PATH);
 
     // ---------------------------------------------------------------------------
-    // Step 7: Interact with the drawing modal
-    // The Légende input being visible confirms the modal is open.
+    // Step 7: Wait for the thumbnail canvas to appear, then open the drawing modal
     // ---------------------------------------------------------------------------
-    await expect(page.getByLabel("Légende")).toBeVisible({ timeout: 15_000 });
+    await expect(planSituationSection.locator("canvas[data-picture-id]")).toBeVisible({ timeout: 15_000 });
+    await planSituationSection.getByRole("button", { name: "Annoter" }).click();
+    await expect(page.getByLabel("Légende")).toBeVisible({ timeout: 5_000 });
 
     // Draw a line on the canvas
     const drawingCanvas = page.locator("canvas").first();
@@ -111,12 +112,10 @@ test.describe("Image upload — drawing and légende", () => {
     await page.getByRole("button", { name: "OK" }).click();
 
     // ---------------------------------------------------------------------------
-    // Step 8: Verify légende and thumbnail appear after saving
+    // Step 8: Verify légende appears in the thumbnail bar and the canvas is present
     // ---------------------------------------------------------------------------
     await expect(page.getByText("Légende de test")).toBeVisible({ timeout: 10_000 });
-    await expect(planSituationSection.locator("canvas[data-picture-id]")).toHaveCount(1, {
-      timeout: 15_000,
-    });
+    await expect(planSituationSection.locator("canvas[data-picture-id]")).toHaveCount(1);
     // Upload button should be gone for a single-upload section
     await expect(planSituationSection.getByRole("button", { name: "Ajouter photo" })).toHaveCount(0);
 
@@ -133,6 +132,8 @@ test.describe("Image upload — drawing and légende", () => {
     // ---------------------------------------------------------------------------
     // Step 10: Finalize constat → navigate to PDF send page
     // ---------------------------------------------------------------------------
+    await page.waitForTimeout(2000);
+
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
     await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
 
@@ -153,6 +154,8 @@ test.describe("Image upload — drawing and légende", () => {
     // Step 11: Verify the légende is embedded in the htmlString sent to the PDF renderer
     // stateReport.tsx embeds attachment labels into the htmlString before posting.
     // ---------------------------------------------------------------------------
+
+    console.log(capturedHtmlString);
     expect(capturedHtmlString).toContain("Légende de test");
 
     await page.waitForURL((url) => url.search.includes("mode=sent"));
