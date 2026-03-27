@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import imageCompression from "browser-image-compression";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -7,7 +7,8 @@ import { AttachmentState } from "@powersync/web";
 import { UploadImageModal } from "./UploadImageButton";
 import { fr } from "@codegouvfr/react-dsfr";
 import { MinimalAttachment, UploadImage } from "./UploadImage";
-import { useImageBlobUrl, useImageBlobUrlDirect } from "./hooks/useImageBlobUrl";
+import { useActor } from "@xstate/react";
+import { thumbnailMachine } from "./machines/thumbnailMachine";
 import { usePictureLines } from "./hooks/usePictureLines";
 import { useAttachmentImages } from "./hooks/useAttachmentImages";
 
@@ -54,38 +55,81 @@ export const PictureThumbnail = ({
   isDisabled?: boolean;
   imageTable: string;
 }) => {
-  // Layer A: always loads local image for pending/transitioning display
-  const localBlobUrl = useImageBlobUrlDirect(picture.local_uri, picture.mediaType);
-  // Layer B: only resolves when SYNCED — this is the backend-processed snapshot
-  const snapshotBlobUrl = useImageBlobUrl(picture.local_uri, picture.mediaType, picture.state);
   const lines = usePictureLines(picture.id, imageTable);
   const hasLines = lines.length > 0;
 
-  // Natural image size for SVG viewBox
+  const [snapshot, send] = useActor(thumbnailMachine, {
+    input: { attachment: picture, hasLines },
+  });
+
+  // Push attachment and lines changes into the machine.
+  const prevPictureRef = useRef(picture);
+  const prevHasLinesRef = useRef(hasLines);
+  useEffect(() => {
+    if (picture !== prevPictureRef.current || hasLines !== prevHasLinesRef.current) {
+      send({ type: "ATTACHMENT_UPDATED", attachment: picture, hasLines });
+      prevPictureRef.current = picture;
+      prevHasLinesRef.current = hasLines;
+    }
+  }, [picture, hasLines, send]);
+
+  // Revoke the final blob URL on unmount (machine handles intermediate revocations).
+  const blobUrlRef = useRef<string | null>(null);
+  blobUrlRef.current = snapshot.context.blobUrl;
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, []);
+
+  const { blobUrl, attachment, error: loadError } = snapshot.context;
+  const machineState = snapshot.value;
+
+  const isLoading =
+    machineState === "init" || machineState === "waitingForUri" || machineState === "loadingBlob";
+  const hasError = machineState === "blobError";
+
+  // Natural image size for SVG viewBox — only needed when lines exist.
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
   useEffect(() => {
-    if (!localBlobUrl) return;
+    if (!blobUrl) return;
     const img = new Image();
     img.onload = () => setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = localBlobUrl;
-  }, [localBlobUrl]);
+    img.src = blobUrl;
+  }, [blobUrl]);
 
-  // Show "En cours" badge while picture_lines exist (backend is processing)
-  const isPending = hasLines;
-  const displayStatus = isPending ? AttachmentState.QUEUED_UPLOAD : picture.state;
+  const badgeStatus = (() => {
+    if (hasError) return AttachmentState.ARCHIVED;
+    if (isLoading) return AttachmentState.QUEUED_UPLOAD;
+    if (hasLines) return AttachmentState.QUEUED_UPLOAD;
+    return attachment.state ?? AttachmentState.QUEUED_UPLOAD;
+  })();
 
   return (
     <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
-      <ReportStatus status={displayStatus as any} />
+      <ReportStatus status={badgeStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
-        {/* Two-layer thumbnail with SVG overlay and crossfade */}
         <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
-          {/* Layer A: local image + SVG lines overlay */}
-          {localBlobUrl && (
+          {hasError ? (
+            <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
+              <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
+                {loadError ?? "Impossible de charger l'image"}
+              </Typography>
+              <Button
+                type="button"
+                size="small"
+                priority="tertiary no outline"
+                iconId="fr-icon-refresh-line"
+                onClick={() => send({ type: "RETRY" })}
+              >
+                Réessayer
+              </Button>
+            </Flex>
+          ) : blobUrl ? (
             <>
               <Box
                 component="img"
-                src={localBlobUrl}
+                src={blobUrl}
                 sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
               {hasLines && imageSize && (
@@ -109,21 +153,7 @@ export const PictureThumbnail = ({
                 </Box>
               )}
             </>
-          )}
-          {/* Layer B: snapshot crossfades in once locally available */}
-          <Box
-            component="img"
-            src={snapshotBlobUrl ?? undefined}
-            sx={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              opacity: snapshotBlobUrl ? 1 : 0,
-              transition: "opacity 0.4s ease-in-out",
-            }}
-          />
+          ) : null /* grey background shows during loading */}
         </Box>
         <Flex
           display={isDisabled ? "none" : "flex"}
@@ -136,7 +166,7 @@ export const PictureThumbnail = ({
           {isDisabled ? null : (
             <Box
               onClick={() => {
-                onEdit({ id: picture.id, url: localBlobUrl! });
+                if (blobUrl) onEdit({ id: picture.id, url: blobUrl });
               }}
               borderRight="1px solid"
               borderColor={fr.colors.decisions.border.default.grey.default}

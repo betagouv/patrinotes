@@ -1,12 +1,12 @@
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box } from "@mui/material";
-import { useMutation } from "@tanstack/react-query";
-import { ChangeEvent, useRef } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ChangeEvent, useEffect, useRef } from "react";
 import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
-import { useImageBlobUrl } from "./hooks/useImageBlobUrl";
 import { usePictureLines } from "./hooks/usePictureLines";
+import { attachmentLocalStorage } from "../../db/db";
 
 type UploadImageButtonProps = {
   addImage: ({ files }: { files: File[] }) => Promise<void>;
@@ -94,7 +94,31 @@ export const UploadImageModal = ({
   imageTable?: string;
   hideLabelInput?: boolean;
 }) => {
-  const url = useImageBlobUrl(selectedAttachment?.local_uri, selectedAttachment?.mediaType, selectedAttachment?.state);
+  const localUri = selectedAttachment?.local_uri;
+  const mediaType = selectedAttachment?.mediaType;
+  const blobQuery = useQuery({
+    queryKey: ["image-blob-url-direct", localUri],
+    queryFn: async () => {
+      const buffer = await attachmentLocalStorage.readFile(localUri!);
+      const blob = new Blob([buffer], { type: mediaType ?? "image/jpeg" });
+      return URL.createObjectURL(blob);
+    },
+    enabled: !!localUri,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+  const prevUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    return () => {
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
+    };
+  }, [blobQuery.data]);
+  if (blobQuery.data && blobQuery.data !== prevUrlRef.current) {
+    if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
+    prevUrlRef.current = blobQuery.data;
+  }
+  const url = prevUrlRef.current;
+
   const lines = usePictureLines(selectedAttachment?.id, imageTable);
   const containerRef = useRef<HTMLDivElement>(null);
   return (

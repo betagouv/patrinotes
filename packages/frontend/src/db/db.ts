@@ -106,6 +106,9 @@ export const setupPowersync = async () => {
     },
   });
   await attachmentQueue.startSync();
+  // Trigger an immediate download pass so referenced files are available right away
+  // instead of waiting for the first syncIntervalMs tick (30 s).
+  attachmentQueue.syncStorage().catch(console.error);
 };
 
 export const clearDb = async () => {

@@ -1,8 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
-import { v7 } from "uuid";
-import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../../../db/db";
+import { useCallback, useRef } from "react";
+import { useActorRef, useSelector } from "@xstate/react";
+import { attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
 import { useLiveUser } from "../../../contexts/AuthContext";
-import { processImage } from "../UploadReportImage";
+import { attachmentUploadMachine } from "../machines/attachmentUploadMachine";
 import { MinimalAttachment } from "../UploadImage";
 
 type AttachmentTableConfig =
@@ -81,72 +81,102 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   const result = useDbQuery(buildQuery(config) as any);
   const attachments = (result.data ?? []) as MinimalAttachment[];
 
-  const addMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const attachmentId = `${parentId}/images/${v7()}.jpg`;
-      const processedFile = await processImage(file);
+  // Keep the latest insert implementation in a ref so the stable callback never goes stale.
+  const insertRecordImplRef = useRef<(attachmentId: string) => Promise<void>>(null!);
+  insertRecordImplRef.current = async (attachmentId: string) => {
+    switch (config.table) {
+      case "report_attachment":
+        await db
+          .insertInto("report_attachment")
+          .values({
+            id: attachmentId,
+            attachment_id: attachmentId,
+            report_id: config.fkValue,
+            service_id: user.service_id,
+            created_at: new Date().toISOString(),
+            is_deprecated: 0,
+          })
+          .execute();
+        break;
+      case "visited_section_attachment":
+        await db
+          .insertInto("visited_section_attachment")
+          .values({
+            id: attachmentId,
+            attachment_id: attachmentId,
+            visited_section_id: config.fkValue,
+            label: "",
+            service_id: user.service_id,
+            created_at: new Date().toISOString(),
+            is_deprecated: 0,
+          })
+          .execute();
+        break;
+      case "state_report_alert_attachment":
+        await db
+          .insertInto("state_report_alert_attachment")
+          .values({
+            id: attachmentId,
+            attachment_id: attachmentId,
+            state_report_alert_id: config.fkValue,
+            label: "",
+            service_id: user.service_id,
+            created_at: new Date().toISOString(),
+            is_deprecated: 0,
+          })
+          .execute();
+        break;
+    }
+  };
 
-      await attachmentQueue.saveFile({
-        id: attachmentId,
-        fileExtension: "jpg",
-        data: processedFile,
-        mediaType: "image/jpeg",
-      });
+  // Stable callback wrapping the ref — safe to pass as machine input.
+  const stableInsertRecord = useCallback((id: string) => insertRecordImplRef.current(id), []);
 
-      switch (config.table) {
-        case "report_attachment":
-          await db
-            .insertInto("report_attachment")
-            .values({
-              id: attachmentId,
-              attachment_id: attachmentId,
-              report_id: config.fkValue,
-              service_id: user.service_id,
-              created_at: new Date().toISOString(),
-              is_deprecated: 0,
-            })
-            .execute();
-          break;
-        case "visited_section_attachment":
-          await db
-            .insertInto("visited_section_attachment")
-            .values({
-              id: attachmentId,
-              attachment_id: attachmentId,
-              visited_section_id: config.fkValue,
-              label: "",
-              service_id: user.service_id,
-              created_at: new Date().toISOString(),
-              is_deprecated: 0,
-            })
-            .execute();
-          break;
-        case "state_report_alert_attachment":
-          await db
-            .insertInto("state_report_alert_attachment")
-            .values({
-              id: attachmentId,
-              attachment_id: attachmentId,
-              state_report_alert_id: config.fkValue,
-              label: "",
-              service_id: user.service_id,
-              created_at: new Date().toISOString(),
-              is_deprecated: 0,
-            })
-            .execute();
-          break;
-      }
-
-      return attachmentId;
-    },
+  const uploadActorRef = useActorRef(attachmentUploadMachine, {
+    input: { parentId, insertRecord: stableInsertRecord },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
+  const uploadState = useSelector(uploadActorRef, (snap) => snap.value);
+  const uploadError = useSelector(uploadActorRef, (snap) => snap.context.error);
+
+  // Exposes a mutateAsync-compatible API so callers don't need to change.
+  const mutateAsync = useCallback(
+    (file: File): Promise<void> => {
+      return new Promise<void>((resolve, reject) => {
+        // Send the event first so the machine leaves idle before subscribe fires.
+        uploadActorRef.send({ type: "UPLOAD_FILE", file });
+
+        const sub = uploadActorRef.subscribe((snap) => {
+          if (snap.matches("idle")) {
+            sub.unsubscribe();
+            resolve();
+          } else if (snap.matches("failed")) {
+            sub.unsubscribe();
+            reject(new Error(snap.context.error ?? "Upload failed"));
+          }
+        });
+      });
+    },
+    [uploadActorRef],
+  );
+
+  const isUploading = uploadState === "compressing" || uploadState === "saving" || uploadState === "inserting";
+
+  const addMutation = {
+    mutateAsync,
+    isPending: isUploading,
+    isError: uploadState === "failed",
+    error: uploadError,
+    retry: () => uploadActorRef.send({ type: "RETRY" }),
+    dismiss: () => uploadActorRef.send({ type: "DISMISS" }),
+  };
+
+  const deleteMutation = {
+    mutate: async ({ id }: { id: string }) => {
       await attachmentLocalStorage.deleteFile(id);
       await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", id).execute();
     },
-  });
+  };
 
   const onLabelChange = async (attachmentId: string, label: string) => {
     if (config.table === "report_attachment") return;
