@@ -40,7 +40,6 @@ export class Connector implements PowerSyncBackendConnector {
 }
 
 export const getTokenOrRefresh = async () => {
-  console.log("getting token or refresh");
   if (!apiStore.loaded) throw new Error("Auth not loaded");
 
   if (!apiStore.accessToken || !apiStore.refreshToken || !apiStore.expiresAt) throw new Error("No token found");
@@ -68,7 +67,7 @@ export const getTokenOrRefresh = async () => {
       apiStore.expiresAt = resp.expiresAt;
       await apiStore.save();
     }
-  } else console.log("token valid");
+  }
 
   return apiStore.accessToken;
 };

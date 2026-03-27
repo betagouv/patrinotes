@@ -33,8 +33,6 @@ export const WithReferencePop = () => {
   const hasReferencePop = !!referencePop;
   if (!hasReferencePop) return null;
 
-  console.log(referencePop);
-
   return (
     <>
       <Box width="100%" height="100%">

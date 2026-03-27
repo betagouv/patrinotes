@@ -16,8 +16,6 @@ export const UploadImage = ({
   const attachment = attachments.length > 0 ? attachments[0] : null;
   const hideButton = !multiple && !!attachment;
 
-  console.log(imageTable, attachments);
-
   return (
     <Box>
       {hideButton ? null : (

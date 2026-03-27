@@ -61,7 +61,7 @@ export const constatPdfQueries = {
           attachmentQuery.map(async (attachment) => {
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
-            console.log(file, url);
+
             return {
               ...attachment,
               file: url,

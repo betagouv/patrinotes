@@ -2356,6 +2356,7 @@ packages:
       pdfjs-dist: 4.2.67
       react: ^18.2.0
       react-dom: ^18.2.0
+    bundledDependencies: []
 
   '@mui/core-downloads-tracker@5.18.0':
     resolution: {integrity: sha512-jbhwoQ1AY200PSSOrNXmrFCaSDSJWP7qk6urkTmIirvRXDROkqe+QwcLlUiw/PrREwsIF/vm3/dAXvjlMHF0RA==}

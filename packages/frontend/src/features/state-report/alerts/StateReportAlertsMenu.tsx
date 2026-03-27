@@ -106,7 +106,7 @@ const AlertSectionsForm = ({
     defaultValues: { alertSections },
   });
   const fieldArray = useFieldArray({ name: "alertSections", control: sectionsForm.control });
-  console.log("AlertSectionsForm render", { alertSections, selectedSection });
+
   return (
     <>
       <AlertSectionSync form={sectionsForm} baseAlerts={alertSections} />
