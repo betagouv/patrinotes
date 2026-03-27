@@ -38,7 +38,6 @@ export class UploadService {
 
   async getAttachment({ filePath }: { filePath: string }) {
     const name = addAttachmentPrefix(filePath);
-    console.log("Getting attachment from S3", bucketUrl, name);
     const command = new GetObjectCommand({ Bucket: bucketUrl, Key: name });
     const response = await client.send(command);
 

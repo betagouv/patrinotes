@@ -7,7 +7,6 @@
     "frontend": "pnpm --filter @patrinotes/frontend",
     "backend": "pnpm --filter @patrinotes/backend",
     "pdf": "pnpm --filter @patrinotes/pdf",
-    "admin": "pnpm --filter @patrinotes/admin",
     "migration:generate": "pnpm backend drizzle generate",
     "migration:up-test": "cross-env NODE_ENV=test pnpm backend drizzle migrate",
     "migration:up": "pnpm backend drizzle migrate",

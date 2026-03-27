@@ -1,119 +1,154 @@
 import { test, expect } from "@playwright/test";
-import { db } from "../packages/backend/src/db/db";
 import { mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
+import { db } from "../packages/backend/src/db/db";
 
-const adminUser = mockUsers[0];
-const regularUser = mockUsers[1];
+const BACKEND_URL = `http://localhost:${process.env.BACKEND_PORT}`;
 
-test.describe("Admin panel", () => {
-  test.use({ baseURL: `http://localhost:${process.env.ADMIN_PORT}` });
+test.describe("Admin whitelist", () => {
+  let adminToken: string;
 
-  test.beforeAll(async () => {
+  test.beforeAll(async ({ browser }) => {
     await resetDatabase();
+
+    // Create the admin user via signup UI flow
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await signup({ page, user: mockUsers[0] });
+    await context.close();
+
+    // Upgrade to admin role
+    await db.updateTable("internal_user").set({ role: "admin" }).where("email", "=", mockUsers[0].email).execute();
+
+    // Obtain admin token for API tests
+    const resp = await fetch(`${BACKEND_URL}/api/admin/login-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: mockUsers[0].email, password: mockUsers[0].password }),
+    });
+    const data = (await resp.json()) as { accessToken: string };
+    adminToken = data.accessToken;
   });
 
-  test.describe("unauthenticated", () => {
-    test("redirects / to /login", async ({ page }) => {
-      await page.goto("/");
-      await page.waitForURL((url) => url.pathname === "/login");
-      expect(page.url()).toContain("/login");
+  // ---------------------------------------------------------------------------
+  // API tests
+  // ---------------------------------------------------------------------------
+
+  test("GET /api/admin/whitelist returns paginated whitelist", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/whitelist`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    test("redirects /dashboard to /login", async ({ page }) => {
-      await page.goto("/dashboard");
-      await page.waitForURL((url) => url.pathname === "/login");
-      expect(page.url()).toContain("/login");
-    });
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(Array.isArray(data.emails)).toBe(true);
+    expect(typeof data.total).toBe("number");
+    expect(typeof data.page).toBe("number");
+    expect(typeof data.limit).toBe("number");
+    // mockUsers[0].email was inserted by resetDatabase
+    expect(data.emails).toContain(mockUsers[0].email);
   });
 
-  test.describe("login", () => {
-    test.beforeAll(async ({ browser }) => {
-      // Create both users via the frontend signup flow — use an explicit context
-      // with the frontend baseURL since test.use() only applies to the page fixture
-      const frontendContext = await browser.newContext({
-        baseURL: `http://localhost:${process.env.FRONTEND_PORT}`,
-      });
-
-      const frontendPage = await frontendContext.newPage();
-      await signup({ page: frontendPage, user: adminUser });
-
-      const frontendPage2 = await frontendContext.newPage();
-      await signup({ page: frontendPage2, user: regularUser });
-
-      await frontendContext.close();
-
-      // Promote adminUser to admin in internal_user
-      await db
-        .updateTable("internal_user")
-        .set({ role: "admin" })
-        .where("email", "=", adminUser.email)
-        .execute();
+  test("GET /api/admin/whitelist respects page/limit params", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/whitelist?page=1&limit=1`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    test("rejects non-admin user with an error message", async ({ page }) => {
-      await page.goto("/login");
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(data.emails).toHaveLength(1);
+    expect(data.limit).toBe(1);
+    expect(data.page).toBe(1);
+  });
 
-      await page.fill("input[name=email]", regularUser.email);
-      await page.fill("input[name=password]", regularUser.password);
-      await page.click("button[type=submit]");
+  test("GET /api/admin/whitelist returns 401 without token", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/whitelist`);
+    expect(resp.ok()).toBe(false);
+  });
 
-      await expect(page.getByText("Accès refusé")).toBeVisible();
-      expect(page.url()).toContain("/login");
+  test("POST /api/admin/whitelist adds a new email", async ({ request }) => {
+    const email = "new-entry@whitelist-test.com";
+
+    const resp = await request.post(`${BACKEND_URL}/api/admin/whitelist`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { email },
     });
 
-    test("rejects wrong password with an error message", async ({ page }) => {
-      await page.goto("/login");
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(data.email).toBe(email);
 
-      await page.fill("input[name=email]", adminUser.email);
-      await page.fill("input[name=password]", "wrongpassword");
-      await page.click("button[type=submit]");
+    const row = await db.selectFrom("whitelist").where("email", "=", email).selectAll().executeTakeFirst();
+    expect(row?.email).toBe(email);
+  });
 
-      await expect(page.getByText("Courriel ou mot de passe incorrect")).toBeVisible();
-      expect(page.url()).toContain("/login");
+  test("POST /api/admin/whitelist returns 409 for duplicate email", async ({ request }) => {
+    // mockUsers[0].email is already in whitelist from resetDatabase
+    const resp = await request.post(`${BACKEND_URL}/api/admin/whitelist`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { email: mockUsers[0].email },
     });
 
-    test("admin user can login and reaches dashboard", async ({ page }) => {
-      await page.goto("/login");
+    expect(resp.status()).toBe(409);
+  });
 
-      await page.fill("input[name=email]", adminUser.email);
-      await page.fill("input[name=password]", adminUser.password);
-      await page.click("button[type=submit]");
+  test("DELETE /api/admin/whitelist/:email removes an email", async ({ request }) => {
+    const email = "to-delete@whitelist-test.com";
+    await db.insertInto("whitelist").values({ email }).execute();
 
-      await page.waitForURL((url) => url.pathname === "/dashboard");
-      expect(page.url()).toContain("/dashboard");
-      await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    const resp = await request.delete(`${BACKEND_URL}/api/admin/whitelist/${encodeURIComponent(email)}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    test("already logged-in admin is redirected from /login to /dashboard", async ({ page }) => {
-      await page.goto("/login");
+    expect(resp.ok()).toBe(true);
 
-      await page.fill("input[name=email]", adminUser.email);
-      await page.fill("input[name=password]", adminUser.password);
-      await page.click("button[type=submit]");
-      await page.waitForURL((url) => url.pathname === "/dashboard");
+    const row = await db.selectFrom("whitelist").where("email", "=", email).selectAll().executeTakeFirst();
+    expect(row).toBeUndefined();
+  });
 
-      // Now navigate back to /login — should redirect to /dashboard
-      await page.goto("/login");
-      await page.waitForURL((url) => url.pathname === "/dashboard");
-      expect(page.url()).toContain("/dashboard");
+  test("DELETE /api/admin/whitelist/:email returns 404 for unknown email", async ({ request }) => {
+    const resp = await request.delete(`${BACKEND_URL}/api/admin/whitelist/notexist@example.com`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    test("logout clears session and redirects to /login", async ({ page }) => {
-      await page.goto("/login");
+    expect(resp.status()).toBe(404);
+  });
 
-      await page.fill("input[name=email]", adminUser.email);
-      await page.fill("input[name=password]", adminUser.password);
-      await page.click("button[type=submit]");
-      await page.waitForURL((url) => url.pathname === "/dashboard");
+  // ---------------------------------------------------------------------------
+  // UI test
+  // ---------------------------------------------------------------------------
 
-      await page.getByRole("button", { name: "Se déconnecter" }).click();
-      await page.waitForURL((url) => url.pathname === "/login");
-      expect(page.url()).toContain("/login");
+  test("admin page shows whitelist and allows add/delete", async ({ page }) => {
+    // Log in via the login form (mockUsers[0] is already admin from beforeAll)
+    await page.goto("./connexion");
+    await page.fill("input[name=email]", mockUsers[0].email);
+    await page.fill("input[name=password]", mockUsers[0].password);
+    await page.click("button[type=submit]");
+    await page.waitForURL((url) => url.pathname === "/");
 
-      // After logout, /dashboard should redirect back to /login
-      await page.goto("/dashboard");
-      await page.waitForURL((url) => url.pathname === "/login");
-    });
+    // Navigate to admin page
+    await page.goto("./admin");
+
+    // Page should show the whitelist heading
+    await page.waitForSelector("h1");
+    await expect(page.locator("h1")).toContainText("whitelist");
+
+    // The existing whitelisted emails should be visible
+    await expect(page.locator("table")).toContainText(mockUsers[0].email);
+
+    // Add a new email via the form
+    const newEmail = "ui-added@whitelist-test.com";
+    await page.fill("input[type=email]", newEmail);
+    await page.click("button[type=submit]");
+
+    // Wait for the new email to appear in the table
+    await expect(page.locator("table")).toContainText(newEmail, { timeout: 5000 });
+
+    // Delete the newly added email
+    const row = page.locator("tr", { hasText: newEmail });
+    await row.locator("button", { hasText: "Supprimer" }).click();
+
+    // Email should be gone from the table
+    await expect(page.locator("table")).not.toContainText(newEmail, { timeout: 5000 });
   });
 });
