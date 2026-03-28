@@ -24,41 +24,39 @@ export const HelpMenu = () => {
   return (
     <>
       <MenuTitle backButtonOnClick={() => menuActor.send({ type: "BACK" })}>Aide</MenuTitle>
-      <Box px="16px">
-        <Divider
-          bgcolor="#C1C1FB"
-          height="2px"
-          mt={{ xs: "0", lg: "0" }}
-          mb={{ xs: "24px", lg: "32px" }}
-          px={{ xs: "16px", lg: 0 }}
-        />
-      </Box>
-      <Stack>
+
+      <Stack mb="64px">
         <Stack px="16px">
           <TitleH3>Guides d'utilisation</TitleH3>
           <Box mt="8px">
             Besoin d’aide pour configurer votre compte, créer un compte-rendu ou un constat d’état ? Retrouvez les
             guides d’utilisation dédiés sur le site vitrine.
           </Box>
-          <Flex gap="16px">
+          <Flex gap={{ xs: "8px", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }} mt="16px">
             <Button
               priority="secondary"
-              sx={{ mt: "16px" }}
               linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/compte-rendu/" }}
+              sx={{
+                width: { xs: "100%", lg: undefined },
+                justifyContent: { xs: "center", lg: undefined },
+              }}
             >
               Compte-rendu
             </Button>
             <Button
               priority="secondary"
-              sx={{ mt: "16px" }}
               linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/constat-d%C3%A9tat/" }}
+              sx={{
+                width: { xs: "100%", lg: undefined },
+                justifyContent: { xs: "center", lg: undefined },
+              }}
             >
               Constat d'état
             </Button>
           </Flex>
         </Stack>
         <Box px="16px">
-          <Divider height="2px" mt={{ xs: "27px", lg: "32px" }} mb={{ xs: 0, lg: "24px" }} color="#C1C1FB" />
+          <Divider height="2px" my="32px" color="#C1C1FB" />
         </Box>
         <Stack px="16px">
           <TitleH3>Foire aux questions</TitleH3>
@@ -75,9 +73,9 @@ export const HelpMenu = () => {
           </Button>
         </Stack>
         <Box px="16px">
-          <Divider height="2px" mt={{ xs: "27px", lg: "32px" }} mb={{ xs: 0, lg: "24px" }} color="#C1C1FB" />
+          <Divider height="2px" my="32px" color="#C1C1FB" />
         </Box>
-        <Stack mt="8px" px="16px">
+        <Stack px="16px">
           <TitleH3>Assistance technique</TitleH3>
           <Box>
             Vous ne voyez pas vos dernières informations enregistrées ? Essayez de réinitialiser les données locales.
@@ -94,10 +92,10 @@ export const HelpMenu = () => {
         </Stack>
 
         <Box px="16px">
-          <Divider height="2px" mt={{ xs: "27px", lg: "32px" }} mb={{ xs: 0, lg: "24px" }} color="#C1C1FB" />
+          <Divider height="2px" my="32px" color="#C1C1FB" />
         </Box>
 
-        <Stack mt="8px" mb="32px" px="16px">
+        <Stack px="16px">
           <TitleH3>Contact</TitleH3>
 
           {showClipboardSuccess ? (
