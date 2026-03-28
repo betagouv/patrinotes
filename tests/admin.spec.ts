@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup } from "./utils";
+import { mockUsers, mockServices, signup } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 
@@ -40,12 +40,12 @@ test.describe("Admin whitelist", () => {
 
     expect(resp.ok()).toBe(true);
     const data = await resp.json();
-    expect(Array.isArray(data.emails)).toBe(true);
+    expect(Array.isArray(data.data)).toBe(true);
     expect(typeof data.total).toBe("number");
     expect(typeof data.page).toBe("number");
     expect(typeof data.limit).toBe("number");
     // mockUsers[0].email was inserted by resetDatabase
-    expect(data.emails).toContain(mockUsers[0].email);
+    expect(data.data.map((d: { email: string }) => d.email)).toContain(mockUsers[0].email);
   });
 
   test("GET /api/admin/whitelist respects page/limit params", async ({ request }) => {
@@ -55,7 +55,7 @@ test.describe("Admin whitelist", () => {
 
     expect(resp.ok()).toBe(true);
     const data = await resp.json();
-    expect(data.emails).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.limit).toBe(1);
     expect(data.page).toBe(1);
   });
@@ -119,15 +119,15 @@ test.describe("Admin whitelist", () => {
   // UI test
   // ---------------------------------------------------------------------------
 
-  test.only("admin page shows whitelist and allows add/delete", async ({ page }) => {
+  test("admin page shows whitelist and allows add/delete", async ({ page }) => {
     test.setTimeout(60000);
     // Log in via the login form (mockUsers[0] is already admin from beforeAll)
     await page.goto("./connexion");
     await page.fill("input[name=email]", mockUsers[0].email);
     await page.fill("input[name=password]", mockUsers[0].password);
     await page.click("button[type=submit]");
-    await page.waitForTimeout(1000);
     await page.waitForURL((url) => url.pathname === "/");
+    await page.waitForTimeout(1000);
 
     // Navigate to admin page
     await page.goto("./admin");
@@ -143,6 +143,7 @@ test.describe("Admin whitelist", () => {
     const newEmail = "ui-added@whitelist-test.com";
     await page.fill("input[type=email]", newEmail);
     await page.click("button[type=submit]");
+    await page.waitForTimeout(500);
 
     // Wait for the new email to appear in the table
     await expect(page.locator("#whitelist-table > table")).toContainText(newEmail, { timeout: 5000 });
@@ -153,5 +154,115 @@ test.describe("Admin whitelist", () => {
 
     // Email should be gone from the table
     await expect(page.locator("#whitelist-table > table")).not.toContainText(newEmail, { timeout: 5000 });
+  });
+
+  test("whitelist table shows pagination and navigates to page 2", async ({ page }) => {
+    test.setTimeout(60000);
+
+    const beforeCount = Number(
+      (await db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst())?.count ?? 0,
+    );
+    const extraEmails = Array.from({ length: 22 }, (_, i) => `wl-pagination-${i + 1}@test.com`);
+    await db
+      .insertInto("whitelist")
+      .values(extraEmails.map((email) => ({ email })))
+      .execute();
+    const total = beforeCount + 22;
+    const page2Count = total - 20;
+
+    try {
+      await page.goto("./connexion");
+      await page.fill("input[name=email]", mockUsers[0].email);
+      await page.fill("input[name=password]", mockUsers[0].password);
+      await page.click("button[type=submit]");
+      await page.waitForURL((url) => url.pathname === "/");
+      await page.waitForTimeout(1000);
+
+      await page.goto("./admin");
+      await page.waitForSelector("h1");
+
+      // Page 1 should have exactly 20 rows
+      await expect(page.locator("#whitelist-table > table tbody tr")).toHaveCount(20, { timeout: 5000 });
+
+      // Pagination nav should be visible
+      await expect(page.locator("#tabpanel-whitelist nav.fr-pagination")).toBeVisible();
+
+      // Click page 2
+      await page.locator("#tabpanel-whitelist button[title='Page 2']").click();
+
+      // Page 2 should show the remaining rows
+      await expect(page.locator("#whitelist-table > table tbody tr")).toHaveCount(page2Count, { timeout: 5000 });
+    } finally {
+      await db.deleteFrom("whitelist").where("email", "in", extraEmails).execute();
+    }
+  });
+
+  test("users table shows pagination and navigates to page 2", async ({ page }) => {
+    test.setTimeout(60000);
+
+    const beforeUserCount = Number(
+      (await db.selectFrom("user").select(db.fn.countAll<number>().as("count")).executeTakeFirst())?.count ?? 0,
+    );
+    const page2UserCount = beforeUserCount + 22 - 20;
+    const extraUsers = Array.from({ length: 22 }, (_, i) => ({
+      id: `pagination-user-${i + 1}`,
+      name: `Pagination User ${i + 1}`,
+      email: `users-pagination-${i + 1}@test.com`,
+      service_id: mockServices[0].id,
+    }));
+    const extraInternalUsers = extraUsers.map((u) => ({
+      id: `pagination-internal-${u.id}`,
+      email: u.email,
+      role: "user",
+      userId: u.id,
+    }));
+
+    await db.insertInto("user").values(extraUsers).execute();
+    await db.insertInto("internal_user").values(extraInternalUsers).execute();
+
+    try {
+      await page.goto("./connexion");
+      await page.fill("input[name=email]", mockUsers[0].email);
+      await page.fill("input[name=password]", mockUsers[0].password);
+      await page.click("button[type=submit]");
+
+      await page.waitForURL((url) => url.pathname === "/");
+      await page.waitForTimeout(1000);
+
+      await page.goto("./admin");
+      await page.waitForSelector("h1");
+
+      // Switch to the Utilisateurs tab
+      await page.getByRole("button", { name: "Utilisateurs" }).click();
+
+      // Page 1 should have exactly 20 rows
+      await expect(page.locator("#users-table > table tbody tr")).toHaveCount(20, { timeout: 5000 });
+
+      // Pagination nav should be visible
+      await expect(page.locator("#tabpanel-users nav.fr-pagination")).toBeVisible();
+
+      // Click page 2
+      await page.locator("#tabpanel-users button[title='Page 2']").click();
+
+      // Page 2 should show the remaining rows
+      await expect(page.locator("#users-table > table tbody tr")).toHaveCount(page2UserCount, { timeout: 5000 });
+    } finally {
+      await db
+        .deleteFrom("internal_user")
+        .where(
+          "id",
+          "in",
+          extraInternalUsers.map((u) => u.id),
+        )
+        .execute();
+      await db
+        .deleteFrom("user")
+        .where(
+          "id",
+          "in",
+          extraUsers.map((u) => u.id),
+        )
+        .execute();
+    }
   });
 });
