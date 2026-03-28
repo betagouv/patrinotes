@@ -16,7 +16,7 @@ export const user = pgTable(
   {
     id: text().primaryKey().notNull(),
     name: text().notNull(),
-    serviceId: text("service_id"),
+    serviceId: text("service_id").default("no-service"),
     email: varchar({ length: 255 }).notNull(),
     job: text(),
   },

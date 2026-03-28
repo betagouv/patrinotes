@@ -18,9 +18,11 @@ sync_config:
   path: sync-config.yaml
 
 # Settings for client authentication
-# Tokens are HS256 JWTs issued by the backend, signed with JWT_SECRET
+# Tokens are HS256 JWTs issued by the backend. PowerSync fetches the JWKS from the backend.
 client_auth:
-  supabase_jwt_secret: !env PS_JWT_SECRET
+  jwks_uri: !env PS_JWKS_URI
+  audience:
+    - patrinotes
 
   # Settings for telemetry reporting
   # See https://docs.powersync.com/self-hosting/telemetry

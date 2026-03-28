@@ -14,7 +14,7 @@ import { uploadPlugin } from "./routes/uploadRoutes";
 import { sentry } from "./features/sentry";
 import { syncPlugin } from "./routes/syncRoutes";
 import { authPlugin } from "./routes/authRoutes";
-import { isDev } from "./envVars";
+import { ENV, isDev } from "./envVars";
 import { stateReportPlugin } from "./routes/stateReportRoutes";
 import { validationPlugin } from "./routes/validationRoutes";
 import { adminPlugin } from "./routes/adminRoutes";
@@ -51,6 +51,10 @@ export const initFastify = async () => {
   fastifyInstance.get("/health", async (_, reply) => {
     reply.status(200).send({ status: "ok" });
   });
+
+  fastifyInstance.get("/.well-known/jwks.json", async () => ({
+    keys: [{ ...JSON.parse(ENV.JWT_PUBLIC_JWK), alg: "RS256", kid: "1", use: "sig" }],
+  }));
 
   fastifyInstance.register(
     async (instance) => {

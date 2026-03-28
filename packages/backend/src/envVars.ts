@@ -26,6 +26,8 @@ const envSchema = z.object({
   DATAGOUV_API: z.string(),
   TOKEN_LIFETIME: z.string().default("60m"),
   JWT_SECRET: z.string(),
+  JWT_PRIVATE_JWK: z.string(),
+  JWT_PUBLIC_JWK: z.string(),
   NODE_ENV: z.string().default("development"),
   PORT: stringOrNumberAsNumber.default(3001),
   DEBUG: z.string().default("cr-vif:*"),

@@ -7,12 +7,17 @@ const emitterChannel = new BroadcastChannel("sw-messages");
 
 export class Connector implements PowerSyncBackendConnector {
   async fetchCredentials() {
-    const token = await getTokenOrRefresh();
-
-    return {
-      endpoint: ENV.VITE_POWERSYNC_URL,
-      token,
-    };
+    try {
+      const token = await getTokenOrRefresh();
+      console.log("fetchCredentials called, token is", !!token);
+      return {
+        endpoint: ENV.VITE_POWERSYNC_URL,
+        token,
+      };
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   }
 
   hasUpdated = false;
@@ -69,5 +74,5 @@ export const getTokenOrRefresh = async () => {
     }
   }
 
-  return apiStore.accessToken;
+  return apiStore.accessToken!;
 };

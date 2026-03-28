@@ -15,6 +15,7 @@ export const authenticateTSchema = {
   body: Type.Object({
     code: Type.String(),
     nonce: Type.String(),
+    redirectUri: Type.String(),
   }),
   response: { 200: authTSchema },
 };

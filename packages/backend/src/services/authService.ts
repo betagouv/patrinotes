@@ -3,7 +3,7 @@ import { ENV } from "../envVars";
 import { Type } from "@sinclair/typebox";
 import jwt from "jsonwebtoken";
 import jwks from "jwks-rsa";
-import { createHash } from "crypto";
+import { createHash, createPrivateKey, createPublicKey } from "crypto";
 import { db } from "../db/db";
 import { serviceTSchema } from "../routes/staticDataRoutes";
 import { AppError } from "../features/errors";
@@ -11,6 +11,9 @@ import { makeDebug } from "../features/debug";
 
 const debug = makeDebug("auth-service");
 const proConnectBaseUrl = ENV.VITE_AUTH_URL;
+
+const jwtPrivateKey = createPrivateKey({ key: JSON.parse(ENV.JWT_PRIVATE_JWK), format: "jwk" });
+const jwtPublicKey = createPublicKey({ key: JSON.parse(ENV.JWT_PUBLIC_JWK), format: "jwk" });
 
 const jwksClient = jwks({
   jwksUri: `${proConnectBaseUrl}/jwks`,
@@ -28,13 +31,13 @@ const getProConnectKey = (header: jwt.JwtHeader) =>
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 export class AuthService {
-  async authenticate({ code, nonce }: { code: string; nonce: string }) {
+  async authenticate({ code, nonce, redirectUri }: { code: string; nonce: string; redirectUri: string }) {
     debug("authenticating with ProConnect", { code: code.slice(0, 8) + "..." });
 
     const params = new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: `${ENV.FRONTEND_URL}/auth-callback`,
+      redirect_uri: redirectUri,
       client_id: ENV.VITE_AUTH_CLIENT_ID,
       client_secret: ENV.AUTH_CLIENT_SECRET,
     });
@@ -56,15 +59,21 @@ export class AuthService {
       throw new AppError(400, "Nonce invalide");
     }
 
-    const userInfo = await ofetch<ProConnectUserInfo>(`${proConnectBaseUrl}/userinfo`, {
+    // ProConnect's userinfo endpoint returns a signed JWT, not plain JSON
+    const userInfoJwt = await ofetch<string>(`${proConnectBaseUrl}/userinfo`, {
       headers: { Authorization: `Bearer ${proConnectTokens.access_token}` },
+      parseResponse: (text) => text,
     });
+    const userInfo = jwt.decode(userInfoJwt) as ProConnectUserInfo | null;
+    if (!userInfo?.sub || !userInfo?.email) {
+      throw new AppError(500, "Réponse userinfo invalide");
+    }
 
-    const user = await this.upsertUser(userInfo);
+    const { user, isNewUser } = await this.upsertUser(userInfo);
     const { accessToken, refreshToken, expiresAt } = await this.issueTokens(user.id);
     const populatedUser = await populateService(user);
 
-    return { accessToken, refreshToken, expiresAt, user: populatedUser };
+    return { accessToken, refreshToken, expiresAt, user: populatedUser, isNewUser };
   }
 
   async refreshToken(refreshToken: string) {
@@ -81,11 +90,7 @@ export class AuthService {
       return { accessToken: null as null, refreshToken: null as null, expiresAt: null as null };
     }
 
-    const user = await db
-      .selectFrom("user")
-      .where("id", "=", session.user_id)
-      .selectAll()
-      .executeTakeFirstOrThrow();
+    const user = await db.selectFrom("user").where("id", "=", session.user_id).selectAll().executeTakeFirstOrThrow();
 
     await db.deleteFrom("session").where("id", "=", session.id).execute();
     const tokens = await this.issueTokens(user.id);
@@ -95,7 +100,7 @@ export class AuthService {
   }
 
   checkToken(token: string) {
-    return jwt.verify(token, ENV.JWT_SECRET, { algorithms: ["HS256"] }) as jwt.JwtPayload;
+    return jwt.verify(token, jwtPublicKey, { algorithms: ["RS256"], audience: "patrinotes" }) as jwt.JwtPayload;
   }
 
   async getUserFromToken(token: string) {
@@ -106,12 +111,12 @@ export class AuthService {
   }
 
   private async upsertUser(userInfo: ProConnectUserInfo) {
+    console.log(userInfo);
     const name = [userInfo.given_name, userInfo.usual_name].filter(Boolean).join(" ") || userInfo.email;
 
     const existingById = await db.selectFrom("user").where("id", "=", userInfo.sub).selectAll().executeTakeFirst();
     const existing =
-      existingById ??
-      (await db.selectFrom("user").where("email", "=", userInfo.email).selectAll().executeTakeFirst());
+      existingById ?? (await db.selectFrom("user").where("email", "=", userInfo.email).selectAll().executeTakeFirst());
 
     if (existing) {
       await db.updateTable("user").set({ name }).where("id", "=", existing.id).execute();
@@ -129,10 +134,10 @@ export class AuthService {
           .execute();
       }
 
-      return { ...existing, name };
+      return { user: { ...existing, name }, isNewUser: false };
     }
 
-    return db.transaction().execute(async (tx) => {
+    const user = await db.transaction().execute(async (tx) => {
       const u = await tx
         .insertInto("user")
         .values({ id: userInfo.sub, name, email: userInfo.email })
@@ -146,12 +151,15 @@ export class AuthService {
 
       return u;
     });
+
+    return { user, isNewUser: true };
   }
 
   private async issueTokens(userId: string) {
-    const accessToken = jwt.sign({ sub: userId }, ENV.JWT_SECRET, {
-      algorithm: "HS256",
+    const accessToken = jwt.sign({ sub: userId, aud: "patrinotes" }, jwtPrivateKey, {
+      algorithm: "RS256",
       expiresIn: "1h",
+      keyid: "1",
     });
 
     const rawRefreshToken = crypto.randomUUID();
@@ -210,4 +218,5 @@ export const authTSchema = Type.Object({
   accessToken: Type.String(),
   refreshToken: Type.String(),
   expiresAt: Type.String(),
+  isNewUser: Type.Optional(Type.Boolean()),
 });
