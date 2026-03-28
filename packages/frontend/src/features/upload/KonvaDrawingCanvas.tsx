@@ -1,11 +1,12 @@
 import { fr } from "@codegouvfr/react-dsfr";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { v7 } from "uuid";
 import { db } from "../../db/db";
 import { Box, Stack } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useUser } from "../../contexts/AuthContext";
+import { ENV } from "../../envVars";
 import { MinimalAttachment } from "./UploadImage";
 import { Stage, Layer, Image as KonvaImage, Line as KonvaLine } from "react-konva";
 import type { Line } from "./types";
@@ -43,6 +44,8 @@ export const ImageCanvas = ({
 
   const [lines, setLines] = useState<Line[]>([]);
   const [activeColor, setActiveColor] = useState(colors[0]);
+  const [tool, setTool] = useState<"draw" | "pan">("draw");
+  const [activeWidthIdx, setActiveWidthIdx] = useState(1); // 0=thin 1=medium 2=thick
 
   // Layer transform state
   const [layerScale, setLayerScale] = useState(1);
@@ -55,9 +58,18 @@ export const ImageCanvas = ({
   const [konvaImage, setKonvaImage] = useState<HTMLImageElement | null>(null);
   const [imageNaturalSize, setImageNaturalSize] = useState({ width: 0, height: 0 });
 
+  // Width options in image-space pixels (proportional to image, so consistent at any zoom/resolution)
+  const widthOptions = useMemo(() => {
+    const base = imageNaturalSize.width > 0 ? imageNaturalSize.width : 1920;
+    return [base / 300, base / 120, base / 48]; // thin, medium, thick
+  }, [imageNaturalSize.width]);
+
   // Drawing state
   const isDrawingRef = useRef(false);
   const stageRef = useRef<Konva.Stage>(null);
+
+  // Pan state
+  const panStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
 
   // Pinch state
   const lastDistRef = useRef<number | null>(null);
@@ -130,13 +142,27 @@ export const ImageCanvas = ({
   const handleMouseDown = (_e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = getStagePos();
     if (!pos) return;
+    if (tool === "pan") {
+      panStartRef.current = { x: pos.x, y: pos.y, offsetX: layerOffset.x, offsetY: layerOffset.y };
+      return;
+    }
     const imgPos = stageToImage(pos);
     if (!isWithinBounds(imgPos)) return;
     isDrawingRef.current = true;
-    setLines((prev) => [...prev, { points: [imgPos], color: activeColor }]);
+    setLines((prev) => [...prev, { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] }]);
   };
 
   const handleMouseMove = (_e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (tool === "pan") {
+      if (!panStartRef.current) return;
+      const pos = getStagePos();
+      if (!pos) return;
+      setLayerOffset({
+        x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
+        y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
+      });
+      return;
+    }
     if (!isDrawingRef.current) return;
     const pos = getStagePos();
     if (!pos) return;
@@ -154,6 +180,7 @@ export const ImageCanvas = ({
 
   const handleMouseUp = () => {
     isDrawingRef.current = false;
+    panStartRef.current = null;
   };
 
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -191,10 +218,14 @@ export const ImageCanvas = ({
       if (!stage) return;
       const rect = stage.container().getBoundingClientRect();
       const pos = { x: touches[0].clientX - rect.left, y: touches[0].clientY - rect.top };
+      if (tool === "pan") {
+        panStartRef.current = { x: pos.x, y: pos.y, offsetX: layerOffset.x, offsetY: layerOffset.y };
+        return;
+      }
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
       isDrawingRef.current = true;
-      setLines((prev) => [...prev, { points: [imgPos], color: activeColor }]);
+      setLines((prev) => [...prev, { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] }]);
     }
   };
 
@@ -225,11 +256,19 @@ export const ImageCanvas = ({
     }
 
     if (touches.length === 1) {
-      if (!isDrawingRef.current) return;
       const stage = stageRef.current;
       if (!stage) return;
       const rect = stage.container().getBoundingClientRect();
       const pos = { x: touches[0].clientX - rect.left, y: touches[0].clientY - rect.top };
+      if (tool === "pan") {
+        if (!panStartRef.current) return;
+        setLayerOffset({
+          x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
+          y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
+        });
+        return;
+      }
+      if (!isDrawingRef.current) return;
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
       setLines((prev) => {
@@ -245,6 +284,7 @@ export const ImageCanvas = ({
 
   const handleTouchEnd = () => {
     isDrawingRef.current = false;
+    panStartRef.current = null;
     lastDistRef.current = null;
     lastMidRef.current = null;
   };
@@ -294,8 +334,6 @@ export const ImageCanvas = ({
     closeModal();
   };
 
-  const strokeWidth = 5 / layerScale;
-
   return (
     <Box display="flex" flexDirection="column" width="100%" height="100%">
       {/* Toolbar row — in normal flow so the canvas never overlaps it */}
@@ -303,6 +341,7 @@ export const ImageCanvas = ({
         sx={{
           "button::before": {
             marginRight: "0 !important",
+            marginLeft: "0 !important",
           },
         }}
         alignItems="center"
@@ -313,9 +352,61 @@ export const ImageCanvas = ({
         flexShrink={0}
         bgcolor="white"
       >
-        <Button type="button" priority="primary" iconId="ri-pencil-line" title="Dessiner">
+        <Button
+          type="button"
+          priority={tool === "draw" ? "primary" : "secondary"}
+          iconId="ri-pencil-line"
+          title="Dessiner"
+          onClick={() => setTool("draw")}
+          sx={tool === "draw" ? {} : { bgcolor: "white !important" }}
+        >
           {null}
         </Button>
+        <Button
+          type="button"
+          priority={tool === "pan" ? "primary" : "secondary"}
+          iconId="ri-drag-move-line"
+          title="Déplacer"
+          onClick={() => setTool("pan")}
+          sx={tool === "pan" ? {} : { bgcolor: "white !important" }}
+        >
+          {null}
+        </Button>
+        {/* Width selector */}
+        {ENV.VITE_DRAWING_WIDTH_SELECTOR_ENABLED === "true" && (
+          <Flex>
+            {[0, 1, 2].map((idx) => {
+              const dotSize = [6, 10, 16][idx];
+              return (
+                <Box
+                  key={idx}
+                  component="button"
+                  type="button"
+                  onClick={() => {
+                    setTool("draw");
+                    setActiveWidthIdx(idx);
+                  }}
+                  sx={{
+                    display: "flex",
+                    gap: "0",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    padding: 0,
+                    background: "none",
+                    border: activeWidthIdx === idx && tool === "draw" ? "2px solid #000091" : "2px solid transparent",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Box sx={{ width: dotSize, height: dotSize, borderRadius: "50%", bgcolor: "black" }} />
+                </Box>
+              );
+            })}
+          </Flex>
+        )}
         <Button
           sx={{ bgcolor: "white !important" }}
           type="button"
@@ -341,9 +432,10 @@ export const ImageCanvas = ({
           sx={{ bgcolor: "white !important" }}
           type="button"
           priority="secondary"
-          iconId="ri-arrow-go-back-line"
           onClick={handleUndo}
+          iconId="ri-arrow-go-back-line"
           disabled={lines.length === 0}
+          title="Annuler le dernier trait"
         />
         <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
           OK
@@ -351,7 +443,12 @@ export const ImageCanvas = ({
       </Flex>
 
       {/* Canvas area */}
-      <Box ref={canvasAreaRef} flex="1" overflow="hidden" sx={{ cursor: "crosshair" }}>
+      <Box
+        ref={canvasAreaRef}
+        flex="1"
+        overflow="hidden"
+        sx={{ cursor: tool === "pan" ? (panStartRef.current ? "grabbing" : "grab") : "crosshair" }}
+      >
         <Stage
           ref={stageRef}
           width={stageSize.width}
@@ -373,7 +470,7 @@ export const ImageCanvas = ({
                 key={i}
                 points={line.points.flatMap((p) => [p.x, p.y])}
                 stroke={line.color}
-                strokeWidth={strokeWidth}
+                strokeWidth={line.width ?? widthOptions[1]}
                 lineCap="round"
                 lineJoin="round"
                 tension={0.3}
