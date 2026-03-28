@@ -1,9 +1,10 @@
 import { useCallback, useRef } from "react";
 import { useActorRef, useSelector } from "@xstate/react";
-import { attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
+import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../../../db/db";
 import { useLiveUser } from "../../../contexts/AuthContext";
 import { attachmentUploadMachine } from "../machines/attachmentUploadMachine";
 import { MinimalAttachment } from "../UploadImage";
+import { v7 } from "uuid";
 
 type AttachmentTableConfig =
   | { table: "report_attachment"; fkColumn: "report_id"; fkValue: string }
@@ -16,11 +17,8 @@ function buildQuery(config: AttachmentTableConfig) {
       return db
         .selectFrom("report_attachment")
         .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
-        .leftJoin("picture_lines", "picture_lines.attachmentId", "report_attachment.id")
         .where("report_attachment.report_id", "=", config.fkValue)
-        .where((eb) =>
-          eb.or([eb("report_attachment.is_deprecated", "=", 0), eb("picture_lines.id", "is not", null)]),
-        )
+        .where("report_attachment.is_deprecated", "=", 0)
         .select((eb) => [
           "report_attachment.id",
           eb.val(null).as("label"),
@@ -34,14 +32,8 @@ function buildQuery(config: AttachmentTableConfig) {
       return db
         .selectFrom("visited_section_attachment")
         .leftJoin("attachments", "attachments.id", "visited_section_attachment.attachment_id")
-        .leftJoin("picture_lines", "picture_lines.attachmentId", "visited_section_attachment.id")
         .where("visited_section_attachment.visited_section_id", "=", config.fkValue)
-        .where((eb) =>
-          eb.or([
-            eb("visited_section_attachment.is_deprecated", "=", 0),
-            eb("picture_lines.id", "is not", null),
-          ]),
-        )
+        .where("visited_section_attachment.is_deprecated", "=", 0)
         .select((eb) => [
           "visited_section_attachment.id",
           "visited_section_attachment.label",
@@ -55,14 +47,8 @@ function buildQuery(config: AttachmentTableConfig) {
       return db
         .selectFrom("state_report_alert_attachment")
         .leftJoin("attachments", "attachments.id", "state_report_alert_attachment.attachment_id")
-        .leftJoin("picture_lines", "picture_lines.attachmentId", "state_report_alert_attachment.id")
         .where("state_report_alert_attachment.state_report_alert_id", "=", config.fkValue)
-        .where((eb) =>
-          eb.or([
-            eb("state_report_alert_attachment.is_deprecated", "=", 0),
-            eb("picture_lines.id", "is not", null),
-          ]),
-        )
+        .where("state_report_alert_attachment.is_deprecated", "=", 0)
         .select((eb) => [
           "state_report_alert_attachment.id",
           "state_report_alert_attachment.label",
@@ -183,5 +169,24 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
     await db.updateTable(config.table).set({ label }).where("id", "=", attachmentId).execute();
   };
 
-  return { attachments, addMutation, deleteMutation, onLabelChange };
+  /**
+   * Replaces an existing attachment with a new composite image generated locally.
+   * Saves the blob to IndexedDB immediately so the thumbnail never goes blank,
+   * then creates the new linking record and deprecates the old one.
+   * Returns the new attachment ID so the caller can write picture_lines with newAttachmentId.
+   */
+  const replaceAttachment = useCallback(
+    async (oldId: string, data: ArrayBuffer): Promise<string> => {
+      const newId = `${parentId}/images/${v7()}.jpg`;
+      await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
+      await insertRecordImplRef.current(newId);
+      await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
+      return newId;
+    },
+    // parentId and config.table are stable for the lifetime of this hook instance
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [parentId, config.table],
+  );
+
+  return { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment };
 }

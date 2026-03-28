@@ -61,6 +61,7 @@ export const UploadImageModal = ({
   blobUrl,
   onClose,
   onSave,
+  onReplaceAttachment,
   imageTable,
   hideLabelInput,
 }: {
@@ -68,6 +69,7 @@ export const UploadImageModal = ({
   blobUrl: string | null;
   onClose: () => void;
   onSave?: (props: MinimalAttachment & { url: string }) => void;
+  onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
   imageTable?: string;
   hideLabelInput?: boolean;
 }) => {
@@ -91,6 +93,7 @@ export const UploadImageModal = ({
               attachment={selectedAttachment}
               closeModal={() => onClose()}
               onSave={onSave}
+              onReplaceAttachment={onReplaceAttachment}
               url={blobUrl}
               lines={lines}
               hideLabelInput={hideLabelInput}

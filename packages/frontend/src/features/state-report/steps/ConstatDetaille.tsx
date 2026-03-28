@@ -366,7 +366,7 @@ const SectionForm = ({
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { constatId } = routeApi.useParams();
-  const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
+  const { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
     { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
     constatId,
   );
@@ -379,6 +379,7 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         onClose={() => setSelected(null)}
         imageTable="visited_section_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
 
       <UploadImage

@@ -15,7 +15,7 @@ import { useThumbnailCanvas } from "./hooks/useThumbnailCanvas";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
-  const { attachments, addMutation, deleteMutation } = useAttachmentImages(
+  const { attachments, addMutation, deleteMutation, replaceAttachment } = useAttachmentImages(
     { table: "report_attachment", fkColumn: "report_id", fkValue: reportId },
     reportId,
   );
@@ -28,6 +28,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         onClose={() => setSelected(null)}
         imageTable="report_attachment"
         onSave={() => {}}
+        onReplaceAttachment={replaceAttachment}
         hideLabelInput
       />
       <UploadImage

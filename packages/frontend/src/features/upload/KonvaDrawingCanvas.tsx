@@ -27,6 +27,7 @@ export const ImageCanvas = ({
   lines: dbLines,
   imageTable,
   onSave,
+  onReplaceAttachment,
   closeModal,
   hideLabelInput,
 }: {
@@ -35,6 +36,11 @@ export const ImageCanvas = ({
   lines: Array<Line>;
   imageTable?: string;
   onSave?: (props: MinimalAttachment & { url: string }) => void;
+  /** When provided, the canvas will generate a composite image on save, create a
+   *  new attachment locally (with local_uri set immediately), and deprecate the old
+   *  one — eliminating the blank-thumbnail gap caused by waiting for a server download.
+   *  Must return the new attachment ID so picture_lines can reference it. */
+  onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
   closeModal: () => void;
   hideLabelInput?: boolean;
 }) => {
@@ -304,6 +310,19 @@ export const ImageCanvas = ({
   const handleUndo = () => setLines((prev) => prev.slice(0, -1));
 
   const handleSave = async () => {
+    // Generate the composite image locally so the new attachment has a local_uri
+    // immediately — no blank-thumbnail gap while waiting for the server download.
+    let newAttachmentId: string | undefined;
+    if (onReplaceAttachment && stageRef.current && imageNaturalSize.width > 0) {
+      const pixelRatio = imageNaturalSize.width / stageSize.width;
+      const canvas = stageRef.current.toCanvas({ pixelRatio });
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
+      );
+      const buffer = await blob.arrayBuffer();
+      newAttachmentId = await onReplaceAttachment(pictureId, buffer);
+    }
+
     const existingLinesQuery = await db
       .selectFrom("picture_lines")
       .where("attachmentId", "=", pictureId)
@@ -315,7 +334,7 @@ export const ImageCanvas = ({
       await db
         .updateTable("picture_lines")
         .where("id", "=", existingLines.id)
-        .set({ lines: JSON.stringify(lines) })
+        .set({ lines: JSON.stringify(lines), newAttachmentId: newAttachmentId ?? null })
         .execute();
     } else {
       await db
@@ -327,6 +346,7 @@ export const ImageCanvas = ({
           createdAt: new Date().toISOString(),
           service_id: user.service_id,
           table: imageTable,
+          newAttachmentId: newAttachmentId ?? null,
         })
         .execute();
     }

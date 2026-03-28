@@ -219,6 +219,7 @@ export const pictureLines = pgTable("picture_lines", {
   createdAt: timestamp({ mode: "string" }),
   table: text().notNull(),
   serviceId: text("service_id"),
+  newAttachmentId: text("newAttachmentId"),
 });
 
 export const pictures = pgTable(

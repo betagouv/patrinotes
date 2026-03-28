@@ -167,6 +167,7 @@ const onNewImageMap: Record<string, OnNewImage> = {
         created_at: new Date().toISOString(),
         service_id: serviceId,
       })
+      .onConflict((oc) => oc.doNothing())
       .execute();
 
     await tx.updateTable("report_attachment").set({ is_deprecated: true }).where("id", "=", originalName).execute();
@@ -210,6 +211,7 @@ const onNewImageMap: Record<string, OnNewImage> = {
         service_id: serviceId,
         label: attachment[0]?.label,
       })
+      .onConflict((oc) => oc.doNothing())
       .execute();
 
     await tx
@@ -249,6 +251,7 @@ const onNewImageMap: Record<string, OnNewImage> = {
         service_id: serviceId,
         label: attachment[0]?.label,
       })
+      .onConflict((oc) => oc.doNothing())
       .execute();
 
     await tx
