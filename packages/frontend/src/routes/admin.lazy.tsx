@@ -53,8 +53,9 @@ const WhitelistPanel = () => {
   });
 
   const tableData =
-    data?.emails.map((email) => [
+    data?.data.map(({ email, createdAt }) => [
       email,
+      createdAt ? new Date(createdAt).toLocaleString() : "—",
       <Button
         key={email}
         priority="tertiary no outline"
@@ -95,7 +96,6 @@ const WhitelistPanel = () => {
             iconId="ri-add-line"
             iconPosition="left"
             disabled={addMutation.isPending || !newEmail.trim()}
-            style={{ marginBottom: "1.5rem" }}
           >
             {addMutation.isPending ? "Ajout..." : "Ajouter"}
           </Button>
@@ -114,7 +114,7 @@ const WhitelistPanel = () => {
         <Table
           id="whitelist-table"
           caption={`${data?.total ?? 0} email${(data?.total ?? 0) !== 1 ? "s" : ""} autorisé${(data?.total ?? 0) !== 1 ? "s" : ""}`}
-          headers={["Email", ""]}
+          headers={["Email", "Date de création", ""]}
           data={tableData}
           noCaption={false}
         />
@@ -174,6 +174,7 @@ const UsersPanel = () => {
       u.serviceName ?? u.serviceId,
       u.serviceDepartment ?? "—",
       u.role ?? "—",
+      u.createdAt ? new Date(u.createdAt).toLocaleString() : "—",
     ]) ?? [];
 
   return (
@@ -200,7 +201,7 @@ const UsersPanel = () => {
         <Table
           id="users-table"
           caption={`${data?.total ?? 0} utilisateur${(data?.total ?? 0) !== 1 ? "s" : ""}`}
-          headers={["Nom", "Email", "Fonction", "Service", "Département", "Rôle"]}
+          headers={["Nom", "Email", "Fonction", "Service", "Département", "Rôle", "Date de création"]}
           data={tableData}
           noCaption={false}
         />

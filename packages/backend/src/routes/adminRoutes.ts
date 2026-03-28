@@ -27,7 +27,12 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         }),
         response: {
           200: Type.Object({
-            emails: Type.Array(Type.String()),
+            data: Type.Array(
+              Type.Object({
+                email: Type.String(),
+                createdAt: Type.String(),
+              }),
+            ),
             total: Type.Number(),
             page: Type.Number(),
             limit: Type.Number(),
@@ -42,12 +47,12 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       const offset = (page - 1) * limit;
       debug("Fetching whitelist page", page, "with limit", limit);
       const [rows, countResult] = await Promise.all([
-        db.selectFrom("whitelist").selectAll().orderBy("email", "asc").limit(limit).offset(offset).execute(),
+        db.selectFrom("whitelist").selectAll().orderBy("createdAt", "desc").limit(limit).offset(offset).execute(),
         db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst(),
       ]);
 
       return {
-        emails: rows.map((r) => r.email),
+        data: rows.map((r) => ({ email: r.email, createdAt: r.createdAt! })),
         total: Number(countResult?.count ?? 0),
         page,
         limit,
@@ -126,6 +131,7 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 serviceName: Type.Union([Type.String(), Type.Null()]),
                 serviceDepartment: Type.Union([Type.String(), Type.Null()]),
                 role: Type.Union([Type.String(), Type.Null()]),
+                createdAt: Type.String(),
               }),
             ),
             total: Type.Number(),
@@ -168,8 +174,9 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
             "service.name as serviceName",
             "service.department as serviceDepartment",
             "internal_user.role",
+            "internal_user.createdAt",
           ])
-          .orderBy("user.name", "asc")
+          .orderBy("internal_user.createdAt", "desc")
           .limit(limit)
           .offset(offset)
           .execute(),
@@ -186,6 +193,7 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           serviceName: r.serviceName ?? null,
           serviceDepartment: r.serviceDepartment ?? null,
           role: r.role ?? null,
+          createdAt: r.createdAt!,
         })),
         total: Number(countResult?.count ?? 0),
         page,

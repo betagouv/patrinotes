@@ -415,7 +415,7 @@ export namespace Endpoints {
     parameters: {
       query: Partial<{ page: number; limit: number }>;
     };
-    response: { emails: Array<string>; total: number; page: number; limit: number };
+    response: { data: Array<{ email: string; createdAt: string }>; total: number; page: number; limit: number };
   };
   export type post_Apiadminwhitelist = {
     method: "POST";
@@ -449,6 +449,7 @@ export namespace Endpoints {
         serviceName: string | Schemas.null | Array<string | Schemas.null>;
         serviceDepartment: string | Schemas.null | Array<string | Schemas.null>;
         role: string | Schemas.null | Array<string | Schemas.null>;
+        createdAt: string;
       }>;
       total: number;
       page: number;
