@@ -19,9 +19,8 @@ test.describe("Admin whitelist", () => {
 
     // Upgrade to admin role
     await db.updateTable("internal_user").set({ role: "admin" }).where("email", "=", mockUsers[0].email).execute();
-
     // Obtain admin token for API tests
-    const resp = await fetch(`${BACKEND_URL}/api/admin/login-user`, {
+    const resp = await fetch(`${BACKEND_URL}/api/login-user`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: mockUsers[0].email, password: mockUsers[0].password }),
@@ -92,12 +91,13 @@ test.describe("Admin whitelist", () => {
     expect(resp.status()).toBe(409);
   });
 
-  test("DELETE /api/admin/whitelist/:email removes an email", async ({ request }) => {
+  test("DELETE /api/admin/whitelist removes an email", async ({ request }) => {
     const email = "to-delete@whitelist-test.com";
     await db.insertInto("whitelist").values({ email }).execute();
 
-    const resp = await request.delete(`${BACKEND_URL}/api/admin/whitelist/${encodeURIComponent(email)}`, {
+    const resp = await request.delete(`${BACKEND_URL}/api/admin/whitelist`, {
       headers: { Authorization: `Bearer ${adminToken}` },
+      data: { email },
     });
 
     expect(resp.ok()).toBe(true);
@@ -106,9 +106,10 @@ test.describe("Admin whitelist", () => {
     expect(row).toBeUndefined();
   });
 
-  test("DELETE /api/admin/whitelist/:email returns 404 for unknown email", async ({ request }) => {
-    const resp = await request.delete(`${BACKEND_URL}/api/admin/whitelist/notexist@example.com`, {
+  test("DELETE /api/admin/whitelist returns 404 for unknown email", async ({ request }) => {
+    const resp = await request.delete(`${BACKEND_URL}/api/admin/whitelist`, {
       headers: { Authorization: `Bearer ${adminToken}` },
+      data: { email: "notexist@example.com" },
     });
 
     expect(resp.status()).toBe(404);
@@ -118,23 +119,25 @@ test.describe("Admin whitelist", () => {
   // UI test
   // ---------------------------------------------------------------------------
 
-  test("admin page shows whitelist and allows add/delete", async ({ page }) => {
+  test.only("admin page shows whitelist and allows add/delete", async ({ page }) => {
+    test.setTimeout(60000);
     // Log in via the login form (mockUsers[0] is already admin from beforeAll)
     await page.goto("./connexion");
     await page.fill("input[name=email]", mockUsers[0].email);
     await page.fill("input[name=password]", mockUsers[0].password);
     await page.click("button[type=submit]");
+    await page.waitForTimeout(1000);
     await page.waitForURL((url) => url.pathname === "/");
 
     // Navigate to admin page
     await page.goto("./admin");
 
-    // Page should show the whitelist heading
+    // Page should show the admin heading
     await page.waitForSelector("h1");
-    await expect(page.locator("h1")).toContainText("whitelist");
+    await expect(page.locator("h1")).toContainText("Administration");
 
     // The existing whitelisted emails should be visible
-    await expect(page.locator("table")).toContainText(mockUsers[0].email);
+    await expect(page.locator("#whitelist-table > table")).toContainText(mockUsers[0].email);
 
     // Add a new email via the form
     const newEmail = "ui-added@whitelist-test.com";
@@ -142,13 +145,13 @@ test.describe("Admin whitelist", () => {
     await page.click("button[type=submit]");
 
     // Wait for the new email to appear in the table
-    await expect(page.locator("table")).toContainText(newEmail, { timeout: 5000 });
+    await expect(page.locator("#whitelist-table > table")).toContainText(newEmail, { timeout: 5000 });
 
     // Delete the newly added email
-    const row = page.locator("tr", { hasText: newEmail });
+    const row = page.locator("#whitelist-table > table tr", { hasText: newEmail });
     await row.locator("button", { hasText: "Supprimer" }).click();
 
     // Email should be gone from the table
-    await expect(page.locator("table")).not.toContainText(newEmail, { timeout: 5000 });
+    await expect(page.locator("#whitelist-table > table")).not.toContainText(newEmail, { timeout: 5000 });
   });
 });

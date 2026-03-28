@@ -8,6 +8,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { Tabs } from "#components/Tabs.tsx";
 import { api, getErrorMessage } from "../api";
 import useDebounce from "react-use/lib/useDebounce";
+import { EnsureUser } from "#components/EnsureUser.tsx";
 
 const PAGE_SIZE = 20;
 
@@ -111,6 +112,7 @@ const WhitelistPanel = () => {
         <Alert severity="info" title="Aucun email dans la whitelist." />
       ) : (
         <Table
+          id="whitelist-table"
           caption={`${data?.total ?? 0} email${(data?.total ?? 0) !== 1 ? "s" : ""} autorisé${(data?.total ?? 0) !== 1 ? "s" : ""}`}
           headers={["Email", ""]}
           data={tableData}
@@ -196,6 +198,7 @@ const UsersPanel = () => {
         <Alert severity="info" title="Aucun utilisateur trouvé." />
       ) : (
         <Table
+          id="users-table"
           caption={`${data?.total ?? 0} utilisateur${(data?.total ?? 0) !== 1 ? "s" : ""}`}
           headers={["Nom", "Email", "Fonction", "Service", "Département", "Rôle"]}
           data={tableData}
@@ -290,5 +293,9 @@ const AdminPage = () => {
 };
 
 export const Route = createLazyFileRoute("/admin")({
-  component: () => <AdminPage />,
+  component: () => (
+    <EnsureUser>
+      <AdminPage />
+    </EnsureUser>
+  ),
 });
