@@ -31,55 +31,45 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       const periodFrom = request.query.from ?? defaultFrom.toISOString().slice(0, 10);
       const periodTo = request.query.to ?? now.toISOString().slice(0, 10);
 
-      const [
-        totalConstatsResult,
-        totalReportsResult,
-        totalUsersResult,
-        usersWithNoDocumentsResult,
-        activeUsersResult,
-      ] = await Promise.all([
-        db
-          .selectFrom("state_report")
-          .where("disabled", "is not", true)
-          .select(db.fn.countAll<number>().as("count"))
-          .executeTakeFirst(),
+      const [totalConstatsResult, totalReportsResult, totalUsersResult, usersWithNoDocumentsResult, activeUsersResult] =
+        await Promise.all([
+          db
+            .selectFrom("state_report")
+            .where("disabled", "is not", true)
+            .select(db.fn.countAll<number>().as("count"))
+            .executeTakeFirst(),
 
-        db
-          .selectFrom("report")
-          .where("disabled", "is not", true)
-          .select(db.fn.countAll<number>().as("count"))
-          .executeTakeFirst(),
+          db
+            .selectFrom("report")
+            .where("disabled", "is not", true)
+            .select(db.fn.countAll<number>().as("count"))
+            .executeTakeFirst(),
 
-        db
-          .selectFrom("user")
-          .select(db.fn.countAll<number>().as("count"))
-          .executeTakeFirst(),
+          db.selectFrom("user").select(db.fn.countAll<number>().as("count")).executeTakeFirst(),
 
-        db
-          .selectFrom("user")
-          .where((eb) =>
-            eb.and([
-              eb.not(
-                eb.exists(
-                  eb.selectFrom("report").whereRef("report.createdBy", "=", "user.id").select("report.id"),
+          db
+            .selectFrom("user")
+            .where((eb) =>
+              eb.and([
+                eb.not(
+                  eb.exists(eb.selectFrom("report").whereRef("report.createdBy", "=", "user.id").select("report.id")),
                 ),
-              ),
-              eb.not(
-                eb.exists(
-                  eb
-                    .selectFrom("state_report")
-                    .whereRef("state_report.created_by", "=", "user.id")
-                    .select("state_report.id"),
+                eb.not(
+                  eb.exists(
+                    eb
+                      .selectFrom("state_report")
+                      .whereRef("state_report.created_by", "=", "user.id")
+                      .select("state_report.id"),
+                  ),
                 ),
-              ),
-            ]),
-          )
-          .select(db.fn.countAll<number>().as("count"))
-          .executeTakeFirst(),
+              ]),
+            )
+            .select(db.fn.countAll<number>().as("count"))
+            .executeTakeFirst(),
 
-        db
-          .selectFrom(
-            sql<{ user_id: string }>`(
+          db
+            .selectFrom(
+              sql<{ user_id: string }>`(
               SELECT r."createdBy" AS user_id
               FROM sent_email se
               JOIN report r ON r.id = se.report_id
@@ -90,10 +80,10 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
               JOIN state_report sr ON sr.id = srse.state_report_id
               WHERE srse.sent_at::date >= ${periodFrom}::date AND srse.sent_at::date <= ${periodTo}::date
             )`.as("active_users"),
-          )
-          .select(db.fn.countAll<number>().as("count"))
-          .executeTakeFirst(),
-      ]);
+            )
+            .select(db.fn.countAll<number>().as("count"))
+            .executeTakeFirst(),
+        ]);
 
       return {
         totalConstats: Number(totalConstatsResult?.count ?? 0),
@@ -131,10 +121,7 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         db
           .selectFrom("service")
           .leftJoin("state_report", (join) =>
-            join
-              .onRef("state_report.service_id", "=", "service.id")
-              .on("state_report.alerts_sent", "=", true)
-              .on("state_report.disabled", "is not", true),
+            join.onRef("state_report.service_id", "=", "service.id").on("state_report.disabled", "is not", true),
           )
           .groupBy(["service.id", "service.name"])
           .orderBy(sql`COUNT(DISTINCT state_report.id)`, "desc")
@@ -147,7 +134,6 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
         db
           .selectFrom("state_report")
-          .where("alerts_sent", "=", false)
           .where("disabled", "is not", true)
           .where("created_at", "<", sql<string>`NOW() - INTERVAL '21 days'`)
           .select(db.fn.countAll<number>().as("count"))
