@@ -16,47 +16,68 @@ export namespace Endpoints {
     method: "POST";
     path: "/api/authenticate";
     parameters: {
-      body: { code: string };
+      body: { code: string; nonce: string };
     };
     response: {
-      tokens: {
-        access_token: string;
-        expires_in: string;
-        refresh_token: string;
-        refresh_expires_in: string;
-        token_type: string;
-        session_state: string;
-        scope: string;
-        id_token: string;
-      };
       user: {
         id: string;
         name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
+        service_id: string | Schemas.null | Array<string | Schemas.null>;
+        service:
+          | {
+              id: string;
+              department: string;
+              completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+              name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            }
+          | Schemas.null
+          | Array<
+              | {
+                  id: string;
+                  department: string;
+                  completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                  name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                }
+              | Schemas.null
+            >;
+        email: string;
         job: string | Schemas.null | Array<string | Schemas.null>;
       };
+      accessToken: string;
+      refreshToken: string;
+      expiresAt: string;
     };
   };
   export type post_ApirefreshToken = {
@@ -66,125 +87,67 @@ export namespace Endpoints {
       body: { refreshToken: string };
     };
     response: {
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: string;
-    };
-  };
-  export type post_ApicreateUser = {
-    method: "POST";
-    path: "/api/create-user";
-    parameters: {
-      body: {
-        password: string;
-        name: string;
-        email: string;
-        job: string;
-        service_id: string;
-        newsletter: boolean;
-        cgu: boolean;
-      };
-    };
-    response: {
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: string;
-    };
-  };
-  export type post_ApiloginUser = {
-    method: "POST";
-    path: "/api/login-user";
-    parameters: {
-      body: { email: string; password: string };
-    };
-    response: {
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: string;
+      accessToken: string | Schemas.null | Array<string | Schemas.null>;
+      refreshToken: string | Schemas.null | Array<string | Schemas.null>;
+      expiresAt: string | Schemas.null | Array<string | Schemas.null>;
+      user?:
+        | {
+            id: string;
+            name: string;
+            service_id: string | Schemas.null | Array<string | Schemas.null>;
+            service:
+              | {
+                  id: string;
+                  department: string;
+                  completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                  name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                }
+              | Schemas.null
+              | Array<
+                  | {
+                      id: string;
+                      department: string;
+                      completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                      name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                      courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                    }
+                  | Schemas.null
+                >;
+            email: string;
+            job: string | Schemas.null | Array<string | Schemas.null>;
+          }
+        | undefined;
     };
   };
   export type post_ApichangeService = {
@@ -192,22 +155,6 @@ export namespace Endpoints {
     path: "/api/change-service";
     parameters: {
       body: { service_id: string };
-    };
-    response: { message: string };
-  };
-  export type post_ApisendResetPassword = {
-    method: "POST";
-    path: "/api/send-reset-password";
-    parameters: {
-      body: { email: string };
-    };
-    response: { message: string };
-  };
-  export type post_ApiresetPassword = {
-    method: "POST";
-    path: "/api/reset-password";
-    parameters: {
-      body: { temporaryLink: string; newPassword: string };
     };
     response: { message: string };
   };
@@ -383,29 +330,57 @@ export namespace Endpoints {
     response: {
       id: string;
       name: string;
-      service_id: string;
-      service: {
-        id: string;
-        department: string;
-        completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-        name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-      };
+      service_id: string | Schemas.null | Array<string | Schemas.null>;
+      service:
+        | {
+            id: string;
+            department: string;
+            completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+            name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+          }
+        | Schemas.null
+        | Array<
+            | {
+                id: string;
+                department: string;
+                completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              }
+            | Schemas.null
+          >;
+      email: string;
       job: string | Schemas.null | Array<string | Schemas.null>;
     };
   };
@@ -456,6 +431,35 @@ export namespace Endpoints {
       limit: number;
     };
   };
+  export type get_Apistatspublic = {
+    method: "GET";
+    path: "/api/stats/public";
+    parameters: {
+      query: Partial<{ from: string; to: string }>;
+    };
+    response: {
+      totalConstats: number;
+      totalReports: number;
+      totalUsers: number;
+      usersWithNoDocuments: number;
+      activeUsersInPeriod: number;
+      periodFrom: string;
+      periodTo: string;
+    };
+  };
+  export type get_Apistatsadmin = {
+    method: "GET";
+    path: "/api/stats/admin";
+    parameters: never;
+    response: {
+      constatsByService: Array<{
+        serviceId: string;
+        serviceName: string | Schemas.null | Array<string | Schemas.null>;
+        sentConstats: number;
+      }>;
+      abandonedConstats: number;
+    };
+  };
 
   // </Endpoints>
 }
@@ -474,15 +478,13 @@ export type EndpointByMethod = {
     "/api/admin/me": Endpoints.get_Apiadminme;
     "/api/admin/whitelist": Endpoints.get_Apiadminwhitelist;
     "/api/admin/users": Endpoints.get_Apiadminusers;
+    "/api/stats/public": Endpoints.get_Apistatspublic;
+    "/api/stats/admin": Endpoints.get_Apistatsadmin;
   };
   post: {
     "/api/authenticate": Endpoints.post_Apiauthenticate;
     "/api/refresh-token": Endpoints.post_ApirefreshToken;
-    "/api/create-user": Endpoints.post_ApicreateUser;
-    "/api/login-user": Endpoints.post_ApiloginUser;
     "/api/change-service": Endpoints.post_ApichangeService;
-    "/api/send-reset-password": Endpoints.post_ApisendResetPassword;
-    "/api/reset-password": Endpoints.post_ApiresetPassword;
     "/api/upload/attachment": Endpoints.post_Apiuploadattachment;
     "/api/upload/picture/{pictureId}/lines": Endpoints.post_ApiuploadpicturePictureIdlines;
     "/api/pdf/report": Endpoints.post_Apipdfreport;

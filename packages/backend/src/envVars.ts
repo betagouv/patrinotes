@@ -26,7 +26,6 @@ const envSchema = z.object({
   DATAGOUV_API: z.string(),
   TOKEN_LIFETIME: z.string().default("60m"),
   JWT_SECRET: z.string(),
-  JWT_REFRESH_SECRET: z.string(),
   NODE_ENV: z.string().default("development"),
   PORT: stringOrNumberAsNumber.default(3001),
   DEBUG: z.string().default("cr-vif:*"),
@@ -43,9 +42,6 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   VITE_AUTH_CLIENT_ID: z.string(),
   VITE_AUTH_URL: z.string(),
-  VITE_AUTH_REALM: z.string(),
-  AUTH_ADMIN_CLIENT_ID: z.string(),
-  AUTH_ADMIN_CLIENT_SECRET: z.string(),
   AUTH_CLIENT_SECRET: z.string(),
   // COLLECTIF_OBJETS_DATASETTE_URL: z.string(),
 

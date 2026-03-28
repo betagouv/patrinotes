@@ -8,14 +8,6 @@ export const userPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const { id } = request.user!;
     return request.services.user.changeService(id, service_id);
   });
-
-  fastify.post("/send-reset-password", { schema: sendResetPasswordTSchema }, async (request) => {
-    return request.services.user.generateResetLink(request.body.email) as Promise<{ message: string }>;
-  });
-
-  fastify.post("/reset-password", { schema: resetPasswordTSchema }, async (request) => {
-    return request.services.user.resetPassword(request.body);
-  });
 };
 
 export const changeServiceTSchema = {

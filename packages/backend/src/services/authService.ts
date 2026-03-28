@@ -1,317 +1,213 @@
-import { FetchError, ofetch } from "ofetch";
-import { ENV, isDev } from "../envVars";
-import { Static, Type } from "@sinclair/typebox";
+import { ofetch } from "ofetch";
+import { ENV } from "../envVars";
+import { Type } from "@sinclair/typebox";
 import jwt from "jsonwebtoken";
 import jwks from "jwks-rsa";
+import { createHash } from "crypto";
 import { db } from "../db/db";
 import { serviceTSchema } from "../routes/staticDataRoutes";
-import { createUserTSchema, loginTSchema } from "../routes/authRoutes";
-import { adminAuthApi, getKeycloakAdminTokens } from "../features/auth/keycloak";
 import { AppError } from "../features/errors";
-import { getServices } from "./services";
-import { AuthUser } from "../routes/authMiddleware";
 import { makeDebug } from "../features/debug";
+
 const debug = makeDebug("auth-service");
-const authFullUrl = `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`;
+const proConnectBaseUrl = ENV.VITE_AUTH_URL;
 
 const jwksClient = jwks({
-  jwksUri: `${authFullUrl}/protocol/openid-connect/certs`,
+  jwksUri: `${proConnectBaseUrl}/jwks`,
   cache: true,
 });
 
+const getProConnectKey = (header: jwt.JwtHeader) =>
+  new Promise<string>((resolve, reject) => {
+    jwksClient.getSigningKey(header.kid, (err, key) => {
+      if (err) return reject(err);
+      resolve(key!.getPublicKey());
+    });
+  });
+
+const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
 export class AuthService {
-  async authenticate({ code }: AuthenticateProps) {
+  async authenticate({ code, nonce }: { code: string; nonce: string }) {
+    debug("authenticating with ProConnect", { code: code.slice(0, 8) + "..." });
+
     const params = new URLSearchParams({
       grant_type: "authorization_code",
       code,
       redirect_uri: `${ENV.FRONTEND_URL}/auth-callback`,
       client_id: ENV.VITE_AUTH_CLIENT_ID,
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      client_assertion: getClientAssertion(),
+      client_secret: ENV.AUTH_CLIENT_SECRET,
     });
 
-    const response = await authApi<Static<typeof keycloakTokenResponseTSchema>>("/protocol/openid-connect/token", {
+    const proConnectTokens = await ofetch<ProConnectTokenResponse>(`${proConnectBaseUrl}/token`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
     });
 
-    const user = await this.getOrCreateUserFromToken(response.access_token);
-
-    return { tokens: response, user: user! };
-  }
-
-  async checkToken(token: string) {
-    const decoded = jwt.decode(token, { complete: true });
-    const key = await getKey(decoded!.header);
-    return jwt.verify(token, key, {
+    // Verify id_token signature (ProConnect uses RS256)
+    const decodedHeader = jwt.decode(proConnectTokens.id_token, { complete: true });
+    const signingKey = await getProConnectKey(decodedHeader!.header);
+    const idToken = jwt.verify(proConnectTokens.id_token, signingKey, {
       algorithms: ["RS256"],
-      issuer: `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`,
-      audience: "account",
-    }) as Promise<jwt.JwtPayload & ExtraTokenInfo>;
+    }) as jwt.JwtPayload & { nonce?: string };
+
+    if (idToken.nonce !== nonce) {
+      throw new AppError(400, "Nonce invalide");
+    }
+
+    const userInfo = await ofetch<ProConnectUserInfo>(`${proConnectBaseUrl}/userinfo`, {
+      headers: { Authorization: `Bearer ${proConnectTokens.access_token}` },
+    });
+
+    const user = await this.upsertUser(userInfo);
+    const { accessToken, refreshToken, expiresAt } = await this.issueTokens(user.id);
+    const populatedUser = await populateService(user);
+
+    return { accessToken, refreshToken, expiresAt, user: populatedUser };
   }
 
   async refreshToken(refreshToken: string) {
-    const keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
-      "/protocol/openid-connect/token",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          client_id: ENV.VITE_AUTH_CLIENT_ID,
-          refresh_token: refreshToken,
-          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-          client_assertion: getClientAssertion(),
-        }).toString(),
-      },
-    );
+    const tokenHash = hashToken(refreshToken);
 
-    const user = await this.getUserFromToken(keycloakTokens.access_token);
+    const session = await db
+      .selectFrom("session")
+      .where("refresh_token_hash", "=", tokenHash)
+      .where("expires_at", ">", new Date().toISOString())
+      .selectAll()
+      .executeTakeFirst();
 
-    return {
-      accessToken: keycloakTokens.access_token,
-      refreshToken: keycloakTokens.refresh_token,
-      expiresAt: get80PercentOfTokenLifespan(Number(keycloakTokens.expires_in)).toString(),
-      user: user!,
-    };
+    if (!session) {
+      return { accessToken: null as null, refreshToken: null as null, expiresAt: null as null };
+    }
+
+    const user = await db
+      .selectFrom("user")
+      .where("id", "=", session.user_id)
+      .selectAll()
+      .executeTakeFirstOrThrow();
+
+    await db.deleteFrom("session").where("id", "=", session.id).execute();
+    const tokens = await this.issueTokens(user.id);
+    const populatedUser = await populateService(user);
+
+    return { ...tokens, user: populatedUser };
   }
 
-  async getOrCreateUserFromToken(token: string) {
-    const checked = await this.checkToken(token);
-
-    const userPayload = {
-      id: checked.sub!,
-      name: checked.name ?? checked.preferred_username!,
-      service_id: "no-service",
-      email: checked.email,
-    };
-
-    const existingUser = await this.getUserFromToken(token);
-    if (existingUser) return existingUser;
-
-    const user = await db.insertInto("user").values(userPayload).returningAll().executeTakeFirstOrThrow();
-    const populatedUser = { ...(await populateService(user!)), isFirstConnection: true };
-    return populatedUser;
+  checkToken(token: string) {
+    return jwt.verify(token, ENV.JWT_SECRET, { algorithms: ["HS256"] }) as jwt.JwtPayload;
   }
 
   async getUserFromToken(token: string) {
-    const checked = await this.checkToken(token);
-    const user = await db.selectFrom("user").where("id", "=", checked.sub!).selectAll().executeTakeFirst();
+    const payload = this.checkToken(token);
+    const user = await db.selectFrom("user").where("id", "=", payload.sub!).selectAll().executeTakeFirst();
     if (!user) return null;
     return populateService(user);
   }
 
-  async loginUser(userData: Static<typeof loginTSchema.body>) {
-    debug("logging in user", userData.email);
-    try {
-      const keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
-        "/protocol/openid-connect/token",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            grant_type: "password",
-            client_id: ENV.VITE_AUTH_CLIENT_ID,
-            client_secret: ENV.AUTH_CLIENT_SECRET,
-            username: userData.email,
-            password: userData.password,
-            scope: "offline_access",
-            client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-            client_assertion: getClientAssertion(),
-          }).toString(),
-        },
-      );
+  private async upsertUser(userInfo: ProConnectUserInfo) {
+    const name = [userInfo.given_name, userInfo.usual_name].filter(Boolean).join(" ") || userInfo.email;
 
-      const user = await db.selectFrom("user").where("email", "=", userData.email).selectAll().executeTakeFirst();
-      return {
-        accessToken: keycloakTokens.access_token,
-        refreshToken: keycloakTokens.refresh_token,
-        expiresAt: get80PercentOfTokenLifespan(Number(keycloakTokens.expires_in)).toString(),
-        user: await populateService(user!),
-      };
-    } catch (error) {
-      if (error instanceof FetchError) {
-        console.log(error.message, error.cause, error.data);
-        console.log(error.data?.error_description);
-        throw convertFetchErrorToAppError(error);
+    const existingById = await db.selectFrom("user").where("id", "=", userInfo.sub).selectAll().executeTakeFirst();
+    const existing =
+      existingById ??
+      (await db.selectFrom("user").where("email", "=", userInfo.email).selectAll().executeTakeFirst());
+
+    if (existing) {
+      await db.updateTable("user").set({ name }).where("id", "=", existing.id).execute();
+
+      const internalUserExists = await db
+        .selectFrom("internal_user")
+        .where("userId", "=", existing.id)
+        .select("id")
+        .executeTakeFirst();
+
+      if (!internalUserExists) {
+        await db
+          .insertInto("internal_user")
+          .values({ id: crypto.randomUUID(), userId: existing.id, email: existing.email, role: "user" })
+          .execute();
       }
-      throw error;
+
+      return { ...existing, name };
     }
+
+    return db.transaction().execute(async (tx) => {
+      const u = await tx
+        .insertInto("user")
+        .values({ id: userInfo.sub, name, email: userInfo.email })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      await tx
+        .insertInto("internal_user")
+        .values({ id: crypto.randomUUID(), userId: u.id, email: userInfo.email, role: "user" })
+        .execute();
+
+      return u;
+    });
   }
 
-  async createUser(userData: Static<typeof createUserTSchema.body>) {
-    await assertEmailInWhitelist(userData.email);
-    debug("creating user", userData.email);
-    try {
-      await adminAuthApi("/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: {
-          username: userData.name,
-          email: userData.email,
-          firstName: userData.name,
-          enabled: true,
-          credentials: [
-            {
-              type: "password",
-              value: userData.password,
-              temporary: false,
-            },
-          ],
-        },
-      });
-      debug("user created in keycloak, creating in local db", userData.email);
+  private async issueTokens(userId: string) {
+    const accessToken = jwt.sign({ sub: userId }, ENV.JWT_SECRET, {
+      algorithm: "HS256",
+      expiresIn: "1h",
+    });
 
-      const keycloakUser = await adminAuthApi<Array<{ id: string }>>("/users", {
-        method: "GET",
-        query: {
-          email: userData.email,
-        },
-      }).then((users) => users[0]);
+    const rawRefreshToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-      debug("fetched keycloak user", keycloakUser);
+    await db
+      .insertInto("session")
+      .values({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        refresh_token_hash: hashToken(rawRefreshToken),
+        expires_at: expiresAt.toISOString(),
+      })
+      .execute();
 
-      const user = await db.transaction().execute(async (tx) => {
-        const u = await tx
-          .insertInto("user")
-          .values({
-            id: keycloakUser!.id,
-            name: userData.name,
-            service_id: userData.service_id,
-            email: userData.email,
-            job: userData.job,
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
-
-        await tx
-          .insertInto("internal_user")
-          .values({
-            id: keycloakUser!.id,
-            userId: keycloakUser!.id,
-            email: userData.email,
-            newsletter: userData.newsletter,
-            role: "user",
-          })
-          .execute();
-
-        return u;
-      });
-
-      debug("user created in local db", user);
-
-      await getServices().user.changeService(user.id, user.service_id);
-      debug("user service changed", user.id, user.service_id);
-      return this.loginUser({ email: userData.email, password: userData.password });
-    } catch (error) {
-      if (error instanceof FetchError) {
-        console.log(error);
-        throw new AppError(error.status || 500, `Authentication error: ${error.data?.errorMessage || error.message}`);
-      }
-      throw error;
-    }
+    return {
+      accessToken,
+      refreshToken: rawRefreshToken,
+      expiresAt: get80PercentOfTokenLifespan(3600).toString(),
+    };
   }
 }
 
-const populateService = async <T extends { service_id: string }>(user: T) => {
+const populateService = async <T extends { service_id: string | null }>(user: T) => {
+  if (!user.service_id) return { ...user, service: null };
   const service = await db.selectFrom("service").where("id", "=", user.service_id).selectAll().executeTakeFirst();
-  return { ...user, service: service! };
-};
-
-const getClientAssertion = () => {
-  return jwt.sign(
-    {
-      iss: ENV.VITE_AUTH_CLIENT_ID,
-      sub: ENV.VITE_AUTH_CLIENT_ID,
-      aud: `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`,
-      exp: Math.floor(Date.now() / 1000) + 30,
-      jti: crypto.randomUUID(),
-    },
-    ENV.AUTH_CLIENT_SECRET,
-    { algorithm: "HS256" },
-  );
-};
-
-const getKey = async (header: jwt.JwtHeader) => {
-  return new Promise<string>((resolve, reject) => {
-    jwksClient.getSigningKey(header.kid, (err, key) => {
-      if (err) {
-        return reject(err);
-      }
-      const signingKey = key!.getPublicKey();
-      resolve(signingKey);
-    });
-  });
+  return { ...user, service: service ?? null };
 };
 
 export const get80PercentOfTokenLifespan = (expiresIn: number) => Date.now() + expiresIn * 0.8 * 1000;
 
-type AuthenticateProps = {
-  code: string;
+type ProConnectTokenResponse = {
+  access_token: string;
+  id_token: string;
+  token_type: string;
 };
 
-type ExtraTokenInfo = {
-  name: string;
+type ProConnectUserInfo = {
+  sub: string;
   email: string;
-  preferred_username: string;
+  given_name?: string;
+  usual_name?: string;
 };
-
-export const keycloakTokenResponseTSchema = Type.Object({
-  access_token: Type.String(),
-  expires_in: Type.String(),
-  refresh_token: Type.String(),
-  refresh_expires_in: Type.String(),
-  token_type: Type.String(),
-  session_state: Type.String(),
-  scope: Type.String(),
-  id_token: Type.String(),
-});
 
 export const userTSchema = Type.Object({
   id: Type.String(),
   name: Type.String(),
-  service_id: Type.String(),
-  service: serviceTSchema,
+  service_id: Type.Union([Type.String(), Type.Null()]),
+  service: Type.Union([serviceTSchema, Type.Null()]),
+  email: Type.String(),
   job: Type.Union([Type.String(), Type.Null()]),
 });
 
-export const authApi = ofetch.create({
-  baseURL: authFullUrl,
+export const authTSchema = Type.Object({
+  user: userTSchema,
+  accessToken: Type.String(),
+  refreshToken: Type.String(),
+  expiresAt: Type.String(),
 });
-
-const assertEmailInWhitelist = async (email: string) => {
-  if (isDev) return;
-
-  const whitelistResults = await db.selectFrom("whitelist").where("email", "=", email).selectAll().execute();
-  const whitelist = whitelistResults[0];
-
-  if (!whitelist) {
-    throw new AppError(
-      403,
-      "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrinotes.beta.gouv.fr.",
-    );
-  }
-};
-
-const convertFetchErrorToAppError = (error: FetchError) => {
-  if (!(error instanceof FetchError)) return new AppError(500, "Une erreur s'est produite");
-  const description =
-    error.data?.error_description || error.data?.message || error.message || "Une erreur s'est produite";
-
-  const userFriendlyDescription = (descriptionMap as any)[description] || description;
-
-  return new AppError(error.status || 500, userFriendlyDescription);
-};
-
-const descriptionMap = {
-  "Invalid user credentials": "Courriel ou mot de passe incorrect",
-};

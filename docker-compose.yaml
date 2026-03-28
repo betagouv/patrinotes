@@ -109,52 +109,6 @@ services:
       --ignore-existing; mc admin user add local $MINIO_ACCESS_KEY_ID $MINIO_SECRET_KEY; mc admin policy attach local
       readwrite --user $MINIO_ACCESS_KEY_ID; exit 0; "
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.3.5
-    container_name: keycloak
-    command: "start-dev --import-realm"
-    entrypoint: ["/opt/keycloak/entrypoint.sh"]
-    volumes:
-      - ./tests/realm-template.json:/opt/keycloak/data/import/realm-template.json
-      - ./tests/keycloak-entrypoint.sh:/opt/keycloak/entrypoint.sh
-    environment:
-      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
-      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
-      AUTH_ADMIN_CLIENT_ID: ${AUTH_ADMIN_CLIENT_ID}
-      AUTH_ADMIN_CLIENT_SECRET: ${AUTH_ADMIN_CLIENT_SECRET}
-
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT}
-      KC_HOSTNAME_STRICT: false
-      KC_HOSTNAME_STRICT_HTTPS: false
-      KC_HOSTNAME_STRICT_BACKCHANNEL: false
-      KC_HTTP_ENABLED: true
-      KC_LOG_LEVEL: info
-      KC_METRICS_ENABLED: true
-      KC_HEALTH_ENABLED: true
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://pg:5432/${KEYCLOAK_DB}
-      KC_DB_USERNAME: ${POSTGRES_USER}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
-
-    ports:
-      - ${KEYCLOAK_PORT}:8080
-    depends_on:
-      - pg
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection:
-          close\r\n\r\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
   mailpit:
     image: axllent/mailpit
     restart: unless-stopped

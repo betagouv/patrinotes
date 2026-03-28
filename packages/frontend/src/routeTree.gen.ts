@@ -16,6 +16,7 @@ import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ConnexionRouteImport } from './routes/connexion'
 import { Route as CguRouteImport } from './routes/cgu'
+import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$link'
@@ -62,6 +63,11 @@ const ConnexionRoute = ConnexionRouteImport.update({
 const CguRoute = CguRouteImport.update({
   id: '/cgu',
   path: '/cgu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth-callback',
+  path: '/auth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRoute = AccountRouteImport.update({
@@ -115,6 +121,7 @@ const ConstatConstatIdPdfRoute = ConstatConstatIdPdfRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/cgu': typeof CguRoute
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/cgu': typeof CguRoute
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/cgu': typeof CguRoute
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/auth-callback'
     | '/cgu'
     | '/connexion'
     | '/inscription'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/auth-callback'
     | '/cgu'
     | '/connexion'
     | '/inscription'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/auth-callback'
     | '/cgu'
     | '/connexion'
     | '/inscription'
@@ -227,6 +239,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CguRoute: typeof CguRoute
   ConnexionRoute: typeof ConnexionRoute
   InscriptionRoute: typeof InscriptionRoute
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/cgu'
       fullPath: '/cgu'
       preLoaderRoute: typeof CguRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth-callback': {
+      id: '/auth-callback'
+      path: '/auth-callback'
+      fullPath: '/auth-callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -363,6 +383,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CguRoute: CguRoute,
   ConnexionRoute: ConnexionRoute,
   InscriptionRoute: InscriptionRoute,

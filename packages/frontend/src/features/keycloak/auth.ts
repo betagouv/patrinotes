@@ -1,16 +1,21 @@
 import { ENV } from "../../envVars";
 
 export const auth = {
-  login: async () => {
-    const params = {
+  login: () => {
+    const nonce = crypto.randomUUID();
+    const state = crypto.randomUUID();
+    sessionStorage.setItem("proconnect_nonce", nonce);
+    sessionStorage.setItem("proconnect_state", state);
+
+    const params = new URLSearchParams({
       client_id: ENV.VITE_AUTH_CLIENT_ID,
       redirect_uri: `${window.location.origin}/auth-callback`,
       response_type: "code",
-      scope: "openid profile email offline_access",
-    };
+      scope: "openid email given_name usual_name",
+      nonce,
+      state,
+    });
 
-    const url = new URL(`${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}/protocol/openid-connect/auth`);
-    url.search = new URLSearchParams(params).toString();
-    window.location.href = url.toString();
+    window.location.href = `${ENV.VITE_AUTH_URL}/authorize?${params}`;
   },
 };

@@ -16,7 +16,7 @@ export const user = pgTable(
   {
     id: text().primaryKey().notNull(),
     name: text().notNull(),
-    serviceId: text("service_id").notNull(),
+    serviceId: text("service_id"),
     email: varchar({ length: 255 }).notNull(),
     job: text(),
   },
@@ -754,3 +754,21 @@ export const popImages = pgTable("pop_images", {
   copyright: text(),
   dept_number: text("dept_number"),
 });
+
+export const session = pgTable(
+  "session",
+  {
+    id: text().primaryKey().notNull(),
+    userId: text("user_id").notNull(),
+    refreshTokenHash: text("refresh_token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "session_user_id_fkey",
+    }).onDelete("cascade"),
+  ],
+);

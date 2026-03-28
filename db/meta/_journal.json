@@ -183,6 +183,13 @@
       "when": 1774711038029,
       "tag": "0025_silly_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1774713528196,
+      "tag": "0026_proconnect_sessions",
+      "breakpoints": true
     }
   ]
 }

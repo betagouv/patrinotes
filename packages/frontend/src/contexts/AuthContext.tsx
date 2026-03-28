@@ -23,7 +23,7 @@ export const AuthContext = createContext<AuthContextProps>({
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [auth, setAuth] = useState<AuthContextProps["auth"]>({ ...emptyAuth });
-
+  console.log(auth);
   const loadAuthQuery = useQuery({
     queryKey: ["load-stored-auth"],
     queryFn: async () => {

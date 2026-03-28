@@ -51,4 +51,5 @@ export type Database = {
   visited_section_attachment: Kyselify<typeof tables.visitedSectionAttachment>;
   pop_images: Kyselify<typeof tables.popImages>;
   constat_validation: Kyselify<typeof tables.constatValidation>;
+  session: Kyselify<typeof tables.session>;
 };

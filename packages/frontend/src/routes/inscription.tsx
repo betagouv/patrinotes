@@ -1,16 +1,5 @@
-import { Box, Typography } from "@mui/material";
-import { createFileRoute } from "@tanstack/react-router";
-import { SignupForm } from "../features/auth/SignupForm";
-import { Center } from "#components/MUIDsfr.tsx";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/inscription")({
-  component: RouteComponent,
+  component: () => <Navigate to="/connexion" />,
 });
-
-function RouteComponent() {
-  return (
-    <Center mt="32px" flexDirection="column" textAlign="left">
-      <SignupForm />
-    </Center>
-  );
-}

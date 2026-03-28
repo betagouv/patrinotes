@@ -7,7 +7,7 @@ import { Flex } from "./ui/Flex";
 export const LoginForm = () => {
   return (
     <Flex flexDirection="column">
-      <Button onClick={() => auth.login()}>Se connecter avec Keycloak</Button>
+      <Button onClick={() => auth.login()}>Se connecter avec ProConnect</Button>
     </Flex>
   );
 };

@@ -6,7 +6,6 @@ import { AppError } from "../features/errors";
 import crypto from "crypto";
 import { sendPasswordResetMail } from "../features/mail";
 import { Selectable } from "kysely";
-import { adminAuthApi } from "../features/auth/keycloak";
 import { transactions } from "../db/schema";
 
 const debug = makeDebug("user_service");
@@ -56,31 +55,6 @@ export class UserService {
       message:
         "Votre demande de récupération de mot de passe a été transmise. Vous recevrez un couriel dans quelques instants.",
     };
-  }
-
-  async resetPassword({ temporaryLink, newPassword }: { temporaryLink: string; newPassword: string }) {
-    const encryptedLink = md5(temporaryLink);
-
-    const userResults = await db
-      .selectFrom("internal_user")
-      .where("temporaryLink", "=", encryptedLink)
-      .selectAll()
-      .execute();
-    const user = userResults[0];
-
-    await assertLinkIsValid(user, encryptedLink);
-
-    await adminAuthApi("/users/" + user!.id + "/reset-password", {
-      method: "PUT",
-      body: { value: newPassword, type: "password", temporary: false },
-    });
-    await db
-      .updateTable("internal_user")
-      .set({ temporaryLink: null, temporaryLinkExpiresAt: null })
-      .where("id", "=", user!.id)
-      .execute();
-
-    return { message: "Votre mot de passe a été modifié avec succès." };
   }
 }
 

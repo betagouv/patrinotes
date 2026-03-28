@@ -1,29 +1,28 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { RedirectIfUser } from "#components/RedirectIfUser";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Typography } from "@mui/material";
-import { LoginForm } from "../features/auth/LoginForm";
+import { Button } from "@codegouvfr/react-dsfr/Button";
+import { auth } from "../features/keycloak/auth";
 
 const LoginPage = () => {
   return (
     <Center mt="20px">
-      <Flex flexDirection="column" width="996px" p="16px" pb="0" mb={{ xs: "48px", lg: "80px" }}>
-        <Typography variant="h4" mb="1.5rem">
-          Connexion
-        </Typography>
-        <LoginForm />
+      <Flex flexDirection="column" alignItems="center" gap="24px" width="480px" p="16px">
+        <Typography variant="h4">Connexion</Typography>
+        <Button onClick={auth.login} size="large">
+          Se connecter avec ProConnect
+        </Button>
       </Flex>
     </Center>
   );
 };
 
 export const Route = createFileRoute("/connexion")({
-  component: () => {
-    return (
-      <RedirectIfUser>
-        <LoginPage />
-      </RedirectIfUser>
-    );
-  },
+  component: () => (
+    <RedirectIfUser>
+      <LoginPage />
+    </RedirectIfUser>
+  ),
 });
