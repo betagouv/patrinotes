@@ -176,6 +176,13 @@
       "when": 1774696705311,
       "tag": "0024_grey_captain_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1774711038029,
+      "tag": "0025_silly_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

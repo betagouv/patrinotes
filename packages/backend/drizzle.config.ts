@@ -9,7 +9,9 @@ export const config = {
   database: ENV.POSTGRES_DB,
 };
 
-export const usersDatabaseUrl = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+console.log("Drizzle config:");
+console.log(config);
+
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "../../db",

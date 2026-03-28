@@ -25,7 +25,7 @@ services:
       - pg_data:/var/lib/postgresql/data
       - ./db/init/:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -66,21 +66,21 @@ services:
       POWERSYNC_CONFIG_PATH: /config/config.yaml
       PS_DATABASE_URL: ${PS_DATABASE_URL}
       PS_JWT_SECRET: ${JWT_SECRET}
-      PS_PORT: ${POWERSYNC_PORT:-3003}
+      PS_PORT: 8080
     ports:
-      - ${POWERSYNC_PORT:-3003}:8080
+      - ${POWERSYNC_PORT}:8080
 
   adminer:
     image: adminer
     restart: always
     ports:
-      - "${ADMINER_PORT:-8081}:8080"
+      - "${ADMINER_PORT}:8080"
 
   minio:
     image: minio/minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_SERVER_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
     volumes:
       - minio_data:/data
     environment:
@@ -109,24 +109,22 @@ services:
       --ignore-existing; mc admin user add local $MINIO_ACCESS_KEY_ID $MINIO_SECRET_KEY; mc admin policy attach local
       readwrite --user $MINIO_ACCESS_KEY_ID; exit 0; "
 
-  minio-console:
-    image: opens3/console:latest
-    environment:
-      CONSOLE_MINIO_SERVER: "http://minio:9000"
-      CONSOLE_PBKDF_PASSPHRASE: ${MINIO_PASSPHRASE}
-      CONSOLE_PBKDF_SALT: ${MINIO_SALT}
-    ports:
-      - "9090:9090"
-
   keycloak:
     image: quay.io/keycloak/keycloak:26.3.5
     container_name: keycloak
-    command: "start-dev"
+    command: "start-dev --import-realm"
+    entrypoint: ["/opt/keycloak/entrypoint.sh"]
     volumes:
-      - ./keycloak-theme.jar:/opt/keycloak/providers/theme.jar
+      - ./tests/realm-template.json:/opt/keycloak/data/import/realm-template.json
+      - ./tests/keycloak-entrypoint.sh:/opt/keycloak/entrypoint.sh
     environment:
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      AUTH_ADMIN_CLIENT_ID: ${AUTH_ADMIN_CLIENT_ID}
+      AUTH_ADMIN_CLIENT_SECRET: ${AUTH_ADMIN_CLIENT_SECRET}
+
       KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT:-8080}
+      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT}
       KC_HOSTNAME_STRICT: false
       KC_HOSTNAME_STRICT_HTTPS: false
       KC_HOSTNAME_STRICT_BACKCHANNEL: false
@@ -141,13 +139,21 @@ services:
       KC_DB_USERNAME: ${POSTGRES_USER}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
 
-      DSFR_THEME_HOME_URL: ${DSFR_THEME_HOME_URL}
-      DSFR_THEME_SERVICE_TITLE: ${DSFR_THEME_SERVICE_TITLE}
-      DSFR_THEME_BRAND_TOP: ${DSFR_THEME_BRAND_TOP}
     ports:
-      - ${KEYCLOAK_PORT:-8080}:8080
+      - ${KEYCLOAK_PORT}:8080
     depends_on:
       - pg
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection:
+          close\r\n\r\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   mailpit:
     image: axllent/mailpit
