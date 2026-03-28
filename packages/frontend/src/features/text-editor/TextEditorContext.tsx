@@ -14,7 +14,7 @@ import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
-import { stateReportExtraCss } from "@cr-vif/pdf/constat";
+import { stateReportExtraCss } from "@patrinotes/pdf/constat";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import { ColumnExtension } from "@gocapsule/column-extension";
 import Link from "@tiptap/extension-link";

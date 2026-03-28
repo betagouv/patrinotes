@@ -25,8 +25,14 @@ import { Route as ConstatConstatIdRouteImport } from './routes/constat.$constatI
 import { Route as ConstatValidationTokenRouteImport } from './routes/constat-validation.$token'
 import { Route as ConstatConstatIdPdfRouteImport } from './routes/constat_.$constatId.pdf'
 
+const AdminLazyRouteImport = createFileRoute('/admin')()
 const ResetPasswordIndexLazyRouteImport = createFileRoute('/reset-password/')()
 
+const AdminLazyRoute = AdminLazyRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.lazy').then((d) => d.Route))
 const ServiceRoute = ServiceRouteImport.update({
   id: '/service',
   path: '/service',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
+  '/admin': typeof AdminLazyRoute
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
+  '/admin': typeof AdminLazyRoute
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/service': typeof ServiceRoute
+  '/admin': typeof AdminLazyRoute
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/inscription'
     | '/mentions-legales'
     | '/service'
+    | '/admin'
     | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/inscription'
     | '/mentions-legales'
     | '/service'
+    | '/admin'
     | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/inscription'
     | '/mentions-legales'
     | '/service'
+    | '/admin'
     | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   InscriptionRoute: typeof InscriptionRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
   ServiceRoute: typeof ServiceRoute
+  AdminLazyRoute: typeof AdminLazyRoute
   ConstatValidationTokenRoute: typeof ConstatValidationTokenRoute
   ConstatConstatIdRoute: typeof ConstatConstatIdRoute
   EditReportIdRoute: typeof EditReportIdRoute
@@ -219,6 +232,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/service': {
       id: '/service'
       path: '/service'
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   InscriptionRoute: InscriptionRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
   ServiceRoute: ServiceRoute,
+  AdminLazyRoute: AdminLazyRoute,
   ConstatValidationTokenRoute: ConstatValidationTokenRoute,
   ConstatConstatIdRoute: ConstatConstatIdRoute,
   EditReportIdRoute: EditReportIdRoute,

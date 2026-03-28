@@ -2,7 +2,7 @@ import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { attachmentLocalStorage, db, getAttachmentUrl } from "../../../db/db";
 import { AlertWithAttachments, SendConstatForm } from "./ConstatPdfContext";
 import { api } from "../../../api";
-import { MinimalAlert } from "@cr-vif/pdf/constat";
+import { MinimalAlert } from "@patrinotes/pdf/constat";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>

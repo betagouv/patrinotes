@@ -65,7 +65,7 @@ export const SectionPhotos = ({
   isDisabled: boolean;
 }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
-  const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
+  const { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
     { table: "state_report_alert_attachment", fkColumn: "state_report_alert_id", fkValue: alertId ?? "" },
     constatId,
   );
@@ -78,6 +78,7 @@ export const SectionPhotos = ({
         onClose={() => setSelected(null)}
         imageTable="state_report_alert_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
 
       <UploadImage

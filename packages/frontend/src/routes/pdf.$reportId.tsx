@@ -3,7 +3,7 @@ import { Banner } from "../components/Banner";
 import { EnsureUser } from "../components/EnsureUser";
 import { Spinner } from "../components/Spinner";
 import { fr } from "@codegouvfr/react-dsfr";
-import { PdfImage, ReportPDFDocument, ReportPDFDocumentProps, getReportHtmlString } from "@cr-vif/pdf";
+import { PdfImage, ReportPDFDocument, ReportPDFDocumentProps, getReportHtmlString } from "@patrinotes/pdf";
 import { usePdf } from "@mikecousins/react-pdf";
 import { pdf } from "@react-pdf/renderer";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -67,11 +67,7 @@ export const PDF = () => {
         .where("report_attachment.is_deprecated", "=", 0)
         .where("attachments.media_type", "like", "image/%")
         .orderBy("report_attachment.created_at", "asc")
-        .select([
-          "report_attachment.attachment_id",
-          "attachments.local_uri",
-          "attachments.media_type",
-        ])
+        .select(["report_attachment.attachment_id", "attachments.local_uri", "attachments.media_type"])
         .execute();
 
       const pictures = (

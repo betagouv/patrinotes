@@ -6,6 +6,12 @@ export namespace Schemas {
 export namespace Endpoints {
   // <Endpoints>
 
+  export type get_Health = {
+    method: "GET";
+    path: "/health";
+    parameters: never;
+    response: unknown;
+  };
   export type post_Apiauthenticate = {
     method: "POST";
     path: "/api/authenticate";
@@ -325,32 +331,32 @@ export namespace Endpoints {
     parameters: {
       path: { token: string };
     };
-    response: {
-      stateReport: {
-        id: string;
-        titre_edifice: string | null;
-        commune: string | null;
-        date_visite: string | null;
-      };
-      pdfUrl: string;
-      status: string;
-      comment: string | null;
-    };
+    response: Partial<{}>;
   };
-  export type post_ApiconstatValidationTokenAccept = {
+  export type get_ApiconstatValidationTokenpdf = {
+    method: "GET";
+    path: "/api/constat-validation/{token}/pdf";
+    parameters: {
+      path: { token: string };
+    };
+    response: unknown;
+  };
+  export type post_ApiconstatValidationTokenaccept = {
     method: "POST";
     path: "/api/constat-validation/{token}/accept";
     parameters: {
       path: { token: string };
-      body: { comment?: string };
+
+      body: Partial<{ comment: string }>;
     };
     response: { message: string };
   };
-  export type post_ApiconstatValidationTokenDecline = {
+  export type post_ApiconstatValidationTokendecline = {
     method: "POST";
     path: "/api/constat-validation/{token}/decline";
     parameters: {
       path: { token: string };
+
       body: { comment: string };
     };
     response: { message: string };
@@ -370,12 +376,105 @@ export namespace Endpoints {
     };
     response: Partial<{}>;
   };
+  export type get_Apiadminme = {
+    method: "GET";
+    path: "/api/admin/me";
+    parameters: never;
+    response: {
+      id: string;
+      name: string;
+      service_id: string;
+      service: {
+        id: string;
+        department: string;
+        completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+        name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      };
+      job: string | Schemas.null | Array<string | Schemas.null>;
+    };
+  };
+  export type get_Apiadminwhitelist = {
+    method: "GET";
+    path: "/api/admin/whitelist";
+    parameters: {
+      query: Partial<{ page: number; limit: number }>;
+    };
+    response: { data: Array<{ email: string; createdAt: string }>; total: number; page: number; limit: number };
+  };
+  export type post_Apiadminwhitelist = {
+    method: "POST";
+    path: "/api/admin/whitelist";
+    parameters: {
+      body: { email: string };
+    };
+    response: { email: string };
+  };
+  export type delete_Apiadminwhitelist = {
+    method: "DELETE";
+    path: "/api/admin/whitelist";
+    parameters: {
+      body: { email: string };
+    };
+    response: { message: string };
+  };
+  export type get_Apiadminusers = {
+    method: "GET";
+    path: "/api/admin/users";
+    parameters: {
+      query: Partial<{ page: number; limit: number; search: string }>;
+    };
+    response: {
+      users: Array<{
+        id: string;
+        name: string;
+        email: string;
+        job: string | Schemas.null | Array<string | Schemas.null>;
+        serviceId: string;
+        serviceName: string | Schemas.null | Array<string | Schemas.null>;
+        serviceDepartment: string | Schemas.null | Array<string | Schemas.null>;
+        role: string | Schemas.null | Array<string | Schemas.null>;
+        createdAt: string;
+      }>;
+      total: number;
+      page: number;
+      limit: number;
+    };
+  };
 
   // </Endpoints>
 }
 
 // <EndpointByMethod>
 export type EndpointByMethod = {
+  get: {
+    "/health": Endpoints.get_Health;
+    "/api/services": Endpoints.get_Apiservices;
+    "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
+    "/api/pdf/report": Endpoints.get_Apipdfreport;
+    "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
+    "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
+    "/api/constat-validation/{token}": Endpoints.get_ApiconstatValidationToken;
+    "/api/constat-validation/{token}/pdf": Endpoints.get_ApiconstatValidationTokenpdf;
+    "/api/admin/me": Endpoints.get_Apiadminme;
+    "/api/admin/whitelist": Endpoints.get_Apiadminwhitelist;
+    "/api/admin/users": Endpoints.get_Apiadminusers;
+  };
   post: {
     "/api/authenticate": Endpoints.post_Apiauthenticate;
     "/api/refresh-token": Endpoints.post_ApirefreshToken;
@@ -388,25 +487,22 @@ export type EndpointByMethod = {
     "/api/upload/picture/{pictureId}/lines": Endpoints.post_ApiuploadpicturePictureIdlines;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
-    "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenAccept;
-    "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokenDecline;
+    "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenaccept;
+    "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokendecline;
     "/api/upload-data": Endpoints.post_ApiuploadData;
+    "/api/admin/whitelist": Endpoints.post_Apiadminwhitelist;
   };
-  get: {
-    "/api/services": Endpoints.get_Apiservices;
-    "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
-    "/api/pdf/report": Endpoints.get_Apipdfreport;
-    "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
-    "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
-    "/api/constat-validation/{token}": Endpoints.get_ApiconstatValidationToken;
+  delete: {
+    "/api/admin/whitelist": Endpoints.delete_Apiadminwhitelist;
   };
 };
 
 // </EndpointByMethod>
 
 // <EndpointByMethod.Shorthands>
-export type PostEndpoints = EndpointByMethod["post"];
 export type GetEndpoints = EndpointByMethod["get"];
+export type PostEndpoints = EndpointByMethod["post"];
+export type DeleteEndpoints = EndpointByMethod["delete"];
 export type AllEndpoints = EndpointByMethod[keyof EndpointByMethod];
 // </EndpointByMethod.Shorthands>
 
@@ -464,6 +560,15 @@ export class ApiClient {
     return this;
   }
 
+  // <ApiClient.get>
+  get<Path extends keyof GetEndpoints, TEndpoint extends GetEndpoints[Path]>(
+    path: Path,
+    ...params: MaybeOptionalArg<TEndpoint["parameters"]>
+  ): Promise<TEndpoint["response"]> {
+    return this.fetcher("get", this.baseUrl + path, params[0]);
+  }
+  // </ApiClient.get>
+
   // <ApiClient.post>
   post<Path extends keyof PostEndpoints, TEndpoint extends PostEndpoints[Path]>(
     path: Path,
@@ -473,14 +578,14 @@ export class ApiClient {
   }
   // </ApiClient.post>
 
-  // <ApiClient.get>
-  get<Path extends keyof GetEndpoints, TEndpoint extends GetEndpoints[Path]>(
+  // <ApiClient.delete>
+  delete<Path extends keyof DeleteEndpoints, TEndpoint extends DeleteEndpoints[Path]>(
     path: Path,
     ...params: MaybeOptionalArg<TEndpoint["parameters"]>
   ): Promise<TEndpoint["response"]> {
-    return this.fetcher("get", this.baseUrl + path, params[0]);
+    return this.fetcher("delete", this.baseUrl + path, params[0]);
   }
-  // </ApiClient.get>
+  // </ApiClient.delete>
 }
 
 export function createApiClient(fetcher: Fetcher, baseUrl?: string) {

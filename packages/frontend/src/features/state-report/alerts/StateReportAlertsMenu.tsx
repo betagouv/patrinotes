@@ -1,5 +1,5 @@
 import { Spinner } from "#components/Spinner.tsx";
-import { alertSectionStaticData } from "@cr-vif/pdf/constat";
+import { alertSectionStaticData } from "@patrinotes/pdf/constat";
 import { Box, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
@@ -23,7 +23,7 @@ import { getEmailsForSection } from "./StateReportAlert.utils";
 import { StateReportAlertObjetSectionForm } from "./StateReportAlertObjetSectionForm";
 import { useStateReportAlerts } from "./StateReportAlerts.hook";
 import { StateReportAlertSectionForm } from "./StateReportAlertSectionForm";
-import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { useDebounce } from "react-use";
 import { getDiff } from "#components/SyncForm.tsx";
 import { useAlertErrors, useSelectedAlertSection } from "../side-menu/StateReportSideMenu.store";

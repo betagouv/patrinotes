@@ -38,7 +38,6 @@ export class UploadService {
 
   async getAttachment({ filePath }: { filePath: string }) {
     const name = addAttachmentPrefix(filePath);
-    console.log("Getting attachment from S3", bucketUrl, name);
     const command = new GetObjectCommand({ Bucket: bucketUrl, Key: name });
     const response = await client.send(command);
 
@@ -84,24 +83,27 @@ export class UploadService {
     pictureId,
     serviceId,
     onNewImage,
-    // lines,
   }: {
     pictureId: string;
     serviceId: string;
     onNewImage?: OnNewImage;
-    // lines: Array<{ points: { x: number; y: number }[]; color: string }>;
   }) {
     debug("Handling picture lines", pictureId);
     const linesQuery = await db.selectFrom("picture_lines").where("attachmentId", "=", pictureId).selectAll().execute();
-    const lines = JSON.parse(linesQuery?.[0]?.lines || "[]");
+    const linesRecord = linesQuery?.[0];
+    const lines = JSON.parse(linesRecord?.lines || "[]");
 
-    console.log(linesQuery?.[0]);
+    console.log(linesRecord);
 
     const pictureUrl = await generatePresignedUrl(addAttachmentPrefix(pictureId));
 
     const buffer = await applyLinesToPicture({ pictureUrl: pictureUrl, lines });
 
-    const name = getPictureName(pictureId, Math.round(Date.now() / 1000));
+    // If the frontend already created the new attachment locally (newAttachmentId is set),
+    // upload the high-quality composite under that same ID so the S3 file matches.
+    // Otherwise fall back to the legacy naming convention (creates a new attachment record).
+    const newAttachmentId = linesRecord?.newAttachmentId ?? null;
+    const name = newAttachmentId ?? getPictureName(pictureId, Math.round(Date.now() / 1000));
 
     debug("Uploading picture to S3", pictureId);
     await this.uploadAttachment({ buffer, filePath: name });
@@ -110,7 +112,11 @@ export class UploadService {
     const url = path.join(`https://${bucketUrl}`, name);
 
     await db.transaction().execute(async (tx) => {
-      if (onNewImage) {
+      // When newAttachmentId is set the frontend has already inserted the new linking
+      // record and deprecated the old one locally; the backend only needs to clean up
+      // picture_lines.  When it is absent (legacy / other-device saves) run the full
+      // onNewImage callback so the attachment tables are updated server-side.
+      if (!newAttachmentId && onNewImage) {
         await onNewImage(tx, {
           originalName: pictureId,
           newName: name,

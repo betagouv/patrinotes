@@ -53,6 +53,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 2097152 * 3,
         // globPatterns: ["**/*.{svg,woff2,js,wasm,css,html,png}"],
         globPatterns: ["**/*.{svg,woff2,js,wasm,css,html,png}"],
+        globIgnores: ["**/admin*.js"],
         rollupFormat: "es",
       },
       includeAssets: ["**/*.{svg,woff2,wasm}"],

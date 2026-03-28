@@ -96,6 +96,7 @@ const picture_lines = new Table({
   createdAt: column.text,
   table: column.text,
   service_id: column.text,
+  newAttachmentId: column.text,
 });
 
 const transactions = new Table({

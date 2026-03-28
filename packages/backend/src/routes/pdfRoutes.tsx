@@ -1,7 +1,7 @@
 import { Type, type FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Font, renderToBuffer } from "@react-pdf/renderer";
-import { ReportPDFDocument } from "@cr-vif/pdf";
-import { StateReportPDFDocument } from "@cr-vif/pdf/constat";
+import { ReportPDFDocument } from "@patrinotes/pdf";
+import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
 import { sendReportMail, sendStateReportMail, sendAlertEmail, sendValidationRequestMail } from "../features/mail";
@@ -16,7 +16,7 @@ import { Selectable } from "kysely";
 import { getServices } from "../services/services";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
-import { deserializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
 
 const debug = makeDebug("pdf-plugin");
 

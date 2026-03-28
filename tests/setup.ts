@@ -5,6 +5,7 @@ import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloa
 
 export const resetDatabase = async () => {
   // Delete child tables first to satisfy foreign key constraints
+  await db.deleteFrom("whitelist").execute();
   await db.deleteFrom("visited_section_attachment").execute();
   await db.deleteFrom("visited_section").execute();
   await db.deleteFrom("state_report_alert_attachment").execute();
@@ -21,7 +22,14 @@ export const resetDatabase = async () => {
 
   // cleanup mock reference data
   await db.deleteFrom("service_instructeurs").where("id", "in", [mockServiceInstructeur.id]).execute();
-  await db.deleteFrom("clause_v2").where("id", "in", mockClauses.map((c) => c.id)).execute();
+  await db
+    .deleteFrom("clause_v2")
+    .where(
+      "id",
+      "in",
+      mockClauses.map((c) => c.id),
+    )
+    .execute();
 
   // delete keycloak users
   for (const user of mockUsers) {
@@ -61,7 +69,10 @@ export const resetDatabase = async () => {
       mockPopObjets.map((o) => o.reference as string),
     )
     .execute();
-  await db.insertInto("pop_objets").values(mockPopObjets as any).execute();
+  await db
+    .insertInto("pop_objets")
+    .values(mockPopObjets as any)
+    .execute();
 
   await db
     .insertInto("whitelist")

@@ -40,6 +40,7 @@ export const internalUser = pgTable(
     temporaryLinkExpiresAt: text(),
     userId: text().notNull(),
     newsletter: boolean().default(false),
+    createdAt: timestamp({ mode: "string" }).defaultNow(),
   },
   (table) => [
     foreignKey({
@@ -82,6 +83,7 @@ export const serviceInstructeurs = pgTable("service_instructeurs", {
 
 export const whitelist = pgTable("whitelist", {
   email: text().primaryKey().notNull(),
+  createdAt: timestamp({ mode: "string" }).defaultNow(),
 });
 
 export const service = pgTable("service", {
@@ -217,6 +219,7 @@ export const pictureLines = pgTable("picture_lines", {
   createdAt: timestamp({ mode: "string" }),
   table: text().notNull(),
   serviceId: text("service_id"),
+  newAttachmentId: text("newAttachmentId"),
 });
 
 export const pictures = pgTable(

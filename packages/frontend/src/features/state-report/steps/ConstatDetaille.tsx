@@ -15,7 +15,7 @@ import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
-import { defaultSections } from "@cr-vif/pdf/constat";
+import { defaultSections } from "@patrinotes/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
@@ -23,7 +23,7 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { chunk } from "pastable";
-import { getIsSectionVisited } from "@cr-vif/pdf/utils";
+import { getIsSectionVisited } from "@patrinotes/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -366,7 +366,7 @@ const SectionForm = ({
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { constatId } = routeApi.useParams();
-  const { attachments, addMutation, deleteMutation, onLabelChange } = useAttachmentImages(
+  const { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
     { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
     constatId,
   );
@@ -379,10 +379,13 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         onClose={() => setSelected(null)}
         imageTable="visited_section_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
 
       <UploadImage
-        onFiles={async (files) => { for (const file of files) await addMutation.mutateAsync(file); }}
+        onFiles={async (files) => {
+          for (const file of files) await addMutation.mutateAsync(file);
+        }}
         multiple
         attachments={attachments}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}

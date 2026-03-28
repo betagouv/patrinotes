@@ -169,6 +169,13 @@
       "when": 1774566134760,
       "tag": "0023_naive_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1774696705311,
+      "tag": "0024_grey_captain_universe",
+      "breakpoints": true
     }
   ]
 }

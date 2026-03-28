@@ -9,7 +9,7 @@ import { Link } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
 import { registerSW } from "virtual:pwa-register";
-import { initFonts } from "@cr-vif/pdf/utils";
+import { initFonts } from "@patrinotes/pdf/utils";
 import { powerSyncDb, setupPowersync } from "./db/db";
 import { PowerSyncContext } from "@powersync/react";
 import MuiDsfrThemeProvider from "@codegouvfr/react-dsfr/mui";

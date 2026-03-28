@@ -10,6 +10,7 @@ const envSchema = z.object({
   VITE_AUTH_CLIENT_ID: z.string(),
 
   VITE_ALERTES_MH_ENABLED: z.string().optional(),
+  VITE_DRAWING_WIDTH_SELECTOR_ENABLED: z.string().optional(),
 });
 
 const isSW = typeof window === "undefined";

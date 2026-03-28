@@ -1,5 +1,5 @@
 {
-  "name": "@cr-vif/frontend",
+  "name": "@patrinotes/frontend",
   "private": true,
   "version": "0.2.0",
   "type": "module",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.26.0",
-    "@cr-vif/pdf": "workspace:*",
+    "@patrinotes/pdf": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.1",

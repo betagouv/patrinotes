@@ -1,11 +1,12 @@
 import { fr } from "@codegouvfr/react-dsfr";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { v7 } from "uuid";
 import { db } from "../../db/db";
 import { Box, Stack } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useUser } from "../../contexts/AuthContext";
+import { ENV } from "../../envVars";
 import { MinimalAttachment } from "./UploadImage";
 import { Stage, Layer, Image as KonvaImage, Line as KonvaLine } from "react-konva";
 import type { Line } from "./types";
@@ -26,6 +27,7 @@ export const ImageCanvas = ({
   lines: dbLines,
   imageTable,
   onSave,
+  onReplaceAttachment,
   closeModal,
   hideLabelInput,
 }: {
@@ -34,6 +36,11 @@ export const ImageCanvas = ({
   lines: Array<Line>;
   imageTable?: string;
   onSave?: (props: MinimalAttachment & { url: string }) => void;
+  /** When provided, the canvas will generate a composite image on save, create a
+   *  new attachment locally (with local_uri set immediately), and deprecate the old
+   *  one — eliminating the blank-thumbnail gap caused by waiting for a server download.
+   *  Must return the new attachment ID so picture_lines can reference it. */
+  onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
   closeModal: () => void;
   hideLabelInput?: boolean;
 }) => {
@@ -41,9 +48,10 @@ export const ImageCanvas = ({
   const [internalLabel, setInternalLabel] = useState<string>(attachment.label ?? "");
   const user = useUser()!;
 
-  const [tool, setTool] = useState<"draw" | "move" | "eraser">("draw");
   const [lines, setLines] = useState<Line[]>([]);
   const [activeColor, setActiveColor] = useState(colors[0]);
+  const [tool, setTool] = useState<"draw" | "pan">("draw");
+  const [activeWidthIdx, setActiveWidthIdx] = useState(1); // 0=thin 1=medium 2=thick
 
   // Layer transform state
   const [layerScale, setLayerScale] = useState(1);
@@ -56,12 +64,18 @@ export const ImageCanvas = ({
   const [konvaImage, setKonvaImage] = useState<HTMLImageElement | null>(null);
   const [imageNaturalSize, setImageNaturalSize] = useState({ width: 0, height: 0 });
 
+  // Width options in image-space pixels (proportional to image, so consistent at any zoom/resolution)
+  const widthOptions = useMemo(() => {
+    const base = imageNaturalSize.width > 0 ? imageNaturalSize.width : 1920;
+    return [base / 300, base / 120, base / 48]; // thin, medium, thick
+  }, [imageNaturalSize.width]);
+
   // Drawing state
   const isDrawingRef = useRef(false);
   const stageRef = useRef<Konva.Stage>(null);
 
   // Pan state
-  const panStartRef = useRef<{ x: number; y: number; offX: number; offY: number } | null>(null);
+  const panStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
 
   // Pinch state
   const lastDistRef = useRef<number | null>(null);
@@ -132,28 +146,26 @@ export const ImageCanvas = ({
   };
 
   const handleMouseDown = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (tool === "move") {
-      const pos = getStagePos();
-      if (!pos) return;
-      panStartRef.current = { x: pos.x, y: pos.y, offX: layerOffset.x, offY: layerOffset.y };
-      return;
-    }
     const pos = getStagePos();
     if (!pos) return;
+    if (tool === "pan") {
+      panStartRef.current = { x: pos.x, y: pos.y, offsetX: layerOffset.x, offsetY: layerOffset.y };
+      return;
+    }
     const imgPos = stageToImage(pos);
     if (!isWithinBounds(imgPos)) return;
     isDrawingRef.current = true;
-    const color = tool === "eraser" ? "white" : activeColor;
-    setLines((prev) => [...prev, { points: [imgPos], color }]);
+    setLines((prev) => [...prev, { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] }]);
   };
 
   const handleMouseMove = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (tool === "move" && panStartRef.current) {
+    if (tool === "pan") {
+      if (!panStartRef.current) return;
       const pos = getStagePos();
       if (!pos) return;
       setLayerOffset({
-        x: panStartRef.current.offX + (pos.x - panStartRef.current.x),
-        y: panStartRef.current.offY + (pos.y - panStartRef.current.y),
+        x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
+        y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
       });
       return;
     }
@@ -208,25 +220,18 @@ export const ImageCanvas = ({
       return;
     }
     if (touches.length === 1) {
-      if (tool === "move") {
-        const touch = touches[0];
-        panStartRef.current = {
-          x: touch.clientX,
-          y: touch.clientY,
-          offX: layerOffset.x,
-          offY: layerOffset.y,
-        };
-        return;
-      }
       const stage = stageRef.current;
       if (!stage) return;
       const rect = stage.container().getBoundingClientRect();
       const pos = { x: touches[0].clientX - rect.left, y: touches[0].clientY - rect.top };
+      if (tool === "pan") {
+        panStartRef.current = { x: pos.x, y: pos.y, offsetX: layerOffset.x, offsetY: layerOffset.y };
+        return;
+      }
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
       isDrawingRef.current = true;
-      const color = tool === "eraser" ? "white" : activeColor;
-      setLines((prev) => [...prev, { points: [imgPos], color }]);
+      setLines((prev) => [...prev, { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] }]);
     }
   };
 
@@ -235,10 +240,7 @@ export const ImageCanvas = ({
     const touches = e.evt.touches;
 
     if (touches.length === 2) {
-      const newDist = Math.hypot(
-        touches[0].clientX - touches[1].clientX,
-        touches[0].clientY - touches[1].clientY,
-      );
+      const newDist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
       const newMid = {
         x: (touches[0].clientX + touches[1].clientX) / 2,
         y: (touches[0].clientY + touches[1].clientY) / 2,
@@ -260,19 +262,19 @@ export const ImageCanvas = ({
     }
 
     if (touches.length === 1) {
-      if (tool === "move" && panStartRef.current) {
-        const touch = touches[0];
-        setLayerOffset({
-          x: panStartRef.current.offX + (touch.clientX - panStartRef.current.x),
-          y: panStartRef.current.offY + (touch.clientY - panStartRef.current.y),
-        });
-        return;
-      }
-      if (!isDrawingRef.current) return;
       const stage = stageRef.current;
       if (!stage) return;
       const rect = stage.container().getBoundingClientRect();
       const pos = { x: touches[0].clientX - rect.left, y: touches[0].clientY - rect.top };
+      if (tool === "pan") {
+        if (!panStartRef.current) return;
+        setLayerOffset({
+          x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
+          y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
+        });
+        return;
+      }
+      if (!isDrawingRef.current) return;
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
       setLines((prev) => {
@@ -293,9 +295,34 @@ export const ImageCanvas = ({
     lastMidRef.current = null;
   };
 
+  const handleZoom = (direction: "in" | "out") => {
+    const scaleBy = 1.2;
+    const newScale = direction === "in" ? layerScale * scaleBy : layerScale / scaleBy;
+    const clamped = clamp(newScale, 0.1, 20);
+    const center = { x: stageSize.width / 2, y: stageSize.height / 2 };
+    setLayerOffset({
+      x: center.x - (center.x - layerOffset.x) * (clamped / layerScale),
+      y: center.y - (center.y - layerOffset.y) * (clamped / layerScale),
+    });
+    setLayerScale(clamped);
+  };
+
   const handleUndo = () => setLines((prev) => prev.slice(0, -1));
 
   const handleSave = async () => {
+    // Generate the composite image locally so the new attachment has a local_uri
+    // immediately — no blank-thumbnail gap while waiting for the server download.
+    let newAttachmentId: string | undefined;
+    if (onReplaceAttachment && stageRef.current && imageNaturalSize.width > 0) {
+      const pixelRatio = imageNaturalSize.width / stageSize.width;
+      const canvas = stageRef.current.toCanvas({ pixelRatio });
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
+      );
+      const buffer = await blob.arrayBuffer();
+      newAttachmentId = await onReplaceAttachment(pictureId, buffer);
+    }
+
     const existingLinesQuery = await db
       .selectFrom("picture_lines")
       .where("attachmentId", "=", pictureId)
@@ -307,7 +334,7 @@ export const ImageCanvas = ({
       await db
         .updateTable("picture_lines")
         .where("id", "=", existingLines.id)
-        .set({ lines: JSON.stringify(lines) })
+        .set({ lines: JSON.stringify(lines), newAttachmentId: newAttachmentId ?? null })
         .execute();
     } else {
       await db
@@ -319,6 +346,7 @@ export const ImageCanvas = ({
           createdAt: new Date().toISOString(),
           service_id: user.service_id,
           table: imageTable,
+          newAttachmentId: newAttachmentId ?? null,
         })
         .execute();
     }
@@ -326,39 +354,96 @@ export const ImageCanvas = ({
     closeModal();
   };
 
-  const strokeWidth = 5 / layerScale;
-
   return (
     <Box display="flex" flexDirection="column" width="100%" height="100%">
       {/* Toolbar row — in normal flow so the canvas never overlaps it */}
-      <Flex alignItems="center" justifyContent="flex-end" gap="18px" px="16px" py="8px" flexShrink={0} bgcolor="white">
+      <Flex
+        sx={{
+          "button::before": {
+            marginRight: "0 !important",
+            marginLeft: "0 !important",
+          },
+        }}
+        alignItems="center"
+        justifyContent="flex-end"
+        gap="18px"
+        px="16px"
+        py="8px"
+        flexShrink={0}
+        bgcolor="white"
+      >
         <Button
           type="button"
           priority={tool === "draw" ? "primary" : "secondary"}
           iconId="ri-pencil-line"
-          onClick={() => setTool("draw")}
-          sx={{ bgcolor: tool !== "draw" ? "white !important" : undefined }}
           title="Dessiner"
+          onClick={() => setTool("draw")}
+          sx={tool === "draw" ? {} : { bgcolor: "white !important" }}
         >
           {null}
         </Button>
         <Button
           type="button"
-          priority={tool === "eraser" ? "primary" : "secondary"}
-          iconId="ri-eraser-line"
-          onClick={() => setTool("eraser")}
-          sx={{ bgcolor: tool !== "eraser" ? "white !important" : undefined }}
-          title="Gomme"
-        >
-          {null}
-        </Button>
-        <Button
-          type="button"
-          priority={tool === "move" ? "primary" : "secondary"}
+          priority={tool === "pan" ? "primary" : "secondary"}
           iconId="ri-drag-move-line"
-          onClick={() => setTool("move")}
-          sx={{ bgcolor: tool !== "move" ? "white !important" : undefined }}
           title="Déplacer"
+          onClick={() => setTool("pan")}
+          sx={tool === "pan" ? {} : { bgcolor: "white !important" }}
+        >
+          {null}
+        </Button>
+        {/* Width selector */}
+        {ENV.VITE_DRAWING_WIDTH_SELECTOR_ENABLED === "true" && (
+          <Flex>
+            {[0, 1, 2].map((idx) => {
+              const dotSize = [6, 10, 16][idx];
+              return (
+                <Box
+                  key={idx}
+                  component="button"
+                  type="button"
+                  onClick={() => {
+                    setTool("draw");
+                    setActiveWidthIdx(idx);
+                  }}
+                  sx={{
+                    display: "flex",
+                    gap: "0",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    padding: 0,
+                    background: "none",
+                    border: activeWidthIdx === idx && tool === "draw" ? "2px solid #000091" : "2px solid transparent",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Box sx={{ width: dotSize, height: dotSize, borderRadius: "50%", bgcolor: "black" }} />
+                </Box>
+              );
+            })}
+          </Flex>
+        )}
+        <Button
+          sx={{ bgcolor: "white !important" }}
+          type="button"
+          priority="secondary"
+          iconId="ri-zoom-in-line"
+          onClick={() => handleZoom("in")}
+          title="Zoom avant"
+        >
+          {null}
+        </Button>
+        <Button
+          sx={{ bgcolor: "white !important" }}
+          type="button"
+          priority="secondary"
+          iconId="ri-zoom-out-line"
+          onClick={() => handleZoom("out")}
+          title="Zoom arrière"
         >
           {null}
         </Button>
@@ -367,9 +452,10 @@ export const ImageCanvas = ({
           sx={{ bgcolor: "white !important" }}
           type="button"
           priority="secondary"
-          iconId="ri-arrow-go-back-line"
           onClick={handleUndo}
+          iconId="ri-arrow-go-back-line"
           disabled={lines.length === 0}
+          title="Annuler le dernier trait"
         />
         <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
           OK
@@ -381,7 +467,7 @@ export const ImageCanvas = ({
         ref={canvasAreaRef}
         flex="1"
         overflow="hidden"
-        sx={{ cursor: tool === "move" ? "grab" : "crosshair" }}
+        sx={{ cursor: tool === "pan" ? (panStartRef.current ? "grabbing" : "grab") : "crosshair" }}
       >
         <Stage
           ref={stageRef}
@@ -404,7 +490,7 @@ export const ImageCanvas = ({
                 key={i}
                 points={line.points.flatMap((p) => [p.x, p.y])}
                 stroke={line.color}
-                strokeWidth={strokeWidth}
+                strokeWidth={line.width ?? widthOptions[1]}
                 lineCap="round"
                 lineJoin="round"
                 tension={0.3}
@@ -430,17 +516,14 @@ export const ImageCanvas = ({
         )}
         <Stack gap="14px" flexDirection="row" justifyContent="center" alignItems="center" p="18px">
           {colors.map((color) => {
-            const isActive = activeColor === color && tool === "draw";
+            const isActive = activeColor === color;
             const size = isActive ? 40 : 20;
             return (
               <Box
                 key={color}
                 component="button"
                 type="button"
-                onClick={() => {
-                  setActiveColor(color);
-                  if (tool !== "move") setTool("draw");
-                }}
+                onClick={() => setActiveColor(color)}
                 sx={{
                   display: "flex",
                   justifyContent: "center",

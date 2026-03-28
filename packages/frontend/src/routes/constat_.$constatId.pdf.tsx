@@ -22,7 +22,7 @@ import { Button, Center } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
 import { EditConstatPdf } from "../features/state-report/pdf/ConstatPdf.edit";
 import { TextEditorToolbar } from "../features/text-editor/TextEditorToolbar";
-import { getStateReportHtmlString } from "@cr-vif/pdf/constat";
+import { getStateReportHtmlString } from "@patrinotes/pdf/constat";
 import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";

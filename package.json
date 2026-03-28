@@ -1,12 +1,12 @@
 {
-  "name": "cr-vif",
+  "name": "patrinotes",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "frontend": "pnpm --filter @cr-vif/frontend",
-    "backend": "pnpm --filter @cr-vif/backend",
-    "pdf": "pnpm --filter @cr-vif/pdf",
+    "frontend": "pnpm --filter @patrinotes/frontend",
+    "backend": "pnpm --filter @patrinotes/backend",
+    "pdf": "pnpm --filter @patrinotes/pdf",
     "migration:generate": "pnpm backend drizzle generate",
     "migration:up-test": "cross-env NODE_ENV=test pnpm backend drizzle migrate",
     "migration:up": "pnpm backend drizzle migrate",

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@cr-vif/pdf/constat";
+import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@patrinotes/pdf/constat";
 import { pdf } from "@react-pdf/renderer";
 import { Accordion, Center, Checkbox, Input } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
@@ -16,7 +16,7 @@ import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form
 import { AlertErrors } from "../alerts/StateReportAlert.utils";
 import { useAlerts, useHtmlString } from "./ConstatPdf.hook";
 import { AlertWithAttachments, useIsSendConstatFormDisabled, useSendConstatFormContext } from "./ConstatPdfContext";
-import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { groupBy } from "pastable";
 
 export const SendConstatPdf = () => {
