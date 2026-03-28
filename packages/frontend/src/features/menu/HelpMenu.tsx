@@ -8,6 +8,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Button, Alert } from "#components/MUIDsfr.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
+import { Flex } from "#components/ui/Flex.tsx";
 
 export const HelpMenu = () => {
   const [showClipboardSuccess, setShowClipboardSuccess] = useState(false);
@@ -34,13 +35,40 @@ export const HelpMenu = () => {
       </Box>
       <Stack>
         <Stack px="16px">
+          <TitleH3>Guides d'utilisation</TitleH3>
+          <Box mt="8px">
+            Besoin d’aide pour configurer votre compte, créer un compte-rendu ou un constat d’état ? Retrouvez les
+            guides d’utilisation dédiés sur le site vitrine.
+          </Box>
+          <Flex gap="16px">
+            <Button
+              priority="secondary"
+              sx={{ mt: "16px" }}
+              linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/compte-rendu/" }}
+            >
+              Compte-rendu
+            </Button>
+            <Button
+              priority="secondary"
+              sx={{ mt: "16px" }}
+              linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/constat-d%C3%A9tat/" }}
+            >
+              Constat d'état
+            </Button>
+          </Flex>
+        </Stack>
+        <Box px="16px">
+          <Divider height="2px" mt={{ xs: "27px", lg: "32px" }} mb={{ xs: 0, lg: "24px" }} color="#C1C1FB" />
+        </Box>
+        <Stack px="16px">
           <TitleH3>Foire aux questions</TitleH3>
           <Box mt="8px">
             À qui s’adresse Patrinotes ? Comment créer un nouveau compte-rendu ? Comment ajouter des photos... Découvrez
             toutes les réponses sur la FAQ.
           </Box>
           <Button
-            sx={{ mt: "16px", bgcolor: fr.colors.decisions.text.actionHigh.blueFrance.default + " !important" }}
+            priority="secondary"
+            sx={{ mt: "16px" }}
             linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/faq" }}
           >
             Consulter FAQ
@@ -55,6 +83,7 @@ export const HelpMenu = () => {
             Vous ne voyez pas vos dernières informations enregistrées ? Essayez de réinitialiser les données locales.
           </Box>
           <Button
+            priority="secondary"
             sx={{
               mt: "16px",
             }}
