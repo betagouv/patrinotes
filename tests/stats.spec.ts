@@ -273,11 +273,11 @@ test.describe("Stats", () => {
     });
     const data = await resp.json();
 
-    const service1 = data.constatsByService.find(
-      (s: { serviceId: string }) => s.serviceId === mockServices[0].id,
-    );
+    const service1 = data.constatsByService.find((s: { serviceId: string }) => s.serviceId === mockServices[0].id);
     expect(service1).toBeDefined();
     // Only 1 constat with alerts_sent=true for service-1
+    console.log("Service 1 sent constats:", service1.sentConstats);
+
     expect(service1.sentConstats).toBe(1);
   });
 
