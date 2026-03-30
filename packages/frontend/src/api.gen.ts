@@ -238,27 +238,19 @@ export namespace Endpoints {
       courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
-  export type post_Apiuploadattachment = {
-    method: "POST";
-    path: "/api/upload/attachment";
-    parameters: never;
-    response: unknown;
+  export type get_ApiuploadattachmentpresignedUrl = {
+    method: "GET";
+    path: "/api/upload/attachment/presigned-url";
+    parameters: {
+      query: { filePath: string };
+    };
+    response: { url: string };
   };
   export type get_Apiuploadattachment = {
     method: "GET";
     path: "/api/upload/attachment";
     parameters: never;
     response: unknown;
-  };
-  export type post_ApiuploadpicturePictureIdlines = {
-    method: "POST";
-    path: "/api/upload/picture/{pictureId}/lines";
-    parameters: {
-      path: { pictureId: string };
-
-      body: { lines: Array<{ points: Array<{ x: number; y: number }>; color: string }> };
-    };
-    response: string;
   };
   export type post_Apipdfreport = {
     method: "POST";
@@ -456,6 +448,35 @@ export namespace Endpoints {
       limit: number;
     };
   };
+  export type get_Apistatspublic = {
+    method: "GET";
+    path: "/api/stats/public";
+    parameters: {
+      query: Partial<{ from: string; to: string }>;
+    };
+    response: {
+      totalConstats: number;
+      totalReports: number;
+      totalUsers: number;
+      usersWithNoDocuments: number;
+      activeUsersInPeriod: number;
+      periodFrom: string;
+      periodTo: string;
+    };
+  };
+  export type get_Apistatsadmin = {
+    method: "GET";
+    path: "/api/stats/admin";
+    parameters: never;
+    response: {
+      constatsByService: Array<{
+        serviceId: string;
+        serviceName: string | Schemas.null | Array<string | Schemas.null>;
+        sentConstats: number;
+      }>;
+      abandonedConstats: number;
+    };
+  };
 
   // </Endpoints>
 }
@@ -465,6 +486,7 @@ export type EndpointByMethod = {
   get: {
     "/health": Endpoints.get_Health;
     "/api/services": Endpoints.get_Apiservices;
+    "/api/upload/attachment/presigned-url": Endpoints.get_ApiuploadattachmentpresignedUrl;
     "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
     "/api/pdf/report": Endpoints.get_Apipdfreport;
     "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
@@ -474,6 +496,8 @@ export type EndpointByMethod = {
     "/api/admin/me": Endpoints.get_Apiadminme;
     "/api/admin/whitelist": Endpoints.get_Apiadminwhitelist;
     "/api/admin/users": Endpoints.get_Apiadminusers;
+    "/api/stats/public": Endpoints.get_Apistatspublic;
+    "/api/stats/admin": Endpoints.get_Apistatsadmin;
   };
   post: {
     "/api/authenticate": Endpoints.post_Apiauthenticate;
@@ -483,8 +507,6 @@ export type EndpointByMethod = {
     "/api/change-service": Endpoints.post_ApichangeService;
     "/api/send-reset-password": Endpoints.post_ApisendResetPassword;
     "/api/reset-password": Endpoints.post_ApiresetPassword;
-    "/api/upload/attachment": Endpoints.post_Apiuploadattachment;
-    "/api/upload/picture/{pictureId}/lines": Endpoints.post_ApiuploadpicturePictureIdlines;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
     "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenaccept;

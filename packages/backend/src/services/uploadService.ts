@@ -26,6 +26,12 @@ const bucketUrl = `${ENV.MINIO_URL}/${ENV.MINIO_BUCKET}`;
 const addAttachmentPrefix = (filePath: string) => "attachment/" + filePath;
 
 export class UploadService {
+  async getPresignedUploadUrl({ filePath }: { filePath: string }) {
+    const key = addAttachmentPrefix(filePath);
+    const command = new PutObjectCommand({ Bucket: bucketUrl, Key: key });
+    return getSignedUrl(client as any, command as any, { expiresIn: 3600 });
+  }
+
   async uploadAttachment({ buffer, filePath }: { buffer: Buffer; filePath: string }) {
     debug("Uploading attachment to S3", filePath);
     const command = new PutObjectCommand({

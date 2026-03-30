@@ -52,9 +52,10 @@ export const attachmentRemoteStorage = {
     return data;
   },
   uploadFile: async (data: ArrayBuffer, attachment: { id: string }) => {
-    const formData = new FormData();
-    formData.append("file", new Blob([data]), attachment.id);
-    await api.post("/api/upload/attachment", { body: formData, query: { filePath: attachment.id } } as any);
+    const { url } = await api.get("/api/upload/attachment/presigned-url", {
+      query: { filePath: attachment.id },
+    });
+    await fetch(url, { method: "PUT", body: new Blob([data]) });
   },
 } satisfies RemoteStorageAdapter;
 

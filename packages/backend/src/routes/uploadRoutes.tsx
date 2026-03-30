@@ -22,18 +22,21 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   });
   fastify.addHook("preHandler", authenticate);
 
-  fastify.post("/attachment", async (request, reply) => {
-    const file = await request.file();
-    if (!file) throw new AppError(400, "No file provided");
-
-    request.services.upload.uploadAttachment({
-      filePath: (request.query as any)?.filePath ?? file.filename,
-      buffer: await file.toBuffer(),
-    });
-
-    debug(`File ${file} saved to attachments folder`);
-    reply.send({ message: "File uploaded successfully" });
-  });
+  fastify.get(
+    "/attachment/presigned-url",
+    {
+      schema: {
+        querystring: Type.Object({ filePath: Type.String() }),
+        response: { 200: Type.Object({ url: Type.String() }) },
+      },
+    },
+    async (request, reply) => {
+      const { filePath } = request.query as any;
+      if (!filePath) throw new AppError(400, "No filePath provided");
+      const url = await request.services.upload.getPresignedUploadUrl({ filePath });
+      reply.send({ url });
+    },
+  );
 
   fastify.get("/attachment", async (request, reply) => {
     const { filePath } = request.query as any;
@@ -48,27 +51,4 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       }
     }
   });
-
-  fastify.post(
-    "/picture/:pictureId/lines",
-    {
-      schema: {
-        params: Type.Object({ pictureId: Type.String() }),
-        body: Type.Object({
-          lines: Type.Array(
-            Type.Object({
-              points: Type.Array(Type.Object({ x: Type.Number(), y: Type.Number() })),
-              color: Type.String(),
-            }),
-          ),
-        }),
-        response: { 200: Type.String() },
-      },
-    },
-    async (request) => {
-      const { pictureId } = request.params;
-
-      return request.services.upload.handleNotifyPictureLines({ pictureId });
-    },
-  );
 };
