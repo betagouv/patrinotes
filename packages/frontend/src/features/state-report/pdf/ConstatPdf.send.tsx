@@ -1,60 +1,62 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@patrinotes/pdf/constat";
-import { pdf } from "@react-pdf/renderer";
-import { Accordion, Center, Checkbox, Input } from "#components/MUIDsfr.tsx";
-import { Spinner } from "#components/Spinner.tsx";
-import { PdfCanvas } from "../../../routes/pdf.$reportId";
-import { useService, useUser } from "../../../contexts/AuthContext";
-import { addSIfPlural } from "../../../utils";
-import { Box, Stack, Typography } from "@mui/material";
-import { Flex } from "#components/ui/Flex.tsx";
-import { fr } from "@codegouvfr/react-dsfr";
-import React, { useEffect, useRef, useState } from "react";
-import { db } from "../../../db/db";
-import { StateReportAlert } from "../../../db/AppSchema";
-import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
-import { AlertErrors } from "../alerts/StateReportAlert.utils";
-import { useAlerts, useHtmlString } from "./ConstatPdf.hook";
-import { AlertWithAttachments, useIsSendConstatFormDisabled, useSendConstatFormContext } from "./ConstatPdfContext";
-import { deserializeMandatoryEmails, serializeMandatoryEmails } from "@patrinotes/pdf/utils";
-import { groupBy } from "pastable";
+import { Center } from "#components/MUIDsfr.tsx";
+import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
+import { useMemo } from "react";
+import { useUser } from "../../../contexts/AuthContext";
+import { useHtmlString } from "./ConstatPdf.hook";
+import { BlobProvider, type BlobProviderParams, PDFViewer } from "@react-pdf/renderer";
+import { useQuery } from "@tanstack/react-query";
 
 export const SendConstatPdf = () => {
   const htmlString = useHtmlString();
   const user = useUser()!;
 
+  const document = useMemo(
+    () => (
+      <StateReportPDFDocument
+        htmlString={htmlString}
+        images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
+        service={user.service as any}
+      />
+    ),
+    [htmlString, user.service?.id],
+  );
+
   return (
-    <Stack>
-      <Center>
-        <Center width="800px" flexDirection="column">
-          <View
-            htmlString={htmlString}
-            images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
-            service={user.service as any}
-          />
-        </Center>
+    <Center>
+      <Center width="800px" flexDirection="column" paddingX="16px" marginTop="32px" marginBottom="96px">
+        <BlobProvider document={document}>{(props) => <BlobViewer {...props} />}</BlobProvider>
       </Center>
-    </Stack>
+    </Center>
   );
 };
 
-const View = (props: StateReportPDFDocumentProps) => {
-  const query = useQuery({
-    queryKey: ["state-report-pdf", props.htmlString],
-    queryFn: async () => {
-      const blob = await pdf(<StateReportPDFDocument {...props} />).toBlob();
-      return blob;
-    },
-    refetchOnWindowFocus: false,
-    enabled: !!props.htmlString,
-  });
+import { PDFObject } from "react-pdfobject";
+import Button from "@mui/material/Button";
+import { MdDownload as DownloadIcon } from "react-icons/md";
 
-  if (query.isLoading || !query.data)
+const supportsPdfInline = (() => {
+  try {
+    return (PDFObject as any).supportsPDFs;
+  } catch {
+    return false;
+  }
+})();
+
+const BlobViewer = ({ ...props }: BlobProviderParams) => {
+  if (!supportsPdfInline) {
     return (
-      <Center height="100%">
-        <Spinner />
-      </Center>
+      <Button
+        variant="contained"
+        startIcon={<DownloadIcon />}
+        component="a"
+        href={props.url ?? undefined}
+        download="constat.pdf"
+        disabled={!props.url}
+      >
+        Télécharger le PDF
+      </Button>
     );
+  }
 
-  return <PdfCanvas blob={query.data as Blob} />;
+  return <PDFObject url={props.url!} assumptionMode />;
 };

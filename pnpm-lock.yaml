@@ -432,6 +432,9 @@ importers:
       react-pdf-html:
         specifier: ^2.0.4
         version: 2.1.5(@react-pdf/renderer@4.3.2(react@18.3.1))(react@18.3.1)
+      react-pdfobject:
+        specifier: ^1.2.0
+        version: 1.2.0
       react-use:
         specifier: ^17.5.0
         version: 17.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2356,7 +2359,6 @@ packages:
       pdfjs-dist: 4.2.67
       react: ^18.2.0
       react-dom: ^18.2.0
-    bundledDependencies: []
 
   '@mui/core-downloads-tracker@5.18.0':
     resolution: {integrity: sha512-jbhwoQ1AY200PSSOrNXmrFCaSDSJWP7qk6urkTmIirvRXDROkqe+QwcLlUiw/PrREwsIF/vm3/dAXvjlMHF0RA==}
@@ -6194,6 +6196,9 @@ packages:
     resolution: {integrity: sha512-DlOzet0HO7OEnmUmB6wWGJrrdvbyJKftI1bhMitK7O2N8W2gc757yyYBbINy9IDafXAV9wmKr9t7xsTaNKRG5Q==}
     engines: {node: '>=20.16.0 || >=22.3.0'}
 
+  pdfobject@2.3.1:
+    resolution: {integrity: sha512-vluuGiSDmMGpOvWFGiUY4trNB8aGKLDVxIXuuGHjX0kK3bMxCANUVtLivctE7uejLBScWCnbVarKatFVvdwXaQ==}
+
   pg-cloudflare@1.3.0:
     resolution: {integrity: sha512-6lswVVSztmHiRtD6I8hw4qP/nDm1EJbKMRhf3HCYaqud7frGysPv7FYJ5noZQdhQtN2xJnimfMtvQq21pdbzyQ==}
 
@@ -6507,6 +6512,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-pdfobject@1.2.0:
+    resolution: {integrity: sha512-mq7DtT3qvZyRMBvrD3z+a0Rc0fUGshiUikz/tk4QULLoOJ76VXbYcDEsD3vXTMeDn5nnWHWnLGn1AsAoA2DEtQ==}
 
   react-reconciler@0.29.2:
     resolution: {integrity: sha512-zZQqIiYgDCTP/f1N/mAR10nJGrPD2ZR+jDSEsKWJHYC7Cm2wodlwbR3upZRdC3cjIjSlTLNVyO7Iu0Yy7t2AYg==}
@@ -13904,6 +13912,8 @@ snapshots:
     optionalDependencies:
       '@napi-rs/canvas': 0.1.97
 
+  pdfobject@2.3.1: {}
+
   pg-cloudflare@1.3.0:
     optional: true
 
@@ -14239,6 +14249,10 @@ snapshots:
       warning: 4.0.3
     optionalDependencies:
       '@types/react': 18.3.28
+
+  react-pdfobject@1.2.0:
+    dependencies:
+      pdfobject: 2.3.1
 
   react-reconciler@0.29.2(react@18.3.1):
     dependencies:

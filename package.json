@@ -13,7 +13,8 @@
     "client:json": "pnpm backend dev --create-only",
     "client:ts": "typed-openapi ./packages/backend/openapi.json --output ./packages/frontend/src/api.gen.ts",
     "client:generate": "pnpm client:json && pnpm client:ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "adb:forward-port": "adb reverse tcp:5173 tcp:5173 && adb reverse tcp:3002 tcp:3002"
   },
   "keywords": [],
   "author": "",

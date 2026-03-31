@@ -62,6 +62,9 @@ export default defineConfig({
       filename: "sw.ts",
     }),
   ],
+  server: {
+    host: "127.0.0.1",
+  },
   optimizeDeps: {
     exclude: ["@journeyapps/wa-sqlite", "@powersync/web", "wa-sqlite", "workbox-precaching", "workbox-routing"],
     include: ["@powersync/web > js-logger"],
