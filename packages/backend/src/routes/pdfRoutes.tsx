@@ -1,70 +1,65 @@
 import { Type, type FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
-import { Font, renderToBuffer } from "@react-pdf/renderer";
-import { ReportPDFDocument } from "@patrinotes/pdf";
-import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
 import { sendReportMail, sendStateReportMail, sendAlertEmail, sendValidationRequestMail } from "../features/mail";
 import { addDays } from "date-fns";
-import { generatePresignedUrl, getPDFName } from "../services/uploadService";
-import { Service, StateReportAlert } from "../../../frontend/src/db/AppSchema";
-import path from "path";
+import { generatePresignedUrl } from "../services/uploadService";
+import { Service } from "../../../frontend/src/db/AppSchema";
 import { makeDebug } from "../features/debug";
 import { v4 } from "uuid";
-import React from "react";
 import { Selectable } from "kysely";
 import { getServices } from "../services/services";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { parseHTML } from "linkedom";
 import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
 
 const debug = makeDebug("pdf-plugin");
 
-// prevent the auto organize imports from removing React import
-const _noop = () => React;
-
 export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.addHook("preHandler", authenticate);
 
+  fastify.post(
+    "/report/upload-url",
+    {
+      schema: {
+        body: Type.Object({ reportId: Type.String() }),
+        response: {
+          200: Type.Object({ uploadUrl: Type.String(), pdfPath: Type.String() }),
+        },
+      },
+    },
+    async (request) => {
+      const { reportId } = request.body;
+      const pdfPath = reportId + "/compte_rendu_" + Math.round(Date.now() / 1000) + ".pdf";
+      const uploadUrl = await request.services.upload.getPresignedUploadUrl({
+        filePath: pdfPath,
+        contentType: "application/pdf",
+      });
+      return { uploadUrl, pdfPath };
+    },
+  );
+
   fastify.post("/report", { schema: reportPdfTSchema }, async (request) => {
-    const { reportId, htmlString } = request.body;
+    const { reportId, pdfPath, recipients: rawRecipients } = request.body;
     const { service_id } = request.user!;
 
-    const pictures = await db
-      .selectFrom("report_attachment")
-      .where("report_id", "=", reportId)
-      .where("is_deprecated", "=", false)
-      .where("attachment_id", "like", "%/images/%")
-      .orderBy("created_at", "asc")
-      .selectAll()
-      .execute();
-
-    const servicesQuery = await db.selectFrom("service").where("id", "=", service_id).selectAll().execute();
-    const service = servicesQuery[0]! as Service;
-
-    const pdf = await generateReportPdf({ htmlString, service, pictures: pictures });
-
-    const name = reportId + "/compte_rendu_" + Math.round(Date.now() / 1000) + ".pdf";
-
-    await request.services.upload.uploadAttachment({ buffer: pdf, filePath: name });
+    const pdf = await request.services.upload.getAttachment({ filePath: pdfPath });
 
     await db.transaction().execute(async (tx) => {
       await tx
         .insertInto("report_attachment")
         .values({
-          id: name,
-          attachment_id: name,
+          id: pdfPath,
+          attachment_id: pdfPath,
           is_deprecated: false,
           report_id: reportId,
           created_at: new Date().toISOString(),
           service_id,
         })
         .execute();
-      await tx.updateTable("report").set({ attachment_id: name }).where("id", "=", reportId).execute();
+      await tx.updateTable("report").set({ attachment_id: pdfPath }).where("id", "=", reportId).execute();
     });
 
     const userMail = request.user!.email;
-    const recipients = request.body.recipients
+    const recipients = rawRecipients
       .replaceAll(";", ",")
       .split(",")
       .map((r) => r.trim());
@@ -89,7 +84,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         .catch(() => {});
     }
 
-    return await generatePresignedUrl(name);
+    return await generatePresignedUrl("attachment/" + pdfPath);
   });
 
   fastify.get(
@@ -133,12 +128,32 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
   );
 
+  fastify.post(
+    "/state-report/upload-url",
+    {
+      schema: {
+        body: Type.Object({ stateReportId: Type.String() }),
+        response: {
+          200: Type.Object({ uploadUrl: Type.String(), pdfPath: Type.String() }),
+        },
+      },
+    },
+    async (request) => {
+      const { stateReportId } = request.body;
+      const pdfPath = stateReportId + "/constat_d_etat_" + Math.round(Date.now() / 1000) + ".pdf";
+      const uploadUrl = await request.services.upload.getPresignedUploadUrl({
+        filePath: pdfPath,
+        contentType: "application/pdf",
+      });
+      return { uploadUrl, pdfPath };
+    },
+  );
+
   fastify.post("/state-report", { schema: stateReportPdfTSchema }, async (request) => {
     const user = request.user!;
-    const { stateReportId: stateReportId, htmlString, alerts } = request.body;
+    const { stateReportId, pdfPath, alerts } = request.body;
 
-    debug(`Generating PDF for state report ${stateReportId} by user ${user.id}`);
-    debug(`HTML string length: ${htmlString.length}`);
+    debug(`Sending PDF for state report ${stateReportId} by user ${user.id}`);
 
     const stateReportQuery = await db
       .selectFrom("state_report")
@@ -153,97 +168,25 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       return "State report not found";
     }
 
-    const stateReportAttachmentsQuery = await db
-      .selectFrom("state_report_attachment")
-      .selectAll()
-      .where("state_report_id", "=", stateReportId)
-      .where("is_deprecated", "=", false)
-      .where("is_ignored", "=", false)
-      .execute();
-
-    const stateReportAttachments = await Promise.all(
-      stateReportAttachmentsQuery
-        .map((attachment) => attachment.attachment_id)
-        .filter(Boolean)
-        .map(async (id) => {
-          const url = await generatePresignedUrl("attachment/" + id);
-          return { id: id!, url };
-        }),
-    );
-
-    const visitedSections = await db
-      .selectFrom("visited_section")
-      .selectAll()
-      .where("state_report_id", "=", stateReportId)
-      .execute();
-
-    const visitedSectionsAttachmentsQuery = visitedSections?.length
-      ? await db
-          .selectFrom("visited_section_attachment")
-          .selectAll()
-          .where(
-            "visited_section_id",
-            "in",
-            visitedSections.map((vs) => vs.id),
-          )
-          .where("is_deprecated", "=", false)
-          .where("is_ignored", "=", false)
-          .execute()
-      : [];
-
-    const visitedSectionsAttachments = await Promise.all(
-      visitedSectionsAttachmentsQuery.map(async (attachment) => {
-        const url = await generatePresignedUrl("attachment/" + attachment.attachment_id);
-        return { id: attachment.attachment_id, url };
-      }),
-    );
-
-    const alertsAttachmentsQuery = alerts?.length
-      ? await db
-          .selectFrom("state_report_alert_attachment")
-          .selectAll()
-          .where(
-            "state_report_alert_id",
-            "in",
-            alerts.map((a) => a.id),
-          )
-          .where("is_deprecated", "=", false)
-          .where("is_ignored", "=", false)
-          .execute()
-      : [];
-
-    const alertsAttachments = await Promise.all(
-      alertsAttachmentsQuery.map(async (attachment) => {
-        const url = await generatePresignedUrl("attachment/" + attachment.attachment_id);
-        return { id: attachment.attachment_id, url };
-      }),
-    );
-
-    const attachmentsUrlMap = [...stateReportAttachments, ...visitedSectionsAttachments, ...alertsAttachments];
-
-    const service = request.user!.service as Service;
-    const pdf = await generateStateReportPdf({ htmlString, service, attachmentsUrlMap, alerts: alerts as any });
-
-    const name = stateReportId + "/constat_d_etat_" + Math.round(Date.now() / 1000) + ".pdf";
-    await request.services.upload.uploadAttachment({ buffer: pdf, filePath: name });
+    const pdf = await request.services.upload.getAttachment({ filePath: pdfPath });
 
     await db.transaction().execute(async (tx) => {
       await tx
         .insertInto("state_report_attachment")
         .values({
-          id: name,
-          attachment_id: name,
+          id: pdfPath,
+          attachment_id: pdfPath,
           is_deprecated: false,
           state_report_id: stateReportId,
           created_at: new Date().toISOString(),
-          service_id: request.user!.service_id,
+          service_id: user.service_id,
         })
         .execute();
 
-      await tx.updateTable("state_report").set({ attachment_id: name }).where("id", "=", stateReportId).execute();
+      await tx.updateTable("state_report").set({ attachment_id: pdfPath }).where("id", "=", stateReportId).execute();
     });
 
-    const userMail = request.user!.email;
+    const userMail = user.email;
     const recipients = request.body.recipients
       .replaceAll(";", ",")
       .split(",")
@@ -262,8 +205,20 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     const alertsAlreadySent = !!stateReportQuery?.alerts_sent;
 
-    if (!alertsAlreadySent && request.body.alerts && request.body.alerts.length > 0) {
-      for (const alert of request.body.alerts) {
+    if (!alertsAlreadySent && alerts && alerts.length > 0) {
+      const alertsAttachmentsQuery = await db
+        .selectFrom("state_report_alert_attachment")
+        .selectAll()
+        .where(
+          "state_report_alert_id",
+          "in",
+          alerts.map((a) => a.id),
+        )
+        .where("is_deprecated", "=", false)
+        .where("is_ignored", "=", false)
+        .execute();
+
+      for (const alert of alerts) {
         if (!alert.shouldSend) continue;
 
         try {
@@ -307,7 +262,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
           validator_email: userSettingsResult.validation_email,
           status: "pending",
           recipients: recipients.join(","),
-          pdf_path: name,
+          pdf_path: pdfPath,
           created_at: new Date().toISOString(),
           service_id: user.service_id,
         })
@@ -326,7 +281,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         creatorName: user.name,
       });
 
-      const url = await generatePresignedUrl("attachment/" + name);
+      const url = await generatePresignedUrl("attachment/" + pdfPath);
       return url;
     }
 
@@ -334,7 +289,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     // update mandatory emails since they might have been filled before sending
     await db.transaction().execute(async (tx) => {
-      for (const alert of request.body.alerts || []) {
+      for (const alert of alerts || []) {
         if (!alert.shouldSend) continue;
 
         await tx
@@ -366,138 +321,14 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         .catch(() => {});
     }
 
-    const url = await generatePresignedUrl("attachment/" + name);
+    const url = await generatePresignedUrl("attachment/" + pdfPath);
     return url;
   });
 };
 
-const generateReportPdf = async ({
-  htmlString,
-  service,
-  pictures,
-}: {
-  htmlString: string;
-  service: Service;
-  pictures: Selectable<Database["report_attachment"]>[];
-}) => {
-  const fontsPath = path.resolve(process.cwd(), "./public");
-
-  Font.register({
-    family: "Marianne",
-    fonts: [
-      {
-        src: path.join(fontsPath, `fonts/Marianne-Regular.ttf`),
-        fontStyle: "normal",
-        fontWeight: "normal",
-      },
-      { src: path.join(fontsPath, `/fonts/Marianne-Bold.ttf`), fontStyle: "normal", fontWeight: "bold" },
-      {
-        src: path.join(fontsPath, `/fonts/Marianne-RegularItalic.ttf`),
-        fontStyle: "italic",
-        fontWeight: "normal",
-      },
-      {
-        src: path.join(fontsPath, `/fonts/Marianne-BoldItalic.ttf`),
-        fontStyle: "italic",
-        fontWeight: "bold",
-      },
-    ],
-  });
-
-  const pdfImages = await Promise.all(
-    pictures.map(async (p) => ({
-      url: await generatePresignedUrl("attachment/" + p.attachment_id),
-    })),
-  );
-
-  return renderToBuffer(
-    <ReportPDFDocument
-      service={service as Omit<Selectable<Database["service"]>, "visible"> & { visible: any }} // postgres boolean vs sqlite integer
-      htmlString={htmlString}
-      images={{ marianne: "./public/marianne.png", marianneFooter: "./public/marianne_footer.png" }}
-      pictures={pdfImages}
-    />,
-  );
-};
-
-const generateStateReportPdf = async ({
-  htmlString,
-  service,
-  attachmentsUrlMap,
-  alerts,
-}: {
-  htmlString: string;
-  service: Service;
-  attachmentsUrlMap: { id: string; url: string }[];
-  alerts?: (Omit<StateReportAlert, "service_id" | "state_report_id" | "show_in_report"> & { show_in_report: any })[];
-}) => {
-  const fontsPath = path.resolve(process.cwd(), "./public");
-  Font.register({
-    family: "Marianne",
-    fonts: [
-      {
-        src: path.join(fontsPath, `fonts/Marianne-Regular.ttf`),
-        fontStyle: "normal",
-        fontWeight: "normal",
-      },
-      { src: path.join(fontsPath, `/fonts/Marianne-Bold.ttf`), fontStyle: "normal", fontWeight: "bold" },
-      {
-        src: path.join(fontsPath, `/fonts/Marianne-RegularItalic.ttf`),
-        fontStyle: "italic",
-        fontWeight: "normal",
-      },
-      {
-        src: path.join(fontsPath, `/fonts/Marianne-BoldItalic.ttf`),
-        fontStyle: "italic",
-        fontWeight: "bold",
-      },
-    ],
-  });
-
-  const mappedHtmlString = replaceImageUrls(htmlString, (attachmentId, currentUrl, img) => {
-    const newUrl = attachmentsUrlMap.find((att) => att.id === attachmentId)?.url;
-    if (newUrl) {
-      return newUrl;
-    }
-    return currentUrl;
-  });
-
-  return renderToBuffer(
-    <StateReportPDFDocument
-      service={service}
-      htmlString={mappedHtmlString}
-      images={{ marianne: "./public/marianne.png", marianneFooter: "./public/marianne_footer.png" }}
-    />,
-  );
-};
-
-function replaceImageUrls(
-  htmlString: string,
-  customUrlFunction: (attachmentId: string, currentUrl: string, img: HTMLImageElement) => string,
-) {
-  const wrappedHtml = `<!DOCTYPE html><html><body>${htmlString}</body></html>`;
-
-  const { document } = parseHTML(wrappedHtml);
-  const doc = document;
-
-  const images = doc.querySelectorAll("img[data-attachment-id]");
-
-  images.forEach((img) => {
-    const attachmentId = img.getAttribute("data-attachment-id");
-    const currentSrc = img.getAttribute("src");
-
-    const newUrl = customUrlFunction(attachmentId!, currentSrc!, img as HTMLImageElement);
-
-    if (newUrl) {
-      img.setAttribute("src", newUrl);
-    }
-  });
-  return doc.body.innerHTML;
-}
-
 export const reportPdfTSchema = {
   body: Type.Object({
-    htmlString: Type.String(),
+    pdfPath: Type.String(),
     reportId: Type.String(),
     recipients: Type.String(),
   }),
@@ -519,7 +350,7 @@ const AlertSchema = Type.Object({
 
 export const stateReportPdfTSchema = {
   body: Type.Object({
-    htmlString: Type.String(),
+    pdfPath: Type.String(),
     stateReportId: Type.String(),
     recipients: Type.String(),
     alerts: Type.Optional(Type.Array(AlertSchema)),

@@ -22,9 +22,9 @@ console.log(bucketUrl);
 const addAttachmentPrefix = (filePath: string) => "attachment/" + filePath;
 
 export class UploadService {
-  async getPresignedUploadUrl({ filePath }: { filePath: string }) {
+  async getPresignedUploadUrl({ filePath, contentType }: { filePath: string; contentType?: string }) {
     const key = addAttachmentPrefix(filePath);
-    const command = new PutObjectCommand({ Bucket: bucketUrl, Key: key });
+    const command = new PutObjectCommand({ Bucket: bucketUrl, Key: key, ContentType: contentType });
     return getSignedUrl(client as any, command as any, { expiresIn: 3600 });
   }
 

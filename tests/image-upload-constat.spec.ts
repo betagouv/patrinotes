@@ -197,14 +197,50 @@ test.describe("Image upload — constat flow", () => {
     await expect(page.getByText("Votre constat d'état a bien été envoyé !")).toBeVisible();
 
     // ---------------------------------------------------------------------------
-    // Step 9: Verify email reached Mailpit
+    // Step 9: Verify emails reached Mailpit (constat + alert)
     // ---------------------------------------------------------------------------
-    const mailResponse = await page.request.get(`http://localhost:${mailpitPort}/api/v1/messages`);
-    expect(mailResponse.ok()).toBeTruthy();
-    const { messages } = await mailResponse.json();
-    const sentMail = messages.find((m: any) =>
-      (m.To as { Address: string }[])?.some((t) => t.Address.includes(`image-constat+${mailId}`)),
+
+    // Wait until both the constat email and the alert email have arrived
+    let allMessages: any[] = [];
+    await expect
+      .poll(
+        async () => {
+          const res = await page.request.get(`http://localhost:${mailpitPort}/api/v1/messages`);
+          const data = await res.json();
+          allMessages = data.messages ?? [];
+          return allMessages.length;
+        },
+        { timeout: 30_000, intervals: [1_000] },
+      )
+      .toBeGreaterThanOrEqual(2);
+
+    // ---- Constat email ----
+    const constatMail = allMessages.find((m: any) =>
+      (m.To as { Address: string }[])?.some((t) => t.Address === `image-constat+${mailId}@example.com`),
     );
-    expect(sentMail, "Email with constat PDF should be received in Mailpit").toBeTruthy();
+    expect(constatMail, "Constat email should be received").toBeTruthy();
+    expect(constatMail.Subject).toBe("Constat d'état  : Château de Test");
+    expect(constatMail.Attachments, "Constat email should have 1 PDF attachment").toBe(1);
+
+    // Verify the attachment is actually a PDF
+    const constatDetail = await (
+      await page.request.get(`http://localhost:${mailpitPort}/api/v1/message/${constatMail.ID}`)
+    ).json();
+    expect(constatDetail.Attachments[0].ContentType).toBe("application/pdf");
+
+    // ---- Alert email (Édifice en péril → CRMH) ----
+    const alertMail = allMessages.find((m: any) =>
+      (m.To as { Address: string }[])?.some((t) => t.Address === "crmh-alert@test.com"),
+    );
+    expect(alertMail, "Alert email should be received by CRMH").toBeTruthy();
+    expect(alertMail.Subject).toBe("Alerte Édifice en péril - Château de Test");
+
+    // Verify the alert email contains the uploaded photo as an inline image
+    const alertDetail = await (
+      await page.request.get(`http://localhost:${mailpitPort}/api/v1/message/${alertMail.ID}`)
+    ).json();
+    const alertInline: { FileName: string; ContentType: string }[] = alertDetail.Inline ?? [];
+    const alertPhoto = alertInline.find((att) => att.FileName === "Photo");
+    expect(alertPhoto, "Alert email should contain the uploaded photo as inline image").toBeTruthy();
   });
 });

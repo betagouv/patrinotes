@@ -1,8 +1,11 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
-import { attachmentLocalStorage, db, getAttachmentUrl } from "../../../db/db";
-import { AlertWithAttachments, SendConstatForm } from "./ConstatPdfContext";
+import { attachmentLocalStorage, db } from "../../../db/db";
+import { SendConstatForm } from "./ConstatPdfContext";
 import { api } from "../../../api";
-import { MinimalAlert } from "@patrinotes/pdf/constat";
+import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
+import { pdf } from "@react-pdf/renderer";
+import React from "react";
+import { Service } from "../../../db/AppSchema";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
@@ -198,14 +201,28 @@ export const constatPdfQueries = {
 };
 
 export const constatPdfMutations = {
-  send: ({ constatId }: { constatId: string }) =>
+  send: ({ constatId, service }: { constatId: string; service: Service }) =>
     mutationOptions({
       mutationKey: ["send-constat-pdf", constatId],
       mutationFn: async ({ alerts, htmlString, recipients }: SendConstatForm) => {
+        const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
+          body: { stateReportId: constatId },
+        });
+
+        const blob = await pdf(
+          React.createElement(StateReportPDFDocument, {
+            htmlString: htmlString!,
+            images: { marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" },
+            service: service as any,
+          }) as any,
+        ).toBlob();
+
+        await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+
         await api.post("/api/pdf/state-report", {
           body: {
             stateReportId: constatId,
-            htmlString: htmlString!,
+            pdfPath,
             recipients: recipients.join(","),
             alerts: alerts,
           },

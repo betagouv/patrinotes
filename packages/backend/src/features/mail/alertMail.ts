@@ -49,7 +49,7 @@ export const createAlertEmailContent = async ({
   const alertAttachments = alert.attachments.filter((att) => !att.is_deprecated);
   const mailAttachments = await Promise.all(
     alertAttachments.map(async (attachment) => {
-      const buffer = await uploadService.getAttachment({ filePath: attachment.id });
+      const buffer = await uploadService.getAttachment({ filePath: attachment.attachment_id! });
 
       return {
         filename: attachment.label || "Photo",

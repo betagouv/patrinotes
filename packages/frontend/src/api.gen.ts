@@ -252,11 +252,19 @@ export namespace Endpoints {
     parameters: never;
     response: unknown;
   };
+  export type post_ApipdfreportuploadUrl = {
+    method: "POST";
+    path: "/api/pdf/report/upload-url";
+    parameters: {
+      body: { reportId: string };
+    };
+    response: { uploadUrl: string; pdfPath: string };
+  };
   export type post_Apipdfreport = {
     method: "POST";
     path: "/api/pdf/report";
     parameters: {
-      body: { htmlString: string; reportId: string; recipients: string };
+      body: { pdfPath: string; reportId: string; recipients: string };
     };
     response: string;
   };
@@ -281,7 +289,7 @@ export namespace Endpoints {
     path: "/api/pdf/state-report";
     parameters: {
       body: {
-        htmlString: string;
+        pdfPath: string;
         stateReportId: string;
         recipients: string;
         alerts?:
@@ -301,6 +309,14 @@ export namespace Endpoints {
       };
     };
     response: string;
+  };
+  export type post_ApipdfstateReportuploadUrl = {
+    method: "POST";
+    path: "/api/pdf/state-report/upload-url";
+    parameters: {
+      body: { stateReportId: string };
+    };
+    response: { uploadUrl: string; pdfPath: string };
   };
   export type get_ApistateReportobjetsImages = {
     method: "GET";
@@ -507,8 +523,10 @@ export type EndpointByMethod = {
     "/api/change-service": Endpoints.post_ApichangeService;
     "/api/send-reset-password": Endpoints.post_ApisendResetPassword;
     "/api/reset-password": Endpoints.post_ApiresetPassword;
+    "/api/pdf/report/upload-url": Endpoints.post_ApipdfreportuploadUrl;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
+    "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;
     "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenaccept;
     "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokendecline;
     "/api/upload-data": Endpoints.post_ApiuploadData;

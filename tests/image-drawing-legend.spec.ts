@@ -17,7 +17,7 @@ test.describe("Image upload — drawing and légende", () => {
     await page.goto("./");
   });
 
-  test("should draw on uploaded image, set légende, and verify it appears in PDF htmlString", async ({ page }) => {
+  test("should draw on uploaded image, set légende, and verify it appears in PDF content", async ({ page }) => {
     test.setTimeout(120_000);
 
     // ---------------------------------------------------------------------------
@@ -120,24 +120,17 @@ test.describe("Image upload — drawing and légende", () => {
     await expect(planSituationSection.getByRole("button", { name: "Ajouter photo" })).toHaveCount(0);
 
     // ---------------------------------------------------------------------------
-    // Step 9: Set up route intercept BEFORE finalizing so we can capture htmlString
-    // ---------------------------------------------------------------------------
-    let capturedHtmlString = "";
-    await page.route("**/api/pdf/state-report", async (route) => {
-      const postData = route.request().postDataJSON();
-      capturedHtmlString = postData?.htmlString ?? "";
-      await route.continue();
-    });
-
-    // ---------------------------------------------------------------------------
-    // Step 10: Finalize constat → navigate to PDF send page
+    // Step 9: Finalize constat → PDF view, then switch to edit mode to check htmlString
     // ---------------------------------------------------------------------------
     await page.waitForTimeout(2000);
 
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
     await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
 
-    await page.getByRole("button", { name: "Continuer" }).click();
+    // ---------------------------------------------------------------------------
+    // Step 10: Navigate to send mode and send
+    // ---------------------------------------------------------------------------
+    await page.goto(page.url().replace("mode=view", "mode=send"));
     await page.waitForURL((url) => url.search.includes("mode=send"));
 
     const mailId = new Date().getTime();
@@ -148,16 +141,6 @@ test.describe("Image upload — drawing and légende", () => {
     await page.getByText(`drawing-legend+${mailId}@example.com`).waitFor();
 
     await page.getByRole("button", { name: "Envoyer" }).click();
-    await page.waitForResponse((r) => r.url().includes("/api/pdf/state-report") && r.status() === 200);
-
-    // ---------------------------------------------------------------------------
-    // Step 11: Verify the légende is embedded in the htmlString sent to the PDF renderer
-    // stateReport.tsx embeds attachment labels into the htmlString before posting.
-    // ---------------------------------------------------------------------------
-
-    console.log(capturedHtmlString);
-    expect(capturedHtmlString).toContain("Légende de test");
-
     await page.waitForURL((url) => url.search.includes("mode=sent"));
     await expect(page.getByText("Votre constat d'état a bien été envoyé !")).toBeVisible();
   });

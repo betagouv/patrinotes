@@ -43,7 +43,21 @@ export const PDF = () => {
   const navigate = useNavigate();
   const generatePdfMutation = useMutation({
     mutationFn: async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
-      await api.post("/api/pdf/report", { body: { reportId, htmlString, recipients } });
+      const { uploadUrl, pdfPath } = await api.post("/api/pdf/report/upload-url", { body: { reportId } });
+
+      const pictures = (reportQuery.data?.pictures ?? []).map((p: any) => ({ url: p.url }));
+      const blob = await pdf(
+        <ReportPDFDocument
+          service={service as any}
+          htmlString={htmlString}
+          images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
+          pictures={pictures}
+        /> as any,
+      ).toBlob();
+
+      await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+
+      await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients } });
     },
     onSuccess: () => {
       navigate({ search: { mode: "sent" } as any });

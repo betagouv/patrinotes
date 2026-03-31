@@ -38,6 +38,7 @@ import { last } from "pastable";
 import { checkAlertErrors } from "../features/state-report/alerts/StateReportAlert.utils";
 import { getIsStateReportDisabled, useIsStateReportDisabled } from "../features/state-report/utils";
 import { useUserSettings } from "../hooks/useUserSettings";
+import { useLiveService, useUser } from "../contexts/AuthContext";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -75,8 +76,9 @@ const ConstatPdf = () => {
   });
 
   const userSettings = useUserSettings();
+  const { service } = useUser()!;
 
-  const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId }));
+  const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId, service: service as any }));
 
   const checkAllAlertsError = (alerts: SendConstatForm["alerts"]) => {
     const alertToSend = alerts.filter((alert) => alert.shouldSend);
@@ -322,7 +324,7 @@ const SendBannerContent = () => {
 
   const sendMutationStatus = useMutationState({
     filters: {
-      mutationKey: constatPdfMutations.send({ constatId }).mutationKey,
+      mutationKey: constatPdfMutations.send({ constatId, service: null as any }).mutationKey,
     },
     select: ({ state }) => state.status,
   });

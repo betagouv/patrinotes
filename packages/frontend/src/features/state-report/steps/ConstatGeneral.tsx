@@ -132,7 +132,7 @@ const PlanSituation = ({
 
   const attachmentQuery = useTypeAttachmentQuery(constatId, "plan_situation");
   const attachment = attachmentQuery.data;
-  console.log("attachmentQuery", attachmentQuery);
+
   const { addMutation, deleteMutation } = useStateReportAttachmentUpload({ constatId, type: "plan_situation" });
 
   return (
@@ -381,12 +381,8 @@ function useStateReportAttachmentUpload({
           .select("attachment_id")
           .where("id", "=", rowId)
           .executeTakeFirst();
-        if (row) await attachmentLocalStorage.deleteFile(row.attachment_id);
-        await db
-          .updateTable("state_report_attachment")
-          .set({ is_deprecated: 1 })
-          .where("id", "=", rowId)
-          .execute();
+        if (row) await attachmentLocalStorage.deleteFile(row.attachment_id!);
+        await db.updateTable("state_report_attachment").set({ is_deprecated: 1 }).where("id", "=", rowId).execute();
       },
     },
   };
