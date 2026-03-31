@@ -206,7 +206,7 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
         const isDisabled = useIsSendConstatFormDisabled();
 
         return (
-          <Flex gap="8px">
+          <Flex gap="8px" pr={{ xs: "0", lg: "16px" }}>
             <Button
               type="button"
               disabled={isDisabled}
