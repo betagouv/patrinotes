@@ -274,7 +274,7 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
     await db
       .insertInto("state_report_attachment")
       .values({
-        id: newId,
+        id: v7(),
         attachment_id: newId,
         state_report_id: constatId,
         service_id: user.service_id,
@@ -326,7 +326,7 @@ function useStateReportAttachmentUpload({
     await db
       .insertInto("state_report_attachment")
       .values({
-        id: attachmentId,
+        id: v7(),
         attachment_id: attachmentId,
         state_report_id: constatId,
         service_id: user.service_id,
@@ -375,12 +375,17 @@ function useStateReportAttachmentUpload({
       dismiss: () => uploadActorRef.send({ type: "DISMISS" }),
     },
     deleteMutation: {
-      mutate: async (attachmentId: string) => {
-        await attachmentLocalStorage.deleteFile(attachmentId);
+      mutate: async (rowId: string) => {
+        const row = await db
+          .selectFrom("state_report_attachment")
+          .select("attachment_id")
+          .where("id", "=", rowId)
+          .executeTakeFirst();
+        if (row) await attachmentLocalStorage.deleteFile(row.attachment_id);
         await db
           .updateTable("state_report_attachment")
           .set({ is_deprecated: 1 })
-          .where("id", "=", attachmentId)
+          .where("id", "=", rowId)
           .execute();
       },
     },

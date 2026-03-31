@@ -193,8 +193,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     const visitedSectionsAttachments = await Promise.all(
       visitedSectionsAttachmentsQuery.map(async (attachment) => {
-        const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return { id: attachment.id, url };
+        const url = await generatePresignedUrl("attachment/" + attachment.attachment_id);
+        return { id: attachment.attachment_id, url };
       }),
     );
 
@@ -214,8 +214,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     const alertsAttachments = await Promise.all(
       alertsAttachmentsQuery.map(async (attachment) => {
-        const url = await generatePresignedUrl("attachment/" + attachment.id);
-        return { id: attachment.id, url };
+        const url = await generatePresignedUrl("attachment/" + attachment.attachment_id);
+        return { id: attachment.attachment_id, url };
       }),
     );
 

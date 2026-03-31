@@ -98,7 +98,7 @@ export const onStateReportFile = async ({
   const attachment = await db
     .insertInto("state_report_attachment")
     .values({
-      id: attachmentId,
+      id: v7(),
       attachment_id: attachmentId,
       state_report_id: constatId,
       service_id: serviceId,

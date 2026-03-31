@@ -28,7 +28,7 @@ SELECT
 FROM state_report
 WHERE
     plan_situation IS NOT NULL
-    AND plan_situation != '';
+    AND plan_situation != '' ON CONFLICT (id) DO NOTHING;
 
 -- plan_edifice (single attachment ID)
 INSERT INTO
@@ -50,7 +50,7 @@ SELECT
 FROM state_report
 WHERE
     plan_edifice IS NOT NULL
-    AND plan_edifice != '';
+    AND plan_edifice != '' ON CONFLICT (id) DO NOTHING;
 
 -- vue_generale (semicolon-separated list of attachment IDs)
 INSERT INTO
@@ -69,7 +69,7 @@ FROM state_report sr, unnest (
 WHERE
     sr.vue_generale IS NOT NULL
     AND sr.vue_generale != ''
-    AND trim(vue_id) != '';
+    AND trim(vue_id) != '' ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE "state_report" DROP COLUMN "plan_situation";
 --> statement-breakpoint

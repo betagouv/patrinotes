@@ -75,7 +75,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("report_attachment")
           .values({
-            id: attachmentId,
+            id: v7(),
             attachment_id: attachmentId,
             report_id: config.fkValue,
             service_id: user.service_id,
@@ -88,7 +88,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("visited_section_attachment")
           .values({
-            id: attachmentId,
+            id: v7(),
             attachment_id: attachmentId,
             visited_section_id: config.fkValue,
             label: "",
@@ -102,7 +102,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("state_report_alert_attachment")
           .values({
-            id: attachmentId,
+            id: v7(),
             attachment_id: attachmentId,
             state_report_alert_id: config.fkValue,
             label: "",
@@ -159,7 +159,8 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
 
   const deleteMutation = {
     mutate: async ({ id }: { id: string }) => {
-      await attachmentLocalStorage.deleteFile(id);
+      const row = await db.selectFrom(config.table).select("attachment_id").where("id", "=", id).executeTakeFirst();
+      if (row) await attachmentLocalStorage.deleteFile(row.attachment_id);
       await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", id).execute();
     },
   };
