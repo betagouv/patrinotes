@@ -4,10 +4,11 @@ import { ofetch } from "ofetch";
 import { ENV } from "../envVars";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Box, Stack, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useForm } from "react-hook-form";
 import { Spinner } from "#components/Spinner.tsx";
+import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 
 export const Route = createFileRoute("/constat-validation/$token")({
   component: ConstatValidationPage,
@@ -138,14 +139,7 @@ function ConstatValidationPage() {
         </Typography>
       )}
 
-      <Box width="100%" height={{ xs: "60vh", lg: "75vh" }} border="1px solid #ccc">
-        <iframe
-          src={`${ENV.VITE_BACKEND_URL}/api/constat-validation/${token}/pdf`}
-          width="100%"
-          height="100%"
-          title="Constat d'état"
-        />
-      </Box>
+      <PDFViewerPaginated url={`${ENV.VITE_BACKEND_URL}/api/constat-validation/${token}/pdf`} />
 
       <Stack width="100%" maxWidth="690px" gap="16px">
         <Input

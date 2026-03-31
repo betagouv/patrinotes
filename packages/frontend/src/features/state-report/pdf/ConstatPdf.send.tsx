@@ -1,10 +1,10 @@
 import { Center } from "#components/MUIDsfr.tsx";
+import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { useMemo } from "react";
 import { useUser } from "../../../contexts/AuthContext";
 import { useHtmlString } from "./ConstatPdf.hook";
-import { BlobProvider, type BlobProviderParams, PDFViewer } from "@react-pdf/renderer";
-import { useQuery } from "@tanstack/react-query";
+import { BlobProvider, type BlobProviderParams } from "@react-pdf/renderer";
 
 export const SendConstatPdf = () => {
   const htmlString = useHtmlString();
@@ -30,33 +30,8 @@ export const SendConstatPdf = () => {
   );
 };
 
-import { PDFObject } from "react-pdfobject";
-import Button from "@mui/material/Button";
-import { MdDownload as DownloadIcon } from "react-icons/md";
-
-const supportsPdfInline = (() => {
-  try {
-    return (PDFObject as any).supportsPDFs;
-  } catch {
-    return false;
-  }
-})();
-
-const BlobViewer = ({ ...props }: BlobProviderParams) => {
-  if (!supportsPdfInline) {
-    return (
-      <Button
-        variant="contained"
-        startIcon={<DownloadIcon />}
-        component="a"
-        href={props.url ?? undefined}
-        download="constat.pdf"
-        disabled={!props.url}
-      >
-        Télécharger le PDF
-      </Button>
-    );
-  }
-
-  return <PDFObject url={props.url!} assumptionMode />;
+const BlobViewer = ({ blob }: BlobProviderParams) => {
+  console.log("blob");
+  if (!blob) return null;
+  return <PDFViewerPaginated blob={blob} />;
 };

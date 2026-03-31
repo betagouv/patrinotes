@@ -1,16 +1,15 @@
 import "@ungap/with-resolvers";
+import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Banner } from "../components/Banner";
 import { EnsureUser } from "../components/EnsureUser";
 import { Spinner } from "../components/Spinner";
 import { fr } from "@codegouvfr/react-dsfr";
 import { PdfImage, ReportPDFDocument, ReportPDFDocumentProps, getReportHtmlString } from "@patrinotes/pdf";
-import { usePdf } from "@mikecousins/react-pdf";
 import { pdf } from "@react-pdf/renderer";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Editor } from "@tiptap/react";
-import { makeArrayOf } from "pastable";
-import { PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { v4 } from "uuid";
 import { api } from "../api";
@@ -30,7 +29,6 @@ import { format } from "date-fns";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
-import { isDev } from "../envVars";
 
 type Mode = "edit" | "view" | "send" | "sent";
 
@@ -619,115 +617,11 @@ const View = (props: ReportPDFDocumentProps) => {
 
   return (
     <Box px="16px">
-      <PdfCanvas blob={query.data as Blob} />
+      <PDFViewerPaginated blob={query.data as Blob} />
     </Box>
   );
 };
 
-export const PdfCanvas = ({ blob }: { blob: Blob }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const file = useMemo(() => URL.createObjectURL(blob), [blob]);
-  const { pdfDocument } = usePdf({
-    file,
-    canvasRef,
-    workerSrc: "/pdfjs/build/pdf.worker.min.mjs",
-  });
-
-  const nbPages = pdfDocument?.numPages;
-
-  useEffect(() => {
-    // @ts-ignore
-    window.dlpdf = () => {
-      const link = document.createElement("a");
-      link.href = file;
-      link.download = "report.pdf";
-      link.click();
-    };
-
-    return () => {
-      // @ts-ignore
-      delete window.dlpdf;
-    };
-  }, []);
-
-  return (
-    <>
-      {isDev ? (
-        <Button
-          type="button"
-          onClick={() => {
-            const link = document.createElement("a");
-            link.href = file;
-            link.download = "report.pdf";
-            link.click();
-          }}
-          sx={{ position: "fixed", bottom: 16, left: 16, zIndex: 10 }}
-        >
-          Télécharger le pdf
-        </Button>
-      ) : null}
-      {makeArrayOf(nbPages ?? 1).map((_, page) => (
-        <PdfCanvasPage key={page} file={file} page={page + 1} />
-      ))}
-    </>
-  );
-};
-
-const ActivePdfPage = ({ file, page, onHeight }: { file: string; page: number; onHeight: (h: number) => void }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  usePdf({
-    scale: 1.2,
-    file,
-    page,
-    canvasRef,
-    workerSrc: "/pdfjs/build/pdf.worker.min.mjs",
-  });
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ro = new ResizeObserver(() => {
-      if (canvas.offsetHeight > 0) onHeight(canvas.offsetHeight);
-    });
-    ro.observe(canvas);
-    return () => ro.disconnect();
-  }, [onHeight]);
-
-  return (
-    <Box
-      ref={canvasRef}
-      component="canvas"
-      width={{ xs: "100%", lg: "800px" }}
-      my="16px"
-      boxShadow="0px 10.18px 30.54px 0px #00001229"
-    />
-  );
-};
-
-const PdfCanvasPage = ({ file, page }: { file: string; page: number }) => {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(page <= 2);
-  const [height, setHeight] = useState(900);
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
-      root: null,
-      rootMargin: "400px 0px",
-      threshold: 0,
-    });
-    observer.observe(wrapper);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <Box ref={wrapperRef} minHeight={isVisible ? undefined : `${height}px`}>
-      {isVisible ? <ActivePdfPage file={file} page={page} onHeight={setHeight} /> : null}
-    </Box>
-  );
-};
 
 const SendReportPage = ({ children }: PropsWithChildren) => {
   const { reportId } = Route.useParams();

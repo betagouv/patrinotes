@@ -166,7 +166,7 @@ const ConstatPdf = () => {
 
   if (isLoading) {
     return (
-      <Center height="100%">
+      <Center height="100%" mb="160px">
         <Spinner />
       </Center>
     );
