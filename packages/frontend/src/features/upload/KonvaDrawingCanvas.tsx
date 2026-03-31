@@ -64,6 +64,7 @@ export const ImageCanvas = ({
 
   // Drawing state
   const isDrawingRef = useRef(false);
+  const currentLineRef = useRef<Line | null>(null);
   const stageRef = useRef<Konva.Stage>(null);
 
   // Pan state
@@ -147,7 +148,8 @@ export const ImageCanvas = ({
     const imgPos = stageToImage(pos);
     if (!isWithinBounds(imgPos)) return;
     isDrawingRef.current = true;
-    setLines((prev) => [...prev, { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] }]);
+    currentLineRef.current = { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] };
+    setLines((prev) => [...prev, currentLineRef.current!]);
   };
 
   const handleMouseMove = (_e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -166,18 +168,19 @@ export const ImageCanvas = ({
     if (!pos) return;
     const imgPos = stageToImage(pos);
     if (!isWithinBounds(imgPos)) return;
+    if (!currentLineRef.current) return;
+    currentLineRef.current = { ...currentLineRef.current, points: [...currentLineRef.current.points, imgPos] };
+    const line = currentLineRef.current;
     setLines((prev) => {
-      const updated = [...prev];
-      updated[updated.length - 1] = {
-        ...updated[updated.length - 1],
-        points: [...updated[updated.length - 1].points, imgPos],
-      };
+      const updated = prev.length === 0 ? [line] : [...prev];
+      updated[updated.length - 1] = line;
       return updated;
     });
   };
 
   const handleMouseUp = () => {
     isDrawingRef.current = false;
+    currentLineRef.current = null;
     panStartRef.current = null;
   };
 
@@ -223,7 +226,8 @@ export const ImageCanvas = ({
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
       isDrawingRef.current = true;
-      setLines((prev) => [...prev, { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] }]);
+      currentLineRef.current = { points: [imgPos], color: activeColor, width: widthOptions[activeWidthIdx] };
+      setLines((prev) => [...prev, currentLineRef.current!]);
     }
   };
 
@@ -269,15 +273,12 @@ export const ImageCanvas = ({
       if (!isDrawingRef.current) return;
       const imgPos = stageToImage(pos);
       if (!isWithinBounds(imgPos)) return;
+      if (!currentLineRef.current) return;
+      currentLineRef.current = { ...currentLineRef.current, points: [...currentLineRef.current.points, imgPos] };
+      const line = currentLineRef.current;
       setLines((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          points: [...updated[updated.length - 1]?.points, imgPos].filter((point) => point !== undefined) as {
-            x: number;
-            y: number;
-          }[],
-        };
+        const updated = prev.length === 0 ? [line] : [...prev];
+        updated[updated.length - 1] = line;
         return updated;
       });
     }
@@ -285,6 +286,7 @@ export const ImageCanvas = ({
 
   const handleTouchEnd = () => {
     isDrawingRef.current = false;
+    currentLineRef.current = null;
     panStartRef.current = null;
     lastDistRef.current = null;
     lastMidRef.current = null;
@@ -306,8 +308,21 @@ export const ImageCanvas = ({
 
   const handleSave = async () => {
     if (onReplaceAttachment && stageRef.current && imageNaturalSize.width > 0) {
+      const layer = stageRef.current.getLayers()[0];
+      const prevScaleX = layer.scaleX();
+      const prevScaleY = layer.scaleY();
+      const prevX = layer.x();
+      const prevY = layer.y();
+      layer.scaleX(1);
+      layer.scaleY(1);
+      layer.x(0);
+      layer.y(0);
       const pixelRatio = imageNaturalSize.width / stageSize.width;
       const canvas = stageRef.current.toCanvas({ pixelRatio });
+      layer.scaleX(prevScaleX);
+      layer.scaleY(prevScaleY);
+      layer.x(prevX);
+      layer.y(prevY);
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
       const buffer = await blob.arrayBuffer();
       await onReplaceAttachment(pictureId, buffer);

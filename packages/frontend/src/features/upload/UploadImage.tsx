@@ -4,54 +4,69 @@ import { v7 } from "uuid";
 import { PictureThumbnail, processImage } from "./UploadReportImage";
 import { attachmentQueue, db } from "../../db/db";
 
-export const UploadImage = ({
-  onFiles,
-  attachments,
-  multiple,
-  onClick,
-  onDelete,
-  isDisabled,
-}: UploadImageProps) => {
-  const attachment = attachments.length > 0 ? attachments[0] : null;
-  const hideButton = !multiple && !!attachment;
-
-  return (
-    <Box>
-      {hideButton ? null : (
-        <UploadImageButton
-          multiple={multiple}
-          isDisabled={isDisabled}
-          addImage={async (files) => {
-            await onFiles(files.files);
-          }}
-        />
-      )}
-      <Box display="flex" height="100%" mt="16px" flexWrap="wrap" gap="8px">
-        {attachment
-          ? attachments.map((attachment) => (
-              <PictureThumbnail
-                label={attachment.label || ""}
-                picture={attachment}
-                onEdit={(a, blobUrl) => onClick?.(a, blobUrl)}
-                onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
-                key={attachment.id}
-                isDisabled={isDisabled}
-              />
-            ))
-          : null}
-      </Box>
-    </Box>
-  );
+type UploadImageButtonSubProps = {
+  onFiles: (files: File[]) => any | Promise<any>;
+  multiple?: boolean;
+  isDisabled?: boolean;
 };
 
-type UploadImageProps = {
+type UploadImageImagesSubProps = {
   attachments: MinimalAttachment[];
-  onFiles: (files: File[]) => any | Promise<any>;
   multiple?: boolean;
   onClick?: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete?: (props: { id: string }) => void;
   isDisabled?: boolean;
 };
+
+type UploadImageProps = UploadImageButtonSubProps & UploadImageImagesSubProps;
+
+const Button = ({ onFiles, multiple, isDisabled }: UploadImageButtonSubProps) => (
+  <UploadImageButton multiple={multiple} isDisabled={isDisabled} addImage={onFiles} />
+);
+
+const Images = ({ attachments, onClick, onDelete, isDisabled }: UploadImageImagesSubProps) => {
+  const attachment = attachments.length > 0 ? attachments[0] : null;
+  if (!attachment) return null;
+
+  return (
+    <Box display="flex" height="100%" flexWrap="wrap" gap="8px">
+      {attachments.map((attachment) => (
+        <PictureThumbnail
+          label={attachment.label || ""}
+          picture={attachment}
+          onEdit={(a, blobUrl) => onClick?.(a, blobUrl)}
+          onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
+          key={attachment.id}
+          isDisabled={isDisabled}
+        />
+      ))}
+    </Box>
+  );
+};
+
+const Basic = ({ onFiles, attachments, multiple, onClick, onDelete, isDisabled }: UploadImageProps) => {
+  const attachment = attachments.length > 0 ? attachments[0] : null;
+  const hideButton = !multiple && !!attachment;
+
+  return (
+    <Box>
+      <Images
+        attachments={attachments}
+        multiple={multiple}
+        onClick={onClick}
+        onDelete={onDelete}
+        isDisabled={isDisabled}
+      />
+      {hideButton ? null : (
+        <Box mt={!!attachment ? "16px" : "0"}>
+          <Button onFiles={onFiles} multiple={multiple} isDisabled={isDisabled} />
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+export const UploadImage = Object.assign(Basic, { Button, Images });
 
 export type MinimalAttachment = {
   id: string;

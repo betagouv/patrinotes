@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
 import { AuthUser, type RouterOutputs } from "../api";
 import { apiStore } from "../ApiStore";
-import { db, useDbQuery } from "../db/db";
+import { db, powerSyncDb, useDbQuery } from "../db/db";
 import { menuActor } from "../features/menu/menuMachine";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";

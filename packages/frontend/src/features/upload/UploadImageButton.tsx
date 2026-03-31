@@ -6,7 +6,7 @@ import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
 
 type UploadImageButtonProps = {
-  addImage: ({ files }: { files: File[] }) => Promise<void>;
+  addImage: (files: File[]) => Promise<void>;
   multiple?: boolean;
   isDisabled?: boolean;
 };
@@ -14,7 +14,7 @@ type UploadImageButtonProps = {
 export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImageButtonProps) => {
   const uploadImageMutation = useMutation({
     mutationFn: async ({ files }: { files: File[] }) => {
-      await addImage({ files });
+      await addImage(files);
       ref.current!.value = "";
     },
   });
