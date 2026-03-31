@@ -91,7 +91,7 @@ test.describe("Image upload — drawing and légende", () => {
     // ---------------------------------------------------------------------------
     // Step 7: Wait for the thumbnail canvas to appear, then open the drawing modal
     // ---------------------------------------------------------------------------
-    await expect(planSituationSection.locator("canvas[data-picture-id]")).toBeVisible({ timeout: 15_000 });
+    await expect(planSituationSection.locator("img[data-picture-id]")).toBeVisible({ timeout: 15_000 });
     await planSituationSection.getByRole("button", { name: "Annoter" }).click();
     await expect(page.getByLabel("Légende")).toBeVisible({ timeout: 5_000 });
 
@@ -115,7 +115,7 @@ test.describe("Image upload — drawing and légende", () => {
     // Step 8: Verify légende appears in the thumbnail bar and the canvas is present
     // ---------------------------------------------------------------------------
     await expect(page.getByText("Légende de test")).toBeVisible({ timeout: 10_000 });
-    await expect(planSituationSection.locator("canvas[data-picture-id]")).toHaveCount(1);
+    await expect(planSituationSection.locator("img[data-picture-id]")).toHaveCount(1);
     // Upload button should be gone for a single-upload section
     await expect(planSituationSection.getByRole("button", { name: "Ajouter photo" })).toHaveCount(0);
 

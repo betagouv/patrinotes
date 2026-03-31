@@ -323,7 +323,8 @@ export const ImageCanvas = ({
   const handleUndo = () => setLines((prev) => prev.slice(0, -1));
 
   const handleSave = async () => {
-    if (onReplaceAttachment && konvaImage && imageNaturalSize.width > 0) {
+    let savedId = pictureId;
+    if (onReplaceAttachment && konvaImage && imageNaturalSize.width > 0 && lines.length > 0) {
       // Draw onto an offscreen canvas at the image's natural size, ignoring zoom/pan
       const offscreen = document.createElement("canvas");
       offscreen.width = imageNaturalSize.width;
@@ -345,9 +346,9 @@ export const ImageCanvas = ({
       }
       const blob = await new Promise<Blob>((resolve) => offscreen.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
       const buffer = await blob.arrayBuffer();
-      await onReplaceAttachment(pictureId, buffer);
+      savedId = await onReplaceAttachment(pictureId, buffer);
     }
-    onSave?.({ ...attachment, label: internalLabel, url });
+    onSave?.({ ...attachment, id: savedId, label: internalLabel, url });
     closeModal();
   };
 

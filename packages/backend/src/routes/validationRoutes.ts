@@ -112,7 +112,6 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         throw { statusCode: 410, message: "Ce lien de validation a expiré" };
       }
 
-      console.log("Accepting validation", { token, validation });
       await db.transaction().execute(async (trx) => {
         await trx
           .updateTable("constat_validation")

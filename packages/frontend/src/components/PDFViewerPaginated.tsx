@@ -136,7 +136,13 @@ const PDFPage = ({
       flexShrink={0}
     >
       {isInWindow && (
-        <Box ref={canvasRef} component="canvas" width={{ xs: "100%", lg: `${pageWidth}px` }} display="block" />
+        <Box
+          data-test-id={"pdf-canvas-" + pageNumber}
+          ref={canvasRef}
+          component="canvas"
+          width={{ xs: "100%", lg: `${pageWidth}px` }}
+          display="block"
+        />
       )}
     </Box>
   );

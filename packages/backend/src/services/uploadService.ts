@@ -18,7 +18,7 @@ const client = new S3Client({
 
 export const upload = async () => {};
 const bucketUrl = `${ENV.MINIO_URL}/${ENV.MINIO_BUCKET}`;
-
+console.log(bucketUrl);
 const addAttachmentPrefix = (filePath: string) => "attachment/" + filePath;
 
 export class UploadService {

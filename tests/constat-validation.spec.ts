@@ -112,7 +112,9 @@ test.describe("Constat validation flow", () => {
     // -------------------------------------------------------------------------
     await page.waitForURL((url) => url.search.includes("mode=sent"));
     await expect(
-      page.getByText("Votre constat a été transmis pour validation. Il sera envoyé aux destinataires après approbation."),
+      page.getByText(
+        "Votre constat a été transmis pour validation. Il sera envoyé aux destinataires après approbation.",
+      ),
     ).toBeVisible();
 
     // 5b. Navigate home and check the list badge shows "En attente de validation"
@@ -140,9 +142,7 @@ test.describe("Constat validation flow", () => {
     // -------------------------------------------------------------------------
     // 7. Extract the magic link from the validation email body
     // -------------------------------------------------------------------------
-    const messageResp = await request.get(
-      `http://localhost:${mailpitPort}/api/v1/message/${validationMail.ID}`,
-    );
+    const messageResp = await request.get(`http://localhost:${mailpitPort}/api/v1/message/${validationMail.ID}`);
     const messageData = await messageResp.json();
     const emailHtml: string = messageData.HTML ?? messageData.Text ?? "";
 
@@ -155,7 +155,7 @@ test.describe("Constat validation flow", () => {
     // -------------------------------------------------------------------------
     await page.goto(validationUrl);
     await expect(page.getByText(/Validation du constat d'état/)).toBeVisible();
-    await expect(page.locator("iframe")).toBeVisible();
+    await expect(page.locator("canvas[data-test-id='pdf-canvas-1']")).toBeVisible();
     await expect(page.getByRole("button", { name: "Accepter" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refuser" })).toBeVisible();
 
@@ -188,8 +188,7 @@ test.describe("Constat validation flow", () => {
     // -------------------------------------------------------------------------
     const creatorNotificationMail = finalMessagesData.messages.find(
       (m: any) =>
-        m.To.some((r: { Address: string }) => r.Address === mockUsers[0].email) &&
-        m.Subject?.includes("Accepté"),
+        m.To.some((r: { Address: string }) => r.Address === mockUsers[0].email) && m.Subject?.includes("Accepté"),
     );
     expect(creatorNotificationMail, "Creator should have received an acceptance notification").toBeDefined();
   });
@@ -292,9 +291,7 @@ test.describe("Constat validation flow", () => {
     );
     expect(validationMail).toBeDefined();
 
-    const messageResp = await request.get(
-      `http://localhost:${mailpitPort}/api/v1/message/${validationMail.ID}`,
-    );
+    const messageResp = await request.get(`http://localhost:${mailpitPort}/api/v1/message/${validationMail.ID}`);
     const messageData = await messageResp.json();
     const emailHtml: string = messageData.HTML ?? messageData.Text ?? "";
     const urlMatch = emailHtml.match(/https?:\/\/[^\s"<>]+constat-validation[^\s"<>]+/);
@@ -329,8 +326,7 @@ test.describe("Constat validation flow", () => {
     // Creator should have been notified of the refusal
     const creatorDeclineMail = finalMessagesData.messages.find(
       (m: any) =>
-        m.To.some((r: { Address: string }) => r.Address === mockUsers[1].email) &&
-        m.Subject?.includes("Refusé"),
+        m.To.some((r: { Address: string }) => r.Address === mockUsers[1].email) && m.Subject?.includes("Refusé"),
     );
     expect(creatorDeclineMail, "Creator should have received a decline notification").toBeDefined();
   });

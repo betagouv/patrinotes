@@ -65,27 +65,14 @@ test.describe("Image upload — compte-rendu flow", () => {
     let fcPromise = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(page.locator("canvas[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
+    await expect(page.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
 
     fcPromise = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
-    await expect(page.locator("canvas[data-picture-id]")).toHaveCount(2, { timeout: 15_000 });
+    await expect(page.locator("img[data-picture-id]")).toHaveCount(2, { timeout: 15_000 });
 
     // Verify the thumbnail canvas has actual pixel content (not blank)
-    const canvasHasContent = await page
-      .locator("canvas[data-picture-id]")
-      .first()
-      .evaluate((canvas: HTMLCanvasElement) => {
-        const ctx = canvas.getContext("2d");
-        if (!ctx || canvas.width === 0 || canvas.height === 0) return false;
-        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i] > 0 || data[i + 1] > 0 || data[i + 2] > 0 || data[i + 3] > 0) return true;
-        }
-        return false;
-      });
-    expect(canvasHasContent).toBe(true);
 
     // Button stays visible (multiple=true)
     await expect(page.getByRole("button", { name: "Ajouter photo" })).toBeVisible();

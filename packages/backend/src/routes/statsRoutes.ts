@@ -121,7 +121,10 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         db
           .selectFrom("service")
           .leftJoin("state_report", (join) =>
-            join.onRef("state_report.service_id", "=", "service.id").on("state_report.disabled", "is not", true),
+            join
+              .onRef("state_report.service_id", "=", "service.id")
+              .on("state_report.disabled", "is not", true)
+              .on("state_report.alerts_sent", "=", true),
           )
           .groupBy(["service.id", "service.name"])
           .orderBy(sql`COUNT(DISTINCT state_report.id)`, "desc")
