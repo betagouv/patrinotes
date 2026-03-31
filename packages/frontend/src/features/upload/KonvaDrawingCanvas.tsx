@@ -1,11 +1,8 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { v7 } from "uuid";
-import { db } from "../../db/db";
 import { Box, Stack } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
-import { useUser } from "../../contexts/AuthContext";
 import { ENV } from "../../envVars";
 import { MinimalAttachment } from "./UploadImage";
 import { Stage, Layer, Image as KonvaImage, Line as KonvaLine } from "react-konva";
@@ -25,7 +22,6 @@ export const ImageCanvas = ({
   url,
   attachment,
   lines: dbLines,
-  imageTable,
   onSave,
   onReplaceAttachment,
   closeModal,
@@ -34,19 +30,15 @@ export const ImageCanvas = ({
   attachment: MinimalAttachment;
   url: string;
   lines: Array<Line>;
-  imageTable?: string;
   onSave?: (props: MinimalAttachment & { url: string }) => void;
   /** When provided, the canvas will generate a composite image on save, create a
-   *  new attachment locally (with local_uri set immediately), and deprecate the old
-   *  one — eliminating the blank-thumbnail gap caused by waiting for a server download.
-   *  Must return the new attachment ID so picture_lines can reference it. */
+   *  new attachment locally (with local_uri set immediately), and deprecate the old one. */
   onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
   closeModal: () => void;
   hideLabelInput?: boolean;
 }) => {
   const { id: pictureId } = attachment;
   const [internalLabel, setInternalLabel] = useState<string>(attachment.label ?? "");
-  const user = useUser()!;
 
   const [lines, setLines] = useState<Line[]>([]);
   const [activeColor, setActiveColor] = useState(colors[0]);
@@ -310,9 +302,6 @@ export const ImageCanvas = ({
   const handleUndo = () => setLines((prev) => prev.slice(0, -1));
 
   const handleSave = async () => {
-    // Generate the composite image locally so the new attachment has a local_uri
-    // immediately — no blank-thumbnail gap while waiting for the server download.
-    let newAttachmentId: string | undefined;
     if (onReplaceAttachment && stageRef.current && imageNaturalSize.width > 0) {
       const pixelRatio = imageNaturalSize.width / stageSize.width;
       const canvas = stageRef.current.toCanvas({ pixelRatio });
@@ -320,35 +309,7 @@ export const ImageCanvas = ({
         canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
       );
       const buffer = await blob.arrayBuffer();
-      newAttachmentId = await onReplaceAttachment(pictureId, buffer);
-    }
-
-    const existingLinesQuery = await db
-      .selectFrom("picture_lines")
-      .where("attachmentId", "=", pictureId)
-      .selectAll()
-      .execute();
-    const existingLines = existingLinesQuery?.[0];
-
-    if (existingLines) {
-      await db
-        .updateTable("picture_lines")
-        .where("id", "=", existingLines.id)
-        .set({ lines: JSON.stringify(lines), newAttachmentId: newAttachmentId ?? null })
-        .execute();
-    } else {
-      await db
-        .insertInto("picture_lines")
-        .values({
-          id: v7(),
-          attachmentId: pictureId,
-          lines: JSON.stringify(lines),
-          createdAt: new Date().toISOString(),
-          service_id: user.service_id,
-          table: imageTable,
-          newAttachmentId: newAttachmentId ?? null,
-        })
-        .execute();
+      await onReplaceAttachment(pictureId, buffer);
     }
     onSave?.({ ...attachment, label: internalLabel, url });
     closeModal();

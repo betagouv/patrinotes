@@ -9,9 +9,7 @@ import { fr } from "@codegouvfr/react-dsfr";
 import { MinimalAttachment, UploadImage } from "./UploadImage";
 import { useActor } from "@xstate/react";
 import { thumbnailMachine } from "./machines/thumbnailMachine";
-import { usePictureLines } from "./hooks/usePictureLines";
 import { useAttachmentImages } from "./hooks/useAttachmentImages";
-import { useThumbnailCanvas } from "./hooks/useThumbnailCanvas";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
@@ -26,7 +24,6 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         selectedAttachment={selected?.attachment ?? null}
         blobUrl={selected?.blobUrl ?? null}
         onClose={() => setSelected(null)}
-        imageTable="report_attachment"
         onSave={() => {}}
         onReplaceAttachment={replaceAttachment}
         hideLabelInput
@@ -41,7 +38,6 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         attachments={attachments}
         onDelete={({ id }) => deleteMutation.mutate({ id })}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
-        imageTable="report_attachment"
       />
     </Box>
   );
@@ -53,32 +49,25 @@ export const PictureThumbnail = ({
   onEdit,
   onDelete,
   isDisabled,
-  imageTable,
 }: {
   picture: MinimalAttachment;
   label: string;
   onEdit: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete: (props: { id: string }) => void;
   isDisabled?: boolean;
-  imageTable: string;
 }) => {
-  const lines = usePictureLines(picture.id, imageTable);
-  const hasLines = lines.length > 0;
-
   const [snapshot, send] = useActor(thumbnailMachine, {
-    input: { attachment: picture, hasLines },
+    input: { attachment: picture, hasLines: false },
   });
 
-  // Push attachment and lines changes into the machine.
+  // Push attachment changes into the machine.
   const prevPictureRef = useRef(picture);
-  const prevHasLinesRef = useRef(hasLines);
   useEffect(() => {
-    if (picture !== prevPictureRef.current || hasLines !== prevHasLinesRef.current) {
-      send({ type: "ATTACHMENT_UPDATED", attachment: picture, hasLines });
+    if (picture !== prevPictureRef.current) {
+      send({ type: "ATTACHMENT_UPDATED", attachment: picture, hasLines: false });
       prevPictureRef.current = picture;
-      prevHasLinesRef.current = hasLines;
     }
-  }, [picture, hasLines, send]);
+  }, [picture, send]);
 
   // Revoke the final blob URL on unmount (machine handles intermediate revocations).
   const blobUrlRef = useRef<string | null>(null);
@@ -99,13 +88,9 @@ export const PictureThumbnail = ({
   // on fresh uploads — it resolves in ~100 ms and should not flash "Erreur".
   const hasError = machineState === "blobError" && retryCount > 1;
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useThumbnailCanvas(canvasRef, blobUrl ?? null, lines);
-
   const badgeStatus = (() => {
     if (hasError) return AttachmentState.ARCHIVED;
     if (isLoading) return AttachmentState.QUEUED_UPLOAD;
-    if (hasLines) return AttachmentState.QUEUED_UPLOAD;
     return attachment.state ?? AttachmentState.QUEUED_UPLOAD;
   })();
 
@@ -131,10 +116,10 @@ export const PictureThumbnail = ({
             </Flex>
           ) : blobUrl ? (
             <Box
-              component="canvas"
-              ref={canvasRef}
+              component="img"
+              src={blobUrl}
               data-picture-id={picture.id}
-              sx={{ width: "100%", height: "100%", display: "block" }}
+              sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
             />
           ) : null /* grey background shows during loading */}
         </Box>

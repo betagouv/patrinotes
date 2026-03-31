@@ -90,15 +90,6 @@ const pictures = new Table({
   finalUrl: column.text,
 });
 
-const picture_lines = new Table({
-  attachmentId: column.text,
-  lines: column.text,
-  createdAt: column.text,
-  table: column.text,
-  service_id: column.text,
-  newAttachmentId: column.text,
-});
-
 const transactions = new Table({
   id: column.text,
   entity_id: column.text,
@@ -429,7 +420,6 @@ export const AppSchema = new Schema({
   service_instructeurs,
   clause_v2,
   pictures,
-  picture_lines,
   transactions,
   sent_email,
   suggested_email,
@@ -469,7 +459,6 @@ export type PdfSnapshot = Database["pdf_snapshot"];
 export type ServiceInstructeurs = Database["service_instructeurs"];
 export type Clause_v2 = Database["clause_v2"];
 export type Pictures = Database["pictures"];
-export type PictureLines = Database["picture_lines"];
 export type Transactions = Database["transactions"];
 export type SentEmail = Database["sent_email"];
 export type SuggestedEmail = Database["suggested_email"];
@@ -508,7 +497,6 @@ const _checkTables: { [K in SharedTables]: IsTableOk<K> } = {
   clause_v2: true,
   report_attachment: true,
   state_report_attachment: true,
-  picture_lines: true,
   transactions: true,
   sent_email: true,
   suggested_email: true,

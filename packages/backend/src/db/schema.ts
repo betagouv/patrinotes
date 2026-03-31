@@ -212,16 +212,6 @@ export const pdfSnapshot = pgTable("pdf_snapshot", {
   userId: text("user_id"),
 });
 
-export const pictureLines = pgTable("picture_lines", {
-  id: text().primaryKey().notNull(),
-  attachmentId: text("attachmentId").notNull(),
-  lines: text().notNull(),
-  createdAt: timestamp({ mode: "string" }),
-  table: text().notNull(),
-  serviceId: text("service_id"),
-  newAttachmentId: text("newAttachmentId"),
-});
-
 export const pictures = pgTable(
   "pictures",
   {

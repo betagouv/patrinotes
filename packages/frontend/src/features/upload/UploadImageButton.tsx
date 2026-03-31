@@ -4,7 +4,6 @@ import { useMutation } from "@tanstack/react-query";
 import { ChangeEvent, useRef } from "react";
 import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
-import { usePictureLines } from "./hooks/usePictureLines";
 
 type UploadImageButtonProps = {
   addImage: ({ files }: { files: File[] }) => Promise<void>;
@@ -62,7 +61,6 @@ export const UploadImageModal = ({
   onClose,
   onSave,
   onReplaceAttachment,
-  imageTable,
   hideLabelInput,
 }: {
   selectedAttachment: MinimalAttachment | null;
@@ -70,11 +68,8 @@ export const UploadImageModal = ({
   onClose: () => void;
   onSave?: (props: MinimalAttachment & { url: string }) => void;
   onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
-  imageTable?: string;
   hideLabelInput?: boolean;
 }) => {
-  const lines = usePictureLines(selectedAttachment?.id, imageTable);
-
   if (!selectedAttachment) return null;
 
   return (
@@ -89,13 +84,12 @@ export const UploadImageModal = ({
         >
           {blobUrl ? (
             <ImageCanvas
-              imageTable={imageTable}
               attachment={selectedAttachment}
               closeModal={() => onClose()}
               onSave={onSave}
               onReplaceAttachment={onReplaceAttachment}
               url={blobUrl}
-              lines={lines}
+              lines={[]}
               hideLabelInput={hideLabelInput}
             />
           ) : null}

@@ -11,7 +11,6 @@ export const UploadImage = ({
   onClick,
   onDelete,
   isDisabled,
-  imageTable,
 }: UploadImageProps) => {
   const attachment = attachments.length > 0 ? attachments[0] : null;
   const hideButton = !multiple && !!attachment;
@@ -37,7 +36,6 @@ export const UploadImage = ({
                 onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
                 key={attachment.id}
                 isDisabled={isDisabled}
-                imageTable={imageTable}
               />
             ))
           : null}
@@ -53,7 +51,6 @@ type UploadImageProps = {
   onClick?: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete?: (props: { id: string }) => void;
   isDisabled?: boolean;
-  imageTable: string;
 };
 
 export type MinimalAttachment = {

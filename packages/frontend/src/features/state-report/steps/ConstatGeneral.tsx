@@ -156,7 +156,7 @@ const PlanSituation = ({
         onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={() => deleteMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
-        imageTable="state_report_attachment"
+
       />
     </Box>
   );
@@ -197,7 +197,7 @@ const PlanEdifice = ({
         onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={() => deleteMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
-        imageTable="state_report_attachment"
+
       />
     </Box>
   );
@@ -263,7 +263,7 @@ const VuesGenerales = ({
         onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={({ id }) => deleteMutation.mutate(id)}
         isDisabled={isDisabled}
-        imageTable="state_report_attachment"
+
       />
     </Box>
   );
@@ -299,7 +299,6 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
         selectedAttachment={selected?.attachment ?? null}
         blobUrl={selected?.blobUrl ?? null}
         onClose={() => setSelected(null)}
-        imageTable="state_report_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
       />
       <PlanSituation

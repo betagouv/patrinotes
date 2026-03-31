@@ -76,7 +76,6 @@ export const SectionPhotos = ({
         selectedAttachment={selected?.attachment ?? null}
         blobUrl={selected?.blobUrl ?? null}
         onClose={() => setSelected(null)}
-        imageTable="state_report_alert_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
         onReplaceAttachment={replaceAttachment}
       />
@@ -88,7 +87,6 @@ export const SectionPhotos = ({
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
         onDelete={(attachment) => deleteMutation.mutate(attachment)}
         isDisabled={isDisabled}
-        imageTable="state_report_alert_attachment"
       />
     </Box>
   );

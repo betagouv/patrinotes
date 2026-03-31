@@ -377,7 +377,6 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         selectedAttachment={selected?.attachment ?? null}
         blobUrl={selected?.blobUrl ?? null}
         onClose={() => setSelected(null)}
-        imageTable="visited_section_attachment"
         onSave={({ id, label }) => onLabelChange(id, label || "")}
         onReplaceAttachment={replaceAttachment}
       />
@@ -391,7 +390,6 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
         onDelete={(section) => deleteMutation.mutate(section)}
         isDisabled={isDisabled}
-        imageTable="visited_section_attachment"
       />
     </Box>
   );

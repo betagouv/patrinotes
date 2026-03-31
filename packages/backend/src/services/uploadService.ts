@@ -3,12 +3,8 @@ import { ENV } from "../envVars";
 import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
 import { S3 } from "@aws-sdk/client-s3";
-import { applyLinesToPicture } from "../features/image";
-import { Database, db } from "../db/db";
+import { db } from "../db/db";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import path from "path";
-import { Prettify } from "pastable";
-import { Transaction } from "kysely";
 
 const debug = makeDebug("upload");
 
@@ -84,77 +80,7 @@ export class UploadService {
 
     return Buffer.from(buffer);
   }
-
-  async handleNotifyPictureLines({
-    pictureId,
-    serviceId,
-    onNewImage,
-  }: {
-    pictureId: string;
-    serviceId: string;
-    onNewImage?: OnNewImage;
-  }) {
-    debug("Handling picture lines", pictureId);
-    const linesQuery = await db.selectFrom("picture_lines").where("attachmentId", "=", pictureId).selectAll().execute();
-    const linesRecord = linesQuery?.[0];
-    const lines = JSON.parse(linesRecord?.lines || "[]");
-
-    console.log(linesRecord);
-
-    const pictureUrl = await generatePresignedUrl(addAttachmentPrefix(pictureId));
-
-    const buffer = await applyLinesToPicture({ pictureUrl: pictureUrl, lines });
-
-    // If the frontend already created the new attachment locally (newAttachmentId is set),
-    // upload the high-quality composite under that same ID so the S3 file matches.
-    // Otherwise fall back to the legacy naming convention (creates a new attachment record).
-    const newAttachmentId = linesRecord?.newAttachmentId ?? null;
-    const name = newAttachmentId ?? getPictureName(pictureId, Math.round(Date.now() / 1000));
-
-    debug("Uploading picture to S3", pictureId);
-    await this.uploadAttachment({ buffer, filePath: name });
-    debug("Picture uploaded", pictureId);
-
-    const url = path.join(`https://${bucketUrl}`, name);
-
-    await db.transaction().execute(async (tx) => {
-      // When newAttachmentId is set the frontend has already inserted the new linking
-      // record and deprecated the old one locally; the backend only needs to clean up
-      // picture_lines.  When it is absent (legacy / other-device saves) run the full
-      // onNewImage callback so the attachment tables are updated server-side.
-      if (!newAttachmentId && onNewImage) {
-        await onNewImage(tx, {
-          originalName: pictureId,
-          newName: name,
-          url,
-          attachmentId: pictureId,
-          serviceId: serviceId,
-        });
-      }
-      await tx
-        .deleteFrom("picture_lines")
-        .where(
-          "id",
-          "in",
-          linesQuery.map((line) => line.id),
-        )
-        .execute();
-    });
-
-    debug(url);
-    return url;
-  }
 }
-export type OnNewImage = (
-  tx: Transaction<Database>,
-  {
-    originalName,
-    newName,
-    url,
-    attachmentId,
-    serviceId,
-  }: { originalName: string; newName: string; url: string; attachmentId: string; serviceId: string },
-) => Promise<void> | void;
 
 export async function generatePresignedUrl(key: string) {
   const command = new GetObjectCommand({

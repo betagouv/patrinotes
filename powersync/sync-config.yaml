@@ -43,7 +43,6 @@ streams:
       - SELECT * FROM visited_section_attachment WHERE service_id IN current_service
       - SELECT * FROM report_attachment WHERE service_id IN current_service
       - SELECT * FROM state_report_attachment WHERE service_id IN current_service
-      - SELECT * FROM picture_lines WHERE service_id IN current_service
       - SELECT * FROM state_report_alert WHERE service_id IN current_service
       - SELECT * FROM state_report_alert_attachment WHERE service_id IN current_service
       - SELECT id, state_report_id, status, service_id FROM constat_validation WHERE service_id IN current_service
