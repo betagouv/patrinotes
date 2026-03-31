@@ -47,8 +47,11 @@ const WithStateReport = () => {
 
   if (reportQuery.isLoading) {
     return (
-      <Center mt="100px" height="100%">
-        <Spinner />
+      <Center flexDirection="column">
+        <Box bgcolor={fr.colors.decisions.background.open.blueFrance.default} height="60px" width="100%"></Box>
+        <Center height="100%" mt="100px" mb="160px">
+          <Spinner />
+        </Center>
       </Center>
     );
   }
