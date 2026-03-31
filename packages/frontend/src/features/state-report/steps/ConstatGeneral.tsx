@@ -9,10 +9,11 @@ import { Box, BoxProps, Stack, Typography } from "@mui/material";
 import { getRouteApi } from "@tanstack/react-router";
 import { useActorRef, useSelector } from "@xstate/react";
 import { useCallback, useRef, useState } from "react";
+import { v7 } from "uuid";
 import { useWatch } from "react-hook-form";
 import { useLiveUser } from "../../../contexts/AuthContext";
 import { StateReport } from "../../../db/AppSchema";
-import { attachmentLocalStorage, db, useDbQuery } from "../../../db/db";
+import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../../../db/db";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { attachmentUploadMachine } from "../../upload/machines/attachmentUploadMachine";
@@ -288,9 +289,47 @@ const useStateReportAttachmentQuery = (attachmentId: string | null) => {
 
 const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
+  const { constatId } = routeApi.useParams();
+  const form = useStateReportFormContext();
+  const user = useLiveUser()!;
 
   const onLabelChange = async (attachmentId: string, newLabel: string) => {
     await db.updateTable("state_report_attachment").set({ label: newLabel }).where("id", "=", attachmentId).execute();
+  };
+
+  const replaceAttachment = async (oldId: string, data: ArrayBuffer): Promise<string> => {
+    const newId = `${constatId}/images/${v7()}.jpg`;
+    await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
+    await db
+      .insertInto("state_report_attachment")
+      .values({
+        id: newId,
+        attachment_id: newId,
+        state_report_id: constatId,
+        service_id: user.service_id,
+        created_at: new Date().toISOString(),
+        is_deprecated: 0,
+      })
+      .execute();
+    const plan_situation = form.getValues("plan_situation");
+    const plan_edifice = form.getValues("plan_edifice");
+    const vue_generale = form.getValues("vue_generale");
+    if (plan_situation === oldId) {
+      form.setValue("plan_situation", newId);
+      await db.updateTable("state_report").set({ plan_situation: newId }).where("id", "=", constatId).execute();
+    } else if (plan_edifice === oldId) {
+      form.setValue("plan_edifice", newId);
+      await db.updateTable("state_report").set({ plan_edifice: newId }).where("id", "=", constatId).execute();
+    } else if (vue_generale) {
+      const newVue = vue_generale
+        .split(";")
+        .map((id: string) => (id === oldId ? newId : id))
+        .join(";");
+      form.setValue("vue_generale", newVue);
+      await db.updateTable("state_report").set({ vue_generale: newVue }).where("id", "=", constatId).execute();
+    }
+    await db.updateTable("state_report_attachment").set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
+    return newId;
   };
 
   return (
@@ -300,6 +339,7 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
         blobUrl={selected?.blobUrl ?? null}
         onClose={() => setSelected(null)}
         onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
       <PlanSituation
         setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}

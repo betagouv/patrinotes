@@ -5,11 +5,11 @@ import { useUser } from "../../../contexts/AuthContext";
 import { useHtmlString } from "./ConstatPdf.hook";
 import { Center } from "#components/MUIDsfr.tsx";
 import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
+import { Spinner } from "#components/Spinner.tsx";
 
 export const ViewConstatPdf = () => {
   const htmlString = useHtmlString();
   const user = useUser()!;
-
   const document = useMemo(
     () => (
       <StateReportPDFDocument
@@ -31,7 +31,19 @@ export const ViewConstatPdf = () => {
         marginBottom="96px"
       >
         <BlobProvider document={document}>
-          {({ blob }) => (blob ? <PDFViewerPaginated blob={blob} /> : null)}
+          {({ blob, loading, error }) => {
+            if (loading) {
+              return (
+                <Center mt="64px">
+                  <Spinner />
+                </Center>
+              );
+            }
+            if (error) {
+              return <div>Error: {error.message}</div>;
+            }
+            return <PDFViewerPaginated blob={blob!} />;
+          }}
         </BlobProvider>
       </Center>
     </Center>
