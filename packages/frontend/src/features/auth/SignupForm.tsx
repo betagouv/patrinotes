@@ -175,6 +175,7 @@ export const SignupForm = () => {
           style={{
             marginTop: "1.5rem",
           }}
+          size="large"
           type="submit"
           nativeButtonProps={{ type: "submit" }}
           disabled={mutation.isPending}
@@ -187,7 +188,12 @@ export const SignupForm = () => {
 
       <h5>Vous avez déjà un compte ?</h5>
 
-      <FullWidthButton priority="secondary" linkProps={{ to: "/connexion" }} style={{ marginBottom: "32px" }}>
+      <FullWidthButton
+        size="large"
+        priority="secondary"
+        linkProps={{ to: "/connexion" }}
+        style={{ marginBottom: "32px" }}
+      >
         Se connecter
       </FullWidthButton>
     </Flex>

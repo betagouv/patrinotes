@@ -11,10 +11,12 @@ import { useAuthContext } from "../../contexts/AuthContext";
 import { Alert, Input } from "#components/MUIDsfr.tsx";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
+import { useStyles } from "tss-react";
 
 export const LoginForm = () => {
   const { auth, setAuth } = useAuthContext();
   const form = useForm<LoginFormProps>();
+  const { cx, css } = useStyles();
 
   const mutation = useMutation({
     mutationFn: (body: LoginFormProps) => unauthenticatedApi.post("/api/login-user", { body }),
@@ -88,6 +90,7 @@ export const LoginForm = () => {
           style={{
             marginTop: "1.5rem",
           }}
+          size="large"
           type="submit"
           nativeButtonProps={{ type: "submit" }}
           onClick={form.handleSubmit(login)}
@@ -118,7 +121,7 @@ export const LoginForm = () => {
           Pour accéder au service, vous devez d'abord vous inscrire en renseignant vos informations :
         </Typography>
 
-        <FullWidthButton linkProps={{ to: "/inscription" }} priority="secondary">
+        <FullWidthButton size="large" linkProps={{ to: "/inscription" }} priority="secondary">
           Créer un compte
         </FullWidthButton>
 
