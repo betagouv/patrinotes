@@ -19,7 +19,7 @@ INSERT INTO
         created_at
     )
 SELECT
-    plan_situation,
+    gen_random_uuid (),
     plan_situation,
     id,
     'plan_situation',
@@ -41,7 +41,7 @@ INSERT INTO
         created_at
     )
 SELECT
-    plan_edifice,
+    gen_random_uuid (),
     plan_edifice,
     id,
     'plan_edifice',
@@ -62,7 +62,7 @@ INSERT INTO
         service_id,
         created_at
     )
-SELECT trim(vue_id), trim(vue_id), sr.id, 'vue_generale', sr.service_id, NOW()
+SELECT gen_random_uuid (), trim(vue_id), sr.id, 'vue_generale', sr.service_id, NOW()
 FROM state_report sr, unnest (
         string_to_array (sr.vue_generale, ';')
     ) AS vue_id
