@@ -514,7 +514,7 @@ const generateImagesTable = (images: (Image | undefined)[]) => {
 };
 
 const generateImageCell = (image: Image | undefined) => {
-  if (!image) return '<div class="column"></div>';
+  if (!image) return "";
   return `<unbreakable class="column">
       ${
         image.title
@@ -523,11 +523,9 @@ const generateImageCell = (image: Image | undefined) => {
           </p>`
           : `<p style="height: 16pt"></p>`
       }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%;  margin-bottom: 30px;" />
-      <div style="position:relative">
-        <div style="position:absolute; bottom:0; left:0; right:0; top:-30px; text-align:left; font-size:8pt; color:gray;">
-          ${image.label ? `<span>${image.label}</span>` : ""}
-        </div>
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%;  margin-bottom: 0px;" />
+      <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
+        ${image.label ? image.label : ""}
       </div>
   </unbreakable>`;
 };

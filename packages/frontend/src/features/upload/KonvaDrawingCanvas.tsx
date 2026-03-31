@@ -273,7 +273,10 @@ export const ImageCanvas = ({
         const updated = [...prev];
         updated[updated.length - 1] = {
           ...updated[updated.length - 1],
-          points: [...updated[updated.length - 1].points, imgPos],
+          points: [...updated[updated.length - 1]?.points, imgPos].filter((point) => point !== undefined) as {
+            x: number;
+            y: number;
+          }[],
         };
         return updated;
       });
@@ -305,9 +308,7 @@ export const ImageCanvas = ({
     if (onReplaceAttachment && stageRef.current && imageNaturalSize.width > 0) {
       const pixelRatio = imageNaturalSize.width / stageSize.width;
       const canvas = stageRef.current.toCanvas({ pixelRatio });
-      const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
-      );
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
       const buffer = await blob.arrayBuffer();
       await onReplaceAttachment(pictureId, buffer);
     }
