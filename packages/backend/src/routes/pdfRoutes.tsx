@@ -162,12 +162,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .execute();
 
     const stateReportAttachments = await Promise.all(
-      [
-        ...stateReportAttachmentsQuery.map((attachment) => attachment.attachment_id),
-        stateReportQuery.plan_edifice,
-        stateReportQuery.plan_situation,
-        ...(stateReportQuery.vue_generale?.split(";").filter((id) => id.trim() !== "") || []),
-      ]
+      stateReportAttachmentsQuery
+        .map((attachment) => attachment.attachment_id)
         .filter(Boolean)
         .map(async (id) => {
           const url = await generatePresignedUrl("attachment/" + id);

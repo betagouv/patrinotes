@@ -237,9 +237,6 @@ const state_report = new Table({
   etat_general: column.text,
   proportion_dans_cet_etat: column.text,
   etat_commentaires: column.text,
-  plan_situation: column.text,
-  plan_edifice: column.text,
-  vue_generale: column.text,
   preconisations: column.text,
   preconisations_commentaires: column.text,
 
@@ -374,6 +371,7 @@ const state_report_attachment = new Table({
   is_deprecated: column.integer,
   is_ignored: column.integer,
   label: column.text,
+  type: column.text,
   service_id: column.text,
   created_at: column.text,
 });

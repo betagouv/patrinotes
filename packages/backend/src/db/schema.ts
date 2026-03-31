@@ -173,8 +173,9 @@ export const stateReportAttachment = pgTable("state_report_attachment", {
   isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   stateReportId: text("state_report_id").notNull(),
-  createdAt: timestamp("created_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
   label: text(),
+  type: text().$type<"plan_situation" | "plan_edifice" | "vue_generale">(),
   service_id: text("service_id"),
 });
 
@@ -663,9 +664,6 @@ export const stateReport = pgTable(
     etatGeneral: text("etat_general"),
     proportionDansCetEtat: text("proportion_dans_cet_etat"),
     etatCommentaires: text("etat_commentaires"),
-    planSituation: text("plan_situation"),
-    planEdifice: text("plan_edifice"),
-    vueGenerale: text("vue_generale"),
     preconisations: text(),
     preconisations_commentaires: text("preconisations_commentaires"),
 

@@ -81,8 +81,7 @@ export const PictureThumbnail = ({
   const { blobUrl, attachment, error: loadError, retryCount } = snapshot.context;
   const machineState = snapshot.value;
 
-  const isLoading =
-    machineState === "init" || machineState === "waitingForUri" || machineState === "loadingBlob";
+  const isLoading = machineState === "init" || machineState === "waitingForUri" || machineState === "loadingBlob";
   // Only show the error state after the first silent retry (retryCount > 1).
   // The first failure (retryCount === 1) is a known IndexedDB write-commit race
   // on fresh uploads — it resolves in ~100 ms and should not flash "Erreur".
@@ -99,29 +98,31 @@ export const PictureThumbnail = ({
       <ReportStatus status={badgeStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
         <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
-          {hasError ? (
-            <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
-              <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
-                {loadError ?? "Impossible de charger l'image"}
-              </Typography>
-              <Button
-                type="button"
-                size="small"
-                priority="tertiary no outline"
-                iconId="fr-icon-refresh-line"
-                onClick={() => send({ type: "RETRY" })}
-              >
-                Réessayer
-              </Button>
-            </Flex>
-          ) : blobUrl ? (
-            <Box
-              component="img"
-              src={blobUrl}
-              data-picture-id={picture.id}
-              sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
-            />
-          ) : null /* grey background shows during loading */}
+          {
+            hasError ? (
+              <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
+                <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
+                  {loadError ?? "Impossible de charger l'image"}
+                </Typography>
+                <Button
+                  type="button"
+                  size="small"
+                  priority="tertiary no outline"
+                  iconId="fr-icon-refresh-line"
+                  onClick={() => send({ type: "RETRY" })}
+                >
+                  Réessayer
+                </Button>
+              </Flex>
+            ) : blobUrl ? (
+              <Box
+                component="img"
+                src={blobUrl}
+                data-picture-id={picture.id}
+                sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
+              />
+            ) : null /* grey background shows during loading */
+          }
         </Box>
         <Flex
           display={isDisabled ? "none" : "flex"}
@@ -139,7 +140,9 @@ export const PictureThumbnail = ({
                 priority="tertiary no outline"
                 nativeButtonProps={{
                   "aria-label": "Annoter",
-                  onClick: () => { if (blobUrl) onEdit(picture, blobUrl); },
+                  onClick: () => {
+                    if (blobUrl) onEdit(picture, blobUrl);
+                  },
                 }}
                 sx={{
                   "::before": {
@@ -230,7 +233,7 @@ const statusData: Record<AttachmentState, any> = {
     icon: "fr-icon-refresh-line",
   },
   [AttachmentState.SYNCED]: { label: "Ok", bgColor: "#B8FEC9", color: "#18753C", icon: "fr-icon-success-line" },
-  [AttachmentState.ARCHIVED]: { label: "Erreur", bgColor: "#FEC9C9", color: "#853C3C", icon: "fr-icon-warning-line" },
+  [AttachmentState.ARCHIVED]: { label: "Ok", bgColor: "#B8FEC9", color: "#18753C", icon: "fr-icon-success-line" },
   [AttachmentState.QUEUED_DELETE]: {
     label: "En cours",
     bgColor: "#FEE7FC",

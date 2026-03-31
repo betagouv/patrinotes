@@ -72,12 +72,6 @@ export const attachmentQueue = new AttachmentQueue({
         SELECT attachment_id FROM visited_section_attachment WHERE is_deprecated = 0
         UNION ALL
         SELECT attachment_id FROM state_report_alert_attachment WHERE is_deprecated = 0
-        UNION ALL
-        SELECT vue_generale as attachment_id FROM state_report WHERE vue_generale IS NOT NULL AND vue_generale != '' AND disabled = false
-        UNION ALL
-        SELECT plan_edifice as attachment_id FROM state_report WHERE plan_edifice IS NOT NULL AND plan_edifice != '' AND disabled = false
-        UNION ALL
-        SELECT plan_situation as attachment_id FROM state_report WHERE plan_situation IS NOT NULL AND plan_situation != '' AND disabled = false
         `,
       [],
       {

@@ -9,9 +9,6 @@ export const config = {
   database: ENV.POSTGRES_DB,
 };
 
-console.log("Drizzle config:");
-console.log(config);
-
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "../../db",

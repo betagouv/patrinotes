@@ -277,10 +277,9 @@ export const getStateReportHtmlString = ({
 }) => {
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
-  const planSituationAttachment = stateReport.attachments.find((att) => stateReport.plan_situation === att.id);
-  const planEdificeAttachment = stateReport.attachments.find((att) => stateReport.plan_edifice === att.id);
-  const vuesGeneralesIds = stateReport.vue_generale ? stateReport.vue_generale.split(";") : [];
-  const vuesGeneralesAttachments = stateReport.attachments.filter((att) => vuesGeneralesIds.includes(att.id));
+  const planSituationAttachment = stateReport.attachments.find((att) => att.type === "plan_situation");
+  const planEdificeAttachment = stateReport.attachments.find((att) => att.type === "plan_edifice");
+  const vuesGeneralesAttachments = stateReport.attachments.filter((att) => att.type === "vue_generale");
 
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 

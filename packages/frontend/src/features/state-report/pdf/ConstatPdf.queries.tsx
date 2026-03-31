@@ -23,11 +23,6 @@ export const constatPdfQueries = {
         }
 
         const stateReport = stateReportQuery[0];
-        const extraAttachmentIds = [
-          stateReport.plan_edifice,
-          stateReport.plan_situation,
-          ...(stateReport.vue_generale?.split(";").filter((id) => id.trim() !== "") || []),
-        ];
         const attachmentQuery = await db
           .selectFrom("state_report_attachment")
           .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
@@ -35,6 +30,7 @@ export const constatPdfQueries = {
             "state_report_attachment.id",
             "state_report_attachment.attachment_id",
             "state_report_attachment.label",
+            "state_report_attachment.type",
             "attachments.local_uri",
             "attachments.state",
             "attachments.media_type",
@@ -44,17 +40,14 @@ export const constatPdfQueries = {
             "state_report_attachment.is_ignored",
             "state_report_attachment.state_report_id",
           ])
-          .where("state_report_attachment.is_deprecated", "=", 0)
+          .where("state_report_attachment.state_report_id", "=", constatId)
           .where((eb) =>
             eb.or([
-              eb("state_report_attachment.state_report_id", "=", constatId),
-              eb(
-                "state_report_attachment.attachment_id",
-                "in",
-                extraAttachmentIds.filter((id): id is string => !!id),
-              ),
+              eb("state_report_attachment.is_deprecated", "=", 0),
+              eb("state_report_attachment.is_deprecated", "is", null),
             ]),
           )
+          .orderBy("state_report_attachment.created_at", "asc")
           .execute();
 
         const attachmentsWithFiles = await Promise.all(
@@ -109,7 +102,12 @@ export const constatPdfQueries = {
             "in",
             visitedSections.map((vs) => vs.id),
           )
-          .where("is_deprecated", "=", 0)
+          .where((eb) =>
+            eb.or([
+              eb("visited_section_attachment.is_deprecated", "=", 0),
+              eb("visited_section_attachment.is_deprecated", "is", null),
+            ]),
+          )
           .execute();
 
         const attachments = await Promise.all(
@@ -170,7 +168,12 @@ export const constatPdfQueries = {
             "in",
             alerts.map((alert) => alert.id),
           )
-          .where("is_deprecated", "=", 0)
+          .where((eb) =>
+            eb.or([
+              eb("state_report_alert_attachment.is_deprecated", "=", 0),
+              eb("state_report_alert_attachment.is_deprecated", "is", null),
+            ]),
+          )
           .execute();
 
         const attachments = await Promise.all(
