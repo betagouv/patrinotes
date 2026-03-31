@@ -186,16 +186,22 @@ const ConstatPdf = () => {
 type PageMode = "view" | "send" | "sent";
 
 const BannerAndContent = ({ mode }: { mode: PageMode }) => {
-  const { bannerProps, Component } = contentMap[mode];
+  const { bannerProps } = contentMap[mode];
   return (
     <>
       <Banner {...bannerProps} />
-      <Component />
+      <Box display={mode === "view" ? "block" : "none"}>
+        <ViewConstatPdf />
+      </Box>
+      <Box display={mode === "send" ? "block" : "none"}>
+        <SendConstatPdf />
+      </Box>
+      {mode === "sent" && <SentConstatPdf />}
     </>
   );
 };
 
-const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => ReactNode }> = {
+const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
   view: {
     bannerProps: {
       content: () => "Prévisualisation du constat",
@@ -224,7 +230,6 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
         );
       },
     },
-    Component: ViewConstatPdf,
   },
   send: {
     bannerProps: {
@@ -232,14 +237,12 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => 
       buttons: () => null,
       alignTop: true,
     },
-    Component: SendConstatPdf,
   },
   sent: {
     bannerProps: {
       content: noop,
       buttons: noop,
     },
-    Component: SentConstatPdf,
   },
 };
 
