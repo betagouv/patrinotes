@@ -1,11 +1,12 @@
-import { getStateReportHtmlString, StateReportPDFDocument } from "@patrinotes/pdf/constat";
+import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { BlobProvider } from "@react-pdf/renderer";
-import { useMemo } from "react";
+import { JSX, useEffect, useMemo } from "react";
 import { useUser } from "../../../contexts/AuthContext";
 import { useHtmlString } from "./ConstatPdf.hook";
 import { Center } from "#components/MUIDsfr.tsx";
 import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Spinner } from "#components/Spinner.tsx";
+import { useSendConstatFormContext } from "./ConstatPdfContext";
 
 export const ViewConstatPdf = () => {
   const htmlString = useHtmlString();
@@ -42,10 +43,23 @@ export const ViewConstatPdf = () => {
             if (error) {
               return <div>Error: {error.message}</div>;
             }
-            return <PDFViewerPaginated blob={blob!} />;
+            return (
+              <BlobSync blob={blob!}>
+                <PDFViewerPaginated blob={blob!} />
+              </BlobSync>
+            );
           }}
         </BlobProvider>
       </Center>
     </Center>
   );
+};
+
+// TODO: do better
+const BlobSync = ({ blob, children }: { blob: Blob; children: JSX.Element }) => {
+  const form = useSendConstatFormContext();
+  useEffect(() => {
+    form.setValue("pdfBlob", blob);
+  }, [blob]);
+  return <>{children}</>;
 };

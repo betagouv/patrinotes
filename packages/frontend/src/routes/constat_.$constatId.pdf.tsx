@@ -72,6 +72,7 @@ const ConstatPdf = () => {
       alertErrors: [],
       checkErrors: () => {},
       isStateReportDisabled: false,
+      pdfBlob: null,
     },
   });
 
@@ -212,9 +213,30 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
         const { constatId } = Route.useParams();
 
         const isDisabled = useIsSendConstatFormDisabled();
+        const form = useSendConstatFormContext();
+        const pdfBlob = form.watch("pdfBlob");
+
+        const handleDownload = () => {
+          if (!pdfBlob) return;
+          const url = URL.createObjectURL(pdfBlob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `constat-${constatId}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
 
         return (
           <Flex gap="8px" pr={{ xs: "0", lg: "16px" }}>
+            <Button
+              type="button"
+              iconId="ri-download-line"
+              priority="secondary"
+              disabled={!pdfBlob}
+              onClick={handleDownload}
+            >
+              Télécharger
+            </Button>
             <Button
               type="button"
               disabled={isDisabled}
