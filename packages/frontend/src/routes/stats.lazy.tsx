@@ -131,14 +131,8 @@ const StatsPage = () => {
                 Utilisateurs ayant créé au moins un document (brouillon ou envoyé)
               </Typography>
               <Box display="flex" flexWrap="wrap" gap="1rem">
-                <KpiCard
-                  label="Utilisateurs actifs"
-                  value={`${usersWithDocs} / ${totalUsers}`}
-                />
-                <KpiCard
-                  label="Taux d'adoption"
-                  value={formatPercent(usersWithDocs, totalUsers)}
-                />
+                <KpiCard label="Utilisateurs actifs" value={`${usersWithDocs} / ${totalUsers}`} />
+                <KpiCard label="Taux d'adoption" value={formatPercent(usersWithDocs, totalUsers)} />
               </Box>
             </Stack>
 
@@ -173,14 +167,8 @@ const StatsPage = () => {
                 />
               </Box>
               <Box display="flex" flexWrap="wrap" gap="1rem">
-                <KpiCard
-                  label="Utilisateurs ayant envoyé un document"
-                  value={`${activeUsers} / ${totalUsers}`}
-                />
-                <KpiCard
-                  label="Taux de rétention"
-                  value={formatPercent(activeUsers, totalUsers)}
-                />
+                <KpiCard label="Utilisateurs ayant envoyé un document" value={`${activeUsers} / ${totalUsers}`} />
+                <KpiCard label="Taux de rétention" value={formatPercent(activeUsers, totalUsers)} />
               </Box>
             </Stack>
           </>
@@ -210,13 +198,10 @@ const StatsPage = () => {
           ) : (
             <Table
               id="constats-by-service-table"
-              caption="Taux d'adoption par service — constats d'état envoyés"
+              caption="Taux d'adoption par service"
               noCaption={false}
               headers={["Service", "Constats envoyés"]}
-              data={adminQuery.data.constatsByService.map((s) => [
-                s.serviceName ?? s.serviceId,
-                s.sentConstats,
-              ])}
+              data={adminQuery.data.constatsByService.map((s) => [s.serviceName ?? s.serviceId, s.sentConstats])}
             />
           )}
         </Stack>
