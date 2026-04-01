@@ -227,13 +227,19 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
         };
 
         return (
-          <Flex gap="8px" pr={{ xs: "0", lg: "16px" }}>
+          <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }} width="100%">
             <Button
               type="button"
               iconId="ri-download-line"
               priority="secondary"
               disabled={!pdfBlob}
               onClick={handleDownload}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                justifyContent: "center",
+              }}
             >
               Télécharger
             </Button>
@@ -247,6 +253,12 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
                   search: { mode: "send" },
                 })
               }
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                justifyContent: "center",
+              }}
             >
               Continuer
             </Button>
@@ -296,7 +308,7 @@ const Banner = ({ content, buttons, alignTop }: BannerProps) => {
             <Content />
           </Box>
         </Flex>
-        <Box>
+        <Box width={{ lg: "unset", xs: "100%" }} px={{ xs: "16px" }}>
           <Buttons />
         </Box>
       </Flex>
