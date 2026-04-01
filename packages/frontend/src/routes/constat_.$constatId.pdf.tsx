@@ -301,7 +301,7 @@ const Banner = ({ content, buttons, alignTop }: BannerProps) => {
         gap={{ xs: "8px", lg: "0" }}
       >
         <Flex justifyContent="flex-start" alignItems={alignTop ? "flex-start" : "center"} width="100%" pl="8px">
-          <Box mt={alignTop ? { xs: "6px", lg: "22px" } : "0"} pl={alignTop ? { xs: "16px", lg: "0" } : "0"}>
+          <Box mt={alignTop ? { xs: "0", lg: "28px" } : "0"} pl={alignTop ? { xs: "0", lg: "0" } : "0"}>
             <GoBackButton />
           </Box>
           <Box ml={{ xs: "8px", lg: "50px" }} flex="1" fontWeight="bold">
@@ -377,11 +377,12 @@ const SendBannerContent = () => {
       <Flex
         flexDirection={{ xs: "column", lg: "row" }}
         width="100%"
+        pl="8px"
         alignItems={{ xs: "center", lg: "flex-start" }}
         gap="16px"
-        py={{ xs: "8px", lg: "24px" }}
+        py={{ xs: "0", lg: "24px" }}
       >
-        <Typography pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
+        <Typography ml="-8px" pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
           Courriels
         </Typography>
         {!isDisabled ? (
@@ -390,8 +391,18 @@ const SendBannerContent = () => {
           </Box>
         ) : null}
 
-        <Box mr="100px" ml="8px">
-          <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending || isDisabled}>
+        <Box mr={{ xs: "0", lg: "100px" }} ml={{ xs: "-48px", lg: "8px" }} width={{ xs: "100%", lg: "unset" }}>
+          <Button
+            type="submit"
+            iconId="ri-send-plane-fill"
+            disabled={isPending || isDisabled}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              justifyContent: "center",
+            }}
+          >
             {isPending ? "Envoi en cours..." : "Envoyer"}
           </Button>
         </Box>
