@@ -13,7 +13,7 @@ import { useAttachmentImages } from "./hooks/useAttachmentImages";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
-  const { attachments, addMutation, deleteMutation, replaceAttachment } = useAttachmentImages(
+  const { attachments, addMutation, deleteMutation, replaceAttachment, onLabelChange } = useAttachmentImages(
     { table: "report_attachment", fkColumn: "report_id", fkValue: reportId },
     reportId,
   );
@@ -24,7 +24,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         selectedAttachment={selected?.attachment ?? null}
         blobUrl={selected?.blobUrl ?? null}
         onClose={() => setSelected(null)}
-        onSave={() => {}}
+        onSave={({ id, label }) => onLabelChange(id, label || "")}
         onReplaceAttachment={replaceAttachment}
       />
       <UploadImage

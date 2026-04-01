@@ -21,7 +21,7 @@ function buildQuery(config: AttachmentTableConfig) {
         .where("report_attachment.is_deprecated", "=", 0)
         .select((eb) => [
           "report_attachment.id",
-          eb.val(null).as("label"),
+          "report_attachment.label",
           "attachments.local_uri",
           "attachments.state",
           eb.ref("attachments.media_type").as("mediaType"),
@@ -77,6 +77,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
           .values({
             id: v7(),
             attachment_id: attachmentId,
+            label: "",
             report_id: config.fkValue,
             service_id: user.service_id,
             created_at: new Date().toISOString(),
@@ -166,7 +167,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   };
 
   const onLabelChange = async (attachmentId: string, label: string) => {
-    if (config.table === "report_attachment") return;
+    console.log("Updating label for", attachmentId, "to", label);
     await db.updateTable(config.table).set({ label }).where("id", "=", attachmentId).execute();
   };
 

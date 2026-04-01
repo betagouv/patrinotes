@@ -162,6 +162,7 @@ export const reportAttachment = pgTable("report_attachment", {
   isDeprecated: boolean("is_deprecated"),
   isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
+  label: text(),
   reportId: text("report_id").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }),
   service_id: text("service_id"),

@@ -358,6 +358,7 @@ const visited_section_attachment = new Table({
 
 const report_attachment = new Table({
   report_id: column.text,
+  label: column.text,
   attachment_id: column.text,
   is_deprecated: column.integer,
   is_ignored: column.integer,

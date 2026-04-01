@@ -47,12 +47,14 @@ export const PDF = () => {
 
       const pictures = (reportQuery.data?.pictures ?? []).map((p: any) => ({ url: p.url }));
       const blob = await pdf(
-        <ReportPDFDocument
-          service={service as any}
-          htmlString={htmlString}
-          images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
-          pictures={pictures}
-        /> as any,
+        (
+          <ReportPDFDocument
+            service={service as any}
+            htmlString={htmlString}
+            images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
+            pictures={pictures}
+          />
+        ) as any,
       ).toBlob();
 
       await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
@@ -79,23 +81,24 @@ export const PDF = () => {
         .where("report_attachment.is_deprecated", "=", 0)
         .where("attachments.media_type", "like", "image/%")
         .orderBy("report_attachment.created_at", "asc")
-        .select(["report_attachment.attachment_id", "attachments.local_uri", "attachments.media_type"])
+        .select([
+          "report_attachment.attachment_id",
+          "report_attachment.label",
+          "attachments.local_uri",
+          "attachments.media_type",
+        ])
         .execute();
 
-      const pictures = (
-        await Promise.allSettled(
-          picturesQuery
-            .filter((pic) => pic.local_uri)
-            .map((pic) =>
-              attachmentLocalStorage.readFile(pic.local_uri!).then((buffer) => ({
-                ...pic,
-                url: URL.createObjectURL(new Blob([buffer], { type: pic.media_type ?? "image/jpeg" })),
-              })),
-            ),
-        )
-      )
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
-        .map((r) => r.value);
+      const pictures = await Promise.all(
+        picturesQuery
+          .filter((pic) => pic.local_uri)
+          .map((pic) =>
+            attachmentLocalStorage.readFile(pic.local_uri!).then((buffer) => ({
+              ...pic,
+              url: URL.createObjectURL(new Blob([buffer], { type: pic.media_type ?? "image/jpeg" })),
+            })),
+          ),
+      );
 
       const report = reportQuery?.[0];
 
@@ -612,7 +615,7 @@ export const WithReport = ({
 
 const View = (props: ReportPDFDocumentProps) => {
   const query = useQuery({
-    queryKey: ["report-pdf", props.htmlString],
+    queryKey: ["report-pdf", props.htmlString, (props.pictures ?? []).map((p) => p.url)],
     queryFn: async () => {
       const blob = await pdf(<ReportPDFDocument {...props} />).toBlob();
       return blob;
@@ -635,7 +638,6 @@ const View = (props: ReportPDFDocumentProps) => {
     </Box>
   );
 };
-
 
 const SendReportPage = ({ children }: PropsWithChildren) => {
   const { reportId } = Route.useParams();

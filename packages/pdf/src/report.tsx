@@ -232,9 +232,25 @@ const PicturesGrid = ({ pictures, marianneUrl }: { pictures: PdfImage[]; mariann
                     src={image.url!}
                     style={{ width: "100%", objectFit: "scale-down", objectPosition: "left", maxHeight: "80vh" }}
                   />
-                  {image.label ? <Text>{image.label}</Text> : null}
+                  {image.label ? (
+                    <Text
+                      style={{
+                        fontSize: "10pt",
+                        color: "gray",
+                      }}
+                    >
+                      {image.label}
+                    </Text>
+                  ) : null}
                 </View>
-                <Text style={{ fontSize: "10px", textAlign: "left", width: "100%" }}>
+                <Text
+                  style={{
+                    fontSize: "10px",
+                    textAlign: "left",
+                    width: "100%",
+                    display: image.label ? "none" : undefined,
+                  }}
+                >
                   N° {pageIndex * picturesPerPage + index + 1}
                 </Text>
               </View>

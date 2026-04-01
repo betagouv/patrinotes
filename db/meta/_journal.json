@@ -190,6 +190,13 @@
       "when": 1774979899237,
       "tag": "0026_mighty_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1775039305946,
+      "tag": "0027_wonderful_dark_beast",
+      "breakpoints": true
     }
   ]
 }

@@ -31,16 +31,21 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
   useEffect(() => {
     let cancelled = false;
     const loadingTask = pdfjsLib.getDocument(url);
-    loadingTask.promise.then(async (doc) => {
-      if (cancelled) return;
-      const firstPage = await doc.getPage(1);
-      const viewport = firstPage.getViewport({ scale: SCALE });
-      setPdfDoc(doc);
-      setNumPages(doc.numPages);
-      setPageHeight(viewport.height);
-      setPageWidth(viewport.width);
-      setRenderedPages(new Set(Array.from({ length: Math.min(1 + RENDER_MARGIN, doc.numPages) }, (_, i) => i + 1)));
-    });
+    loadingTask.promise
+      .then(async (doc) => {
+        if (cancelled) return;
+        const firstPage = await doc.getPage(1);
+        const viewport = firstPage.getViewport({ scale: SCALE });
+        setPdfDoc(doc);
+        setNumPages(doc.numPages);
+        setPageHeight(viewport.height);
+        setPageWidth(viewport.width);
+        setRenderedPages(new Set(Array.from({ length: Math.min(1 + RENDER_MARGIN, doc.numPages) }, (_, i) => i + 1)));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        throw err;
+      });
     return () => {
       cancelled = true;
       loadingTask.destroy();
