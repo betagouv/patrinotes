@@ -6,7 +6,8 @@ import Box from "@mui/material/Box/Box";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { type PropsWithChildren } from "react";
 import { useIsLoggedIn } from "../contexts/AuthContext";
-import { MenuButton, MenuModal, StatusBadge } from "../features/menu/MenuButton";
+import { MenuButton, MenuModal } from "../features/menu/MenuButton";
+import { StatusBadge } from "./menu/StatusBadge";
 import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
 

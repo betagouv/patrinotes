@@ -1,5 +1,4 @@
-import { Font, Image, Text, View, ViewProps } from "@react-pdf/renderer";
-import React from "react";
+import { Font } from "@react-pdf/renderer";
 import { StateReportAlert } from "../../frontend/src/db/AppSchema";
 import linkifyHtml from "linkify-html";
 export const initFonts = (folder: string = "") => {
@@ -24,56 +23,6 @@ export const initFonts = (folder: string = "") => {
       },
     ],
   });
-};
-
-export const MarianneHeader = ({
-  marianneUrl,
-  styles,
-}: {
-  marianneUrl: string;
-  styles?: ({ pageNumber }: { pageNumber: number }) => ViewProps["style"];
-}) => {
-  return (
-    <View
-      fixed
-      render={({ pageNumber }) => (
-        <View
-          style={{
-            position: "absolute",
-            top: -36,
-            left: 40,
-            height: 13,
-            width: 34,
-            ...styles?.({ pageNumber }),
-          }}
-          fixed
-        >
-          <Image
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-            }}
-            src={marianneUrl}
-          />
-        </View>
-      )}
-    />
-  );
-};
-
-export const Pagination = () => {
-  return (
-    <View fixed style={{ position: "absolute", bottom: 40, right: 40, fontSize: 10 }}>
-      <Text
-        render={({ pageNumber, totalPages }) => (
-          <Text style={{ fontSize: 8 }}>
-            Page {pageNumber} sur {totalPages}
-          </Text>
-        )}
-      />
-    </View>
-  );
 };
 
 const minifyHtml = (htmlString: string) => {

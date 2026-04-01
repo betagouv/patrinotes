@@ -12,7 +12,7 @@ export const Banner = forwardRef<HTMLDivElement, BoxProps & { status: SyncFormSt
       pending: "#FEECC2",
     };
 
-    const bgColor = (statusColorMap as any)[status] || fr.colors.decisions.background.open.blueFrance.default;
+    const bgColor = fr.colors.decisions.background.open.blueFrance.default;
 
     return <Center ref={ref as any} className={className} bgcolor={bgColor} flexDirection="column" {...props} />;
   },

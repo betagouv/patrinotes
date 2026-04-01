@@ -2,7 +2,9 @@ import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { Html } from "react-pdf-html";
 import { Clause_v2, Report, Service, ServiceInstructeurs } from "../../frontend/src/db/AppSchema";
-import { MarianneHeader, processHtml, Pagination } from "./utils";
+import { processHtml } from "./utils";
+import { MarianneHeader } from "./components/MarianneHeader";
+import { Pagination } from "./components/Pagination";
 import React from "react";
 import { transformHeaderText } from "./stateReport";
 
@@ -225,11 +227,12 @@ const PicturesGrid = ({ pictures, marianneUrl }: { pictures: PdfImage[]; mariann
                   alignItems: "center",
                 }}
               >
-                <View style={{ width: "100%", marginBottom: 5 }}>
+                <View style={{ width: "100%", marginBottom: 5 }} wrap={false}>
                   <Image
                     src={image.url!}
                     style={{ width: "100%", objectFit: "scale-down", objectPosition: "left", maxHeight: "80vh" }}
                   />
+                  {image.label ? <Text>{image.label}</Text> : null}
                 </View>
                 <Text style={{ fontSize: "10px", textAlign: "left", width: "100%" }}>
                   N° {pageIndex * picturesPerPage + index + 1}

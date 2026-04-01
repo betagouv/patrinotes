@@ -26,7 +26,6 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         onClose={() => setSelected(null)}
         onSave={() => {}}
         onReplaceAttachment={replaceAttachment}
-        hideLabelInput
       />
       <UploadImage
         onFiles={async (files) => {

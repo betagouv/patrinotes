@@ -12,9 +12,7 @@ import {
   ARCHEOLOGIE_SECTION,
   BIODIVERSITE_SECTION,
   EDIFICE_EN_PERIL_SECTION,
-  MarianneHeader,
   OBJETS_MOBILIERS_SECTION,
-  Pagination,
   SECURITE_SECTION,
   SITE_CLASSE_OU_INSCRIT_SECTION,
   deserializeMandatoryEmails,
@@ -22,6 +20,8 @@ import {
   initFonts,
   processHtml,
 } from "./utils";
+import { MarianneHeader } from "./components/MarianneHeader";
+import { Pagination } from "./components/Pagination";
 import { Html } from "react-pdf-html";
 import { StateReportWithUser } from "../../frontend/src/features/report/ReportList";
 import React from "react";
@@ -235,25 +235,26 @@ export const transformHeaderText = (text: string | null | undefined) => {
   if (!text) return "";
 
   const cleanString = text.normalize("NFC").replaceAll("\n", " ").replaceAll("  ", " ").trim();
+  const uppercaseString = cleanString.toUpperCase();
 
-  if (cleanString.startsWith("Préfet") || cleanString.startsWith("Préfète")) {
+  if (uppercaseString.startsWith("PRÉFET") || uppercaseString.startsWith("PRÉFÈTE")) {
     return addBreaksAfterWords(cleanString, ["Préfet", "Préfète", "région"]);
   }
 
   if (
-    cleanString.startsWith("Direction des affaires culturelles") ||
-    cleanString.startsWith("Direction régionale des affaires culturelles")
+    uppercaseString.startsWith("DIRECTION DES AFFAIRES CULTURELLES") ||
+    uppercaseString.startsWith("DIRECTION RÉGIONALE DES AFFAIRES CULTURELLES")
   ) {
     return addBreaksAfterWords(cleanString, ["culturelles"]);
   }
 
-  if (cleanString.startsWith("Unité départementale de")) {
+  if (uppercaseString.startsWith("UNITÉ DÉPARTEMENTALE DE")) {
     console.log("matched");
-    return addBreaksAfterWords(cleanString, ["départementale de", "patrimoine"]);
+    return addBreaksAfterWords(cleanString, ["DÉPARTEMENTALE DE", "PATRIMOINE"]);
   }
 
-  if (cleanString.startsWith("Conservation régionale des monuments historiques")) {
-    return addBreaksAfterWords(cleanString, ["monuments"]);
+  if (uppercaseString.startsWith("CONSERVATION RÉGIONALE DES MONUMENTS HISTORIQUES")) {
+    return addBreaksAfterWords(cleanString, ["MONUMENTS"]);
   }
 
   return cleanString;
