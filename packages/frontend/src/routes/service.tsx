@@ -475,7 +475,7 @@ const SingleClause = ({ clauseKey, title }: { clauseKey: string; title: string }
       >
         Ajouter
       </Button>
-      <div>Sélectionnez pour modifier ou supprimer</div>
+      {clausesQuery.data?.length ? <div>Sélectionnez pour modifier ou supprimer</div> : null}
       <Flex gap="8px" flexWrap="wrap">
         {clausesQuery.isLoading ? (
           <Spinner />
