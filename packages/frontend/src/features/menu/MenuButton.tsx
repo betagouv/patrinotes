@@ -113,17 +113,20 @@ export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
             </Box>
             <Button
               sx={{
-                "::before": { width: "24px", height: "24px" },
                 p: 0,
+                width: "40px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
-              iconId="ri-menu-fill"
               priority="tertiary no outline"
               nativeButtonProps={{
                 onClick: () => menuActor.send({ type: "OPEN" }),
                 type: "button",
               }}
             >
-              {null}
+              <i className="fr-icon ri-menu-fill" />
             </Button>
           </Center>
         )}
