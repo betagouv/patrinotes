@@ -382,7 +382,6 @@ const SendBannerContent = () => {
   return (
     <>
       {/* // TODO */}
-      {/* <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={() => {}} /> */}
       <Flex
         flexDirection={{ xs: "column", lg: "row" }}
         width="100%"
@@ -417,54 +416,5 @@ const SendBannerContent = () => {
         </Box>
       </Flex>
     </>
-  );
-};
-
-const AlertEmailErrorModal = ({
-  errors,
-  onClose,
-  onAlertClick,
-}: {
-  errors: Array<{ id: string; alert: string }> | null;
-  onClose: () => void;
-  onAlertClick: (alertId: string) => void;
-}) => {
-  return (
-    <Dialog open={!!errors?.length} onClose={onClose}>
-      <Box p="24px" maxWidth="500px">
-        <Flex justifyContent="space-between" alignItems="flex-start" mb="16px">
-          <Flex alignItems="center" gap="8px">
-            <Box
-              className="fr-icon-error-warning-fill"
-              sx={{ color: fr.colors.decisions.text.actionHigh.redMarianne.default }}
-            />
-            <Typography variant="h6" fontWeight="bold">
-              Alertes sans courriel
-            </Typography>
-          </Flex>
-          <ModalCloseButton onClose={onClose} />
-        </Flex>
-        <Typography mb="16px">Veuillez renseigner un courriel pour les alertes suivantes :</Typography>
-        <Stack component="ul" gap="8px" pl="16px">
-          {errors?.map(({ id, alert }) => (
-            <li key={id}>
-              <Typography
-                onClick={() => onAlertClick(id)}
-                sx={{
-                  cursor: "pointer",
-                  color: fr.colors.decisions.text.actionHigh.redMarianne.default,
-                  textDecoration: "underline",
-                  "&:hover": {
-                    textDecoration: "none",
-                  },
-                }}
-              >
-                {alert}
-              </Typography>
-            </li>
-          ))}
-        </Stack>
-      </Box>
-    </Dialog>
   );
 };

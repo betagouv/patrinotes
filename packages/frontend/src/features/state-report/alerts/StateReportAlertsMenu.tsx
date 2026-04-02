@@ -53,7 +53,7 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
       {!selectedSection ? (
         <>
           <MenuTitle hideDivider onClose={onClose}>
-            Alertes
+            Alertes MH
           </MenuTitle>
           <Typography mb="24px">
             Vous avez remarqué un problème lié au monument historique ?<br />

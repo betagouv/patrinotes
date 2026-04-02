@@ -25,7 +25,6 @@ const getAlertEmails = (alerts: AlertWithAttachments[]): string => {
 export const AlertsReminder = () => {
   const form = useSendConstatFormContext();
   const alerts = useWatch({ control: form.control, name: "alerts" });
-  const selectedAlertIds = useWatch({ control: form.control, name: "selectedAlertIds" });
 
   if (alerts.length === 0) return null;
 
@@ -33,21 +32,6 @@ export const AlertsReminder = () => {
 
   const mobilierAlerts = alerts.filter((a) => a.alert === OBJETS_MOBILIERS_SECTION);
   const otherAlerts = alerts.filter((a) => a.alert !== OBJETS_MOBILIERS_SECTION);
-  const mobilierIds = mobilierAlerts.map((a) => a.id);
-  const isMobilierChecked = mobilierIds.some((id) => selectedAlertIds?.includes(id));
-
-  const toggleAlert = (id: string, checked: boolean) => {
-    const current = form.getValues("selectedAlertIds") ?? [];
-    form.setValue("selectedAlertIds", checked ? [...current, id] : current.filter((i) => i !== id));
-  };
-
-  const toggleMobilier = (checked: boolean) => {
-    const current = form.getValues("selectedAlertIds") ?? [];
-    form.setValue(
-      "selectedAlertIds",
-      checked ? [...new Set([...current, ...mobilierIds])] : current.filter((id) => !mobilierIds.includes(id)),
-    );
-  };
 
   return (
     <Stack width="100%">
@@ -55,7 +39,7 @@ export const AlertsReminder = () => {
         label={
           <Flex pr="8px" alignItems="center">
             <i className="fr-icon ri-alarm-warning-fill" style={{ marginRight: "8px" }} />
-            {alerts.length} alerte{sIfPlural} signalée{sIfPlural}
+            {alerts.length} alerte{sIfPlural} MH signalée{sIfPlural}
           </Flex>
         }
       >

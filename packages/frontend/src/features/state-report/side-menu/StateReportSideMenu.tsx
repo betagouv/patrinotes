@@ -30,9 +30,9 @@ export const StateReportSideMenu = () => {
           onClick={() => setSideMenu("alerts")}
           sx={{ width: "254px", justifyContent: "center" }}
           iconId="ri-alarm-warning-fill"
-          disabled={false && !ENV.VITE_ALERTES_MH_ENABLED}
+          disabled={!ENV.VITE_ALERTES_MH_ENABLED}
         >
-          Alertes
+          Alertes MH
         </Button>
         <Button
           priority="secondary"
