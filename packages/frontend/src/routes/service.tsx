@@ -817,6 +817,17 @@ const AlertesForm = ({ service }: { service: Service }) => {
     },
   });
 
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const fields = [
+    { name: "courriel_crmh", label: "Courriel CRMH", sx: { mt: "16px" } },
+    { name: "courriel_caoa", label: "Courriel CAOA" },
+    { name: "courriel_dreal", label: "Courriel DREAL" },
+    { name: "courriel_sra", label: "Courriel SRA" },
+    { name: "courriel_udap", label: "Courriel UDAP" },
+    { name: "courriel_ofb", label: "Courriel OFB" },
+  ];
+
   return (
     <Stack
       component="form"
@@ -828,12 +839,33 @@ const AlertesForm = ({ service }: { service: Service }) => {
     >
       <Title anchor="alertes-mh">4. Alertes visites Monuments Historiques</Title>
 
-      <Input sx={{ mt: "16px" }} label="Courriel CRMH" nativeInputProps={{ ...form.register("courriel_crmh") }} />
+      {fields.map((field) => {
+        const { onBlur, ...formProps } = form.register(field.name as any);
+
+        return (
+          <Input
+            key={field.name}
+            sx={field.sx}
+            label={field.label}
+            nativeInputProps={{
+              autoComplete: focusedField === field.name ? "email" : "nope",
+              ...formProps,
+              onFocus: () => setFocusedField(field.name),
+              onBlur: (e) => {
+                setFocusedField(null);
+                onBlur?.(e);
+              },
+            }}
+          />
+        );
+      })}
+
+      {/* <Input sx={{ mt: "16px" }} label="Courriel CRMH" nativeInputProps={{ ...form.register("courriel_crmh") }} />
       <Input label="Courriel CAOA" nativeInputProps={{ ...form.register("courriel_caoa") }} />
       <Input label="Courriel DREAL" nativeInputProps={{ ...form.register("courriel_dreal") }} />
       <Input label="Courriel SRA" nativeInputProps={{ ...form.register("courriel_sra") }} />
       <Input label="Courriel UDAP" nativeInputProps={{ ...form.register("courriel_udap") }} />
-      <Input label="Courriel OFB" nativeInputProps={{ ...form.register("courriel_ofb") }} />
+      <Input label="Courriel OFB" nativeInputProps={{ ...form.register("courriel_ofb") }} /> */}
 
       <Flex>
         <Button
