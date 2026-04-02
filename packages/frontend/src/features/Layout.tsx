@@ -149,6 +149,13 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
       <header
         role="banner"
         id="fr-header"
+        style={
+          isDesktop
+            ? undefined
+            : {
+                boxShadow: "0 1px 3px var(--shadow-color)",
+              }
+        }
         className="fr-header [&amp;_.fr-btn--menu]:opacity_0 [&amp;_.fr-btn--menu]:pointer-events_none"
       >
         <div className="fr-header__body">
