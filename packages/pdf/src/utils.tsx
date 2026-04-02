@@ -1,6 +1,15 @@
 import { Font } from "@react-pdf/renderer";
-import { StateReportAlert } from "../../frontend/src/db/AppSchema";
+import {
+  StateReport,
+  StateReportAlert,
+  StateReportAlertAttachment,
+  StateReportAttachment,
+  VisitedSection,
+  VisitedSectionAttachment,
+} from "../../frontend/src/db/AppSchema";
 import linkifyHtml from "linkify-html";
+import { MinimalAlert } from "./stateReport";
+
 export const initFonts = (folder: string = "") => {
   Font.register({
     family: "Marianne",
@@ -30,6 +39,8 @@ const minifyHtml = (htmlString: string) => {
 };
 const breakUrl = (url: string) => url.replace(/([/\-._])/g, "$1\u200B");
 
+export const addSIfPlural = (count: number) => (count > 1 ? "s" : "");
+
 export const processHtml = (htmlString: string) => {
   return minifyHtml(
     linkifyHtml(htmlString, {
@@ -51,8 +62,19 @@ export const deserializeMandatoryEmails = (data: string): { service: string; ema
   });
 };
 
-export const getIsAlertVisited = (alertSection: any) => {
-  return !!alertSection.commentaires || !!alertSection.objet_ou_mobilier;
+export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
+  // OBJETS_MOBILIERS_SECTION
+  const isObjetsMobiliers = alert.alert === OBJETS_MOBILIERS_SECTION;
+  if (isObjetsMobiliers) {
+    return false;
+  }
+
+  const hasAttachments = !!alert.attachments && alert.attachments.length > 0;
+  const hasDescription = !!alert.commentaires && alert.commentaires.trim() !== "";
+
+  console.log({ hasAttachments, hasDescription });
+
+  return Boolean(hasAttachments || hasDescription);
 };
 
 export const getIsSectionVisited = (section: any) => {
@@ -66,3 +88,19 @@ export const ARCHEOLOGIE_SECTION = "Archéologie";
 export const SITE_CLASSE_OU_INSCRIT_SECTION = "Site classé ou inscrit";
 export const BIODIVERSITE_SECTION = "Biodiversité";
 export const SECURITE_SECTION = "Sécurité";
+
+export type AlertWithAttachments = Omit<StateReportAlert, "should_send"> & {
+  attachments: (StateReportAlertAttachment & { file: string })[];
+  should_send: Booleanish;
+};
+
+export type Booleanish = boolean | number | null | undefined;
+
+export type StateReportWithUserAndAttachments = StateReport & {
+  attachments: (StateReportAttachment & { file: string })[];
+  createdByName: string | null;
+};
+
+export type SectionWithAttachments = VisitedSection & {
+  attachments: (VisitedSectionAttachment & { file: string })[];
+};

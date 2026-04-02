@@ -303,7 +303,7 @@ export namespace Endpoints {
               objet_ou_mobilier: string | Schemas.null | Array<string | Schemas.null>;
               objet_ou_mobilier_name: string | Schemas.null | Array<string | Schemas.null>;
               probleme: string | Schemas.null | Array<string | Schemas.null>;
-              shouldSend: boolean | number | Schemas.null | Array<boolean | number | Schemas.null>;
+              should_send: boolean | number | Schemas.null | Array<boolean | number | Schemas.null>;
             }>
           | undefined;
       };

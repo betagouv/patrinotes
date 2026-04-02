@@ -12,7 +12,6 @@ import { UseFormReturn } from "react-hook-form";
 import { v7 } from "uuid";
 import { StateReportAlert } from "../../../db/AppSchema";
 import { db } from "../../../db/db";
-import { addSIfPlural } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled } from "../utils";
 import { SectionCommentaires, SectionPhotos, ShouldSendToggle, ShowInReportToggle } from "./SectionCommentaires";
@@ -21,6 +20,7 @@ import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 import { useAlertErrors, useIsEditingAlertEmail } from "../side-menu/StateReportSideMenu.store";
+import { AlertWithAttachments } from "@patrinotes/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -44,8 +44,8 @@ export const StateReportAlertSectionForm = ({
 }: {
   title: string;
   onClose: () => void;
-  onBack: (data?: StateReportAlert[]) => void;
-  alert: StateReportAlert;
+  onBack: (data?: AlertWithAttachments[]) => void;
+  alert: AlertWithAttachments;
   name: AlertSectionName;
   form: AlertSectionsForm;
   errors: AlertErrors | null;

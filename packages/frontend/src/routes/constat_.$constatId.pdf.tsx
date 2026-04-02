@@ -82,7 +82,7 @@ const ConstatPdf = () => {
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId, service: service as any }));
 
   const checkAllAlertsError = (alerts: SendConstatForm["alerts"]) => {
-    const alertToSend = alerts.filter((alert) => alert.shouldSend);
+    const alertToSend = alerts.filter((alert) => alert.should_send);
     const alertErrors = alertToSend.map(checkAlertErrors);
     form.setValue("alertErrors", alertErrors);
     return alertErrors;
@@ -156,6 +156,10 @@ const ConstatPdf = () => {
     form.setValue("htmlString", htmlString);
 
     isSetRef.current = true;
+
+    return () => {
+      isSetRef.current = false;
+    };
   }, [sections, stateReport, alerts]);
 
   // propagate isDisabled to children

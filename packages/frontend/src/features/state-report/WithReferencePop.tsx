@@ -18,12 +18,13 @@ import { pick } from "pastable";
 import { immeubleMapping } from "../ImmeubleAutocomplete";
 import { ModalCloseButton } from "../menu/MenuTitle";
 import { useStateReportAlerts } from "./alerts/StateReportAlerts.hook";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
 import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
 import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
 import { useUnsyncedAttachments } from "./hooks/useUnsyncedAttachments";
 import { ImageSyncModal } from "./ImageSyncModal";
+import { constatPdfQueries } from "./pdf/ConstatPdf.queries";
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
@@ -241,7 +242,7 @@ const CreateButton = () => {
   const form = useStateReportFormContext();
   const isDisabled = useIsStateReportDisabled();
 
-  const alertsQuery = useStateReportAlerts(constatId);
+  const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
   const unsyncedAttachments = useUnsyncedAttachments(constatId);
 
   const proceedToFinalize = () => {
@@ -260,6 +261,7 @@ const CreateButton = () => {
       })
       .map(([key]) => key);
 
+    console.log(alertsQuery.data);
     const alertErrors = alertsQuery.data
       ?.map((alert) => {
         const errors = checkAlertErrors(alert);

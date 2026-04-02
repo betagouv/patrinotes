@@ -1,6 +1,11 @@
 import { alertSectionStaticData } from "@patrinotes/pdf/constat";
 import { Service, StateReportAlert } from "../../../db/AppSchema";
-import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
+import {
+  AlertWithAttachments,
+  deserializeMandatoryEmails,
+  getIsAlertVisited,
+  OBJETS_MOBILIERS_SECTION,
+} from "@patrinotes/pdf/utils";
 
 export const getEmailsForSection = (sectionTitle: string, service: Service) => {
   const sectionStaticData = alertSectionStaticData.find((s) => s.title === sectionTitle);
@@ -16,8 +21,13 @@ export const getEmailsForSection = (sectionTitle: string, service: Service) => {
   return mandatoryEmails;
 };
 
-export const checkAlertErrors = (alert: StateReportAlert): AlertErrors => {
+export const checkAlertErrors = (alert: AlertWithAttachments): AlertErrors => {
   if (!alert.should_send) return { email: [] };
+  if (!getIsAlertVisited(alert)) {
+    return {
+      email: [],
+    };
+  }
   const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
 
   const missingEmails = mandatoryEmails

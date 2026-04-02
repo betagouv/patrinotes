@@ -10,12 +10,17 @@ import {
 import {
   ABORDS_DE_L_EDIFICE_SECTION,
   ARCHEOLOGIE_SECTION,
+  AlertWithAttachments,
   BIODIVERSITE_SECTION,
   EDIFICE_EN_PERIL_SECTION,
   OBJETS_MOBILIERS_SECTION,
   SECURITE_SECTION,
   SITE_CLASSE_OU_INSCRIT_SECTION,
+  SectionWithAttachments,
+  StateReportWithUserAndAttachments,
+  addSIfPlural,
   deserializeMandatoryEmails,
+  getIsAlertVisited,
   getIsSectionVisited,
   initFonts,
   processHtml,
@@ -23,15 +28,9 @@ import {
 import { MarianneHeader } from "./components/MarianneHeader";
 import { Pagination } from "./components/Pagination";
 import { Html } from "react-pdf-html";
-import { StateReportWithUser } from "../../frontend/src/features/report/ReportList";
 import React from "react";
 import { groupBy } from "pastable";
 import { format } from "date-fns";
-import type {
-  AlertWithAttachments,
-  SectionWithAttachments,
-  StateReportWithUserAndAttachments,
-} from "../../frontend/src/features/state-report/pdf/ConstatPdfContext";
 
 export const StateReportPDFDocument = ({ service, htmlString, images }: StateReportPDFDocumentProps) => {
   return (
@@ -293,6 +292,8 @@ export const getStateReportHtmlString = ({
     .filter(Boolean)
     .join(" ");
 
+  const filteredAlerts = (alerts || []).filter((alert) => alert.show_in_report).filter(getIsAlertVisited);
+
   // accessibilité
   // h1 pour les deux premières lignes
   // h2 pour les titres de sections
@@ -404,7 +405,7 @@ export const getStateReportHtmlString = ({
 
       ${
         preconisationsHtml
-          ? `<div id="preconisations">
+          ? `<unbreakable id="preconisations">
         <h2>Préconisations générales</h2>
         <b>
           Suite à la visite, il est préconisé d'entreprendre les travaux suivants sur l'édifice :
@@ -412,20 +413,21 @@ export const getStateReportHtmlString = ({
         <br/>
         <div>
           ${preconisationsHtml}
-        </div>`
+        </div>
+        </unbreakable>`
           : ""
       }
 
       ${
-        alerts?.filter((alert) => alert.show_in_report).length
-          ? `<div id="alertes">
-        <h2>Alertes</h2>
-        <b>
-          Suite à la visite, ${alerts.length} ont été signalées et transmises aux services concernés :
-        </b>
-        <br/>
-        ${generateAlertsTable(alerts)}
-        </div>`
+        filteredAlerts.length
+          ? `<unbreakable id="alertes">
+              <h2>Alertes</h2>
+              <b>
+                Suite à la visite, ${filteredAlerts.length} alerte${filteredAlerts.length > 1 ? "s ont été" : " a été"} signalée${filteredAlerts.length > 1 ? "s" : ""} et transmise${filteredAlerts.length > 1 ? "s" : ""} aux services concernés :
+              </b>
+              <br/>
+              ${generateAlertsTable(filteredAlerts)}
+            </unbreakable>`
           : ""
       }
 

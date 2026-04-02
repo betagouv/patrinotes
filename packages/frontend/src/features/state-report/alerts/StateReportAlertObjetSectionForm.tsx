@@ -19,6 +19,7 @@ import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 import { AlertSectionFieldArray, AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { useIsEditingAlertEmail } from "../side-menu/StateReportSideMenu.store";
+import { AlertWithAttachments } from "@patrinotes/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -33,8 +34,8 @@ export const StateReportAlertObjetSectionForm = ({
 }: {
   title: string;
   onClose: () => void;
-  onBack: (data?: StateReportAlert[]) => void;
-  alerts: { alert: StateReportAlert; name: AlertSectionName }[];
+  onBack: (data?: AlertWithAttachments[]) => void;
+  alerts: { alert: AlertWithAttachments; name: AlertSectionName }[];
   form: AlertSectionsForm;
   appendAlert: () => Promise<void>;
   errors: AlertErrors | null;

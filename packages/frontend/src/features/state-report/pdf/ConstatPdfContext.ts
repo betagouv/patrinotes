@@ -10,24 +10,12 @@ import {
 import { StateReportWithUser } from "../../report/ReportList";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AlertErrors } from "../alerts/StateReportAlert.utils";
+import { AlertWithAttachments, SectionWithAttachments, StateReportWithUserAndAttachments } from "@patrinotes/pdf/utils";
 
 export type AlertWithEmail = {
   id: string;
   alert: string | null;
   email: string;
-};
-
-export type StateReportWithUserAndAttachments = StateReportWithUser & {
-  attachments: (StateReportAttachment & { file: string })[];
-};
-
-export type SectionWithAttachments = VisitedSection & {
-  attachments: (VisitedSectionAttachment & { file: string })[];
-};
-
-export type AlertWithAttachments = StateReportAlert & {
-  attachments: (StateReportAlertAttachment & { file: string })[];
-  shouldSend: boolean;
 };
 
 export const useSendConstatFormContext = () => useFormContext<SendConstatForm>();

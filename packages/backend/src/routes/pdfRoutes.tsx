@@ -219,7 +219,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         .execute();
 
       for (const alert of alerts) {
-        if (!alert.shouldSend) continue;
+        if (!alert.should_send) continue;
 
         try {
           const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
@@ -290,7 +290,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     // update mandatory emails since they might have been filled before sending
     await db.transaction().execute(async (tx) => {
       for (const alert of alerts || []) {
-        if (!alert.shouldSend) continue;
+        if (!alert.should_send) continue;
 
         await tx
           .updateTable("state_report_alert")
@@ -345,7 +345,7 @@ const AlertSchema = Type.Object({
   objet_ou_mobilier: Type.Union([Type.String(), Type.Null()]),
   objet_ou_mobilier_name: Type.Union([Type.String(), Type.Null()]),
   probleme: Type.Union([Type.String(), Type.Null()]),
-  shouldSend: Type.Union([Type.Boolean(), Type.Number(), Type.Null()]),
+  should_send: Type.Union([Type.Boolean(), Type.Number(), Type.Null()]),
 });
 
 export const stateReportPdfTSchema = {

@@ -71,7 +71,6 @@ export const constatPdfQueries = {
         };
       },
       refetchOnWindowFocus: false,
-      gcTime: 0,
     }),
 
   sections: ({ constatId }: { constatId: string }) =>
