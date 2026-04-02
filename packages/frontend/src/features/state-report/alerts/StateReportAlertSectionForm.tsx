@@ -21,6 +21,7 @@ import { LinkButton } from "#components/ui/LinkButton.tsx";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 import { useAlertErrors, useIsEditingAlertEmail } from "../side-menu/StateReportSideMenu.store";
 import { AlertWithAttachments } from "@patrinotes/pdf/utils";
+import { Awaitable } from "../../../utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -37,6 +38,7 @@ export const StateReportAlertSectionForm = ({
   title,
   onClose,
   onBack,
+  onSave,
   alert,
   name,
   form,
@@ -45,7 +47,9 @@ export const StateReportAlertSectionForm = ({
   title: string;
   onClose: () => void;
   onBack: (data?: AlertWithAttachments[]) => void;
+  onSave: () => Awaitable<void>;
   alert: AlertWithAttachments;
+
   name: AlertSectionName;
   form: AlertSectionsForm;
   errors: AlertErrors | null;
@@ -88,8 +92,8 @@ export const StateReportAlertSectionForm = ({
 
       <ShowInReportToggle form={form} names={[name]} />
 
-      <FullWidthButton type="button" onClick={() => onBack()} disabled={isFormDisabled} style={{ marginTop: "16px" }}>
-        Enregistrer
+      <FullWidthButton type="button" onClick={() => onSave()} disabled={isFormDisabled} style={{ marginTop: "16px" }}>
+        Valider
       </FullWidthButton>
     </Stack>
   );

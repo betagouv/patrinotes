@@ -250,7 +250,6 @@ const useTypeAttachmentQuery = (constatId: string, type: "plan_situation" | "pla
       ]),
   );
 
-  console.log("result", result);
   return { data: (result.data?.[0] as MinimalAttachment) ?? null };
 };
 

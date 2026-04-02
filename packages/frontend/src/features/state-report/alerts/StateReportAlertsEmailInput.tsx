@@ -109,7 +109,7 @@ const MandatoryEmailsForm = ({
             state={error ? "error" : undefined}
             stateRelatedMessage={error ? error.error : undefined}
             key={index}
-            label={val.service ? `Courriel ${val.service}*` : "Courriel"}
+            label={val.service ? <div className="mandatory-field">Courriel {val.service}</div> : "Courriel"}
             nativeInputProps={{
               autoComplete: `mandatory-email-${val.service}-${index}`,
               type: "text",

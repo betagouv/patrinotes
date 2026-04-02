@@ -72,8 +72,6 @@ export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
   const hasAttachments = !!alert.attachments && alert.attachments.length > 0;
   const hasDescription = !!alert.commentaires && alert.commentaires.trim() !== "";
 
-  console.log({ hasAttachments, hasDescription });
-
   return Boolean(hasAttachments || hasDescription);
 };
 

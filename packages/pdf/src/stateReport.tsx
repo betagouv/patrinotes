@@ -500,22 +500,22 @@ const uppercaseFirstLetter = (str: string) => {
 
 type Image = { url: string; label?: string; title?: string; attachmentId: string };
 
-const generateImagesTable = (images: (Image | undefined)[]) => {
+const generateImagesTable = (images: (Image | undefined)[], options: { hideTitle?: boolean } = {}) => {
   const rows = [];
   for (let i = 0; i < images.length; i += 2) {
     const firstImage = images[i];
     const secondImage = images[i + 1];
 
     rows.push(`<div class="column-block">
-      ${generateImageCell(firstImage)}
-      ${generateImageCell(secondImage)}
+      ${generateImageCell(firstImage, options)}
+      ${generateImageCell(secondImage, options)}
     </div><div></div>
     `);
   }
   return `${rows.join("")}`;
 };
 
-const generateImageCell = (image: Image | undefined) => {
+const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?: boolean } = {}) => {
   if (!image) return "";
   return `<unbreakable class="column">
       ${
@@ -523,9 +523,11 @@ const generateImageCell = (image: Image | undefined) => {
           ? `<p>
           <span style="font-size: 16pt"><strong>${image.title}</strong></span>
           </p>`
-          : `<p style="height: 16pt"></p>`
+          : hideTitle
+            ? ""
+            : `<p style="height: 16pt"></p>`
       }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%;  margin-bottom: 0px;" />
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%; margin-bottom: 0px;" />
       <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
         ${image.label ? image.label : ""}
       </div>
@@ -610,15 +612,22 @@ const generateAlertTableRow = (alert: MinimalAlert) => {
   if (alert.alert === OBJETS_MOBILIERS_SECTION) {
     return `
       <div>- ${alert.objet_ou_mobilier_name} (<a href="${`https://pop.culture.gouv.fr/notice/palissy/${alert.objet_ou_mobilier}`}">${alert.objet_ou_mobilier}</a>) : ${alert.probleme}</div>
-      <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}</div>
-      ${generateImagesTable(alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })))}
+      <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}<br/>
+      ${generateImagesTable(
+        alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })),
+        { hideTitle: true },
+      )}</div>
     `;
   }
 
   return `<div>
-  <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}</div>
-
-  ${generateImagesTable(alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })))}
+  <div style="margin-bottom: 8px;">
+    <u>Commentaires :</u> ${alert.commentaires || "Aucun"}
+  </div>
+  ${generateImagesTable(
+    alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })),
+    { hideTitle: true },
+  )}
   
   </div>`;
 };

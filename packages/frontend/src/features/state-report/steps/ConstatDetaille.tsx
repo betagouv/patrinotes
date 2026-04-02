@@ -341,7 +341,7 @@ const SectionForm = ({
           onClose();
         }}
       >
-        Enregistrer
+        Valider
       </FullWidthButton>
       <FullWidthButton
         disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}

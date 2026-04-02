@@ -1,5 +1,5 @@
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
-import { Center, Select } from "#components/MUIDsfr.tsx";
+import { Alert, Center, Select } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -11,7 +11,7 @@ import { Fragment, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { PopObjet, StateReportAlert } from "../../../db/AppSchema";
 import { db } from "../../../db/db";
-import { uppercaseFirstLetterIf } from "../../../utils";
+import { Awaitable, uppercaseFirstLetterIf } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { SectionCommentaires, SectionPhotos, ShouldSendToggle, ShowInReportToggle } from "./SectionCommentaires";
@@ -27,6 +27,7 @@ export const StateReportAlertObjetSectionForm = ({
   title,
   onClose,
   onBack,
+  onSave,
   alerts,
   form,
   appendAlert,
@@ -35,6 +36,7 @@ export const StateReportAlertObjetSectionForm = ({
   title: string;
   onClose: () => void;
   onBack: (data?: AlertWithAttachments[]) => void;
+  onSave: () => Awaitable<void>;
   alerts: { alert: AlertWithAttachments; name: AlertSectionName }[];
   form: AlertSectionsForm;
   appendAlert: () => Promise<void>;
@@ -70,6 +72,24 @@ export const StateReportAlertObjetSectionForm = ({
   }
 
   const { mandatory_emails, additional_emails } = alerts[0].alert;
+
+  if (!objetsQuery.isLoading && objetsQuery.data?.length === 0) {
+    return (
+      <Stack>
+        <MenuTitle onClose={onClose} hideDivider>
+          <ModalBackButton onClick={onBack} />
+        </MenuTitle>
+        <Center width="100%">
+          <Alert
+            sx={{ width: "100%" }}
+            title={""}
+            severity="info"
+            description="Aucun objet ou mobilier trouvé pour ce constat d’état."
+          />
+        </Center>
+      </Stack>
+    );
+  }
 
   return (
     <Stack>
@@ -127,11 +147,11 @@ export const StateReportAlertObjetSectionForm = ({
 
               <FullWidthButton
                 type="button"
-                onClick={() => onBack()}
+                onClick={() => onSave()}
                 disabled={isFormDisabled}
                 style={{ marginTop: "16px" }}
               >
-                Enregistrer
+                Valider
               </FullWidthButton>
             </Flex>
           </Stack>
