@@ -39,6 +39,7 @@ import { checkAlertErrors } from "../features/state-report/alerts/StateReportAle
 import { getIsStateReportDisabled, useIsStateReportDisabled } from "../features/state-report/utils";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useLiveService, useUser } from "../contexts/AuthContext";
+import { getIsAlertVisited } from "@patrinotes/pdf/utils";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -138,11 +139,13 @@ const ConstatPdf = () => {
   // sync alerts with form since they can be edited in the alert accordion
   useEffect(() => {
     if (!alerts) return;
-    const alertsWithShouldSend = alerts.map((alert) => ({ ...alert, shouldSend: alert.should_send !== 0 }));
+    const visitedAlerts = alerts.filter((alert) => !!alert.should_send).filter(getIsAlertVisited);
 
-    form.setValue("alerts", alertsWithShouldSend);
+    console.log(alerts);
 
-    checkAllAlertsError(alertsWithShouldSend);
+    form.setValue("alerts", visitedAlerts);
+
+    checkAllAlertsError(visitedAlerts);
   }, [alerts, form]);
 
   // generate html string (only once since displaying it is a heavy operation)

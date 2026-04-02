@@ -7,6 +7,7 @@ import { Center } from "#components/MUIDsfr.tsx";
 import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Spinner } from "#components/Spinner.tsx";
 import { useSendConstatFormContext } from "./ConstatPdfContext";
+import { AlertsReminder } from "./AlertsReminder";
 
 export const ViewConstatPdf = () => {
   const htmlString = useHtmlString();
@@ -23,7 +24,8 @@ export const ViewConstatPdf = () => {
   );
 
   return (
-    <Center>
+    <Center flexDirection="column">
+      <AlertsReminder />
       <Center
         width="800px"
         flexDirection="column"

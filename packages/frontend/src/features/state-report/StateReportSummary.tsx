@@ -61,7 +61,7 @@ const SummaryContent = ({ onClick }: { onClick?: () => void }) => {
   const { step } = routeApi.useSearch();
 
   const navigateToStep = (step: StateReportStep) => {
-    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step } });
+    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step, mode: "view" } });
     onClick?.();
     scrollToTop();
   };
