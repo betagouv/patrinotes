@@ -27,6 +27,7 @@ export type SendConstatForm = {
   stateReport: StateReportWithUserAndAttachments;
   sections: SectionWithAttachments[];
   alerts: AlertWithAttachments[];
+  selectedAlertIds: string[];
   recipients: string[];
   htmlString: string;
   alertErrors: AlertErrors[];

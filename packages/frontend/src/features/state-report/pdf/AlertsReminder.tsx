@@ -1,20 +1,56 @@
 import { useWatch } from "react-hook-form";
 import { useSendConstatFormContext } from "./ConstatPdfContext";
-import { Stack } from "@mui/material";
+import { Box, Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import { Accordion } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { addSIfPlural } from "@patrinotes/pdf/utils";
+import { addSIfPlural, deserializeMandatoryEmails, OBJETS_MOBILIERS_SECTION } from "@patrinotes/pdf/utils";
+import { fr } from "@codegouvfr/react-dsfr";
+import { AlertWithAttachments } from "@patrinotes/pdf/utils";
+
+const getAlertEmails = (alerts: AlertWithAttachments[]): string => {
+  const allEmails = alerts.flatMap((alert) => {
+    const mandatory = deserializeMandatoryEmails(alert.mandatory_emails || "")
+      .map((e) => e.email)
+      .filter(Boolean);
+    const additional = (alert.additional_emails || "")
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+    return [...mandatory, ...additional];
+  });
+  const unique = [...new Set(allEmails)];
+  return unique.join(", ") || "Aucun courriel configuré";
+};
 
 export const AlertsReminder = () => {
   const form = useSendConstatFormContext();
   const alerts = useWatch({ control: form.control, name: "alerts" });
+  const selectedAlertIds = useWatch({ control: form.control, name: "selectedAlertIds" });
 
   if (alerts.length === 0) return null;
 
   const sIfPlural = addSIfPlural(alerts.length);
 
+  const mobilierAlerts = alerts.filter((a) => a.alert === OBJETS_MOBILIERS_SECTION);
+  const otherAlerts = alerts.filter((a) => a.alert !== OBJETS_MOBILIERS_SECTION);
+  const mobilierIds = mobilierAlerts.map((a) => a.id);
+  const isMobilierChecked = mobilierIds.some((id) => selectedAlertIds?.includes(id));
+
+  const toggleAlert = (id: string, checked: boolean) => {
+    const current = form.getValues("selectedAlertIds") ?? [];
+    form.setValue("selectedAlertIds", checked ? [...current, id] : current.filter((i) => i !== id));
+  };
+
+  const toggleMobilier = (checked: boolean) => {
+    const current = form.getValues("selectedAlertIds") ?? [];
+    form.setValue(
+      "selectedAlertIds",
+      checked ? [...new Set([...current, ...mobilierIds])] : current.filter((id) => !mobilierIds.includes(id)),
+    );
+  };
+
   return (
-    <Stack>
+    <Stack width="100%">
       <Accordion
         label={
           <Flex pr="8px" alignItems="center">
@@ -23,10 +59,27 @@ export const AlertsReminder = () => {
           </Flex>
         }
       >
-        <Stack gap="8px">
-          {alerts.map((alert, index) => (
-            
+        <Stack gap="4px">
+          {otherAlerts.map((alert) => (
+            <Stack key={alert.id}>
+              <Typography pl="34px" fontSize="16px">
+                {alert.alert}
+              </Typography>
+              <Typography fontSize="13px" color={fr.colors.decisions.text.mention.grey.default} pl="34px" mt="-4px">
+                {getAlertEmails([alert])}
+              </Typography>
+            </Stack>
           ))}
+          {mobilierAlerts.length > 0 && (
+            <Stack>
+              <Typography pl="34px" fontSize="14px">
+                Alerte : Objets ou mobiliers
+              </Typography>
+              <Typography fontSize="13px" color={fr.colors.decisions.text.mention.grey.default} pl="34px" mt="-4px">
+                {getAlertEmails(mobilierAlerts)}
+              </Typography>
+            </Stack>
+          )}
         </Stack>
       </Accordion>
     </Stack>

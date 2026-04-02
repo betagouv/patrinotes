@@ -25,14 +25,13 @@ export const ViewConstatPdf = () => {
 
   return (
     <Center flexDirection="column">
-      <AlertsReminder />
       <Center
-        width="800px"
+        width={{ xs: "100%", lg: "800px" }}
         flexDirection="column"
         paddingX={{ xs: "16px", lg: "0" }}
-        marginTop="32px"
         marginBottom="96px"
       >
+        <AlertsReminder />
         <BlobProvider document={document}>
           {({ blob, loading, error }) => {
             if (loading) {

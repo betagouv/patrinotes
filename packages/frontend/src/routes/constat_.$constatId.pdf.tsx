@@ -69,6 +69,7 @@ const ConstatPdf = () => {
       stateReport: null as any,
       recipients: [],
       alerts: [],
+      selectedAlertIds: [],
       htmlString: "",
       alertErrors: [],
       checkErrors: () => {},
@@ -83,7 +84,8 @@ const ConstatPdf = () => {
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId, service: service as any }));
 
   const checkAllAlertsError = (alerts: SendConstatForm["alerts"]) => {
-    const alertToSend = alerts.filter((alert) => alert.should_send);
+    const selectedIds = form.getValues("selectedAlertIds");
+    const alertToSend = alerts.filter((alert) => selectedIds.includes(alert.id));
     const alertErrors = alertToSend.map(checkAlertErrors);
     form.setValue("alertErrors", alertErrors);
     return alertErrors;
@@ -139,11 +141,14 @@ const ConstatPdf = () => {
   // sync alerts with form since they can be edited in the alert accordion
   useEffect(() => {
     if (!alerts) return;
+
     const visitedAlerts = alerts.filter((alert) => !!alert.should_send).filter(getIsAlertVisited);
 
-    console.log(alerts);
-
     form.setValue("alerts", visitedAlerts);
+    form.setValue(
+      "selectedAlertIds",
+      visitedAlerts.map((a) => a.id),
+    );
 
     checkAllAlertsError(visitedAlerts);
   }, [alerts, form]);
@@ -200,11 +205,8 @@ const BannerAndContent = ({ mode }: { mode: PageMode }) => {
   return (
     <>
       <Banner {...bannerProps} />
-      <Box display={mode === "view" ? "block" : "none"}>
+      <Box>
         <ViewConstatPdf />
-      </Box>
-      <Box display={mode === "send" ? "block" : "none"}>
-        <SendConstatPdf />
       </Box>
       {mode === "sent" && <SentConstatPdf />}
     </>
