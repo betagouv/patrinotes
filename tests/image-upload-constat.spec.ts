@@ -97,7 +97,7 @@ test.describe("Image upload — constat flow", () => {
     // Button stays visible (multiple=true)
     await expect(dialog.getByRole("button", { name: "Ajouter photo" })).toBeVisible();
 
-    await dialog.getByRole("button", { name: "Enregistrer" }).click();
+    await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
 
     // ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ test.describe("Image upload — constat flow", () => {
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(drawer.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
 
-    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
 
     // Close drawer

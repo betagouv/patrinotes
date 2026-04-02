@@ -86,7 +86,7 @@ test.describe("Constat with alerts flow", () => {
     await sectionDialog.getByRole("radio", { name: "Bon" }).check({ force: true });
     await sectionDialog.getByRole("radio", { name: "50%" }).check({ force: true });
     await sectionDialog.locator("textarea").fill("Bon état général, pas de dégradation visible.");
-    await sectionDialog.getByRole("button", { name: "Enregistrer" }).click();
+    await sectionDialog.getByRole("button", { name: "Valider" }).click();
     await sectionDialog.waitFor({ state: "hidden" });
 
     // ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ test.describe("Constat with alerts flow", () => {
     await drawer.getByRole("button", { name: /Édifice en péril/ }).click();
     await drawer.locator("textarea").waitFor();
     await drawer.locator("textarea").fill("Des fissures importantes sont visibles sur la façade principale.");
-    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: "Valider" }).click();
 
     // Wait to go back to section list
     await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
@@ -130,7 +130,7 @@ test.describe("Constat with alerts flow", () => {
     // Wait for debounce to flush
     await page.waitForTimeout(700);
 
-    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Abords de l/ }).waitFor();
 
     // ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ test.describe("Constat with alerts flow", () => {
     // DSFR ToggleSwitch renders a hidden checkbox behind a label; use force
     await drawer.locator('input[title="Envoyer par courriel"]').uncheck({ force: true });
 
-    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Archéologie/ }).waitFor();
 
     // ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ test.describe("Constat with alerts flow", () => {
     await page.waitForTimeout(700);
 
     // Save and go back to section list
-    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Objets et mobiliers/ }).waitFor();
 
     // ---------------------------------------------------------------------------
@@ -209,6 +209,30 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
+
+    // ---------------------------------------------------------------------------
+    // Step 10a: Verify AlertsReminder accordion
+    // ---------------------------------------------------------------------------
+    // Open the accordion (it lists alerts with should_send=true only)
+    await page.getByRole("button", { name: /alerte.*MH signalée/ }).click();
+
+    // Archéologie must NOT appear — should_send was turned off
+    await expect(page.getByText("Archéologie")).not.toBeVisible();
+
+    // Édifice en péril must appear with CRMH email
+    await expect(page.getByText("Édifice en péril")).toBeVisible();
+    // exact: true to avoid collision with "caoa-alert@test.com, crmh-alert@test.com" in the Objets row
+    await expect(page.getByText("crmh-alert@test.com", { exact: true })).toBeVisible();
+
+    // Abords de l'édifice must appear with UDAP + extra emails
+    await expect(page.getByText(/Abords de l/)).toBeVisible();
+    await expect(
+      page.getByText(/udap-alert@test\.com.*extra-alert@test\.com|extra-alert@test\.com.*udap-alert@test\.com/),
+    ).toBeVisible();
+
+    // Objets et mobiliers must appear with CAOA + CRMH emails
+    await expect(page.getByText("Objets ou mobiliers")).toBeVisible();
+    await expect(page.getByText(/caoa-alert@test\.com/)).toBeVisible();
 
     const mailId = new Date().getTime();
     const emailInput = page.locator('input[type="text"]').first();
@@ -350,7 +374,7 @@ test.describe("Alerts with validation flow", () => {
     await sectionDialog.getByRole("radio", { name: "Bon" }).check({ force: true });
     await sectionDialog.getByRole("radio", { name: "50%" }).check({ force: true });
     await sectionDialog.locator("textarea").fill("Bon état général.");
-    await sectionDialog.getByRole("button", { name: "Enregistrer" }).click();
+    await sectionDialog.getByRole("button", { name: "Valider" }).click();
     await sectionDialog.waitFor({ state: "hidden" });
 
     // -------------------------------------------------------------------------
@@ -363,7 +387,7 @@ test.describe("Alerts with validation flow", () => {
     await drawer.getByRole("button", { name: /Édifice en péril/ }).click();
     await drawer.locator("textarea").waitFor();
     await drawer.locator("textarea").fill("Fissures importantes sur la façade.");
-    await drawer.getByRole("button", { name: "Enregistrer" }).click();
+    await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
 
     await page.waitForTimeout(500);

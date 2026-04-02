@@ -9,7 +9,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { useSendConstatFormContext } from "./ConstatPdfContext";
 import { AlertsReminder } from "./AlertsReminder";
 
-export const ViewConstatPdf = () => {
+export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => {
   const htmlString = useHtmlString();
   const user = useUser()!;
   const document = useMemo(
@@ -31,7 +31,7 @@ export const ViewConstatPdf = () => {
         paddingX={{ xs: "16px", lg: "0" }}
         marginBottom="96px"
       >
-        <AlertsReminder />
+        {step === "send" ? <AlertsReminder /> : null}
         <BlobProvider document={document}>
           {({ blob, loading, error }) => {
             if (loading) {

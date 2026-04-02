@@ -22,7 +22,7 @@ import { Button, Center } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
 import { EditConstatPdf } from "../features/state-report/pdf/ConstatPdf.edit";
 import { TextEditorToolbar } from "../features/text-editor/TextEditorToolbar";
-import { getStateReportHtmlString } from "@patrinotes/pdf/constat";
+import { getStateReportHtmlString, getStateReportMailName } from "@patrinotes/pdf/constat";
 import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";
@@ -206,7 +206,7 @@ const BannerAndContent = ({ mode }: { mode: PageMode }) => {
     <>
       <Banner {...bannerProps} />
       <Box>
-        <ViewConstatPdf />
+        <ViewConstatPdf step={mode} />
       </Box>
       {mode === "sent" && <SentConstatPdf />}
     </>
@@ -230,7 +230,10 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
           const url = URL.createObjectURL(pdfBlob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `constat-${constatId}.pdf`;
+          const name = getStateReportMailName({
+            titre_edifice: form.getValues("stateReport")?.titre_edifice ?? undefined,
+          });
+          a.download = name;
           a.click();
           URL.revokeObjectURL(url);
         };

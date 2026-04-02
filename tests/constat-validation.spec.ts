@@ -79,7 +79,7 @@ test.describe("Constat validation flow", () => {
     await dialog.getByRole("radio", { name: "Bon" }).check({ force: true });
     await dialog.getByRole("radio", { name: "50%" }).check({ force: true });
     await dialog.locator("textarea").fill("Bon état général.");
-    await dialog.getByRole("button", { name: "Enregistrer" }).click();
+    await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
     await page.getByRole("button", { name: "Constat général" }).click();
     await page.waitForURL((url) => url.search.includes("constat-general"));
@@ -251,7 +251,7 @@ test.describe("Constat validation flow", () => {
     await dialog.getByRole("radio", { name: "Bon" }).check({ force: true });
     await dialog.getByRole("radio", { name: "50%" }).check({ force: true });
     await dialog.locator("textarea").fill("Bon état général.");
-    await dialog.getByRole("button", { name: "Enregistrer" }).click();
+    await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
     await page.getByRole("button", { name: "Constat général" }).click();
     await page.waitForURL((url) => url.search.includes("constat-general"));

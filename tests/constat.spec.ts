@@ -77,7 +77,7 @@ test.describe("Constat d'état flow", () => {
     await dialog.locator("textarea").fill("Bon état général, pas de dégradation visible.");
 
     // Save and close modal
-    await dialog.getByRole("button", { name: "Enregistrer" }).click();
+    await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
 
     // Navigate to Constat général

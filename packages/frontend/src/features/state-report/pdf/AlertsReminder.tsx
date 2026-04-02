@@ -26,12 +26,14 @@ export const AlertsReminder = () => {
   const form = useSendConstatFormContext();
   const alerts = useWatch({ control: form.control, name: "alerts" });
 
-  if (alerts.length === 0) return null;
+  const visibleAlerts = alerts.filter((a) => a.should_send);
 
-  const sIfPlural = addSIfPlural(alerts.length);
+  if (visibleAlerts.length === 0) return null;
 
-  const mobilierAlerts = alerts.filter((a) => a.alert === OBJETS_MOBILIERS_SECTION);
-  const otherAlerts = alerts.filter((a) => a.alert !== OBJETS_MOBILIERS_SECTION);
+  const sIfPlural = addSIfPlural(visibleAlerts.length);
+
+  const mobilierAlerts = visibleAlerts.filter((a) => a.alert === OBJETS_MOBILIERS_SECTION);
+  const otherAlerts = visibleAlerts.filter((a) => a.alert !== OBJETS_MOBILIERS_SECTION);
 
   return (
     <Stack width="100%">
@@ -39,14 +41,14 @@ export const AlertsReminder = () => {
         label={
           <Flex pr="8px" alignItems="center">
             <i className="fr-icon ri-alarm-warning-fill" style={{ marginRight: "8px" }} />
-            {alerts.length} alerte{sIfPlural} MH signalée{sIfPlural}
+            {visibleAlerts.length} alerte{sIfPlural} MH signalée{sIfPlural}
           </Flex>
         }
       >
         <Stack gap="4px">
           {otherAlerts.map((alert) => (
             <Stack key={alert.id}>
-              <Typography pl="34px" fontSize="16px">
+              <Typography pl="34px" fontSize="16px" fontWeight="500">
                 {alert.alert}
               </Typography>
               <Typography fontSize="13px" color={fr.colors.decisions.text.mention.grey.default} pl="34px" mt="-4px">
@@ -56,7 +58,7 @@ export const AlertsReminder = () => {
           ))}
           {mobilierAlerts.length > 0 && (
             <Stack>
-              <Typography pl="34px" fontSize="14px">
+              <Typography pl="34px" fontSize="14px" fontWeight="500">
                 Alerte : Objets ou mobiliers
               </Typography>
               <Typography fontSize="13px" color={fr.colors.decisions.text.mention.grey.default} pl="34px" mt="-4px">

@@ -199,6 +199,9 @@ const ObjetSelect = ({
 
   return (
     <Select
+      sx={{
+        option: { textOverflow: "clip" },
+      }}
       label="Objet ou mobilier concerné"
       disabled={isFormDisabled}
       nativeSelectProps={{

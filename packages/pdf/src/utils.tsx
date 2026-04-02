@@ -65,12 +65,16 @@ export const deserializeMandatoryEmails = (data: string): { service: string; ema
 export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
   // OBJETS_MOBILIERS_SECTION
   const isObjetsMobiliers = alert.alert === OBJETS_MOBILIERS_SECTION;
-  if (isObjetsMobiliers) {
-    return false;
-  }
 
   const hasAttachments = !!alert.attachments && alert.attachments.length > 0;
   const hasDescription = !!alert.commentaires && alert.commentaires.trim() !== "";
+
+  if (isObjetsMobiliers) {
+    const hasProblem = !!alert.probleme;
+    const hasObjet = !!alert.objet_ou_mobilier_name;
+
+    return hasProblem || hasObjet || hasAttachments || hasDescription;
+  }
 
   return Boolean(hasAttachments || hasDescription);
 };

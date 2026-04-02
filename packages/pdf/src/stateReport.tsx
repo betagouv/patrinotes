@@ -741,8 +741,8 @@ type Images = {
   marianneFooter: string;
 };
 
-export const getStateReportMailName = (stateReport: { titre_edifice?: string | null }) => {
-  return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
+export const getStateReportMailName = ({ titre_edifice }: { titre_edifice?: string | null }) => {
+  return `constat-d-etat${titre_edifice ? `-${cleanString(titre_edifice || "")}` : ""}_${format(new Date(), "ddMMyyyy")}.pdf`;
 };
 
 function cleanString(str: string): string {
