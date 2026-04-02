@@ -46,7 +46,6 @@ export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImag
         ref={ref as any}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={onChange}
         multiple={multiple}
         style={{ display: "none" }}
