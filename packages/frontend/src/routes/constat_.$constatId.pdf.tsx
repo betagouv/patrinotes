@@ -202,13 +202,18 @@ type PageMode = "view" | "send" | "sent";
 
 const BannerAndContent = ({ mode }: { mode: PageMode }) => {
   const { bannerProps } = contentMap[mode];
+
   return (
     <>
       <Banner {...bannerProps} />
-      <Box>
-        <ViewConstatPdf step={mode} />
-      </Box>
-      {mode === "sent" && <SentConstatPdf />}
+
+      {mode !== "sent" ? (
+        <Box>
+          <ViewConstatPdf step={mode} />
+        </Box>
+      ) : (
+        <SentConstatPdf />
+      )}
     </>
   );
 };
