@@ -49,7 +49,6 @@ const envSchema = z.object({
   AUTH_CLIENT_SECRET: z.string(),
   // COLLECTIF_OBJETS_DATASETTE_URL: z.string(),
 
-  VITE_ALERTES_MH_ENABLED: z.string().optional(),
   ASSETS_DIR: z.string().optional(),
 });
 

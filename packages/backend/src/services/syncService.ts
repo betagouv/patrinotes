@@ -13,9 +13,6 @@ const blackListedTables = ["internal_user"];
 
 const getBlackListedTables = () => {
   const base = [...blackListedTables];
-  if (!ENV.VITE_ALERTES_MH_ENABLED) {
-    base.push("state_report_alert", "state_report_alert_attachment");
-  }
 
   return base;
 };
