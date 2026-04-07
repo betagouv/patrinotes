@@ -183,6 +183,7 @@ export const ImmeubleAutocomplete = () => {
           popper: "immeubles-autocomplete-popper",
           noOptions: "immeubles-autocomplete-no-options",
         }}
+        disabled={isDisabled}
         open={areSuggestionsShown}
         clearOnBlur={false}
         disablePortal
@@ -318,6 +319,7 @@ export const ImmeubleAutocomplete = () => {
             priority="secondary"
             sx={{ width: { xs: "100%", lg: "unset" }, justifyContent: { xs: "center", lg: "unset" } }}
             onClick={() => form.setValue("reference_pop", "CUSTOM")}
+            disabled={isDisabled}
           >
             Créer un constat sans lien MH
           </Button>

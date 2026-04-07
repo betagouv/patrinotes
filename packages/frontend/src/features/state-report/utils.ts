@@ -1,6 +1,7 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { StateReport } from "../../db/AppSchema";
 import z from "zod";
+import { useLiveUser } from "../../contexts/AuthContext";
 
 export type StateReportFormType = Pretty<StateReport>;
 export const useStateReportFormContext = () => useFormContext<StateReportFormType>();
@@ -20,12 +21,24 @@ export const stateReportStepSchema = z.enum([
 export type StateReportStep = z.infer<typeof stateReportStepSchema>;
 
 export const useIsStateReportDisabled = () => {
+  const user = useLiveUser!();
+
   const form = useStateReportFormContext();
   const [hasAttachment, validationStatus] = useWatch({
     control: form.control,
     name: ["attachment_id", "validation_status"],
   });
-  return getIsStateReportDisabled({ attachment_id: hasAttachment, validation_status: validationStatus });
+
+  const createdBy = useWatch({ control: form.control, name: "created_by" });
+  const isUsersReport = createdBy === user.id;
+
+  console.log("createdBy", createdBy);
+  console.log("user.id", user.id);
+  console.log("isUsersReport", isUsersReport);
+
+  return (
+    !isUsersReport || getIsStateReportDisabled({ attachment_id: hasAttachment, validation_status: validationStatus })
+  );
 };
 
 export const getIsStateReportDisabled = (stateReport: {

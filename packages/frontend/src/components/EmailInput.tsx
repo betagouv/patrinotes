@@ -19,9 +19,11 @@ export const EmailInput = ({
   nativeInputProps,
   value,
   onValueChange,
+  disabled,
   single,
 }: Partial<InputProps> & {
   value: string[];
+  disabled?: boolean;
   single?: boolean;
   onValueChange: (value: string[]) => void;
 }) => {
@@ -86,6 +88,7 @@ export const EmailInput = ({
     <Stack>
       <Box ref={wrapperRef} position="relative" width="100%">
         <Input
+          disabled={disabled}
           sx={{
             mb: "1.5rem",
             "& > input": {

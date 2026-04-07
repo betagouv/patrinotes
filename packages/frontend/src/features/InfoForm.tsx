@@ -118,6 +118,7 @@ export const InfoForm = () => {
         <Box mt="8px">
           <EmailInput
             value={[applicantEmail ?? ""]}
+            disabled={isFormDisabled}
             label={"Courriel demandeur"}
             single
             onValueChange={(e) => form.setValue("applicantEmail", e[0])}
