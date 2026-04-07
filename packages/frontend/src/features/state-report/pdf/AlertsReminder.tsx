@@ -36,7 +36,7 @@ export const AlertsReminder = () => {
   const otherAlerts = visibleAlerts.filter((a) => a.alert !== OBJETS_MOBILIERS_SECTION);
 
   return (
-    <Stack width="100%">
+    <Stack width="100%" px={{ xs: 0, lg: "16px" }}>
       <Accordion
         label={
           <Flex pr="8px" alignItems="center">
@@ -46,6 +46,11 @@ export const AlertsReminder = () => {
         }
       >
         <Stack gap="4px">
+          <Box pl="34px" mb="16px">
+            <Typography>
+              Les alertes suivantes seront transmises aux services concernés, sauf modification de votre part.
+            </Typography>
+          </Box>
           {otherAlerts.map((alert) => (
             <Stack key={alert.id}>
               <Typography pl="34px" fontSize="16px" fontWeight="500">
