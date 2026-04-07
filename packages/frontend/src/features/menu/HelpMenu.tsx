@@ -103,7 +103,7 @@ export const HelpMenu = () => {
             <Alert severity="info" sx={{ mb: "16px" }} title={undefined} description="Ajouté au presse-papier" />
           ) : null}
           <Box>
-            Vous pouvez contacter l'équipe à{" "}
+            Besoin d'accompagnement ? Écrivez-nous à{" "}
             <Typography
               component="span"
               className="fr-link"
