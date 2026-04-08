@@ -13,7 +13,6 @@ export const createBordereauMailContent = ({
   const preconisations = deserializePreconisations(stateReport.preconisations || "");
   const title = stateReport.titre_edifice ? `Constat d'état : ${stateReport.titre_edifice}` : "Constat d'état";
   const inner = `<p>Madame, Monsieur,</p>
-   Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée le 18 février 2026.
 <p>Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée, le ${
     stateReport.date_visite
       ? new Date(stateReport.date_visite).toLocaleDateString("fr-FR", {
@@ -42,7 +41,7 @@ ${preconisations.map(({ preconisation, commentaire }) => {
 
 <p>
 Le contrôle scientifique et technique des services exercé par l'État sur les monuments historiques s'exerce tout au long des travaux autorisés
-jusqu'à leur achèvement (MH classés <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000024241971/">R.621-20</a>)
+jusqu'à leur achèvement (MH classés <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000024241971/">R.621-20</a>  et MH inscrits : <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029694949/">R. 621-65</a> du code du patrimoine).
 </p>
 
 <p>
