@@ -13,7 +13,7 @@ export const createBordereauMailContent = ({
   const preconisations = deserializePreconisations(stateReport.preconisations || "");
   const title = stateReport.titre_edifice ? `Constat d'état : ${stateReport.titre_edifice}` : "Constat d'état";
   const inner = `<p>Madame, Monsieur,</p>
-<p>Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée, le ${
+<p>Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée le ${
     stateReport.date_visite
       ? new Date(stateReport.date_visite).toLocaleDateString("fr-FR", {
           year: "numeric",
