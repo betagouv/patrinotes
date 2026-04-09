@@ -122,6 +122,7 @@ const ConstatPdf = () => {
   const alerts = alertsQuery.data;
 
   // sync recipients with state report owner emails
+  // and needValidation with userSettings
   useEffect(() => {
     if (!stateReport) return;
     if (userSettings.isLoading) return;
@@ -137,6 +138,9 @@ const ConstatPdf = () => {
     const emailsArray = Array.from(emails).filter(Boolean);
 
     form.setValue("recipients", emailsArray);
+
+    const needValidation = userSettings?.userSettings.validation_enabled && userSettings?.userSettings.validation_email;
+    form.setValue("needValidation", !!needValidation);
   }, [stateReportQuery.data, userSettings, form]);
 
   // sync alerts with form since they can be edited in the alert accordion
@@ -223,72 +227,13 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
   view: {
     bannerProps: {
       content: () => <ViewBannerContent />,
-      buttons: () => {
-        const navigate = useNavigate();
-        const { constatId } = Route.useParams();
-
-        const isDisabled = useIsSendConstatFormDisabled();
-        const form = useSendConstatFormContext();
-        const pdfBlob = form.watch("pdfBlob");
-
-        const handleDownload = () => {
-          if (!pdfBlob) return;
-          const url = URL.createObjectURL(pdfBlob);
-          const a = document.createElement("a");
-          a.href = url;
-          const name = getStateReportMailName({
-            titre_edifice: form.getValues("stateReport")?.titre_edifice ?? undefined,
-          });
-          a.download = name;
-          a.click();
-          URL.revokeObjectURL(url);
-        };
-
-        return (
-          <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }} width="100%">
-            <Button
-              type="button"
-              iconId="ri-download-line"
-              priority="secondary"
-              disabled={!pdfBlob}
-              onClick={handleDownload}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                width: "100%",
-                justifyContent: "center",
-              }}
-            >
-              Télécharger
-            </Button>
-            <Button
-              type="button"
-              disabled={isDisabled}
-              onClick={() =>
-                navigate({
-                  to: "/constat/$constatId/pdf",
-                  params: { constatId },
-                  search: { mode: "send" },
-                })
-              }
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                width: "100%",
-                justifyContent: "center",
-              }}
-            >
-              Continuer
-            </Button>
-          </Flex>
-        );
-      },
+      buttons: noop,
     },
   },
   send: {
     bannerProps: {
       content: () => <SendBannerContent />,
-      buttons: () => null,
+      buttons: noop,
       alignTop: true,
     },
   },
@@ -525,6 +470,10 @@ const ViewBannerContent = () => {
 };
 
 const ValidationToggle = () => {
+  const form = useSendConstatFormContext();
+
+  const needValidation = useWatch({ control: form.control, name: "needValidation" });
+
   return (
     <Box
       width="100%"
@@ -548,6 +497,8 @@ const ValidationToggle = () => {
         showCheckedHint={false}
         labelPosition="right"
         label={<Typography>Envoi sous-couvert</Typography>}
+        checked={needValidation}
+        onChange={(checked) => form.setValue("needValidation", checked)}
       />
     </Box>
   );

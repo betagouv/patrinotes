@@ -151,7 +151,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
   fastify.post("/state-report", { schema: stateReportPdfTSchema }, async (request) => {
     const user = request.user!;
-    const { stateReportId, pdfPath, alerts } = request.body;
+    const { stateReportId, pdfPath, alerts, needValidation } = request.body;
 
     debug(`Sending PDF for state report ${stateReportId} by user ${user.id}`);
 
@@ -250,7 +250,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       await db.updateTable("state_report").set({ alerts_sent: true }).where("id", "=", stateReportId).execute();
     }
 
-    if (userSettingsResult?.validation_enabled && userSettingsResult?.validation_email) {
+    if (needValidation && userSettingsResult?.validation_enabled && userSettingsResult?.validation_email) {
       const token = v4();
       await db
         .insertInto("constat_validation")
@@ -350,6 +350,7 @@ const AlertSchema = Type.Object({
 
 export const stateReportPdfTSchema = {
   body: Type.Object({
+    needValidation: Type.Optional(Type.Boolean()),
     pdfPath: Type.String(),
     stateReportId: Type.String(),
     recipients: Type.String(),

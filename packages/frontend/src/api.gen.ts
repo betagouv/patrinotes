@@ -289,6 +289,7 @@ export namespace Endpoints {
     path: "/api/pdf/state-report";
     parameters: {
       body: {
+        needValidation?: boolean | undefined;
         pdfPath: string;
         stateReportId: string;
         recipients: string;

@@ -204,7 +204,7 @@ export const constatPdfMutations = {
   send: ({ constatId, service }: { constatId: string; service: Service }) =>
     mutationOptions({
       mutationKey: ["send-constat-pdf", constatId],
-      mutationFn: async ({ alerts, selectedAlertIds, htmlString, recipients }: SendConstatForm) => {
+      mutationFn: async ({ alerts, selectedAlertIds, htmlString, recipients, needValidation }: SendConstatForm) => {
         const alertsToSend = alerts.filter((a) => selectedAlertIds.includes(a.id));
         const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
           body: { stateReportId: constatId },
@@ -226,6 +226,7 @@ export const constatPdfMutations = {
             pdfPath,
             recipients: recipients.join(","),
             alerts: alertsToSend,
+            needValidation,
           },
         });
       },
