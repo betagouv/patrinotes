@@ -143,6 +143,7 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 serviceId: Type.String(),
                 serviceName: Type.Union([Type.String(), Type.Null()]),
                 sentConstats: Type.Number(),
+                totalConstats: Type.Number(),
               }),
             ),
             abandonedConstats: Type.Number(),
@@ -158,17 +159,20 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         db
           .selectFrom("service")
           .leftJoin("state_report", (join) =>
-            join
-              .onRef("state_report.service_id", "=", "service.id")
-              .on("state_report.disabled", "is not", true)
-              .on("state_report.alerts_sent", "=", true),
+            join.onRef("state_report.service_id", "=", "service.id").on("state_report.disabled", "is not", true),
           )
           .groupBy(["service.id", "service.name"])
-          .orderBy(sql`COUNT(DISTINCT state_report.id)`, "desc")
+          .orderBy(
+            sql`COUNT(DISTINCT CASE WHEN state_report.attachment_id IS NOT NULL THEN state_report.id END)`,
+            "desc",
+          )
           .select([
             "service.id as serviceId",
             "service.name as serviceName",
-            db.fn.count<number>("state_report.id").distinct().as("sentConstats"),
+            sql<number>`COUNT(DISTINCT CASE WHEN state_report.attachment_id IS NOT NULL THEN state_report.id END)`.as(
+              "sentConstats",
+            ),
+            db.fn.count<number>("state_report.id").distinct().as("totalConstats"),
           ])
           .execute(),
 
@@ -193,6 +197,7 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           serviceId: r.serviceId,
           serviceName: r.serviceName ?? null,
           sentConstats: Number(r.sentConstats),
+          totalConstats: Number(r.totalConstats),
         })),
         abandonedConstats: Number(abandonedResult?.count ?? 0),
         totalConstats: Number(totalConstatsResult?.count ?? 0),

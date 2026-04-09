@@ -86,7 +86,12 @@ const StatsPage = () => {
       const token = await getTokenOrRefresh();
       if (!token) throw new Error("No token");
       return ofetch<{
-        constatsByService: Array<{ serviceId: string; serviceName: string | null; sentConstats: number }>;
+        constatsByService: Array<{
+          serviceId: string;
+          serviceName: string | null;
+          sentConstats: number;
+          totalConstats: number;
+        }>;
         abandonedConstats: number;
         totalConstats: number;
         totalUsers: number;
@@ -276,8 +281,13 @@ const StatsPage = () => {
               id="constats-by-service-table"
               caption="Taux d'adoption par service"
               noCaption={false}
-              headers={["Service", "Constats envoyés"]}
-              data={adminQuery.data.constatsByService.map((s) => [s.serviceName ?? s.serviceId, s.sentConstats])}
+              headers={["Service", "Constats envoyés", "Constats créés", "Taux d'adoption"]}
+              data={adminQuery.data.constatsByService.map((s) => [
+                s.serviceName ?? s.serviceId,
+                s.totalConstats,
+                s.sentConstats,
+                formatPercent(s.sentConstats, s.totalConstats),
+              ])}
             />
           )}
         </Stack>
