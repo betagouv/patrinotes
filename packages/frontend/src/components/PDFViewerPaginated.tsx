@@ -6,7 +6,7 @@ import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
-const SCALE = 1.2;
+const TARGET_WIDTH = 944;
 const RENDER_MARGIN = 1; // pages to render beyond visible
 
 export const PDFViewerPaginated = ({ blob, url }: { blob?: Blob; url?: string }) => {
@@ -27,6 +27,7 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
   const [pageHeight, setPageHeight] = useState(0);
   const [pageWidth, setPageWidth] = useState(0);
   const [renderedPages, setRenderedPages] = useState<Set<number>>(new Set([1, 2]));
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +36,10 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
       .then(async (doc) => {
         if (cancelled) return;
         const firstPage = await doc.getPage(1);
-        const viewport = firstPage.getViewport({ scale: SCALE });
+        const naturalWidth = firstPage.getViewport({ scale: 1 }).width;
+        const computedScale = TARGET_WIDTH / naturalWidth;
+        const viewport = firstPage.getViewport({ scale: computedScale });
+        setScale(computedScale);
         setPdfDoc(doc);
         setNumPages(doc.numPages);
         setPageHeight(viewport.height);
@@ -64,6 +68,8 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
 
   if (!pdfDoc || !pageHeight) return null;
 
+  console.log(pageWidth);
+
   return (
     <Box display="flex" flexDirection="column" alignItems="center" width="100%" gap="16px" py="16px">
       {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => (
@@ -73,6 +79,7 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
           pageNumber={pageNumber}
           pageHeight={pageHeight}
           pageWidth={pageWidth}
+          scale={scale}
           isInWindow={renderedPages.has(pageNumber)}
           onVisible={onPageVisible}
         />
@@ -86,6 +93,7 @@ const PDFPage = ({
   pageNumber,
   pageHeight,
   pageWidth,
+  scale,
   isInWindow,
   onVisible,
 }: {
@@ -93,6 +101,7 @@ const PDFPage = ({
   pageNumber: number;
   pageHeight: number;
   pageWidth: number;
+  scale: number;
   isInWindow: boolean;
   onVisible: (pageNumber: number) => void;
 }) => {
@@ -119,7 +128,7 @@ const PDFPage = ({
     let cancelled = false;
     pdfDoc.getPage(pageNumber).then((page) => {
       if (cancelled || !canvasRef.current) return;
-      const viewport = page.getViewport({ scale: SCALE });
+      const viewport = page.getViewport({ scale });
       const canvas = canvasRef.current;
       canvas.width = viewport.width;
       canvas.height = viewport.height;

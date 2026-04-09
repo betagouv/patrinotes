@@ -25,7 +25,7 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
 
   return (
     <Center flexDirection="column">
-      <Center width={{ xs: "100%", lg: "800px" }} flexDirection="column" marginBottom="96px">
+      <Center width={{ xs: "100%", lg: "944px" }} flexDirection="column" marginBottom="96px">
         {step === "send" ? <AlertsReminder /> : null}
         <BlobProvider document={document}>
           {({ blob, loading, error }) => {

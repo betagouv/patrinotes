@@ -40,6 +40,7 @@ import { getIsStateReportDisabled, useIsStateReportDisabled } from "../features/
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useLiveService, useUser } from "../contexts/AuthContext";
 import { getIsAlertVisited } from "@patrinotes/pdf/utils";
+import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -299,41 +300,96 @@ const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
   },
 };
 
+const ViewButtons = () => {
+  const navigate = useNavigate();
+  const { constatId } = Route.useParams();
+
+  const isDisabled = useIsSendConstatFormDisabled();
+  const form = useSendConstatFormContext();
+  const pdfBlob = form.watch("pdfBlob");
+
+  const handleDownload = () => {
+    if (!pdfBlob) return;
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    const name = getStateReportMailName({
+      titre_edifice: form.getValues("stateReport")?.titre_edifice ?? undefined,
+    });
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }} width="100%">
+      <Button
+        type="button"
+        iconId="ri-download-line"
+        priority="secondary"
+        disabled={!pdfBlob}
+        onClick={handleDownload}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          width: "100%",
+          justifyContent: "center",
+        }}
+      >
+        Télécharger
+      </Button>
+      <Button
+        type="button"
+        disabled={isDisabled}
+        onClick={() =>
+          navigate({
+            to: "/constat/$constatId/pdf",
+            params: { constatId },
+            search: { mode: "send" },
+          })
+        }
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          width: "100%",
+          justifyContent: "center",
+        }}
+      >
+        Continuer
+      </Button>
+    </Flex>
+  );
+};
+
 type BannerProps = { content: () => ReactNode; buttons: () => ReactNode; alignTop?: boolean };
-const Banner = ({ content, buttons, alignTop }: BannerProps) => {
-  if (content === noop && buttons === noop) {
+const Banner = ({ content }: BannerProps) => {
+  if (content === noop) {
     return null;
   }
 
   const Content = content;
-  const Buttons = buttons;
 
   return (
     <SimpleBanner minHeight="80px" position="sticky" top="0" zIndex="appBar" py={{ xs: "8px", lg: "0" }}>
       <Flex
         alignItems="center"
-        maxWidth="1200px"
         width="100%"
         flexDirection={{ xs: "column", lg: "row" }}
         gap={{ xs: "8px", lg: "0" }}
+        flex="1"
       >
-        <Flex justifyContent="flex-start" alignItems={alignTop ? "flex-start" : "center"} width="100%" pl="8px">
-          <Box mt={alignTop ? { xs: "0", lg: "28px" } : "0"} pl={alignTop ? { xs: "0", lg: "0" } : "0"}>
+        <Flex justifyContent="center" flex="1" alignItems={"center"} width="100%">
+          {/* <Box mt={alignTop ? { xs: "0", lg: "28px" } : "0"} pl={alignTop ? { xs: "0", lg: "0" } : "0"}>
             <GoBackButton />
-          </Box>
-          <Box ml={{ xs: "8px", lg: "50px" }} flex="1" fontWeight="bold">
-            <Content />
-          </Box>
+          </Box> */}
+          <Content />
         </Flex>
-        <Box width={{ lg: "unset", xs: "100%" }} px={{ xs: "16px" }}>
-          <Buttons />
-        </Box>
       </Flex>
     </SimpleBanner>
   );
 };
 
-const GoBackButton = () => {
+const GoBackButton = ({ sx }: { sx?: BoxProps["sx"] } = {}) => {
   const { constatId } = Route.useParams();
   const navigate = useNavigate();
   const goBack = () => {
@@ -354,6 +410,7 @@ const GoBackButton = () => {
           width: "16px !important",
           mr: "4px",
         },
+        ...sx,
       }}
       fontSize="16px"
       whiteSpace="nowrap"
@@ -388,41 +445,51 @@ const SendBannerContent = () => {
   };
 
   return (
-    <>
-      {/* // TODO */}
-      <Flex
-        flexDirection={{ xs: "column", lg: "row" }}
-        width="100%"
-        pl="8px"
-        alignItems={{ xs: "center", lg: "flex-start" }}
-        gap="16px"
-        py={{ xs: "0", lg: "24px" }}
-      >
-        <Typography ml="-8px" pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
-          Courriels
-        </Typography>
-        {!isDisabled ? (
-          <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
-            <EmailInput value={recipients} onValueChange={setRecipients} />
-          </Box>
-        ) : null}
-
-        <Box mr={{ xs: "0", lg: "100px" }} ml={{ xs: "-48px", lg: "8px" }} width={{ xs: "100%", lg: "unset" }}>
-          <Button
-            type="submit"
-            iconId="ri-send-plane-fill"
-            disabled={isPending || isDisabled}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              width: "100%",
-              justifyContent: "center",
-            }}
-          >
-            {isPending ? "Envoi en cours..." : "Envoyer"}
-          </Button>
+    <Flex
+      flexDirection={{ xs: "column", lg: "row" }}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+      gap="16px"
+      py={{ xs: "0", lg: "24px" }}
+    >
+      <Flex flex="1" justifyContent="flex-end" alignItems="flex-start">
+        <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
+      </Flex>
+      <Flex width="100%" maxWidth="944px">
+        <EmailInput sx={{ width: "100%" }} label="Courriels" value={recipients} onValueChange={setRecipients} />
+        <Box
+          width="100%"
+          maxWidth="220px"
+          mt="42px"
+          mr="16px"
+          ml="16px"
+          sx={{
+            "& input": {},
+            "& label": {
+              width: "220px",
+              maxHeight: "30px",
+              overflowWrap: "normal",
+            },
+            "& label::before": {
+              marginRight: "16px",
+              background: "var(--data-uri-svg), white;",
+            },
+          }}
+        >
+          <ToggleSwitch
+            inputTitle="Envoi sous-couvert"
+            showCheckedHint={false}
+            labelPosition="right"
+            label={<Typography>Envoi sous-couvert</Typography>}
+          />
         </Box>
       </Flex>
-    </>
+      <Box flex="1" display="flex" justifyContent="flex-start" alignItems="flex-start" mt="32px" mr="16px" ml="16px">
+        <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending || isDisabled} sx={{}}>
+          {isPending ? "Envoi en cours..." : "Envoyer"}
+        </Button>
+      </Box>
+    </Flex>
   );
 };
