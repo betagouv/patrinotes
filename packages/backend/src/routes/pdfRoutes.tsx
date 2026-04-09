@@ -10,6 +10,7 @@ import { v4 } from "uuid";
 import { Selectable } from "kysely";
 import { getServices } from "../services/services";
 import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
+import { AppError } from "../features/errors";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -165,10 +166,13 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       .executeTakeFirst();
 
     if (!stateReportQuery) {
-      return "State report not found";
+      throw new AppError(404, "Constat d'état non trouvé");
     }
 
-    const pdf = await request.services.upload.getAttachment({ filePath: pdfPath });
+    const pdf = await request.services.upload.getAttachment({ filePath: pdfPath }).catch((error) => {
+      debug(`Failed to retrieve PDF from storage for state report ${stateReportId}: ${error}`);
+      throw new AppError(500, "Le PDF n'a pas pu être récupéré depuis le stockage. Veuillez réessayer.");
+    });
 
     await db.transaction().execute(async (tx) => {
       await tx

@@ -2,21 +2,19 @@ import { setup, fromPromise, assign } from "xstate";
 import { v7 } from "uuid";
 import { attachmentQueue } from "../../../db/db";
 import { processImage } from "../UploadReportImage";
+import { AttachmentRecord } from "@powersync/common";
 
 type UploadContext = {
   parentId: string;
   /** Table-specific insert function passed in as input. Kept in context so actors can reference it. */
-  insertRecord: (attachmentId: string) => Promise<void>;
+  insertRecord: (attachmentId: string) => Promise<any>;
   file: File | null;
   compressedData: ArrayBuffer | null;
   attachmentId: string | null;
   error: string | null;
 };
 
-type UploadEvent =
-  | { type: "UPLOAD_FILE"; file: File }
-  | { type: "RETRY" }
-  | { type: "DISMISS" };
+type UploadEvent = { type: "UPLOAD_FILE"; file: File } | { type: "RETRY" } | { type: "DISMISS" };
 
 /**
  * State machine for a single file upload lifecycle.
@@ -37,23 +35,25 @@ export const attachmentUploadMachine = setup({
     events: {} as UploadEvent,
     input: {} as {
       parentId: string;
-      insertRecord: (attachmentId: string) => Promise<void>;
+      insertRecord: (attachmentId: string) => Promise<any>;
     },
   },
   actors: {
     compressImage: fromPromise<ArrayBuffer, { file: File }>(async ({ input }) => processImage(input.file)),
-    saveToStorage: fromPromise<string, { parentId: string; data: ArrayBuffer }>(async ({ input }) => {
-      const id = `${input.parentId}/images/${v7()}.jpg`;
-      await attachmentQueue.saveFile({
-        id,
+    saveToStorage: fromPromise<AttachmentRecord, { attachmentId: string; data: ArrayBuffer }>(async ({ input }) =>
+      attachmentQueue.saveFile({
+        id: input.attachmentId,
         fileExtension: "jpg",
         data: input.data,
         mediaType: "image/jpeg",
-      });
-      return id;
-    }),
-    insertRecord: fromPromise<void, { attachmentId: string; insertFn: (id: string) => Promise<void> }>(
-      async ({ input }) => input.insertFn(input.attachmentId),
+      }),
+    ),
+    insertRecord: fromPromise<string, { parentId: string; insertFn: (id: string) => Promise<string> }>(
+      async ({ input }) => {
+        const id = `${input.parentId}/images/${v7()}.jpg`;
+        await input.insertFn(id);
+        return id;
+      },
     ),
   },
   actions: {
@@ -93,7 +93,15 @@ export const attachmentUploadMachine = setup({
   states: {
     idle: {
       on: {
-        UPLOAD_FILE: { target: "compressing", actions: "setFile" },
+        UPLOAD_FILE: { target: "inserting", actions: "setFile" },
+      },
+    },
+    inserting: {
+      invoke: {
+        src: "insertRecord",
+        input: ({ context }) => ({ parentId: context.parentId, insertFn: context.insertRecord }),
+        onDone: { target: "compressing", actions: "setAttachmentId" },
+        onError: { target: "failed", actions: "setError" },
       },
     },
     compressing: {
@@ -107,15 +115,7 @@ export const attachmentUploadMachine = setup({
     saving: {
       invoke: {
         src: "saveToStorage",
-        input: ({ context }) => ({ parentId: context.parentId, data: context.compressedData! }),
-        onDone: { target: "inserting", actions: "setAttachmentId" },
-        onError: { target: "failed", actions: "setError" },
-      },
-    },
-    inserting: {
-      invoke: {
-        src: "insertRecord",
-        input: ({ context }) => ({ attachmentId: context.attachmentId!, insertFn: context.insertRecord }),
+        input: ({ context }) => ({ attachmentId: context.attachmentId!, data: context.compressedData! }),
         onDone: { target: "idle", actions: "reset" },
         onError: { target: "failed", actions: "setError" },
       },

@@ -56,7 +56,7 @@ export default defineConfig({
         globIgnores: ["**/admin*.js"],
         rollupFormat: "es",
       },
-      includeAssets: ["**/*.{svg,woff2,wasm}"],
+      includeAssets: ["**/*.{svg,woff2,wasm,ttf}", "**/marianne_footer.png"],
       strategies: "injectManifest",
       srcDir: "src/service-worker",
       filename: "sw.ts",

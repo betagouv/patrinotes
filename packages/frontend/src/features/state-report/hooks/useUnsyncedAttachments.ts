@@ -19,7 +19,6 @@ export function useUnsyncedAttachments(stateReportId: string | null | undefined)
       .where("state_report_attachment.state_report_id", "=", safeId)
       .where("state_report_attachment.is_deprecated", "=", 0)
       .where("state_report_attachment.is_ignored", "=", 0)
-      .where("attachments.state", "!=", AttachmentState.SYNCED)
       .select([
         "state_report_attachment.id",
         "state_report_attachment.attachment_id as attachmentId",
@@ -37,7 +36,6 @@ export function useUnsyncedAttachments(stateReportId: string | null | undefined)
       )
       .where("visited_section_attachment.is_deprecated", "=", 0)
       .where("visited_section_attachment.is_ignored", "=", 0)
-      .where("attachments.state", "!=", AttachmentState.SYNCED)
       .select([
         "visited_section_attachment.id",
         "visited_section_attachment.attachment_id as attachmentId",
@@ -55,7 +53,6 @@ export function useUnsyncedAttachments(stateReportId: string | null | undefined)
       )
       .where("state_report_alert_attachment.is_deprecated", "=", 0)
       .where("state_report_alert_attachment.is_ignored", "=", 0)
-      .where("attachments.state", "!=", AttachmentState.SYNCED)
       .select([
         "state_report_alert_attachment.id",
         "state_report_alert_attachment.attachment_id as attachmentId",

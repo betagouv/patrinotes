@@ -104,7 +104,7 @@ export const ImageSyncModal = ({
               >
                 <AttachmentStatusBadge state={attachment.state} />
                 <Typography flex="1" fontSize="14px" noWrap>
-                  {attachment.label || attachment.attachmentId.split("/").pop() || "Image"}
+                  {attachment.table || attachment.attachmentId.split("/").pop() || "Image"}
                 </Typography>
                 <Button
                   type="button"

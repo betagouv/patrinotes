@@ -1,5 +1,5 @@
 import { useWatch } from "react-hook-form";
-import { db, useDbQuery } from "../../db/db";
+import { attachmentLocalStorage, attachmentRemoteStorage, db, useDbQuery } from "../../db/db";
 import { StateReportFormType, StateReportStep, useIsStateReportDisabled, useStateReportFormContext } from "./utils";
 import { Box, Dialog, DialogTitle, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -243,8 +243,7 @@ const CreateButton = () => {
   const isDisabled = useIsStateReportDisabled();
 
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
-  const unsyncedAttachments = useUnsyncedAttachments(constatId);
-
+  // const unsyncedAttachments = useUnsyncedAttachments(constatId);
   const proceedToFinalize = () => {
     navigate({
       to: "/constat/$constatId/pdf",
@@ -280,11 +279,6 @@ const CreateButton = () => {
       return;
     }
 
-    if (unsyncedAttachments.length > 0) {
-      setIsImageSyncModalOpen(true);
-      return;
-    }
-
     proceedToFinalize();
   };
 
@@ -298,7 +292,6 @@ const CreateButton = () => {
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
       {isImageSyncModalOpen ? (
         <ImageSyncModal
-          unsyncedAttachments={unsyncedAttachments}
           onClose={() => setIsImageSyncModalOpen(false)}
           onIgnoreAll={() => {
             setIsImageSyncModalOpen(false);
