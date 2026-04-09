@@ -113,7 +113,7 @@ export const sendValidationRequestMail = ({
   const { html: validationReqHtml, attachments: validationReqAttachments } = wrapWithDsfrMail({
     title: `Validation requise — Constat d'état${title}`,
     content: `<p>Bonjour,</p>
-<p>${creatorName} vous soumet un constat d'état${title} pour validation.</p>
+<p>${creatorName} vous soumet un constat d'état pour validation${title}.</p>
 <p>Veuillez consulter le document et l'accepter ou le refuser en cliquant sur le lien ci-dessous :</p>
 <p><a href="${link}">${link}</a></p>
 <p>Ce lien est valable 7 jours.</p>`,
@@ -144,10 +144,12 @@ export const sendValidationResultMail = ({
   const title = stateReport.titre_edifice ? ` : ${stateReport.titre_edifice}` : "";
   const decision = accepted ? "accepté" : "refusé";
 
+  const stateReportLink = `${ENV.FRONTEND_URL}/constat/${stateReport.id}`;
+
   const { html: validationResHtml, attachments: validationResAttachments } = wrapWithDsfrMail({
     title: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"}`,
     content: `<p>Bonjour,</p>
-<p>Votre constat d'état${title} a été <strong>${decision}</strong> par ${validatorEmail}.</p>
+<p>Votre <a href="${stateReportLink}">constat d'état${title}</a> a été <strong>${decision}</strong> par ${validatorEmail}.</p>
 ${comment ? `<p>Commentaire : ${comment}</p>` : ""}`,
   });
 
