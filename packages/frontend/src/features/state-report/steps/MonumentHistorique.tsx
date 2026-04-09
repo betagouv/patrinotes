@@ -1,6 +1,6 @@
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps, LinkBaseProps, LinkProps, Stack, styled, Typography } from "@mui/material";
-import { StateReportFormType, useStateReportFormContext } from "../utils";
+import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { UseFormRegisterReturn, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Alert, Button, Input } from "#components/MUIDsfr.tsx";
@@ -28,6 +28,8 @@ export const MonumentHistorique = () => {
 
   const referencePop = useWatch({ control: form.control, name: "reference_pop" });
   const isCustom = referencePop === "CUSTOM";
+
+  const isDisabled = useIsStateReportDisabled();
 
   const isEditing = mode === "edit" || isCustom;
   return (
@@ -71,7 +73,7 @@ export const MonumentHistorique = () => {
               label="Nature de l'édifice"
               field="nature_edifice"
               isEditing={isEditing}
-              isDisabled={!isCustom}
+              isDisabled={!isCustom || isDisabled}
             />
           </Box>
           <Box flex="1" mt={{ xs: isEditing ? "16px" : "0", lg: "0" }}>
@@ -108,6 +110,7 @@ export const MonumentHistorique = () => {
             label="Adresse"
             field="adresse"
             isEditing={isEditing}
+            isDisabled={isDisabled}
             renderInput={(props) => <MHAddressAutocomplete {...props} />}
           />
           {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
@@ -120,11 +123,21 @@ export const MonumentHistorique = () => {
           mt={isEditing ? "16px" : 0}
         >
           {isCustom ? (
-            <EditableField label="Commune" field="commune" isEditing={isEditing} />
+            <EditableField label="Commune" field="commune" isEditing={isEditing} isDisabled={isDisabled} />
           ) : (
-            <EditableField label="Commune historique" field="commune_historique" isEditing={isEditing} />
+            <EditableField
+              label="Commune historique"
+              field="commune_historique"
+              isEditing={isEditing}
+              isDisabled={isDisabled}
+            />
           )}
-          <EditableField label="Référence cadastrale" field="reference_cadastrale" isEditing={isEditing} />
+          <EditableField
+            label="Référence cadastrale"
+            field="reference_cadastrale"
+            isEditing={isEditing}
+            isDisabled={isDisabled}
+          />
         </Flex>
 
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
@@ -136,11 +149,21 @@ export const MonumentHistorique = () => {
           gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
         >
           <Box flex="1">
-            <EditableField label="Nature de la protection" field="nature_protection" isEditing={isEditing} />
+            <EditableField
+              isDisabled={isDisabled}
+              label="Nature de la protection"
+              field="nature_protection"
+              isEditing={isEditing}
+            />
           </Box>
           <Box flex="1" mt={{ xs: isEditing ? "16px" : "0", lg: "0" }}>
             {!isCustom ? (
-              <EditableField label="Période de construction" field="periode_construction" isEditing={isEditing} />
+              <EditableField
+                isDisabled={isDisabled}
+                label="Période de construction"
+                field="periode_construction"
+                isEditing={isEditing}
+              />
             ) : null}
           </Box>
         </Flex>
@@ -152,6 +175,7 @@ export const MonumentHistorique = () => {
           mt={isEditing ? "32px" : "0"}
         >
           <EditableField
+            isDisabled={isDisabled}
             renderInput={renderTextAreaInput}
             label="Parties protégées"
             field="parties_protegees"
@@ -159,6 +183,7 @@ export const MonumentHistorique = () => {
           />
           {!isCustom ? (
             <EditableField
+              isDisabled={isDisabled}
               renderInput={renderTextAreaInput}
               label="Description de l'édifice"
               field="description"
@@ -456,6 +481,22 @@ const renderBasicInput = ({
   return <Input label={label} nativeInputProps={{ ...inputProps }} disabled={disabled} />;
 };
 
-const renderTextAreaInput = ({ inputProps, label }: { inputProps: UseFormRegisterReturn; label: string }) => {
-  return <Input label={label} sx={{ width: "100%" }} textArea nativeTextAreaProps={{ rows: 5, ...inputProps }} />;
+const renderTextAreaInput = ({
+  inputProps,
+  label,
+  disabled,
+}: {
+  inputProps: UseFormRegisterReturn;
+  label: string;
+  disabled?: boolean;
+}) => {
+  return (
+    <Input
+      label={label}
+      sx={{ width: "100%" }}
+      textArea
+      nativeTextAreaProps={{ rows: 5, ...inputProps, disabled }}
+      disabled={disabled}
+    />
+  );
 };
