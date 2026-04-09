@@ -222,7 +222,7 @@ const BannerAndContent = ({ mode }: { mode: PageMode }) => {
 const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
   view: {
     bannerProps: {
-      content: () => "Prévisualisation du constat",
+      content: () => <ViewBannerContent />,
       buttons: () => {
         const navigate = useNavigate();
         const { constatId } = Route.useParams();
@@ -452,44 +452,103 @@ const SendBannerContent = () => {
       justifyContent="center"
       gap="16px"
       py={{ xs: "0", lg: "24px" }}
+      px={{ xs: "16px", lg: "0" }}
     >
-      <Flex flex="1" justifyContent="flex-end" alignItems="flex-start">
+      <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
         <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
       </Flex>
-      <Flex width="100%" maxWidth="944px">
-        <EmailInput sx={{ width: "100%" }} label="Courriels" value={recipients} onValueChange={setRecipients} />
-        <Box
-          width="100%"
-          maxWidth="220px"
-          mt="42px"
-          mr="16px"
-          ml="16px"
+      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "row" }}>
+        <EmailInput
+          sx={{ width: "100%" }}
+          label={
+            <Flex mt={{ xs: "8px", lg: "0" }}>
+              <Box mr="8px" display={{ xs: "block", lg: "none" }}>
+                <GoBackButton />
+              </Box>
+              <Box fontWeight="bold">Courriels</Box>
+            </Flex>
+          }
+          value={recipients}
+          onValueChange={setRecipients}
+        />
+        <ValidationToggle />
+      </Flex>
+      <Box flex="1" display="flex" justifyContent="flex-start" alignItems="flex-start">
+        <Button
+          type="submit"
+          iconId="ri-send-plane-fill"
+          disabled={isPending || isDisabled}
           sx={{
-            "& input": {},
-            "& label": {
-              width: "220px",
-              maxHeight: "30px",
-              overflowWrap: "normal",
-            },
-            "& label::before": {
-              marginRight: "16px",
-              background: "var(--data-uri-svg), white;",
-            },
+            mt: { xs: "0", lg: "32px" },
+
+            display: { xs: "flex" },
+            alignItems: { xs: "center" },
+            justifyContent: { xs: "center" },
+            width: { xs: "100%", lg: "auto" },
           }}
         >
-          <ToggleSwitch
-            inputTitle="Envoi sous-couvert"
-            showCheckedHint={false}
-            labelPosition="right"
-            label={<Typography>Envoi sous-couvert</Typography>}
-          />
-        </Box>
-      </Flex>
-      <Box flex="1" display="flex" justifyContent="flex-start" alignItems="flex-start" mt="32px" mr="16px" ml="16px">
-        <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending || isDisabled} sx={{}}>
           {isPending ? "Envoi en cours..." : "Envoyer"}
         </Button>
       </Box>
     </Flex>
+  );
+};
+
+const ViewBannerContent = () => {
+  return (
+    <Flex
+      flexDirection={{ xs: "column", lg: "row" }}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+      gap="16px"
+      py={{ xs: "0", lg: "24px" }}
+      px={{ xs: "16px", lg: "0" }}
+    >
+      <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
+        <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
+      </Flex>
+      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "row" }} justifyContent={"space-between"}>
+        <Flex mt={{ xs: "8px", lg: "0" }}>
+          <Box mr="8px" display={{ xs: "block", lg: "none" }}>
+            <GoBackButton />
+          </Box>
+          <Box fontWeight="bold">Prévisualisation du constat</Box>
+        </Flex>
+        <Flex mt={{ xs: "16px", lg: "0" }} mb={{ xs: "8px", lg: "0" }}>
+          <ViewButtons />
+        </Flex>
+      </Flex>
+      <Box flex="1" display={{ xs: "none", lg: "flex" }} justifyContent="flex-start" alignItems="flex-start"></Box>
+    </Flex>
+  );
+};
+
+const ValidationToggle = () => {
+  return (
+    <Box
+      width="100%"
+      maxWidth="220px"
+      mt={{ xs: "24px", lg: "42px" }}
+      mr={{ xs: "0", lg: "16px" }}
+      ml={{ xs: "0", lg: "16px" }}
+      sx={{
+        "& label": {
+          width: "220px",
+          overflowWrap: "normal",
+        },
+        "& label::before": {
+          marginRight: "16px",
+          background: "var(--data-uri-svg), white;",
+        },
+      }}
+    >
+      <ToggleSwitch
+        inputTitle="Envoi sous-couvert"
+        showCheckedHint={false}
+        labelPosition="right"
+        label={<Typography>Envoi sous-couvert</Typography>}
+      />
+    </Box>
   );
 };

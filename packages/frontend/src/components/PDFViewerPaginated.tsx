@@ -71,7 +71,7 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
   console.log(pageWidth);
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" width="100%" gap="16px" py="16px">
+    <Box display="flex" flexDirection="column" alignItems="center" width="100%" gap="16px">
       {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => (
         <PDFPage
           key={pageNumber}
