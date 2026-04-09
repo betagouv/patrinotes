@@ -69,7 +69,7 @@ export const HelpMenu = () => {
             sx={{ mt: "16px" }}
             linkProps={{ target: "_blank", href: "https://patrinotes.beta.gouv.fr/faq" }}
           >
-            Consulter FAQ
+            Consulter la FAQ
           </Button>
         </Stack>
         <Box px="16px">
@@ -87,7 +87,7 @@ export const HelpMenu = () => {
             }}
             onClick={() => deleteLocalData()}
           >
-            Réinitialiser
+            Réinitialiser les données locales
           </Button>
         </Stack>
 
@@ -100,7 +100,12 @@ export const HelpMenu = () => {
 
           {showClipboardSuccess ? (
             // @ts-ignore
-            <Alert severity="info" sx={{ mb: "16px" }} title={undefined} description="Ajouté au presse-papier" />
+            <Alert
+              severity="info"
+              sx={{ mb: "16px" }}
+              title={undefined}
+              description="Courriel ajouté au presse-papier"
+            />
           ) : null}
           <Box>
             Besoin d'accompagnement ? Écrivez-nous à{" "}
