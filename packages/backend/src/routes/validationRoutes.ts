@@ -4,6 +4,7 @@ import { db } from "../db/db";
 import { generatePresignedUrl } from "../services/uploadService";
 import { sendStateReportMail, sendValidationResultMail } from "../features/mail";
 import { v4 } from "uuid";
+import { AppError } from "../features/errors";
 
 export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.get(
@@ -193,11 +194,11 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (!validation) {
-        throw { statusCode: 404, message: "Lien invalide ou déjà traité" };
+        throw new AppError(404, "Lien invalide ou déjà traité");
       }
 
       if (new Date(validation.token_expires_at) < new Date()) {
-        throw { statusCode: 410, message: "Ce lien de validation a expiré" };
+        throw new AppError(410, "Ce lien de validation a expiré");
       }
 
       await db.transaction().execute(async (trx) => {
