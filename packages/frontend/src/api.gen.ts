@@ -477,6 +477,8 @@ export namespace Endpoints {
       totalUsers: number;
       usersWithNoDocuments: number;
       activeUsersInPeriod: number;
+      deployedUdapCount: number;
+      deployedCrmhCount: number;
       periodFrom: string;
       periodTo: string;
     };
@@ -492,6 +494,8 @@ export namespace Endpoints {
         sentConstats: number;
       }>;
       abandonedConstats: number;
+      totalConstats: number;
+      totalUsers: number;
     };
   };
 
