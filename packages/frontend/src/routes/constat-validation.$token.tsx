@@ -9,6 +9,10 @@ import { Button, Input } from "#components/MUIDsfr.tsx";
 import { useForm } from "react-hook-form";
 import { Spinner } from "#components/Spinner.tsx";
 import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
+import { fr } from "@codegouvfr/react-dsfr";
+import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
+import { useState } from "react";
+import { downloadFile } from "../utils";
 
 export const Route = createFileRoute("/constat-validation/$token")({
   component: ConstatValidationPage,
@@ -18,7 +22,9 @@ type DecisionForm = { comment: string };
 
 function ConstatValidationPage() {
   const { token } = Route.useParams();
+  const pdfUrl = `${ENV.VITE_BACKEND_URL}/api/constat-validation/${token}/pdf`;
 
+  const [selectedOption, setSelectedOption] = useState<"accept" | "decline" | null>(null);
   const query = useQuery({
     queryKey: ["constat-validation", token],
     queryFn: () =>
@@ -126,8 +132,84 @@ function ConstatValidationPage() {
 
   const isPending = acceptMutation.isPending || declineMutation.isPending;
 
+  const isCommentRequired = selectedOption === "decline";
+
   return (
     <Box display="flex" flexDirection="column" alignItems="center">
+      <Center bgcolor="#E3E3FD" width="100%">
+        <Flex
+          width={{ xs: "100%", lg: "1200px" }}
+          px="16px"
+          pt="32px"
+          pb="8px"
+          justifyContent="space-between"
+          gap="24px"
+        >
+          <Flex flexDirection="column" flex="1">
+            <Typography component="h2" fontSize="20px" fontWeight="bold" alignSelf="flex-start">
+              Validation du constat d'état
+            </Typography>
+
+            <Typography alignSelf="flex-start" mt="24px">
+              Souhaitez-vous valider l'envoi du document ci-dessous au propriétaire du monument historique ?{" "}
+            </Typography>
+
+            <RadioButtons
+              style={{ marginTop: "24px" }}
+              options={[
+                {
+                  label: "Oui, envoyer le constat",
+                  nativeInputProps: {
+                    checked: selectedOption === "accept",
+                    onChange: () => setSelectedOption("accept"),
+                  },
+                },
+                {
+                  label: "Non, ne pas envoyer le constat",
+                  nativeInputProps: {
+                    checked: selectedOption === "decline",
+                    onChange: () => setSelectedOption("decline"),
+                  },
+                },
+              ]}
+            />
+
+            {isCommentRequired ? (
+              <Box>
+                <Input textArea label="Commentaires" nativeTextAreaProps={{ ...form.register("comment"), rows: 5 }} />
+              </Box>
+            ) : null}
+          </Flex>
+          <Flex
+            mt="48px"
+            flexDirection="column"
+            alignItems="center"
+            gap="16px"
+            sx={{ "& button": { display: "flex", width: "100%", justifyContent: "center" } }}
+          >
+            <Button
+              size="large"
+              disabled={isPending || !selectedOption}
+              onClick={form.handleSubmit((data) => {
+                if (selectedOption === "accept") {
+                  acceptMutation.mutate(data);
+                } else if (selectedOption === "decline") {
+                  declineMutation.mutate(data);
+                }
+              })}
+            >
+              Terminer
+            </Button>
+
+            {(acceptMutation.isError || declineMutation.isError) && (
+              <Typography color="error">Une erreur est survenue. Veuillez réessayer.</Typography>
+            )}
+            <Button size="large" priority="secondary" iconId="ri-download-line" onClick={() => downloadFile(pdfUrl)}>
+              Télécharger le document
+            </Button>
+          </Flex>
+        </Flex>
+      </Center>
       <Flex
         flexDirection="column"
         alignItems="center"
@@ -135,43 +217,9 @@ function ConstatValidationPage() {
         p={{ xs: "16px", lg: "32px" }}
         gap="16px"
       >
-        <Typography variant="h4" alignSelf="flex-start">
-          Validation du constat d'état : {title}
-        </Typography>
-        {stateReport?.commune && <Typography color="text.secondary">{stateReport.commune}</Typography>}
         <Box width="100%">
-          <PDFViewerPaginated url={`${ENV.VITE_BACKEND_URL}/api/constat-validation/${token}/pdf`} />
+          <PDFViewerPaginated url={pdfUrl} />
         </Box>
-
-        <Stack width="100%" maxWidth="690px" gap="16px">
-          <Input
-            label="Commentaire (facultatif pour l'acceptation, obligatoire pour le refus)"
-            nativeInputProps={{ ...form.register("comment") }}
-            sx={{ mb: "8px" }}
-          />
-
-          {(acceptMutation.isError || declineMutation.isError) && (
-            <Typography color="error">Une erreur est survenue. Veuillez réessayer.</Typography>
-          )}
-
-          <Flex gap="16px" justifyContent="flex-end">
-            <Button
-              type="button"
-              priority="secondary"
-              onClick={form.handleSubmit((data) => declineMutation.mutate(data))}
-              disabled={isPending}
-            >
-              Refuser
-            </Button>
-            <Button
-              type="button"
-              onClick={form.handleSubmit((data) => acceptMutation.mutate(data))}
-              disabled={isPending}
-            >
-              Accepter
-            </Button>
-          </Flex>
-        </Stack>
       </Flex>
     </Box>
   );

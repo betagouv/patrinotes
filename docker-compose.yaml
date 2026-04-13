@@ -4,6 +4,7 @@ volumes:
   pg_data:
   minio_data:
   mongo_storage:
+  mailpit_data:
 
 services:
   pg:
@@ -161,6 +162,8 @@ services:
     ports:
       - "${SMTP_PORT}:1025"
       - "${SMTP_WEB_PORT}:8025"
+    volumes:
+      - mailpit_data:/data
     environment:
       MP_MAX_MESSAGES: 500
       MP_SMTP_AUTH_ACCEPT_ANY: 1
