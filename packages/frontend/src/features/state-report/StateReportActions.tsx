@@ -72,20 +72,37 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
         "validation_status",
       ]);
 
-      return db
-        .insertInto("state_report")
-        .values({
-          ...payload,
-          id: v4(),
-          titre_edifice: `${report.titre_edifice ?? "Sans titre"}`,
-          created_at: new Date().toISOString(),
-          created_by: user.id,
-          disabled: 0,
-          service_id: user.service_id,
-          redacted_by: user.name,
-          date_visite: new Date().toISOString(),
-        })
+      const visitedSections = await db
+        .selectFrom("visited_section")
+        .selectAll()
+        .where("state_report_id", "=", report.id)
         .execute();
+
+      const newReportId = v4();
+
+      const visitedSectionValues = visitedSections.map((section) => ({
+        ...section,
+        id: v4(),
+        state_report_id: newReportId,
+      }));
+
+      return db.transaction().execute(async (trx) => {
+        await trx
+          .insertInto("state_report")
+          .values({
+            ...payload,
+            id: newReportId,
+            titre_edifice: `${report.titre_edifice ?? "Sans titre"}`,
+            created_at: new Date().toISOString(),
+            created_by: user.id,
+            disabled: 0,
+            service_id: user.service_id,
+            redacted_by: user.name,
+            date_visite: new Date().toISOString(),
+          })
+          .execute();
+        await trx.insertInto("visited_section").values(visitedSectionValues).execute();
+      });
     },
   });
 
