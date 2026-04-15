@@ -2,7 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { Stack, Typography, Box } from "@mui/material";
-import { Alert, Input, Table } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Input, Table } from "#components/MUIDsfr.tsx";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { ofetch } from "ofetch";
@@ -59,8 +59,13 @@ const KpiCard = ({ label, value }: { label: ReactNode; value: string | number })
 
 const StatsPage = () => {
   const now = new Date();
-  const [from, setFrom] = useState(() => subMonths(now, 3).toISOString().slice(0, 10));
-  const [to, setTo] = useState(() => now.toISOString().slice(0, 10));
+  const [range, setRange] = useState<{ from: string; to: string }>({
+    from: subMonths(now, 3).toISOString().slice(0, 10),
+    to: now.toISOString().slice(0, 10),
+  });
+  const [tmpRange, setTmpRange] = useState(range);
+
+  const { from, to } = range;
 
   const publicQuery = useQuery({
     queryKey: ["stats", "public", from, to],
@@ -202,9 +207,12 @@ const StatsPage = () => {
                   style={{ marginBottom: 0 }}
                   nativeInputProps={{
                     type: "date",
-                    value: from,
-                    max: to,
-                    onChange: (e) => setFrom(e.target.value),
+                    value: tmpRange.from,
+                    max: tmpRange.to,
+                    onChange: (e) => {
+                      e.preventDefault();
+                      setTmpRange((prev) => ({ ...prev, from: e.target.value }));
+                    },
                   }}
                 />
                 <Input
@@ -212,11 +220,17 @@ const StatsPage = () => {
                   style={{ marginBottom: 0 }}
                   nativeInputProps={{
                     type: "date",
-                    value: to,
-                    min: from,
-                    onChange: (e) => setTo(e.target.value),
+                    value: tmpRange.to,
+                    min: tmpRange.from,
+                    onChange: (e) => {
+                      e.preventDefault();
+                      setTmpRange((prev) => ({ ...prev, to: e.target.value }));
+                    },
                   }}
                 />
+                <Button type="button" onClick={() => setRange({ ...tmpRange })}>
+                  Valider
+                </Button>
               </Box>
               <Box display="flex" flexWrap="wrap" gap="1rem">
                 <KpiCard
