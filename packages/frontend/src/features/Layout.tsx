@@ -91,13 +91,11 @@ const AppFooter = () => {
         <div className="fr-footer__bottom">
           <ul className="fr-footer__bottom-list">
             <li className="fr-footer__bottom-item">
-              <Link to="/mentions-legales" className="fr-footer__bottom-link">
-                Mentions légales
-              </Link>
+              <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
             </li>
             <li className="fr-footer__bottom-item">
-              <Link to="/cgu" className="fr-footer__bottom-link">
-                Conditions générales d'utilisation
+              <Link to="/mentions-legales" className="fr-footer__bottom-link">
+                Mentions légales
               </Link>
             </li>
             <li className="fr-footer__bottom-item">
@@ -106,7 +104,9 @@ const AppFooter = () => {
               </Link>
             </li>
             <li className="fr-footer__bottom-item">
-              <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
+              <Link to="/cgu" className="fr-footer__bottom-link">
+                Conditions générales d'utilisation
+              </Link>
             </li>
           </ul>
 

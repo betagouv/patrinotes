@@ -12,6 +12,7 @@ import { PasswordInput } from "#components/PasswordInput.tsx";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { omit } from "pastable";
 import { scrollToTop } from "../state-report/StateReportSummary";
+import { fr } from "@codegouvfr/react-dsfr";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -58,6 +59,9 @@ export const SignupForm = () => {
     <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }} width={{ xs: "100%", lg: "600px" }} mx="auto" mt="32px">
       <Typography variant="h4" mb="24px">
         Inscription
+      </Typography>
+      <Typography fontSize="14px" color={fr.colors.decisions.text.default.grey.default} mb="32px">
+        Choisissez vos identifiants pour créer votre compte. Tous les champs sont obligatoires.
       </Typography>
       <form onSubmit={form.handleSubmit(signup)}>
         {mutationError ? (
@@ -134,7 +138,7 @@ export const SignupForm = () => {
               {
                 label: (
                   <span>
-                    J’accepte les{" "}
+                    J'ai lu et j'accepte les{" "}
                     <Link
                       className="fr-link"
                       target="_blank"
@@ -142,9 +146,7 @@ export const SignupForm = () => {
                       style={{ textDecoration: "underline", textUnderlineOffset: 2 }}
                     >
                       conditions générales d’utilisation (CGU)
-                    </Link>{" "}
-                    du service Patrinotes et consens à ce que mes données soient collectées, afin de garantir la bonne
-                    utilisation des services offerts.
+                    </Link>
                   </span>
                 ),
                 nativeInputProps: {
