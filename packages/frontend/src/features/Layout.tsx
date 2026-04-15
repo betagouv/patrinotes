@@ -101,6 +101,11 @@ const AppFooter = () => {
               </Link>
             </li>
             <li className="fr-footer__bottom-item">
+              <Link to="/politique-confidentialite" className="fr-footer__bottom-link">
+                Politique de confidentialité
+              </Link>
+            </li>
+            <li className="fr-footer__bottom-item">
               <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
             </li>
           </ul>

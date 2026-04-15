@@ -12,6 +12,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiceRouteImport } from './routes/service'
+import { Route as PolitiqueConfidentialiteRouteImport } from './routes/politique-confidentialite'
 import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ConnexionRouteImport } from './routes/connexion'
@@ -44,6 +45,12 @@ const ServiceRoute = ServiceRouteImport.update({
   path: '/service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PolitiqueConfidentialiteRoute =
+  PolitiqueConfidentialiteRouteImport.update({
+    id: '/politique-confidentialite',
+    path: '/politique-confidentialite',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MentionsLegalesRoute = MentionsLegalesRouteImport.update({
   id: '/mentions-legales',
   path: '/mentions-legales',
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
+  '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
   '/admin': typeof AdminLazyRoute
   '/stats': typeof StatsLazyRoute
@@ -137,6 +145,7 @@ export interface FileRoutesByTo {
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
+  '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
   '/admin': typeof AdminLazyRoute
   '/stats': typeof StatsLazyRoute
@@ -156,6 +165,7 @@ export interface FileRoutesById {
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
+  '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
   '/admin': typeof AdminLazyRoute
   '/stats': typeof StatsLazyRoute
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
+    | '/politique-confidentialite'
     | '/service'
     | '/admin'
     | '/stats'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
+    | '/politique-confidentialite'
     | '/service'
     | '/admin'
     | '/stats'
@@ -212,6 +224,7 @@ export interface FileRouteTypes {
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
+    | '/politique-confidentialite'
     | '/service'
     | '/admin'
     | '/stats'
@@ -231,6 +244,7 @@ export interface RootRouteChildren {
   ConnexionRoute: typeof ConnexionRoute
   InscriptionRoute: typeof InscriptionRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
+  PolitiqueConfidentialiteRoute: typeof PolitiqueConfidentialiteRoute
   ServiceRoute: typeof ServiceRoute
   AdminLazyRoute: typeof AdminLazyRoute
   StatsLazyRoute: typeof StatsLazyRoute
@@ -264,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/service'
       fullPath: '/service'
       preLoaderRoute: typeof ServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politique-confidentialite': {
+      id: '/politique-confidentialite'
+      path: '/politique-confidentialite'
+      fullPath: '/politique-confidentialite'
+      preLoaderRoute: typeof PolitiqueConfidentialiteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mentions-legales': {
@@ -367,6 +388,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnexionRoute: ConnexionRoute,
   InscriptionRoute: InscriptionRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
+  PolitiqueConfidentialiteRoute: PolitiqueConfidentialiteRoute,
   ServiceRoute: ServiceRoute,
   AdminLazyRoute: AdminLazyRoute,
   StatsLazyRoute: StatsLazyRoute,
