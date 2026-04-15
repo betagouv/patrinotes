@@ -197,12 +197,17 @@ export const ImmeubleAutocomplete = () => {
         filterOptions={(x, state) => {
           if (!state.inputValue) return [];
 
-          const isReferenceSearch = /^PA\d{8}$/.test(state.inputValue.trim());
-
           const searchResults = searchEngine
             .search(state.inputValue)
             .map((result) => result.item)
             .slice(0, 15);
+
+          const isReferenceSearch = state.inputValue.trim().startsWith("PA000");
+          if (isReferenceSearch) {
+            return searchResults.filter((result) =>
+              result.reference?.toLowerCase().startsWith(state.inputValue.trim().toLowerCase()),
+            );
+          }
 
           return [
             ...(isCustom
