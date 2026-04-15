@@ -281,7 +281,7 @@ const StatsPage = () => {
               id="constats-by-service-table"
               caption="Taux d'adoption par service"
               noCaption={false}
-              headers={["Service", "Constats envoyés", "Constats créés", "Taux d'adoption"]}
+              headers={["Service", "Constats créés", "Constats envoyés", "Taux d'adoption"]}
               data={adminQuery.data.constatsByService.map((s) => [
                 s.serviceName ?? s.serviceId,
                 s.totalConstats,
