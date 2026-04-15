@@ -42,7 +42,8 @@ export const ImageCanvas = ({
   const [lines, setLines] = useState<Line[]>(() => dbLines ?? []);
   const [activeColor, setActiveColor] = useState(colors[0]);
   const [tool, setTool] = useState<"draw" | "pan">("draw");
-  const [activeWidthIdx, setActiveWidthIdx] = useState(1); // 0=thin 1=medium 2=thick
+  const [activeWidthIdx, setActiveWidthIdx] = useState(1);
+  const [isColorSelectionOpen, setIsColorSelectionOpen] = useState(false);
 
   // Layer transform state
   const [layerScale, setLayerScale] = useState(1);
@@ -173,10 +174,15 @@ export const ImageCanvas = ({
       if (!panStartRef.current) return;
       const pos = getStagePos();
       if (!pos) return;
-      setLayerOffset(clampOffset({
-        x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
-        y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
-      }, layerScale));
+      setLayerOffset(
+        clampOffset(
+          {
+            x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
+            y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
+          },
+          layerScale,
+        ),
+      );
       return;
     }
     if (!isDrawingRef.current) return;
@@ -209,10 +215,15 @@ export const ImageCanvas = ({
     if (!pointer) return;
     const newScale = e.evt.deltaY < 0 ? layerScale * scaleBy : layerScale / scaleBy;
     const clamped = clamp(newScale, 0.1, 20);
-    setLayerOffset(clampOffset({
-      x: pointer.x - (pointer.x - layerOffset.x) * (clamped / layerScale),
-      y: pointer.y - (pointer.y - layerOffset.y) * (clamped / layerScale),
-    }, clamped));
+    setLayerOffset(
+      clampOffset(
+        {
+          x: pointer.x - (pointer.x - layerOffset.x) * (clamped / layerScale),
+          y: pointer.y - (pointer.y - layerOffset.y) * (clamped / layerScale),
+        },
+        clamped,
+      ),
+    );
     setLayerScale(clamped);
   };
 
@@ -263,10 +274,15 @@ export const ImageCanvas = ({
       const stagePos = { x: newMid.x - rect.left, y: newMid.y - rect.top };
       const scaleFactor = newDist / lastDistRef.current;
       const newScale = clamp(layerScale * scaleFactor, 0.1, 20);
-      setLayerOffset(clampOffset({
-        x: stagePos.x - (stagePos.x - layerOffset.x) * (newScale / layerScale),
-        y: stagePos.y - (stagePos.y - layerOffset.y) * (newScale / layerScale),
-      }, newScale));
+      setLayerOffset(
+        clampOffset(
+          {
+            x: stagePos.x - (stagePos.x - layerOffset.x) * (newScale / layerScale),
+            y: stagePos.y - (stagePos.y - layerOffset.y) * (newScale / layerScale),
+          },
+          newScale,
+        ),
+      );
       setLayerScale(newScale);
       lastDistRef.current = newDist;
       lastMidRef.current = newMid;
@@ -280,10 +296,15 @@ export const ImageCanvas = ({
       const pos = { x: touches[0].clientX - rect.left, y: touches[0].clientY - rect.top };
       if (tool === "pan") {
         if (!panStartRef.current) return;
-        setLayerOffset(clampOffset({
-          x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
-          y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
-        }, layerScale));
+        setLayerOffset(
+          clampOffset(
+            {
+              x: panStartRef.current.offsetX + (pos.x - panStartRef.current.x),
+              y: panStartRef.current.offsetY + (pos.y - panStartRef.current.y),
+            },
+            layerScale,
+          ),
+        );
         return;
       }
       if (!isDrawingRef.current) return;
@@ -313,10 +334,15 @@ export const ImageCanvas = ({
     const newScale = direction === "in" ? layerScale * scaleBy : layerScale / scaleBy;
     const clamped = clamp(newScale, 0.1, 20);
     const center = { x: stageSize.width / 2, y: stageSize.height / 2 };
-    setLayerOffset(clampOffset({
-      x: center.x - (center.x - layerOffset.x) * (clamped / layerScale),
-      y: center.y - (center.y - layerOffset.y) * (clamped / layerScale),
-    }, clamped));
+    setLayerOffset(
+      clampOffset(
+        {
+          x: center.x - (center.x - layerOffset.x) * (clamped / layerScale),
+          y: center.y - (center.y - layerOffset.y) * (clamped / layerScale),
+        },
+        clamped,
+      ),
+    );
     setLayerScale(clamped);
   };
 
@@ -356,104 +382,139 @@ export const ImageCanvas = ({
     <Box display="flex" flexDirection="column" width="100%" height="100%">
       {/* Toolbar row — in normal flow so the canvas never overlaps it */}
       <Flex
-        sx={{
-          "button::before": {
-            marginRight: "0 !important",
-            marginLeft: "0 !important",
-          },
-        }}
-        alignItems="center"
-        justifyContent="flex-end"
-        gap="18px"
         px="16px"
         py="8px"
-        flexShrink={0}
         bgcolor="white"
+        width="100%"
+        alignItems="center"
+        justifyContent="space-between"
+        flexShrink={0}
       >
-        <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
+        <Flex
+          sx={{
+            "button:empty::before": {
+              marginRight: "0 !important",
+              marginLeft: "0 !important",
+            },
+          }}
+          alignItems="center"
+          justifyContent="flex-start"
+          flexShrink={0}
+          gap="18px"
+        >
           <Button
+            sx={{ bgcolor: "white !important", "&::before": { mr: "10px !important" } }}
             type="button"
-            priority={tool === "draw" ? "primary" : "secondary"}
-            iconId="ri-pencil-line"
-            title="Dessiner"
-            onClick={() => setTool("draw")}
-            sx={tool === "draw" ? {} : { bgcolor: "white !important" }}
+            priority="secondary"
+            onClick={handleUndo}
+            iconId="ri-arrow-go-back-line"
+            disabled={lines.length === 0}
+            title="Annuler le dernier trait"
           >
-            {null}
+            Annuler
           </Button>
-          <Button
-            type="button"
-            priority={tool === "pan" ? "primary" : "secondary"}
-            iconId="ri-drag-move-line"
-            title="Déplacer"
-            onClick={() => setTool("pan")}
-            sx={{
-              ...(tool === "pan" ? {} : { bgcolor: "white !important" }),
-              "&::before": { fontSize: "1.5rem !important" },
-            }}
-          >
-            {null}
-          </Button>
-        </Flex>
-        {/* Width selector */}
-        <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
-          {[0, 1, 2].map((idx) => {
-            const dotSize = [6, 10, 16][idx];
-            const isActive = activeWidthIdx === idx && tool === "draw";
-            return (
+          <Box sx={{ display: { xs: "none", lg: "flex" } }}>
+            <Tools tool={tool} setTool={setTool} />
+          </Box>
+          {/* Width selector */}
+          <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
+            {[0, 1].map((idx) => {
+              const dotSize = [10, 16][idx];
+              const isActive = activeWidthIdx === idx && tool === "draw";
+              return (
+                <Box
+                  key={idx}
+                  component="button"
+                  type="button"
+                  onClick={() => {
+                    setTool("draw");
+                    setActiveWidthIdx(idx);
+                  }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 40,
+                    height: 40,
+                    padding: 0,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    bgcolor: isActive ? "#EAEAEA" : "white",
+                    border: "1px solid",
+                    borderColor: isActive ? "#000091" : "#3a3a3a",
+                    borderRadius: 0,
+                    position: "relative",
+                    zIndex: isActive ? 1 : 0,
+                    "&:hover": {
+                      bgcolor: isActive ? "#000091" : "#f0f0f0",
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: dotSize,
+                      height: dotSize,
+                      borderRadius: "50%",
+                      bgcolor: "#000091",
+                    }}
+                  />
+                </Box>
+              );
+            })}
+          </Flex>
+
+          <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
+            <Box position="relative">
               <Box
-                key={idx}
-                component="button"
-                type="button"
-                onClick={() => {
-                  setTool("draw");
-                  setActiveWidthIdx(idx);
-                }}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 40,
-                  height: 40,
-                  padding: 0,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                  bgcolor: isActive ? "#000091" : "white",
-                  border: "1px solid",
-                  borderColor: isActive ? "#000091" : "#3a3a3a",
-                  borderRadius: 0,
-                  position: "relative",
-                  zIndex: isActive ? 1 : 0,
-                  "&:hover": {
-                    bgcolor: isActive ? "#000091" : "#f0f0f0",
-                  },
+                  bgcolor: activeColor,
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  position: "absolute",
+                  zIndex: "1",
+                  left: "24px",
+                  top: "24px",
+                }}
+              ></Box>
+              <Button
+                type="button"
+                priority={"secondary"}
+                iconId="fr-icon-palette-fill"
+                title="Changer la couleur du trait"
+                onClick={() => setIsColorSelectionOpen((open) => !open)}
+                sx={{
+                  zIndex: "0",
+                  bgcolor: isColorSelectionOpen ? "#EAEAEA !important" : "white !important",
+                }}
+              ></Button>
+            </Box>
+            {isColorSelectionOpen && (
+              <Box
+                zIndex="11"
+                position="absolute"
+                top="60px"
+                sx={{
+                  transform: "translateX(calc(-50% + 20px))",
                 }}
               >
-                <Box
-                  sx={{
-                    width: dotSize,
-                    height: dotSize,
-                    borderRadius: "50%",
-                    bgcolor: isActive ? "white" : "black",
+                <ColorSelection
+                  activeColor={activeColor}
+                  setActiveColor={(c) => {
+                    setActiveColor(c);
+                    setIsColorSelectionOpen(false);
+                    setTool("draw");
                   }}
                 />
               </Box>
-            );
-          })}
+            )}
+          </Flex>
         </Flex>
-        {/* @ts-ignore */}
-        <Button
-          sx={{ bgcolor: "white !important" }}
-          type="button"
-          priority="secondary"
-          onClick={handleUndo}
-          iconId="ri-arrow-go-back-line"
-          disabled={lines.length === 0}
-          title="Annuler le dernier trait"
-        />
-        <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
-          OK
-        </Button>
+        <Box justifySelf="flex-end" alignItems="flex-end">
+          <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
+            Valider
+          </Button>
+        </Box>
       </Flex>
 
       {/* Canvas area */}
@@ -469,40 +530,51 @@ export const ImageCanvas = ({
           sx={{
             position: "absolute",
             bottom: 12,
-            right: 12,
+            right: 0,
+            left: 0,
             zIndex: 10,
-            "& > button": { marginLeft: "-1px !important" },
           }}
+          px="16px"
+          justifyContent="space-between"
         >
-          {(["in", "out"] as const).map((dir) => (
-            <Box
-              key={dir}
-              component="button"
-              type="button"
-              onClick={() => handleZoom(dir)}
-              title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 40,
-                height: 40,
-                padding: 0,
-                cursor: "pointer",
-                flexShrink: 0,
-                bgcolor: "white",
-                border: "1px solid",
-                borderColor: fr.colors.decisions.background.active.blueFrance.default,
-                color: fr.colors.decisions.background.active.blueFrance.default,
-                borderRadius: 0,
-                position: "relative",
-                zIndex: 0,
-                fontSize: "1.1rem",
-              }}
-            >
-              <Box component="span" className={fr.cx(dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line")} />
-            </Box>
-          ))}
+          <Flex>
+            <Tools tool={tool} setTool={setTool} />
+          </Flex>
+          <Flex
+            sx={{
+              "& > button": { marginLeft: "-1px !important" },
+            }}
+          >
+            {(["in", "out"] as const).map((dir) => (
+              <Box
+                key={dir}
+                component="button"
+                type="button"
+                onClick={() => handleZoom(dir)}
+                title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  bgcolor: "white",
+                  border: "1px solid",
+                  borderColor: fr.colors.decisions.background.active.blueFrance.default,
+                  color: fr.colors.decisions.background.active.blueFrance.default,
+                  borderRadius: 0,
+                  position: "relative",
+                  zIndex: 0,
+                  fontSize: "1.1rem",
+                }}
+              >
+                <Box component="span" className={fr.cx(dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line")} />
+              </Box>
+            ))}
+          </Flex>
         </Flex>
         <Stage
           ref={stageRef}
@@ -538,7 +610,7 @@ export const ImageCanvas = ({
       {/* Legend + color swatches */}
       <Flex justifyContent="center" alignItems="center" flexDirection="column" flexShrink={0} bgcolor="white">
         {hideLabelInput ? null : (
-          <Flex px="16px" width="100%" pt="8px">
+          <Flex px="16px" width="100%" pt="8px" mb={{ xs: "16px", lg: "32px" }}>
             <Input
               sx={{ width: "100%" }}
               label="Légende"
@@ -549,55 +621,93 @@ export const ImageCanvas = ({
             />
           </Flex>
         )}
-        <Stack gap="14px" flexDirection="row" justifyContent="center" alignItems="center" p="18px">
-          {colors.map((color) => {
-            const isActive = activeColor === color;
-            const size = isActive ? 40 : 20;
-            return (
-              <Box
-                key={color}
-                component="button"
-                type="button"
-                onClick={() => setActiveColor(color)}
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  width: 40,
-                  height: 40,
-                  padding: 0,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    borderRadius: "50%",
-                    width: size,
-                    height: size,
-                    bgcolor: color,
-                    border: color === "white" ? "1px solid black" : "none",
-                    transition: "width 0.1s, height 0.1s",
-                  }}
-                >
-                  {isActive && (
-                    <Box
-                      className={fr.cx("fr-icon--md", "ri-pencil-line")}
-                      component="i"
-                      color={blackPenColors.includes(color) ? "black" : "white"}
-                    />
-                  )}
-                </Box>
-              </Box>
-            );
-          })}
-        </Stack>
       </Flex>
     </Box>
+  );
+};
+
+const ColorSelection = ({
+  activeColor,
+  setActiveColor,
+}: {
+  activeColor: string;
+  setActiveColor: (color: string) => void;
+}) => {
+  return (
+    <Stack gap="8px" flexDirection="row" justifyContent="center" alignItems="center">
+      {colors.map((color) => {
+        const isActive = activeColor === color;
+        const size = isActive ? 30 : 20;
+        return (
+          <Box
+            key={color}
+            component="button"
+            type="button"
+            onClick={() => setActiveColor(color)}
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: 40,
+              height: 40,
+              padding: 0,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                borderRadius: "50%",
+                width: size,
+                height: size,
+                bgcolor: color,
+                border: color === "white" ? "1px solid black" : "none",
+                transition: "width 0.1s, height 0.1s",
+              }}
+            >
+              {isActive && (
+                <Box
+                  className={fr.cx("fr-icon--sm", "ri-pencil-line")}
+                  component="i"
+                  color={blackPenColors.includes(color) ? "black" : "white"}
+                />
+              )}
+            </Box>
+          </Box>
+        );
+      })}
+    </Stack>
+  );
+};
+
+const Tools = ({ tool, setTool }: { tool: "draw" | "pan"; setTool: (tool: "draw" | "pan") => void }) => {
+  return (
+    <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
+      <Button
+        type="button"
+        priority={"secondary"}
+        style={{}}
+        iconId="ri-pencil-line"
+        title="Dessiner"
+        onClick={() => setTool("draw")}
+        sx={tool === "draw" ? { bgcolor: "#EAEAEA !important" } : { bgcolor: "white !important" }}
+      ></Button>
+      <Button
+        type="button"
+        priority={"secondary"}
+        iconId="ri-drag-move-2-fill"
+        title="Déplacer"
+        onClick={() => setTool("pan")}
+        sx={{
+          ...(tool === "pan" ? { bgcolor: "#EAEAEA !important" } : { bgcolor: "white !important" }),
+          "&::before": { fontSize: "1.5rem !important" },
+        }}
+      ></Button>
+    </Flex>
   );
 };
