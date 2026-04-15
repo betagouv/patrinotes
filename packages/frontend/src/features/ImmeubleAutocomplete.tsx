@@ -307,7 +307,7 @@ export const ImmeubleAutocomplete = () => {
         noOptionsText={
           !referencePop && inputValue ? (
             <Center height="80px">
-              {(immeubleQuery.isLoading ?? !popSynced) ? <Spinner size={50} /> : "Aucun résultat"}
+              {immeubleQuery.isLoading || !popSynced ? <Spinner size={50} /> : "Aucun résultat"}
             </Center>
           ) : null
         }
