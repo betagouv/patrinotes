@@ -93,36 +93,34 @@ export const PictureThumbnail = ({
   })();
 
   return (
-    <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
+    <Stack gap="4px" width={{ xs: "100%", sm: "100%", md: "31%" }}>
       <ReportStatus status={badgeStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
         <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
-          {
-            hasError ? (
-              <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
-                <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
-                  {loadError ?? "Impossible de charger l'image"}
-                </Typography>
-                <Button
-                  type="button"
-                  size="small"
-                  priority="tertiary no outline"
-                  iconId="fr-icon-refresh-line"
-                  onClick={() => send({ type: "RETRY" })}
-                >
-                  Réessayer
-                </Button>
-              </Flex>
-            ) : blobUrl ? (
-              <Box
-                onClick={() => blobUrl && onEdit(picture, blobUrl)}
-                component="img"
-                src={blobUrl}
-                data-picture-id={picture.id}
-                sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover", cursor: "pointer" }}
-              />
-            ) : null /* grey background shows during loading */
-          }
+          {hasError ? (
+            <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
+              <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
+                {loadError ?? "Impossible de charger l'image"}
+              </Typography>
+              <Button
+                type="button"
+                size="small"
+                priority="tertiary no outline"
+                iconId="fr-icon-refresh-line"
+                onClick={() => send({ type: "RETRY" })}
+              >
+                Réessayer
+              </Button>
+            </Flex>
+          ) : blobUrl ? (
+            <Box
+              onClick={() => blobUrl && onEdit(picture, blobUrl)}
+              component="img"
+              src={blobUrl}
+              data-picture-id={picture.id}
+              sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover", cursor: "pointer" }}
+            />
+          ) : null}
         </Box>
         <Flex
           display={isDisabled ? "none" : "flex"}
