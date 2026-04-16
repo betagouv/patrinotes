@@ -669,7 +669,7 @@ const ColorSelection = ({
                 width: size,
                 height: size,
                 bgcolor: color,
-                border: color === "white" ? "1px solid black" : "none",
+                border: "1px solid #000091",
                 transition: "width 0.1s, height 0.1s",
               }}
             >
