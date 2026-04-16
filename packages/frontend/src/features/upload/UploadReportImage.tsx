@@ -93,7 +93,7 @@ export const PictureThumbnail = ({
   })();
 
   return (
-    <Stack gap="4px" width={{ xs: "100%", sm: "100%", md: "31%" }}>
+    <Stack gap="4px" width={{ xs: "100%", sm: "100%", md: "calc(50% - 8px)" }}>
       <ReportStatus status={badgeStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
         <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
