@@ -400,7 +400,7 @@ export const ImageCanvas = ({
           alignItems="center"
           justifyContent="flex-start"
           flexShrink={0}
-          gap="18px"
+          gap={{ xs: "8px", lg: "16px" }}
         >
           <Button
             sx={{ bgcolor: "white !important", "&::before": { mr: "10px !important" } }}
@@ -538,7 +538,9 @@ export const ImageCanvas = ({
           justifyContent="space-between"
         >
           <Flex>
-            <Tools tool={tool} setTool={setTool} />
+            <Box display={{ xs: "flex", lg: "none" }}>
+              <Tools tool={tool} setTool={setTool} />
+            </Box>
           </Flex>
           <Flex
             sx={{
