@@ -1,7 +1,7 @@
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Box } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useRef } from "react";
 import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
 
@@ -69,27 +69,30 @@ export const UploadImageModal = ({
   onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
   hideLabelInput?: boolean;
 }) => {
-  const [vvHeight, setVvHeight] = useState<number>(() => window.visualViewport?.height ?? window.innerHeight);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handler = () => setVvHeight(vv.height);
-    vv.addEventListener("resize", handler);
-    return () => vv.removeEventListener("resize", handler);
-  }, []);
-
   if (!selectedAttachment) return null;
 
   return (
-    <Box zIndex="1000" position="fixed" top="0" left="0" right="0" width="100vw" height={vvHeight}>
+    <Box
+      zIndex="1000"
+      position="fixed"
+      top="0"
+      left="0"
+      right="0"
+      width="100vw"
+      height="100dvh"
+      sx={{
+        overflowY: "auto",
+        overscrollBehavior: "contain",
+      }}
+    >
       <Box bgcolor="rgba(0, 0, 0, 0.5)" position="fixed" top="0" left="0" right="0" bottom="0" />
-      <Center width="100%" height="100%">
+      <Center width="100%" height="100%" sx={{ alignItems: { xs: "flex-start", lg: "center" } }}>
         <Box
           bgcolor="white"
           position="relative"
           width={{ xs: "100%", lg: "634px" }}
-          height={{ xs: vvHeight, lg: 792 }}
+          height={{ xs: "100dvh", lg: 792 }}
+          maxHeight={{ xs: "100dvh", lg: "calc(100dvh - 32px)" }}
         >
           {blobUrl ? (
             <ImageCanvas

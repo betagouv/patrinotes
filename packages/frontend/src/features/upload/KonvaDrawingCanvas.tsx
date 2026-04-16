@@ -379,7 +379,7 @@ export const ImageCanvas = ({
   };
 
   return (
-    <Box display="flex" flexDirection="column" width="100%" height="100%">
+    <Box display="flex" flexDirection="column" width="100%" height="100%" sx={{ minHeight: 0 }}>
       {/* Toolbar row — in normal flow so the canvas never overlaps it */}
       <Flex
         px="16px"
@@ -521,6 +521,7 @@ export const ImageCanvas = ({
       <Box
         ref={canvasAreaRef}
         flex="1"
+        minHeight={0}
         overflow="hidden"
         position="relative"
         sx={{ cursor: tool === "pan" ? (panStartRef.current ? "grabbing" : "grab") : "crosshair" }}
