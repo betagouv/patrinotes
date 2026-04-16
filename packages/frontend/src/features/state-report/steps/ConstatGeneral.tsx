@@ -267,22 +267,24 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
     const oldAttachment = await db
       .selectFrom("state_report_attachment")
       .where("id", "=", oldId)
-      .select(["type"])
+      .select(["type", "created_at"])
       .executeTakeFirst();
     await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
-    await db
-      .insertInto("state_report_attachment")
-      .values({
-        id: v7(),
-        attachment_id: newId,
-        state_report_id: constatId,
-        service_id: user.service_id,
-        created_at: new Date().toISOString(),
-        is_deprecated: 0,
-        type: oldAttachment?.type ?? null,
-      })
-      .execute();
-    await db.updateTable("state_report_attachment").set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
+    await db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto("state_report_attachment")
+        .values({
+          id: v7(),
+          attachment_id: newId,
+          state_report_id: constatId,
+          service_id: user.service_id,
+          created_at: oldAttachment?.created_at ?? new Date().toISOString(),
+          is_deprecated: 0,
+          type: oldAttachment?.type ?? null,
+        })
+        .execute();
+      await trx.updateTable("state_report_attachment").set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
+    });
     return newId;
   };
 

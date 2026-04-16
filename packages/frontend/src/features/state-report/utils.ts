@@ -32,10 +32,6 @@ export const useIsStateReportDisabled = () => {
   const createdBy = useWatch({ control: form.control, name: "created_by" });
   const isUsersReport = createdBy === user.id;
 
-  console.log("createdBy", createdBy);
-  console.log("user.id", user.id);
-  console.log("isUsersReport", isUsersReport);
-
   return (
     !isUsersReport || getIsStateReportDisabled({ attachment_id: hasAttachment, validation_status: validationStatus })
   );

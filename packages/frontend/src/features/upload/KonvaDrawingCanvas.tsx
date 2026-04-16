@@ -7,6 +7,7 @@ import { MinimalAttachment } from "./UploadImage";
 import { Stage, Layer, Image as KonvaImage, Line as KonvaLine } from "react-konva";
 import type { Line } from "./types";
 import type Konva from "konva";
+import { useMutation } from "@tanstack/react-query";
 
 export type { Line };
 
@@ -348,175 +349,40 @@ export const ImageCanvas = ({
 
   const handleUndo = () => setLines((prev) => prev.slice(0, -1));
 
-  const handleSave = async () => {
-    let savedId = pictureId;
-    if (onReplaceAttachment && konvaImage && imageNaturalSize.width > 0 && lines.length > 0) {
-      // Draw onto an offscreen canvas at the image's natural size, ignoring zoom/pan
-      const offscreen = document.createElement("canvas");
-      offscreen.width = imageNaturalSize.width;
-      offscreen.height = imageNaturalSize.height;
-      const ctx = offscreen.getContext("2d")!;
-      ctx.drawImage(konvaImage, 0, 0);
-      for (const line of lines) {
-        if (line.points.length < 1) continue;
-        ctx.beginPath();
-        ctx.strokeStyle = line.color;
-        ctx.lineWidth = line.width ?? widthOptions[1];
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.moveTo(line.points[0].x, line.points[0].y);
-        for (let i = 1; i < line.points.length; i++) {
-          ctx.lineTo(line.points[i].x, line.points[i].y);
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      let savedId = pictureId;
+      if (onReplaceAttachment && konvaImage && imageNaturalSize.width > 0 && lines.length > 0) {
+        // Draw onto an offscreen canvas at the image's natural size, ignoring zoom/pan
+        const offscreen = document.createElement("canvas");
+        offscreen.width = imageNaturalSize.width;
+        offscreen.height = imageNaturalSize.height;
+        const ctx = offscreen.getContext("2d")!;
+        ctx.drawImage(konvaImage, 0, 0);
+        for (const line of lines) {
+          if (line.points.length < 1) continue;
+          ctx.beginPath();
+          ctx.strokeStyle = line.color;
+          ctx.lineWidth = line.width ?? widthOptions[1];
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.moveTo(line.points[0].x, line.points[0].y);
+          for (let i = 1; i < line.points.length; i++) {
+            ctx.lineTo(line.points[i].x, line.points[i].y);
+          }
+          ctx.stroke();
         }
-        ctx.stroke();
+        const blob = await new Promise<Blob>((resolve) => offscreen.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
+        const buffer = await blob.arrayBuffer();
+        savedId = await onReplaceAttachment(pictureId, buffer);
       }
-      const blob = await new Promise<Blob>((resolve) => offscreen.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
-      const buffer = await blob.arrayBuffer();
-      savedId = await onReplaceAttachment(pictureId, buffer);
-    }
-    onSave?.({ ...attachment, id: savedId, label: internalLabel, url });
-    closeModal();
-  };
+      onSave?.({ ...attachment, id: savedId, label: internalLabel, url });
+      closeModal();
+    },
+  });
 
   return (
     <Box display="flex" flexDirection="column" width="100%" height="100%" sx={{ minHeight: 0 }}>
-      {/* Toolbar row — in normal flow so the canvas never overlaps it */}
-      <Flex
-        px="16px"
-        py="8px"
-        bgcolor="white"
-        width="100%"
-        alignItems="center"
-        justifyContent="space-between"
-        flexShrink={0}
-      >
-        <Flex
-          sx={{
-            "button:empty::before": {
-              marginRight: "0 !important",
-              marginLeft: "0 !important",
-            },
-          }}
-          alignItems="center"
-          justifyContent="flex-start"
-          flexShrink={0}
-          gap={{ xs: "8px", lg: "16px" }}
-        >
-          <Button
-            sx={{ bgcolor: "white !important", "&::before": { mr: "10px !important" } }}
-            type="button"
-            priority="secondary"
-            onClick={handleUndo}
-            iconId="ri-arrow-go-back-line"
-            disabled={lines.length === 0}
-            title="Annuler le dernier trait"
-          >
-            Annuler
-          </Button>
-          <Box sx={{ display: { xs: "none", lg: "flex" } }}>
-            <Tools tool={tool} setTool={setTool} />
-          </Box>
-          {/* Width selector */}
-          <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
-            {[0, 1].map((idx) => {
-              const dotSize = [10, 16][idx];
-              const isActive = activeWidthIdx === idx && tool === "draw";
-              return (
-                <Box
-                  key={idx}
-                  component="button"
-                  type="button"
-                  onClick={() => {
-                    setTool("draw");
-                    setActiveWidthIdx(idx);
-                  }}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 40,
-                    height: 40,
-                    padding: 0,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    bgcolor: isActive ? "#EAEAEA" : "white",
-                    border: "1px solid",
-                    borderColor: isActive ? "#000091" : "#3a3a3a",
-                    borderRadius: 0,
-                    position: "relative",
-                    zIndex: isActive ? 1 : 0,
-                    "&:hover": {
-                      bgcolor: isActive ? "#000091" : "#f0f0f0",
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: dotSize,
-                      height: dotSize,
-                      borderRadius: "50%",
-                      bgcolor: "#000091",
-                    }}
-                  />
-                </Box>
-              );
-            })}
-          </Flex>
-
-          <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
-            <Box position="relative">
-              <Box
-                sx={{
-                  bgcolor: activeColor,
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "50%",
-                  position: "absolute",
-                  zIndex: "1",
-                  left: "24px",
-                  top: "24px",
-                }}
-              ></Box>
-              <Button
-                type="button"
-                priority={"secondary"}
-                iconId="fr-icon-palette-fill"
-                title="Changer la couleur du trait"
-                onClick={() => setIsColorSelectionOpen((open) => !open)}
-                sx={{
-                  zIndex: "0",
-                  bgcolor: isColorSelectionOpen ? "#EAEAEA !important" : "white !important",
-                }}
-              ></Button>
-            </Box>
-            {isColorSelectionOpen && (
-              <Box
-                zIndex="11"
-                position="absolute"
-                top="60px"
-                sx={{
-                  transform: "translateX(calc(-50% + 20px))",
-                }}
-              >
-                <ColorSelection
-                  activeColor={activeColor}
-                  setActiveColor={(c) => {
-                    setActiveColor(c);
-                    setIsColorSelectionOpen(false);
-                    setTool("draw");
-                  }}
-                />
-              </Box>
-            )}
-          </Flex>
-        </Flex>
-        <Box justifySelf="flex-end" alignItems="flex-end">
-          <Button sx={{ bgcolor: "white !important" }} type="button" priority="secondary" onClick={handleSave}>
-            Valider
-          </Button>
-        </Box>
-      </Flex>
-
       {/* Canvas area */}
       <Box
         ref={canvasAreaRef}
@@ -526,6 +392,145 @@ export const ImageCanvas = ({
         position="relative"
         sx={{ cursor: tool === "pan" ? (panStartRef.current ? "grabbing" : "grab") : "crosshair" }}
       >
+        {/* Toolbar overlay */}
+        <Flex
+          sx={{
+            position: "absolute",
+            top: 12,
+            right: 0,
+            left: 0,
+            zIndex: 10,
+            "button:empty::before": {
+              marginRight: "0 !important",
+              marginLeft: "0 !important",
+            },
+          }}
+          px="16px"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Flex alignItems="center" justifyContent="flex-start" flexShrink={0} gap={{ xs: "8px", lg: "16px" }}>
+            <Button
+              sx={{ bgcolor: "white !important", "&::before": { mr: "10px !important" } }}
+              type="button"
+              priority="secondary"
+              onClick={handleUndo}
+              iconId="ri-arrow-go-back-line"
+              disabled={lines.length === 0}
+              title="Annuler le dernier trait"
+            >
+              Annuler
+            </Button>
+            <Box sx={{ display: { xs: "none", lg: "flex" } }}>
+              <Tools tool={tool} setTool={setTool} />
+            </Box>
+            <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
+              {[0, 1].map((idx) => {
+                const dotSize = [10, 16][idx];
+                const isActive = activeWidthIdx === idx && tool === "draw";
+                return (
+                  <Box
+                    key={idx}
+                    component="button"
+                    type="button"
+                    onClick={() => {
+                      setTool("draw");
+                      setActiveWidthIdx(idx);
+                    }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 40,
+                      height: 40,
+                      padding: 0,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      bgcolor: isActive ? "#EAEAEA" : "white",
+                      border: "1px solid",
+                      borderColor: isActive ? "#000091" : "#3a3a3a",
+                      borderRadius: 0,
+                      position: "relative",
+                      zIndex: isActive ? 1 : 0,
+                      "&:hover": {
+                        bgcolor: isActive ? "#000091" : "#f0f0f0",
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: dotSize,
+                        height: dotSize,
+                        borderRadius: "50%",
+                        bgcolor: "#000091",
+                      }}
+                    />
+                  </Box>
+                );
+              })}
+            </Flex>
+
+            <Flex sx={{ "& > button": { marginLeft: "-1px !important" } }}>
+              <Box position="relative">
+                <Box
+                  sx={{
+                    bgcolor: activeColor,
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "50%",
+                    position: "absolute",
+                    zIndex: "1",
+                    left: "24px",
+                    top: "24px",
+                  }}
+                />
+                <Button
+                  type="button"
+                  priority={"secondary"}
+                  iconId="fr-icon-palette-fill"
+                  title="Changer la couleur du trait"
+                  onClick={() => setIsColorSelectionOpen((open) => !open)}
+                  sx={{
+                    zIndex: "0",
+                    bgcolor: isColorSelectionOpen ? "#EAEAEA !important" : "white !important",
+                  }}
+                />
+              </Box>
+              {isColorSelectionOpen && (
+                <Box
+                  zIndex="11"
+                  position="absolute"
+                  top="50px"
+                  sx={{
+                    transform: "translateX(calc(-50% + 20px))",
+                  }}
+                >
+                  <ColorSelection
+                    activeColor={activeColor}
+                    setActiveColor={(c) => {
+                      setActiveColor(c);
+                      setIsColorSelectionOpen(false);
+                      setTool("draw");
+                    }}
+                  />
+                </Box>
+              )}
+            </Flex>
+          </Flex>
+          <Box justifySelf="flex-end" alignItems="flex-end">
+            <Button
+              sx={{ bgcolor: "white !important" }}
+              type="button"
+              priority="secondary"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              iconId="ri-check-line"
+            >
+              Valider
+            </Button>
+          </Box>
+        </Flex>
+
         {/* Zoom buttons overlay */}
         <Flex
           sx={{
