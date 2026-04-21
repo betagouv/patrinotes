@@ -1,6 +1,6 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Box, Stack } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { MinimalAttachment } from "./UploadImage";
@@ -411,7 +411,7 @@ export const ImageCanvas = ({
         >
           <Flex alignItems="center" justifyContent="flex-start" flexShrink={0} gap={{ xs: "8px", lg: "16px" }}>
             <Button
-              sx={{ bgcolor: "white !important", "&::before": { mr: "10px !important" } }}
+              sx={{ bgcolor: "white !important", "&::before": { mr: { lg: "10px !important", xs: "0 !important" } } }}
               type="button"
               priority="secondary"
               onClick={handleUndo}
@@ -419,7 +419,15 @@ export const ImageCanvas = ({
               disabled={lines.length === 0}
               title="Annuler le dernier trait"
             >
-              Annuler
+              <Typography
+                component="span"
+                display={{
+                  xs: "none",
+                  lg: "inline",
+                }}
+              >
+                Annuler
+              </Typography>
             </Button>
             <Box sx={{ display: { xs: "none", lg: "flex" } }}>
               <Tools tool={tool} setTool={setTool} />
