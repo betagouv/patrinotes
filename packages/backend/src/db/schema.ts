@@ -747,6 +747,7 @@ export const popImages = pgTable("pop_images", {
 export const attachment_redirection = pgTable("attachment_redirection", {
   id: text().primaryKey().notNull(),
   s3Key: text("s3_key").notNull(),
+  name: text(),
   createdAt: timestamp("created_at", { mode: "string" }).notNull(),
   createdBy: text("created_by").notNull(),
   sentTo: text("sent_to").notNull(),

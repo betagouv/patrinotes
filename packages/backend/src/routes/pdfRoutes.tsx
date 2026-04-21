@@ -10,6 +10,7 @@ import { v4 } from "uuid";
 import { Selectable } from "kysely";
 import { getServices } from "../services/services";
 import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
+import { getStateReportMailName } from "@patrinotes/pdf/constat";
 import { AppError } from "../features/errors";
 import { randomInt } from "crypto";
 import base62 from "base62";
@@ -21,17 +22,19 @@ const createAttachmentRedirection = async ({
   s3Key,
   createdBy,
   sentTo,
+  name,
 }: {
   s3Key: string;
   createdBy: string;
   sentTo: string;
+  name?: string;
 }) => {
   const id = base62.encode(randomInt(1, 281474976710655));
   await db
     .insertInto("attachment_redirection")
-    .values({ id, s3_key: s3Key, created_at: new Date().toISOString(), created_by: createdBy, sent_to: sentTo })
+    .values({ id, s3_key: s3Key, created_at: new Date().toISOString(), created_by: createdBy, sent_to: sentTo, name })
     .execute();
-  return `${ENV.BACKEND_URL}/attachment/${id}`;
+  return `${ENV.BACKEND_URL}/attachment/${id}${name ? `/${name}` : ""}`;
 };
 
 export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
@@ -304,6 +307,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         s3Key: "attachment/" + pdfPath,
         createdBy: user.id,
         sentTo: userSettingsResult.validation_email,
+        name: getStateReportMailName({ titre_edifice: stateReportQuery.titre_edifice }),
       });
       return url;
     }
@@ -312,6 +316,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       s3Key: "attachment/" + pdfPath,
       createdBy: user.id,
       sentTo: recipients.join(","),
+      name: getStateReportMailName({ titre_edifice: stateReportQuery.titre_edifice }),
     });
     await sendStateReportMail({ recipients: recipients.join(","), pdfUrl: pdfMailUrl, stateReport: stateReport!, user });
 
@@ -353,6 +358,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       s3Key: "attachment/" + pdfPath,
       createdBy: user.id,
       sentTo: recipients.join(","),
+      name: getStateReportMailName({ titre_edifice: stateReportQuery.titre_edifice }),
     });
     return url;
   });

@@ -20,22 +20,8 @@ import { ModalCloseButton } from "../menu/MenuTitle";
 import { ConfirmationModal } from "#components/ui/ConfirmationModal.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import { emptyStateReport } from "./StateReportForm";
-
-const getStateReportMailName = (stateReport: StateReport) => {
-  return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
-};
-
-function cleanString(str: string): string {
-  return str
-    .normalize("NFD") // Decompose accented characters
-    .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
-    .toLowerCase() // Convert to lowercase
-    .trim() // Remove leading/trailing spaces
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/[^\w-]/g, "") // Remove special characters (keep letters, numbers, hyphens)
-    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
-}
+import { format } from "date-fns";
+import { getStateReportMailName } from "@patrinotes/pdf/constat";
 
 export const StateReportActions = forwardRef<HTMLDivElement, { report: StateReportWithUser }>(({ report }, ref) => {
   const user = useUser()!;

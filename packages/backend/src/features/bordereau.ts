@@ -34,9 +34,11 @@ ${
     ? `<p>Le constat joint permet de préconiser les interventions suivantes :</p>
 
 <p>
-${preconisations.map(({ preconisation, commentaire }) => {
-  return `- ${preconisation}${commentaire ? ` : ${commentaire}` : ""}<br />`;
-})}
+${preconisations
+  .map(({ preconisation, commentaire }) => {
+    return `- ${preconisation}${commentaire ? ` : ${commentaire}` : ""}<br />`;
+  })
+  .join("")}
 </p>`
     : ""
 }

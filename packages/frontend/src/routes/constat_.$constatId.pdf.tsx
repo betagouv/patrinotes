@@ -125,6 +125,7 @@ const ConstatPdf = () => {
   // and needValidation with userSettings
   useEffect(() => {
     if (!stateReport) return;
+    form.setValue("stateReport", stateReport);
     if (userSettings.isLoading) return;
     if (form.getValues("recipients").length > 0) return;
 

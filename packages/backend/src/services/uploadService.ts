@@ -82,10 +82,19 @@ export class UploadService {
   }
 }
 
-export async function generatePresignedUrl(key: string, expiresIn = 3600) {
+export async function getObjectByKey(key: string): Promise<{ buffer: Buffer; contentType?: string }> {
+  const command = new GetObjectCommand({ Bucket: bucketUrl, Key: key });
+  const response = await client.send(command);
+  const buffer = await response.Body?.transformToByteArray();
+  if (!buffer) throw new AppError(404, "Attachment not found");
+  return { buffer: Buffer.from(buffer), contentType: response.ContentType };
+}
+
+export async function generatePresignedUrl(key: string, expiresIn = 3600, filename?: string) {
   const command = new GetObjectCommand({
     Bucket: bucketUrl,
     Key: key,
+    ...(filename && { ResponseContentDisposition: `inline; filename="${filename}"` }),
   });
 
   const presignedUrl = await getSignedUrl(client as any, command as any, {
