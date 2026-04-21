@@ -6,14 +6,16 @@ import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
 export const createBordereauMailContent = ({
   stateReport,
   user,
+  pdfUrl,
 }: {
   stateReport: Selectable<Database["state_report"]>;
   user: Selectable<Database["user"]>;
+  pdfUrl: string;
 }) => {
   const preconisations = deserializePreconisations(stateReport.preconisations || "");
   const title = stateReport.titre_edifice ? `Constat d'état : ${stateReport.titre_edifice}` : "Constat d'état";
   const inner = `<p>Madame, Monsieur,</p>
-<p>Veuillez trouver ci-joint le rapport établi à la suite de la visite de votre monument historique réalisée le ${
+<p>Veuillez trouver le rapport établi à la suite de la visite de votre monument historique réalisée le ${
     stateReport.date_visite
       ? new Date(stateReport.date_visite).toLocaleDateString("fr-FR", {
           year: "numeric",
@@ -21,7 +23,7 @@ export const createBordereauMailContent = ({
           day: "numeric",
         })
       : ""
-  }.
+  } en cliquant sur le lien suivant : <a href="${pdfUrl}">Télécharger le constat d'état</a> (lien valable 1 mois).
 </p>
 
 <p>Le constat réalisé lors de cette visite, accompagné de la couverture photographique établie à cette occasion, n'est que visuel. Il rend compte de l'état apparent du bien protégé, sans mise en œuvre d'aucune technologie. Cette visite s’inscrit dans le cadre de la vérification périodique de l’état des monuments historiques et des conditions de leur conservation de façon que leur pérennité soit assurée, en application du contrôle scientifique et technique des services chargés des monuments historiques.

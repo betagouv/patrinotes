@@ -136,11 +136,11 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (stateReport) {
-        const pdfBuffer = await request.services.upload.getAttachment({ filePath: validation.pdf_path });
+        const pdfUrl = await generatePresignedUrl("attachment/" + validation.pdf_path, 30 * 24 * 3600);
 
         await sendStateReportMail({
           recipients: validation.recipients,
-          pdfBuffer,
+          pdfUrl,
           stateReport,
           user: { name: stateReport.createdByName ?? "", email: stateReport.creatorEmail ?? "" } as any,
         });

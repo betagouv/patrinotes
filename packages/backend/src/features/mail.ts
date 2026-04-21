@@ -5,7 +5,7 @@ import { sentry } from "./sentry";
 import { getPDFInMailName } from "@patrinotes/pdf";
 import { Database } from "../db/db";
 import { Selectable } from "kysely";
-import { getStateReportMailName, MinimalAlert } from "@patrinotes/pdf/constat";
+import { MinimalAlert } from "@patrinotes/pdf/constat";
 import { createBordereauMailContent } from "./bordereau";
 import { getAlertMailSubject, createAlertEmailContent } from "./mail/alertMail";
 import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
@@ -22,31 +22,25 @@ const transporter = createTransport({
 
 export const sendStateReportMail = ({
   recipients,
-  pdfBuffer,
+  pdfUrl,
   stateReport,
   user,
 }: {
   recipients: string;
-  pdfBuffer: Buffer;
+  pdfUrl: string;
   stateReport: Selectable<Database["state_report"]>;
   user: Selectable<Database["user"]>;
 }) => {
   sentry?.captureMessage("Sending state report mail", { extra: { recipients, stateReport } });
 
-  const { html, attachments } = createBordereauMailContent({ stateReport, user });
+  const { html, attachments } = createBordereauMailContent({ stateReport, user, pdfUrl });
 
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: recipients,
     subject: "Constat d'état " + (stateReport?.titre_edifice ? ` : ${stateReport.titre_edifice}` : ""),
     html,
-    attachments: [
-      ...attachments,
-      {
-        filename: getStateReportMailName(stateReport),
-        content: pdfBuffer,
-      },
-    ],
+    attachments,
   });
 };
 

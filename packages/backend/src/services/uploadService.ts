@@ -82,14 +82,14 @@ export class UploadService {
   }
 }
 
-export async function generatePresignedUrl(key: string) {
+export async function generatePresignedUrl(key: string, expiresIn = 3600) {
   const command = new GetObjectCommand({
     Bucket: bucketUrl,
     Key: key,
   });
 
   const presignedUrl = await getSignedUrl(client as any, command as any, {
-    expiresIn: 3600,
+    expiresIn,
   });
 
   const url = new URL(presignedUrl);

@@ -169,11 +169,6 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       throw new AppError(404, "Constat d'état non trouvé");
     }
 
-    const pdf = await request.services.upload.getAttachment({ filePath: pdfPath }).catch((error) => {
-      debug(`Failed to retrieve PDF from storage for state report ${stateReportId}: ${error}`);
-      throw new AppError(500, "Le PDF n'a pas pu être récupéré depuis le stockage. Veuillez réessayer.");
-    });
-
     await db.transaction().execute(async (tx) => {
       await tx
         .insertInto("state_report_attachment")
@@ -289,7 +284,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       return url;
     }
 
-    await sendStateReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, stateReport: stateReport!, user });
+    const pdfMailUrl = await generatePresignedUrl("attachment/" + pdfPath, 30 * 24 * 3600);
+    await sendStateReportMail({ recipients: recipients.join(","), pdfUrl: pdfMailUrl, stateReport: stateReport!, user });
 
     // update mandatory emails since they might have been filled before sending
     await db.transaction().execute(async (tx) => {
