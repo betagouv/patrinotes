@@ -87,7 +87,7 @@ const SyncForm = ({ report }: { report: StateReport }) => {
   return null;
 };
 
-const emptyStateReport: StateReport = {
+export const emptyStateReport: StateReport = {
   id: "",
   notes: "",
   nature_edifice: null,

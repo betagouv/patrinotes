@@ -743,3 +743,11 @@ export const popImages = pgTable("pop_images", {
   copyright: text(),
   dept_number: text("dept_number"),
 });
+
+export const attachment_redirection = pgTable("attachment_redirection", {
+  id: text().primaryKey().notNull(),
+  s3Key: text("s3_key").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+  createdBy: text("created_by").notNull(),
+  sentTo: text("sent_to").notNull(),
+});

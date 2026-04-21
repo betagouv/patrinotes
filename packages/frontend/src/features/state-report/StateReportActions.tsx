@@ -19,6 +19,7 @@ import { StateReport } from "../../db/AppSchema";
 import { ModalCloseButton } from "../menu/MenuTitle";
 import { ConfirmationModal } from "#components/ui/ConfirmationModal.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
+import { emptyStateReport } from "./StateReportForm";
 
 const getStateReportMailName = (stateReport: StateReport) => {
   return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;

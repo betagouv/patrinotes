@@ -98,6 +98,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.20.0
+      base62:
+        specifier: ^2.0.2
+        version: 2.0.2
       canvas:
         specifier: ^2.11.2
         version: 2.11.2
@@ -449,7 +452,7 @@ importers:
         version: 3.6.0(vite@5.4.21(@types/node@20.19.37)(lightningcss@1.32.0)(terser@5.46.1))
       wa-sqlite:
         specifier: github:rhashimoto/wa-sqlite
-        version: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7
+        version: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/916357481405e47a4e3a6527468bf32ac6ecb671
       web-locks-polyfill:
         specifier: ^0.0.13
         version: 0.0.13
@@ -3982,6 +3985,10 @@ packages:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
 
+  base62@2.0.2:
+    resolution: {integrity: sha512-FLoAQzMpmdDBei0u7fUAQzVCxoH6g4pueCIuGDoCZVZCiCeW4qTKpEGB79jkS15VB8b/5EIHc4R+WSKTByM+dw==}
+    engines: {node: '>=6.0.0'}
+
   base64-js@0.0.8:
     resolution: {integrity: sha512-3XSA2cR/h/73EzlXXdU6YNycmYI7+kicTxks4eJg2g39biHR84slg2+des+p7iHYhbRg/udIS4TD53WabcOUkw==}
     engines: {node: '>= 0.4'}
@@ -7456,9 +7463,9 @@ packages:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
 
-  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7:
-    resolution: {tarball: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7}
-    version: 1.0.9
+  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/916357481405e47a4e3a6527468bf32ac6ecb671:
+    resolution: {tarball: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/916357481405e47a4e3a6527468bf32ac6ecb671}
+    version: 1.1.0
 
   warning@4.0.3:
     resolution: {integrity: sha512-rpJyN222KWIvHJ/F53XSZv0Zl/accqHR8et1kpaMTD/fLCRxtV8iX8czMzY7sVZupTI3zcUTg8eycS2kNF9l6w==}
@@ -11662,6 +11669,8 @@ snapshots:
 
   balanced-match@4.0.4: {}
 
+  base62@2.0.2: {}
+
   base64-js@0.0.8: {}
 
   base64-js@1.5.1: {}
@@ -15279,7 +15288,7 @@ snapshots:
     dependencies:
       xml-name-validator: 5.0.0
 
-  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7: {}
+  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/916357481405e47a4e3a6527468bf32ac6ecb671: {}
 
   warning@4.0.3:
     dependencies:

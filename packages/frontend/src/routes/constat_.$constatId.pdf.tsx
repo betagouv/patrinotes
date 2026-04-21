@@ -471,9 +471,15 @@ const ViewBannerContent = () => {
 
 const ValidationToggle = () => {
   const form = useSendConstatFormContext();
-
   const needValidation = useWatch({ control: form.control, name: "needValidation" });
 
+  const userSettings = useUserSettings();
+  const initialNeedValidation =
+    userSettings?.userSettings.validation_enabled && userSettings?.userSettings.validation_email;
+
+  if (!initialNeedValidation) {
+    return null;
+  }
   return (
     <Box
       width="100%"

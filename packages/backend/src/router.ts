@@ -19,6 +19,7 @@ import { stateReportPlugin } from "./routes/stateReportRoutes";
 import { validationPlugin } from "./routes/validationRoutes";
 import { adminPlugin } from "./routes/adminRoutes";
 import { statsPlugin } from "./routes/statsRoutes";
+import { attachmentRedirectPlugin } from "./routes/attachmentRedirectRoutes";
 
 const debug = makeDebug("fastify");
 
@@ -80,6 +81,8 @@ export const initFastify = async () => {
     },
     { prefix: "/api" },
   );
+
+  await fastifyInstance.register(attachmentRedirectPlugin);
 
   await fastifyInstance.ready();
 

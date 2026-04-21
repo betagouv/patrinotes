@@ -31,6 +31,7 @@ const envSchema = z.object({
   PORT: stringOrNumberAsNumber.default(3001),
   DEBUG: z.string().default("cr-vif:*"),
   FRONTEND_URL: z.string(),
+  BACKEND_URL: z.string(),
   EMAIL_HOST: z.string(),
   EMAIL_PORT: stringOrNumberAsNumber.default(465),
   EMAIL_USER: z.string(),

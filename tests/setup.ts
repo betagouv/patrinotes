@@ -13,6 +13,7 @@ export const resetDatabase = async () => {
   await db.deleteFrom("state_report_attachment").execute();
   await db.deleteFrom("state_report_sent_email").execute();
   await db.deleteFrom("constat_validation").execute();
+  await db.deleteFrom("attachment_redirection").execute();
   await db.deleteFrom("state_report").execute();
   await db.deleteFrom("user_settings").execute();
 

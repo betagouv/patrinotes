@@ -54,6 +54,7 @@
     "@sentry/node": "^7.70.0",
     "@sinclair/typebox": "^0.32.20",
     "@types/pg": "^8.11.10",
+    "base62": "^2.0.2",
     "canvas": "^2.11.2",
     "csv-parser": "^3.2.0",
     "date-fns": "^3.6.0",

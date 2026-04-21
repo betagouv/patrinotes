@@ -73,7 +73,6 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
       if (!validation) {
         throw { statusCode: 404, message: "Lien de validation introuvable" };
       }
-
       if (new Date(validation.token_expires_at) < new Date() && validation.status === "pending") {
         throw { statusCode: 410, message: "Ce lien de validation a expiré" };
       }
@@ -136,7 +135,7 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (stateReport) {
-        const pdfUrl = await generatePresignedUrl("attachment/" + validation.pdf_path, 30 * 24 * 3600);
+        const pdfUrl = await generatePresignedUrl("attachment/" + validation.pdf_path, 7 * 24 * 3600);
 
         await sendStateReportMail({
           recipients: validation.recipients,

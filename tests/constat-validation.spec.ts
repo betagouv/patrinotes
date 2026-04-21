@@ -14,7 +14,7 @@ test.describe("Constat validation flow", () => {
   });
 
   test("should send validation email and let validator accept the constat", async ({ page, request }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(60_000);
 
     // -------------------------------------------------------------------------
     // 1. Sign up
@@ -156,8 +156,9 @@ test.describe("Constat validation flow", () => {
     await page.goto(validationUrl);
     await expect(page.getByText(/Validation du constat d'état/)).toBeVisible();
     await expect(page.locator("canvas[data-test-id='pdf-canvas-1']")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Accepter" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Refuser" })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Oui, envoyer le constat/ })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Non, ne pas envoyer/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Terminer" })).toBeVisible();
 
     const validationToken = new URL(validationUrl).pathname.split("/").pop()!;
     const pdfResp = await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${validationToken}/pdf`);
@@ -166,10 +167,10 @@ test.describe("Constat validation flow", () => {
     expect(pdfBody.length, "PDF should not be empty").toBeGreaterThan(0);
 
     // -------------------------------------------------------------------------
-    // 9. Accept with a comment
+    // 9. Accept
     // -------------------------------------------------------------------------
-    await page.locator("input[name=comment]").fill("Document conforme, approuvé.");
-    await page.getByRole("button", { name: "Accepter" }).click();
+    await page.getByRole("radio", { name: /Oui, envoyer le constat/ }).check({ force: true });
+    await page.getByRole("button", { name: "Terminer" }).click();
     await expect(page.getByText("Constat accepté")).toBeVisible();
 
     // -------------------------------------------------------------------------
@@ -182,6 +183,15 @@ test.describe("Constat validation flow", () => {
       m.To.some((r: { Address: string }) => r.Address === recipientEmail),
     );
     expect(finalRecipientMail, "Recipient should have received the email after acceptance").toBeDefined();
+
+    // Verify the email contains an /attachment/ redirect link
+    const recipientMessageResp = await request.get(
+      `http://localhost:${mailpitPort}/api/v1/message/${finalRecipientMail.ID}`,
+    );
+    const recipientMessageData = await recipientMessageResp.json();
+    const recipientEmailHtml: string = recipientMessageData.HTML ?? recipientMessageData.Text ?? "";
+    const linkMatch = recipientEmailHtml.match(/href="(https?:\/\/[^"]+\/attachment\/[^"]+)"/);
+    expect(linkMatch, "Recipient email should contain an /attachment/ redirect link").not.toBeNull();
 
     // -------------------------------------------------------------------------
     // 11. Verify the creator was notified of the acceptance
@@ -310,8 +320,9 @@ test.describe("Constat validation flow", () => {
     const pdfBody = await pdfResp.body();
     expect(pdfBody.length, "PDF should not be empty").toBeGreaterThan(0);
 
-    await page.locator("input[name=comment]").fill("Document incomplet, merci de corriger.");
-    await page.getByRole("button", { name: "Refuser" }).click();
+    await page.getByRole("radio", { name: /Non, ne pas envoyer/ }).check({ force: true });
+    await page.locator("textarea[name=comment]").fill("Document incomplet, merci de corriger.");
+    await page.getByRole("button", { name: "Terminer" }).click();
     await expect(page.getByText("Constat refusé")).toBeVisible();
 
     // Recipient should NOT have received the email
