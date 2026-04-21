@@ -109,7 +109,7 @@ test.describe("Image upload — drawing and légende", () => {
     await page.getByLabel("Légende").fill("Légende de test");
 
     // Save the annotation
-    await page.getByRole("button", { name: "OK" }).click();
+    await page.getByRole("button", { name: "Valider" }).click();
 
     // ---------------------------------------------------------------------------
     // Step 8: Verify légende appears in the thumbnail bar and the canvas is present

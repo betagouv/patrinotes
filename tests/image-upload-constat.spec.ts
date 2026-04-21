@@ -220,13 +220,13 @@ test.describe("Image upload — constat flow", () => {
     );
     expect(constatMail, "Constat email should be received").toBeTruthy();
     expect(constatMail.Subject).toBe("Constat d'état  : Château de Test");
-    expect(constatMail.Attachments, "Constat email should have 1 PDF attachment").toBe(1);
+    expect(constatMail.Attachments, "Constat email should have no direct PDF attachment").toBe(0);
 
-    // Verify the attachment is actually a PDF
+    // Verify the email contains a PDF download link instead of an attachment
     const constatDetail = await (
       await page.request.get(`http://localhost:${mailpitPort}/api/v1/message/${constatMail.ID}`)
     ).json();
-    expect(constatDetail.Attachments[0].ContentType).toBe("application/pdf");
+    expect(constatDetail.HTML, "Email should contain a PDF download link").toContain("Télécharger");
 
     // ---- Alert email (Édifice en péril → CRMH) ----
     const alertMail = allMessages.find((m: any) =>

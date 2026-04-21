@@ -1,7 +1,7 @@
 import { Type, type FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { db } from "../db/db";
 import { generatePresignedUrl } from "../services/uploadService";
-import { addDays } from "date-fns";
+import { differenceInDays } from "date-fns";
 
 export const attachmentRedirectPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.get(
@@ -24,8 +24,7 @@ export const attachmentRedirectPlugin: FastifyPluginAsyncTypebox = async (fastif
         return reply.status(404).send({ error: "Lien introuvable" });
       }
 
-      const expiresAt = addDays(new Date(redirection.created_at), 90);
-      if (expiresAt < new Date()) {
+      if (differenceInDays(new Date(), new Date(redirection.created_at)) > 90) {
         return reply.status(410).send({ error: "Ce lien a expiré" });
       }
 

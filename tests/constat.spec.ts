@@ -152,7 +152,7 @@ test.describe("Constat d'état flow", () => {
     expect(linkMatch, "Email should contain an /attachment/ redirect link").not.toBeNull();
 
     const attachmentUrl = linkMatch![1].replace(/&amp;/g, "&");
-    expect(attachmentUrl).toContain(`127.0.0.1:${backendPort}/attachment/`);
+    expect(attachmentUrl).toContain(`localhost:${backendPort}/attachment/`);
 
     // Following the redirect should resolve to the actual PDF
     const pdfResponse = await page.request.get(attachmentUrl);

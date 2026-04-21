@@ -98,7 +98,7 @@ test.describe("Stats", () => {
       })
       .execute();
 
-    // Sent constat (alerts_sent = true)
+    // Sent constat (alerts_sent = true, attachment_id set = sent)
     await db
       .insertInto("state_report")
       .values({
@@ -107,6 +107,7 @@ test.describe("Stats", () => {
         created_at: new Date().toISOString(),
         service_id: mockServices[0].id,
         alerts_sent: true,
+        attachment_id: "fake-sent-constat-pdf-path",
       })
       .execute();
     await db
@@ -293,11 +294,10 @@ test.describe("Stats", () => {
     await expect(page.locator("h1")).toContainText("Statistiques", { timeout: 10000 });
 
     // KPI cards showing counts should be visible
-    await expect(page.getByText("Constats d'état créés")).toBeVisible();
-    await expect(page.getByText("Comptes rendus créés")).toBeVisible();
-    await expect(page.getByText("Utilisateurs inscrits")).toBeVisible();
+    await expect(page.getByText("Nombre de constats créés en 2026")).toBeVisible();
+    await expect(page.getByText("Nombre de compte-rendus crées en 2026")).toBeVisible();
+    await expect(page.getByText(/Nombre d.utilisateurs actifs/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Taux d'adoption" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Taux de rétention à 3 mois" })).toBeVisible();
 
     // Admin section should not be visible (not logged in)
     await expect(page.getByText("Statistiques par service (admin)")).not.toBeVisible();
@@ -333,8 +333,9 @@ test.describe("Stats", () => {
 
     await fromInput.fill("2000-01-01");
     await toInput.fill("2000-01-31");
+    await page.getByRole("button", { name: "Valider" }).click();
 
-    // Wait for the refetch — retention KPI should update to show 0
-    await expect(page.getByText("0 / ")).toBeVisible({ timeout: 5000 });
+    // Wait for the refetch — active users KPI should update to show 0 %
+    await expect(page.getByText(/Soit 0 %/)).toBeVisible({ timeout: 5000 });
   });
 });
