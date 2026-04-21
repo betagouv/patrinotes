@@ -553,7 +553,7 @@ export const ImageCanvas = ({
               "& > button": { marginLeft: "-1px !important" },
             }}
           >
-            {(["in", "out"] as const).map((dir) => (
+            {(["out", "in"] as const).map((dir) => (
               <Box
                 key={dir}
                 component="button"
