@@ -1,8 +1,8 @@
-import { Button, Center } from "#components/MUIDsfr.tsx";
+import { Button, Center, Input, SearchBar } from "#components/MUIDsfr.tsx";
 import { Pagination } from "@codegouvfr/react-dsfr/Pagination";
 import { Box, Stack } from "@mui/material";
 import { chunk } from "pastable";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import welcomeImage from "../../assets/welcome.svg?url";
 import { useLiveUser, useUser } from "../../contexts/AuthContext";
 import { Report, StateReport } from "../../db/AppSchema";
@@ -10,24 +10,44 @@ import { useDbQuery } from "../../db/db";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { ReportListItem } from "./ReportListItem";
 import { getRouteApi } from "@tanstack/react-router";
-import { getReportQueries, getStateReportQueries } from "../useDocumentQueries";
+import {
+  getReportQueries,
+  getSearchReportQueries,
+  getSearchStateReportQueries,
+  getStateReportQueries,
+} from "../useDocumentQueries";
 import { StateReportListItem } from "../state-report/StateReportListItem";
 import { AppDocument } from "../../utils";
 import { DocumentTypeSelector } from "#components/DocumentTypeSelector.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import { useStatus, useSyncStream } from "@powersync/react";
 import { Spinner } from "#components/Spinner.tsx";
+import { createStore } from "@xstate/store";
+import { useSelector } from "@xstate/store/react";
+import { Flex } from "#components/ui/Flex.tsx";
+import { cx } from "@codegouvfr/react-dsfr/tools/cx";
 
 export type ReportWithUser = Report & { createdByName: string | null };
 export type StateReportWithUser = StateReport & { createdByName: string | null };
 
 const routeApi = getRouteApi("/");
 
+const searchStore = createStore(
+  {
+    search: "",
+  },
+  {
+    setSearch: (ctx, event: { search: string }) => ({ search: event.search }),
+  },
+);
+
 export const MyReports = () => {
   const [page, setPage] = useState(0);
   const document = routeApi.useSearch().document;
 
-  const { baseQuery, countQuery } = useRightQueries({ page, document, scope: "my" });
+  const search = useSelector(searchStore, (state) => state.context.search);
+
+  const { baseQuery, countQuery } = useRightQueries({ page, document, scope: "my", search });
   const reports = baseQuery.data;
 
   const reportsCount = countQuery.data?.[0]?.count as number;
@@ -72,7 +92,9 @@ export const AllReports = () => {
   const [page, setPage] = useState(0);
   const document = routeApi.useSearch().document;
 
-  const { baseQuery, countQuery } = useRightQueries({ page, document, scope: "all" });
+  const search = useSelector(searchStore, (state) => state.context.search);
+
+  const { baseQuery, countQuery } = useRightQueries({ page, document, scope: "all", search });
   const reports = baseQuery.data;
   const reportsCount = countQuery.data?.[0]?.count as number;
 
@@ -117,12 +139,26 @@ const useRightQueries = <Document extends AppDocument>({
   page,
   document,
   scope,
+  search,
 }: {
   page: number;
   document: Document;
   scope: "my" | "all";
+  search?: string;
 }) => {
   const user = useUser()!;
+
+  if (search?.length) {
+    const queries =
+      document === "compte-rendus"
+        ? getSearchReportQueries(search!, scope, user)
+        : getSearchStateReportQueries(search!, scope, user);
+    return {
+      baseQuery: useDbQuery(queries.baseQuery as any),
+      countQuery: useDbQuery(queries.countQuery),
+    };
+  }
+
   if (document === "compte-rendus") {
     const queries = getReportQueries(scope, page, user);
     return { baseQuery: useDbQuery(queries.baseQuery), countQuery: useDbQuery(queries.countQuery) };
@@ -161,15 +197,27 @@ export const ReportList = ({
   onClick?: () => void;
   hideEmpty?: boolean;
 }) => {
-  const error = reports.length === 0 ? <NoReport /> : null;
+  const search = useSelector(searchStore, (state) => state.context.search);
+  const error = reports.length === 0 && !search ? <NoReport /> : null;
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
-      <Center mb="40px">
-        <Box width="926px">
+      <Center
+        mb="40px"
+        width="100%"
+        maxWidth={{ xs: "100%", lg: "calc(800px + 126px)" }}
+        alignSelf="center"
+        gap="16px"
+        flexDirection={{ xs: "column", lg: "row" }}
+      >
+        <Box maxWidth="800px" width={{ xs: "100%", lg: "unset" }}>
           <DocumentTypeSelector />
+        </Box>
+
+        <Box width="100%" ml={{ xs: "0", lg: "24px" }}>
+          <AppSearchBar />
         </Box>
       </Center>
       {!hideEmpty && error ? (
@@ -238,6 +286,46 @@ export const ReportList = ({
   );
 };
 
+const AppSearchBar = () => {
+  const search = useSelector(searchStore, (state) => state.context.search);
+  const setSearch = (search: string) => searchStore.send({ type: "setSearch", search });
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <Flex
+      sx={{
+        ".fr-search-bar": { width: "100%" },
+        ".fr-search-bar > div": { width: "100%" },
+      }}
+    >
+      <SearchBar
+        renderInput={(params) => (
+          <div>
+            <input
+              id={params.id}
+              className={cx(params.className)}
+              placeholder={params.placeholder}
+              type={params.type}
+              value={search}
+              ref={searchInputRef}
+              style={{ width: "100%" }}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  if (searchInputRef.current !== null) {
+                    searchInputRef.current.blur();
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+      />
+    </Flex>
+  );
+};
+
 export const StateReportList = ({
   reports,
   page,
@@ -255,15 +343,27 @@ export const StateReportList = ({
   onClick?: () => void;
   hideEmpty?: boolean;
 }) => {
-  const error = reports.length === 0 ? <NoReport /> : null;
+  const search = useSelector(searchStore, (state) => state.context.search);
+
+  const error = reports.length === 0 && !search ? <NoReport /> : null;
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
-      <Center mb="40px">
-        <Box width="926px">
+      <Center
+        mb="40px"
+        width="100%"
+        maxWidth={{ xs: "100%", lg: "calc(800px + 126px)" }}
+        alignSelf="center"
+        gap="16px"
+        flexDirection={{ xs: "column", lg: "row" }}
+      >
+        <Box maxWidth="800px" width={{ xs: "100%", lg: "unset" }}>
           <DocumentTypeSelector />
+        </Box>
+        <Box width="100%" ml={{ xs: "0", lg: "24px" }}>
+          <AppSearchBar />
         </Box>
       </Center>
       {!hideEmpty && error ? (
