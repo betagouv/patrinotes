@@ -14,15 +14,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { StateReportActions } from "./StateReportActions";
 
-export const StateReportListItem = ({
-  report,
-  isLast,
-  onClick,
-}: {
-  report: StateReportWithUser;
-  isLast?: boolean;
-  onClick?: () => void;
-}) => {
+export const StateReportListItem = ({ report, isLast }: { report: StateReportWithUser; isLast?: boolean }) => {
   const ref = useRef<HTMLButtonElement>(null);
 
   const { css } = useStyles();
@@ -43,7 +35,6 @@ export const StateReportListItem = ({
             backgroundColor: "initial !important",
           },
         })}
-        onClick={onClick}
         to={"/constat/$constatId"}
         params={{ constatId: report.id }}
         search={{ step: report.reference_pop ? "constat-general" : "informations", mode: "view" }}

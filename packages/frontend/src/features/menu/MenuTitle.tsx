@@ -85,7 +85,10 @@ export const ModalCloseButton = ({ onClose }: { onClose: () => void }) => {
       title="Fermer"
       type="button"
       data-fr-js-modal-button="true"
-      onClick={onClose}
+      onClick={(e) => {
+        e.preventDefault();
+        onClose?.();
+      }}
     >
       Fermer
     </button>

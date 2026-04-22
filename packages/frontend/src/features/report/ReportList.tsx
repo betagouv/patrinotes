@@ -1,8 +1,8 @@
-import { Button, Center, Input, SearchBar } from "#components/MUIDsfr.tsx";
+import { Button, Center, Input } from "#components/MUIDsfr.tsx";
 import { Pagination } from "@codegouvfr/react-dsfr/Pagination";
 import { Box, Stack } from "@mui/material";
 import { chunk } from "pastable";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import welcomeImage from "../../assets/welcome.svg?url";
 import { useLiveUser, useUser } from "../../contexts/AuthContext";
 import { Report, StateReport } from "../../db/AppSchema";
@@ -24,30 +24,27 @@ import { useStatus, useSyncStream } from "@powersync/react";
 import { Spinner } from "#components/Spinner.tsx";
 import { createStore } from "@xstate/store";
 import { useSelector } from "@xstate/store/react";
-import { Flex } from "#components/ui/Flex.tsx";
-import { cx } from "@codegouvfr/react-dsfr/tools/cx";
+import { searchStore } from "#components/SearchModal.tsx";
+import { AppSearchBar } from "./AppSearchBar";
 
 export type ReportWithUser = Report & { createdByName: string | null };
 export type StateReportWithUser = StateReport & { createdByName: string | null };
 
 const routeApi = getRouteApi("/");
 
-const searchStore = createStore(
-  {
-    search: "",
-  },
-  {
-    setSearch: (ctx, event: { search: string }) => ({ search: event.search }),
-  },
-);
-
 export const MyReports = () => {
   const [page, setPage] = useState(0);
   const document = routeApi.useSearch().document;
 
   const search = useSelector(searchStore, (state) => state.context.search);
+  const isDesktop = useIsDesktop();
 
-  const { baseQuery, countQuery } = useRightQueries({ page, document, scope: "my", search });
+  const { baseQuery, countQuery } = useRightQueries({
+    page,
+    document,
+    scope: "my",
+    search: isDesktop ? search : undefined,
+  });
   const reports = baseQuery.data;
 
   const reportsCount = countQuery.data?.[0]?.count as number;
@@ -93,8 +90,14 @@ export const AllReports = () => {
   const document = routeApi.useSearch().document;
 
   const search = useSelector(searchStore, (state) => state.context.search);
+  const isDesktop = useIsDesktop();
 
-  const { baseQuery, countQuery } = useRightQueries({ page, document, scope: "all", search });
+  const { baseQuery, countQuery } = useRightQueries({
+    page,
+    document,
+    scope: "all",
+    search: isDesktop ? search : undefined,
+  });
   const reports = baseQuery.data;
   const reportsCount = countQuery.data?.[0]?.count as number;
 
@@ -198,6 +201,8 @@ export const ReportList = ({
   hideEmpty?: boolean;
 }) => {
   const search = useSelector(searchStore, (state) => state.context.search);
+  const openSearchModal = () => searchStore.send({ type: "openModal" });
+
   const error = reports.length === 0 && !search ? <NoReport /> : null;
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
@@ -217,7 +222,7 @@ export const ReportList = ({
         </Box>
 
         <Box width="100%" ml={{ xs: "0", lg: "24px" }}>
-          <AppSearchBar />
+          <AppSearchBar onClick={() => openSearchModal()} />
         </Box>
       </Center>
       {!hideEmpty && error ? (
@@ -286,46 +291,6 @@ export const ReportList = ({
   );
 };
 
-const AppSearchBar = () => {
-  const search = useSelector(searchStore, (state) => state.context.search);
-  const setSearch = (search: string) => searchStore.send({ type: "setSearch", search });
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  return (
-    <Flex
-      sx={{
-        ".fr-search-bar": { width: "100%" },
-        ".fr-search-bar > div": { width: "100%" },
-      }}
-    >
-      <SearchBar
-        renderInput={(params) => (
-          <div>
-            <input
-              id={params.id}
-              className={cx(params.className)}
-              placeholder={params.placeholder}
-              type={params.type}
-              value={search}
-              ref={searchInputRef}
-              style={{ width: "100%" }}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  if (searchInputRef.current !== null) {
-                    searchInputRef.current.blur();
-                  }
-                }
-              }}
-            />
-          </div>
-        )}
-      />
-    </Flex>
-  );
-};
-
 export const StateReportList = ({
   reports,
   page,
@@ -344,7 +309,7 @@ export const StateReportList = ({
   hideEmpty?: boolean;
 }) => {
   const search = useSelector(searchStore, (state) => state.context.search);
-
+  const openSearchModal = () => searchStore.send({ type: "openModal" });
   const error = reports.length === 0 && !search ? <NoReport /> : null;
   const isDesktop = useIsDesktop();
   const columns = reports.length < 6 ? [reports] : chunk(reports, Math.ceil(reports.length / 2));
@@ -363,7 +328,7 @@ export const StateReportList = ({
           <DocumentTypeSelector />
         </Box>
         <Box width="100%" ml={{ xs: "0", lg: "24px" }}>
-          <AppSearchBar />
+          <AppSearchBar onClick={() => openSearchModal()} />
         </Box>
       </Center>
       {!hideEmpty && error ? (
@@ -375,7 +340,6 @@ export const StateReportList = ({
               <Stack key={columnIndex} flexDirection="column" width={{ xs: "100%", lg: "400px" }}>
                 {reports.map((report, index) => (
                   <StateReportListItem
-                    onClick={onClick}
                     key={report.id}
                     report={report}
                     isLast={
