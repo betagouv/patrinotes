@@ -28,7 +28,7 @@ const PolitiqueConfidentialite = () => {
   return (
     <Stack width={{ xs: "100%", lg: "800px" }} gap="16px" px="16px">
       <Typography variant="h1" mb="16px">
-        Politique de confidentialite
+        Politique de confidentialité
       </Typography>
 
       <Typography variant="h2">Qui est responsable du traitement des données à caractère personnel ?</Typography>
