@@ -4,6 +4,24 @@ import { useState } from "react";
 import { Stack, Typography } from "@mui/material";
 import { Alert, Button, Input, Pagination, Table } from "#components/MUIDsfr.tsx";
 import { Center } from "#components/MUIDsfr.tsx";
+
+const toCsv = (headers: string[], rows: (string | null)[][]): string => {
+  const escape = (v: string | null) => {
+    const s = v ?? "";
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [headers, ...rows].map((row) => row.map(escape).join(",")).join("\n");
+};
+
+const downloadCsv = (filename: string, csv: string) => {
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 import { Spinner } from "#components/Spinner.tsx";
 import { Tabs } from "#components/Tabs.tsx";
 import { api, getErrorMessage } from "../api";
@@ -29,6 +47,17 @@ const WhitelistPanel = () => {
   const [page, setPage] = useState(1);
   const [newEmail, setNewEmail] = useState("");
   const queryClient = useQueryClient();
+
+  const exportMutation = useMutation({
+    mutationFn: () => api.get("/api/admin/whitelist/export"),
+    onSuccess: (rows) => {
+      const csv = toCsv(
+        ["Email", "Date de création"],
+        rows.map((r) => [r.email, r.createdAt ? new Date(r.createdAt).toLocaleString() : ""]),
+      );
+      downloadCsv("whitelist.csv", csv);
+    },
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: adminKeys.whitelist(page),
@@ -104,6 +133,19 @@ const WhitelistPanel = () => {
 
       {error && <Alert severity="error" title={getErrorMessage(error)} />}
 
+      <Stack flexDirection="row" justifyContent="flex-end">
+        <Button
+          priority="secondary"
+          iconId="ri-download-line"
+          iconPosition="left"
+          size="small"
+          onClick={() => exportMutation.mutate()}
+          disabled={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
+        </Button>
+      </Stack>
+
       {isLoading ? (
         <Center py="3rem">
           <Spinner />
@@ -149,6 +191,24 @@ const UsersPanel = () => {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const exportMutation = useMutation({
+    mutationFn: () => api.get("/api/admin/users/export", { query: { search: search || undefined } }),
+    onSuccess: (rows) => {
+      const csv = toCsv(
+        ["Nom", "Email", "Fonction", "Service", "Département", "Rôle", "Date de création"],
+        rows.map((u) => [
+          u.name,
+          u.email,
+          u.job ?? "",
+          u.serviceName ?? u.serviceId,
+          u.serviceDepartment ?? "",
+          u.role ?? "",
+          u.createdAt ? new Date(u.createdAt).toLocaleString() : "",
+        ]),
+      );
+      downloadCsv("utilisateurs.csv", csv);
+    },
+  });
 
   useDebounce(
     () => {
@@ -190,6 +250,19 @@ const UsersPanel = () => {
       />
 
       {error && <Alert severity="error" title={getErrorMessage(error)} />}
+
+      <Stack flexDirection="row" justifyContent="flex-end">
+        <Button
+          priority="secondary"
+          iconId="ri-download-line"
+          iconPosition="left"
+          size="small"
+          onClick={() => exportMutation.mutate()}
+          disabled={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
+        </Button>
+      </Stack>
 
       {isLoading ? (
         <Center py="3rem">

@@ -111,6 +111,97 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
   );
 
   fastify.get(
+    "/whitelist/export",
+    {
+      schema: {
+        response: {
+          200: Type.Array(
+            Type.Object({
+              email: Type.String(),
+              createdAt: Type.String(),
+            }),
+          ),
+        },
+      },
+      preHandler: [authenticateAdmin],
+    },
+    async () => {
+      const rows = await db.selectFrom("whitelist").selectAll().orderBy("createdAt", "desc").execute();
+      return rows.map((r) => ({ email: r.email, createdAt: r.createdAt! }));
+    },
+  );
+
+  fastify.get(
+    "/users/export",
+    {
+      schema: {
+        querystring: Type.Object({
+          search: Type.Optional(Type.String()),
+        }),
+        response: {
+          200: Type.Array(
+            Type.Object({
+              id: Type.String(),
+              name: Type.String(),
+              email: Type.String(),
+              job: Type.Union([Type.String(), Type.Null()]),
+              serviceId: Type.String(),
+              serviceName: Type.Union([Type.String(), Type.Null()]),
+              serviceDepartment: Type.Union([Type.String(), Type.Null()]),
+              role: Type.Union([Type.String(), Type.Null()]),
+              createdAt: Type.String(),
+            }),
+          ),
+        },
+      },
+      preHandler: [authenticateAdmin],
+    },
+    async (request) => {
+      const { search } = request.query;
+
+      const rows = await db
+        .selectFrom("user")
+        .leftJoin("internal_user", "internal_user.userId", "user.id")
+        .leftJoin("service", "service.id", "user.service_id")
+        .$if(!!search, (qb) =>
+          qb.where((eb) =>
+            eb.or([
+              eb("user.name", "ilike", `%${search}%`),
+              eb("user.email", "ilike", `%${search}%`),
+              eb("service.name", "ilike", `%${search}%`),
+              eb("service.id", "=", search!),
+            ]),
+          ),
+        )
+        .select([
+          "user.id",
+          "user.name",
+          "user.email",
+          "user.job",
+          "user.service_id as serviceId",
+          "service.name as serviceName",
+          "service.department as serviceDepartment",
+          "internal_user.role",
+          "internal_user.createdAt",
+        ])
+        .orderBy("internal_user.createdAt", "desc")
+        .execute();
+
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        job: r.job ?? null,
+        serviceId: r.serviceId,
+        serviceName: r.serviceName ?? null,
+        serviceDepartment: r.serviceDepartment ?? null,
+        role: r.role ?? null,
+        createdAt: r.createdAt!,
+      }));
+    },
+  );
+
+  fastify.get(
     "/users",
     {
       schema: {

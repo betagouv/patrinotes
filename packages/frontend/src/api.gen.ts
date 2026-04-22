@@ -442,6 +442,30 @@ export namespace Endpoints {
     };
     response: { message: string };
   };
+  export type get_Apiadminwhitelistexport = {
+    method: "GET";
+    path: "/api/admin/whitelist/export";
+    parameters: never;
+    response: Array<{ email: string; createdAt: string }>;
+  };
+  export type get_Apiadminusersexport = {
+    method: "GET";
+    path: "/api/admin/users/export";
+    parameters: {
+      query: Partial<{ search: string }>;
+    };
+    response: Array<{
+      id: string;
+      name: string;
+      email: string;
+      job: string | Schemas.null | Array<string | Schemas.null>;
+      serviceId: string;
+      serviceName: string | Schemas.null | Array<string | Schemas.null>;
+      serviceDepartment: string | Schemas.null | Array<string | Schemas.null>;
+      role: string | Schemas.null | Array<string | Schemas.null>;
+      createdAt: string;
+    }>;
+  };
   export type get_Apiadminusers = {
     method: "GET";
     path: "/api/admin/users";
@@ -492,11 +516,20 @@ export namespace Endpoints {
         serviceId: string;
         serviceName: string | Schemas.null | Array<string | Schemas.null>;
         sentConstats: number;
+        totalConstats: number;
       }>;
       abandonedConstats: number;
       totalConstats: number;
       totalUsers: number;
     };
+  };
+  export type get_AttachmentIdFilename_ = {
+    method: "GET";
+    path: "/attachment/{id}/{filename}?";
+    parameters: {
+      path: { id: string; filename: string };
+    };
+    response: unknown;
   };
 
   // </Endpoints>
@@ -516,9 +549,12 @@ export type EndpointByMethod = {
     "/api/constat-validation/{token}/pdf": Endpoints.get_ApiconstatValidationTokenpdf;
     "/api/admin/me": Endpoints.get_Apiadminme;
     "/api/admin/whitelist": Endpoints.get_Apiadminwhitelist;
+    "/api/admin/whitelist/export": Endpoints.get_Apiadminwhitelistexport;
+    "/api/admin/users/export": Endpoints.get_Apiadminusersexport;
     "/api/admin/users": Endpoints.get_Apiadminusers;
     "/api/stats/public": Endpoints.get_Apistatspublic;
     "/api/stats/admin": Endpoints.get_Apistatsadmin;
+    "/attachment/{id}/{filename}?": Endpoints.get_AttachmentIdFilename_;
   };
   post: {
     "/api/authenticate": Endpoints.post_Apiauthenticate;
