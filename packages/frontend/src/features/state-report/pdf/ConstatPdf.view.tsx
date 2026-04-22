@@ -8,6 +8,7 @@ import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Spinner } from "#components/Spinner.tsx";
 import { useSendConstatFormContext } from "./ConstatPdfContext";
 import { AlertsReminder } from "./AlertsReminder";
+import { Box } from "@mui/material";
 
 export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => {
   const htmlString = useHtmlString();
@@ -27,25 +28,27 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
     <Center flexDirection="column">
       <Center width={{ xs: "100%", lg: "944px" }} flexDirection="column" marginBottom="96px">
         {step === "send" ? <AlertsReminder /> : null}
-        <BlobProvider document={document}>
-          {({ blob, loading, error }) => {
-            if (loading) {
+        <Box mt={{ xs: "16px", lg: "80px" }}>
+          <BlobProvider document={document}>
+            {({ blob, loading, error }) => {
+              if (loading) {
+                return (
+                  <Center mt="64px">
+                    <Spinner />
+                  </Center>
+                );
+              }
+              if (error) {
+                return <div>Error: {error.message}</div>;
+              }
               return (
-                <Center mt="64px">
-                  <Spinner />
-                </Center>
+                <BlobSync blob={blob!}>
+                  <PDFViewerPaginated blob={blob!} />
+                </BlobSync>
               );
-            }
-            if (error) {
-              return <div>Error: {error.message}</div>;
-            }
-            return (
-              <BlobSync blob={blob!}>
-                <PDFViewerPaginated blob={blob!} />
-              </BlobSync>
-            );
-          }}
-        </BlobProvider>
+            }}
+          </BlobProvider>
+        </Box>
       </Center>
     </Center>
   );

@@ -214,7 +214,7 @@ const BannerAndContent = ({ mode }: { mode: PageMode }) => {
       <Banner {...bannerProps} />
 
       {mode !== "sent" ? (
-        <Box mt={{ xs: "16px", lg: "80px" }}>
+        <Box>
           <ViewConstatPdf step={mode} />
         </Box>
       ) : (
