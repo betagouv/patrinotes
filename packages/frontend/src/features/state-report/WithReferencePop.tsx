@@ -260,7 +260,6 @@ const CreateButton = () => {
       })
       .map(([key]) => key);
 
-    console.log(alertsQuery.data);
     const alertErrors = alertsQuery.data
       ?.map((alert) => {
         const errors = checkAlertErrors(alert);

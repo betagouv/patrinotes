@@ -167,7 +167,6 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   };
 
   const onLabelChange = async (attachmentId: string, label: string) => {
-    console.log("Updating label for", attachmentId, "to", label);
     await db.updateTable(config.table).set({ label }).where("id", "=", attachmentId).execute();
   };
 

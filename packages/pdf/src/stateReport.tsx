@@ -248,7 +248,6 @@ export const transformHeaderText = (text: string | null | undefined) => {
   }
 
   if (uppercaseString.startsWith("UNITÉ DÉPARTEMENTALE DE")) {
-    console.log("matched");
     return addBreaksAfterWords(cleanString, ["DÉPARTEMENTALE DE", "PATRIMOINE"]);
   }
 

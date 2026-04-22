@@ -31,7 +31,6 @@ export const SendConstatPdf = () => {
 };
 
 const BlobViewer = ({ blob }: BlobProviderParams) => {
-  console.log("blob");
   if (!blob) return null;
   return <PDFViewerPaginated blob={blob} />;
 };

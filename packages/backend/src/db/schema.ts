@@ -649,8 +649,8 @@ export const stateReport = pgTable(
     titre_edifice: text("titre_edifice"),
     // contexte de la visite
     natureVisite: text("nature_visite"),
-    visite_partielle_parties: text("visite_partielle_parties"),
     visite_partielle_details: text("visite_partielle_details"),
+    visite_details: text("visite_details"),
     bilanQuinquennal: boolean("bilan_quinquennal").default(true),
     dateVisite: timestamp("date_visite", { mode: "string" }),
     redactedBy: text("redacted_by"),

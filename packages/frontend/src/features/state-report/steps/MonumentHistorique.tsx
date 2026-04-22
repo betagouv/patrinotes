@@ -79,7 +79,7 @@ export const MonumentHistorique = () => {
           <Box flex="1" mt={{ xs: isEditing ? "16px" : "0", lg: "0" }}>
             {!isCustom ? (
               <EditableField
-                label="Référence POP"
+                label="Référence Mérimée"
                 field="reference_pop"
                 isEditing={isEditing}
                 isDisabled

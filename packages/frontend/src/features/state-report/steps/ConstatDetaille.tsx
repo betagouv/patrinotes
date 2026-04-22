@@ -6,7 +6,7 @@ import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
 import { Box, Dialog, DialogTitle, Grid, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useDebounce from "react-use/lib/useDebounce";
 import { v4 } from "uuid";
 import { useUser } from "../../../contexts/AuthContext";
@@ -24,6 +24,7 @@ import { fr } from "@codegouvfr/react-dsfr";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { chunk } from "pastable";
 import { getIsSectionVisited } from "@patrinotes/pdf/utils";
+import { useClickAway } from "react-use";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -192,6 +193,11 @@ const SectionModal = ({
 }) => {
   const isCustom = selectedSection && !defaultSections.includes(selectedSection.section!);
 
+  const ref = useRef<HTMLDivElement>(null);
+  useClickAway(ref, () => {
+    onClose();
+  });
+
   return (
     <Dialog
       open={selectedSection !== null}
@@ -206,7 +212,7 @@ const SectionModal = ({
         },
       }}
     >
-      <Box p={{ xs: "16px" }}>
+      <Box p={{ xs: "16px" }} ref={ref}>
         <ModalCloseButton onClose={onClose} />
 
         <DialogTitle
@@ -248,6 +254,13 @@ const SectionForm = ({
       setValues((values) => ({ ...values, commentaires: (values.commentaires || "") + " " + text }));
     },
   });
+
+  // sync form values when modal is closed
+  useEffect(() => {
+    return () => {
+      syncMutation.mutate();
+    };
+  }, []);
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -316,6 +329,7 @@ const SectionForm = ({
             sx={{ mb: "16px !important" }}
             textArea
             disabled={isDisabled || isRecording}
+            hintText="Cause(s) probable(s) des désordres, incidences sur d’autres éléments…"
             label="Commentaires"
             nativeTextAreaProps={{
               rows: 6,

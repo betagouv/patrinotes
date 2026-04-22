@@ -143,7 +143,6 @@ export const constatPdfQueries = {
     queryOptions({
       queryKey: ["state-report-alerts", constatId],
       queryFn: async () => {
-        console.log("fetching alerts for constatId", constatId);
         const alerts = await db
           .selectFrom("state_report_alert")
           .selectAll()

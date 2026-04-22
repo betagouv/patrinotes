@@ -113,6 +113,7 @@ const DSFR_CSS = `
     [data-ogsc] .link { color: #7C7CFF !important; }
   }
   body {
+    font-family:'Marianne',Arial,Helvetica,sans-serif !important;
     width: 100%;
     background-color: #ffffff;
     margin: 0;
@@ -173,7 +174,7 @@ export function wrapWithDsfrMail({
     <tr><td align="center" class="darkmode">
       <table style="min-width:600px; margin:0 auto; width:600px;" class="wlkm-mw darkmode" width="600" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ffffff" align="center">
         <tr><td class="darkmode">
-          <table style="margin:0 auto; width:496px;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ffffff" align="center">
+          <table style="padding-left:10px;padding-right:10px;width:496px;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ffffff" align="center">
             <tr><td class="darkmode-1" width="496" align="left" valign="top" style="padding:4px 0px 8px 0px; line-height:18px; font-size:12px; color:#6b6b6b; font-family:'Marianne',Arial,Helvetica,sans-serif;">
               <span style="font-family:'Marianne',Arial,Helvetica,sans-serif !important;">${escapeHtml(preheader)}</span>
             </td></tr>
@@ -192,8 +193,8 @@ export function wrapWithDsfrMail({
         <tr><td align="center">
           <table style="min-width:600px; margin:0 auto; width:600px; border-left:1px #e5e5e5 solid; border-right:1px #e5e5e5 solid; border-top:1px #e5e5e5 solid;" class="wlkm-mw darkmode" width="600" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ffffff" align="center">
             <tr><td>
-              <table style="margin:0 auto; width:496px;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ffffff" align="center">
-                <tr><td style="width:100%;" width="100%" valign="top" align="center">
+              <table style="width:100%;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ffffff" align="center">
+                <tr ><td style="width:100%; padding-left:10px; padding-right:10px;" width="100%" valign="top" align="center">
                   <!-- Marianne logo left -->
                   <table style="border-collapse:collapse;" width="76" cellspacing="0" cellpadding="0" role="presentation" border="0" align="left" bgcolor="#ffffff" class="darkmode">
                     <tr><td align="center">
@@ -237,7 +238,7 @@ export function wrapWithDsfrMail({
         <tr><td align="center">
           <table style="min-width:600px; margin:0 auto; width:600px; border-left:1px #e5e5e5 solid; border-right:1px #e5e5e5 solid;" class="wlkm-mw darkmode-4" width="600" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ECECFE" align="center">
             <tr><td>
-              <table style="margin:0 auto; width:496px;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ECECFE" align="center">
+              <table style="width:100%;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ECECFE" align="center">
                 <tr><td class="darkmode-4" width="496" align="left" valign="top" style="padding:20px 10px 20px 10px; line-height:32px; font-size:24px; color:#161616; font-family:'Marianne',Arial,Helvetica,sans-serif;">
                   <span style="font-family:'Marianne',Arial,Helvetica,sans-serif !important;"><strong>${escapeHtml(title)}</strong></span>
                 </td></tr>

@@ -18,7 +18,6 @@ const client = new S3Client({
 
 export const upload = async () => {};
 const bucketUrl = `${ENV.MINIO_URL}/${ENV.MINIO_BUCKET}`;
-console.log(bucketUrl);
 const addAttachmentPrefix = (filePath: string) => "attachment/" + filePath;
 
 export class UploadService {
@@ -69,7 +68,6 @@ export class UploadService {
       .where("attachment_id", "like", "%.pdf")
       .selectAll()
       .executeTakeFirst();
-    console.log(attachment);
     if (!attachment) throw new AppError(404, "PDF not found");
 
     const command = new GetObjectCommand({ Bucket: bucketUrl, Key: addAttachmentPrefix(attachment.attachment_id) });

@@ -227,6 +227,7 @@ const state_report = new Table({
 
   nature_visite: column.text,
   visite_partielle_details: column.text,
+  visite_details: column.text,
   date_visite: column.text,
   personnes_presentes: column.text,
   redacted_by: column.text,

@@ -114,7 +114,6 @@ const StatsPage = () => {
   const totalDocuments = (data?.totalConstats ?? 0) + (data?.totalReports ?? 0);
   const deployedUdapCount = data?.deployedUdapCount ?? 0;
   const deployedCrmhCount = data?.deployedCrmhCount ?? 0;
-  console.log(adminQuery.data?.totalUsers);
   const usersShare = adminQuery.isSuccess ? formatPercent(adminQuery.data.totalUsers, 1102) : null;
   const abandonmentRate = adminQuery.isSuccess
     ? formatPercent(adminQuery.data.abandonedConstats, adminQuery.data.totalConstats)

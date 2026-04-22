@@ -45,7 +45,6 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
 
   const { constatId } = routeApi.useParams();
   const existingSectionsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
-  console.log("existingSectionsQuery", existingSectionsQuery.data);
   const existingSections = existingSectionsQuery.data ?? [];
 
   return (
@@ -188,8 +187,6 @@ const AlertSectionsList = ({
         .returningAll()
         .execute();
 
-      console.log("Created new alert", newAlert);
-
       fieldArray.append({ ...newAlert[0], attachments: [] });
     },
   });
@@ -262,7 +259,6 @@ const AlertSectionsList = ({
   }
 
   const chunked = chunk(alertSectionStaticData, isDesktop ? 2 : 1);
-  console.log({ alertSectionStaticData, alertSections });
   return (
     <>
       {chunked.map((chunk, index) => (
