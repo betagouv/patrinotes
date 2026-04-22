@@ -234,7 +234,12 @@ const NatureVisiteRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
         style={{ marginBottom: 0 }}
       />
       {value === "partielle (préciser)" ? (
-        <Input disabled={isDisabled} label={null} nativeInputProps={{ ...form.register("visite_partielle_details") }} />
+        <Input
+          sx={{ mt: "16px" }}
+          label="Partie visitée"
+          disabled={isDisabled}
+          nativeInputProps={{ ...form.register("visite_partielle_details") }}
+        />
       ) : null}
     </Stack>
   );
