@@ -133,18 +133,16 @@ const WhitelistPanel = () => {
 
       {error && <Alert severity="error" title={getErrorMessage(error)} />}
 
-      <Stack flexDirection="row" justifyContent="flex-end">
-        <Button
-          priority="secondary"
-          iconId="ri-download-line"
-          iconPosition="left"
-          size="small"
-          onClick={() => exportMutation.mutate()}
-          disabled={exportMutation.isPending}
-        >
-          {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
-        </Button>
-      </Stack>
+      <Button
+        priority="secondary"
+        iconId="ri-download-line"
+        iconPosition="left"
+        size="small"
+        onClick={() => exportMutation.mutate()}
+        disabled={exportMutation.isPending}
+      >
+        {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
+      </Button>
 
       {isLoading ? (
         <Center py="3rem">
@@ -251,18 +249,16 @@ const UsersPanel = () => {
 
       {error && <Alert severity="error" title={getErrorMessage(error)} />}
 
-      <Stack flexDirection="row" justifyContent="flex-end">
-        <Button
-          priority="secondary"
-          iconId="ri-download-line"
-          iconPosition="left"
-          size="small"
-          onClick={() => exportMutation.mutate()}
-          disabled={exportMutation.isPending}
-        >
-          {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
-        </Button>
-      </Stack>
+      <Button
+        priority="secondary"
+        iconId="ri-download-line"
+        iconPosition="left"
+        size="small"
+        onClick={() => exportMutation.mutate()}
+        disabled={exportMutation.isPending}
+      >
+        {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
+      </Button>
 
       {isLoading ? (
         <Center py="3rem">
