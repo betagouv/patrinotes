@@ -2,11 +2,17 @@ import { config } from "dotenv";
 import { expand } from "dotenv-expand";
 import { z } from "zod";
 
+console.log(`Running in ${process.env.NODE_ENV} mode`);
+
+if (process.env.NODE_ENV === "test") {
+  expand(config({ path: "../../.env.test" }));
+} else {
+  expand(config({ path: "../../.env" }));
+}
+
 export const isDev = process.env.NODE_ENV === "development";
 export const isTest = process.env.NODE_ENV === "test";
 export const isProd = !isDev && !isTest;
-
-expand(config({ path: `../../${isTest ? ".env.test" : ".env"}` }));
 
 const stringOrNumberAsNumber = z.string().or(z.number()).transform(Number);
 
@@ -25,6 +31,7 @@ const envSchema = z.object({
   PORT: stringOrNumberAsNumber.default(3001),
   DEBUG: z.string().default("cr-vif:*"),
   FRONTEND_URL: z.string(),
+  BACKEND_URL: z.string(),
   EMAIL_HOST: z.string(),
   EMAIL_PORT: stringOrNumberAsNumber.default(465),
   EMAIL_USER: z.string(),
@@ -43,7 +50,7 @@ const envSchema = z.object({
   AUTH_CLIENT_SECRET: z.string(),
   // COLLECTIF_OBJETS_DATASETTE_URL: z.string(),
 
-  VITE_ALERTES_MH_ENABLED: z.string().optional(),
+  ASSETS_DIR: z.string().optional(),
 });
 
 export const ENV = envSchema.parse(process.env);

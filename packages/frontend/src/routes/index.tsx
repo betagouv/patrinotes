@@ -21,9 +21,9 @@ import { HomeImageSvg } from "#components/HomeImageSvg.tsx";
 import { DocumentTypeSelector } from "#components/DocumentTypeSelector.tsx";
 import z from "zod";
 import { appDocumentEnum } from "../utils";
+import { SearchModal } from "#components/SearchModal.tsx";
 
 const Index = () => {
-  const [search, setSearch] = useState("");
   const user = useUser()!;
   const navigate = useNavigate();
 
@@ -128,8 +128,8 @@ const Index = () => {
           </Flex>
         </Flex>
       </SimpleBanner>
-
-      {search ? <SearchResults hideEmpty search={search} /> : <MainContentTabs />}
+      <MainContentTabs />
+      <SearchModal />
     </Flex>
   );
 };

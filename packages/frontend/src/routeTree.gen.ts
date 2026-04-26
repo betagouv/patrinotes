@@ -12,6 +12,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiceRouteImport } from './routes/service'
+import { Route as PolitiqueConfidentialiteRouteImport } from './routes/politique-confidentialite'
 import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ConnexionRouteImport } from './routes/connexion'
@@ -22,15 +23,34 @@ import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$
 import { Route as PdfReportIdRouteImport } from './routes/pdf.$reportId'
 import { Route as EditReportIdRouteImport } from './routes/edit.$reportId'
 import { Route as ConstatConstatIdRouteImport } from './routes/constat.$constatId'
+import { Route as ConstatValidationTokenRouteImport } from './routes/constat-validation.$token'
 import { Route as ConstatConstatIdPdfRouteImport } from './routes/constat_.$constatId.pdf'
 
+const StatsLazyRouteImport = createFileRoute('/stats')()
+const AdminLazyRouteImport = createFileRoute('/admin')()
 const ResetPasswordIndexLazyRouteImport = createFileRoute('/reset-password/')()
 
+const StatsLazyRoute = StatsLazyRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/stats.lazy').then((d) => d.Route))
+const AdminLazyRoute = AdminLazyRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.lazy').then((d) => d.Route))
 const ServiceRoute = ServiceRouteImport.update({
   id: '/service',
   path: '/service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PolitiqueConfidentialiteRoute =
+  PolitiqueConfidentialiteRouteImport.update({
+    id: '/politique-confidentialite',
+    path: '/politique-confidentialite',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MentionsLegalesRoute = MentionsLegalesRouteImport.update({
   id: '/mentions-legales',
   path: '/mentions-legales',
@@ -88,6 +108,11 @@ const ConstatConstatIdRoute = ConstatConstatIdRouteImport.update({
   path: '/constat/$constatId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConstatValidationTokenRoute = ConstatValidationTokenRouteImport.update({
+  id: '/constat-validation/$token',
+  path: '/constat-validation/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConstatConstatIdPdfRoute = ConstatConstatIdPdfRouteImport.update({
   id: '/constat_/$constatId/pdf',
   path: '/constat/$constatId/pdf',
@@ -101,12 +126,16 @@ export interface FileRoutesByFullPath {
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
+  '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
+  '/admin': typeof AdminLazyRoute
+  '/stats': typeof StatsLazyRoute
+  '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
-  '/reset-password': typeof ResetPasswordIndexLazyRoute
+  '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
 export interface FileRoutesByTo {
@@ -116,7 +145,11 @@ export interface FileRoutesByTo {
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
+  '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
+  '/admin': typeof AdminLazyRoute
+  '/stats': typeof StatsLazyRoute
+  '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
@@ -132,7 +165,11 @@ export interface FileRoutesById {
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
+  '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
+  '/admin': typeof AdminLazyRoute
+  '/stats': typeof StatsLazyRoute
+  '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
@@ -149,12 +186,16 @@ export interface FileRouteTypes {
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
+    | '/politique-confidentialite'
     | '/service'
+    | '/admin'
+    | '/stats'
+    | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
     | '/reset-password/$link'
-    | '/reset-password'
+    | '/reset-password/'
     | '/constat/$constatId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -164,7 +205,11 @@ export interface FileRouteTypes {
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
+    | '/politique-confidentialite'
     | '/service'
+    | '/admin'
+    | '/stats'
+    | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
@@ -179,7 +224,11 @@ export interface FileRouteTypes {
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
+    | '/politique-confidentialite'
     | '/service'
+    | '/admin'
+    | '/stats'
+    | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
@@ -195,7 +244,11 @@ export interface RootRouteChildren {
   ConnexionRoute: typeof ConnexionRoute
   InscriptionRoute: typeof InscriptionRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
+  PolitiqueConfidentialiteRoute: typeof PolitiqueConfidentialiteRoute
   ServiceRoute: typeof ServiceRoute
+  AdminLazyRoute: typeof AdminLazyRoute
+  StatsLazyRoute: typeof StatsLazyRoute
+  ConstatValidationTokenRoute: typeof ConstatValidationTokenRoute
   ConstatConstatIdRoute: typeof ConstatConstatIdRoute
   EditReportIdRoute: typeof EditReportIdRoute
   PdfReportIdRoute: typeof PdfReportIdRoute
@@ -206,11 +259,32 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/service': {
       id: '/service'
       path: '/service'
       fullPath: '/service'
       preLoaderRoute: typeof ServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politique-confidentialite': {
+      id: '/politique-confidentialite'
+      path: '/politique-confidentialite'
+      fullPath: '/politique-confidentialite'
+      preLoaderRoute: typeof PolitiqueConfidentialiteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mentions-legales': {
@@ -258,7 +332,7 @@ declare module '@tanstack/react-router' {
     '/reset-password/': {
       id: '/reset-password/'
       path: '/reset-password'
-      fullPath: '/reset-password'
+      fullPath: '/reset-password/'
       preLoaderRoute: typeof ResetPasswordIndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -290,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConstatConstatIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/constat-validation/$token': {
+      id: '/constat-validation/$token'
+      path: '/constat-validation/$token'
+      fullPath: '/constat-validation/$token'
+      preLoaderRoute: typeof ConstatValidationTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/constat_/$constatId/pdf': {
       id: '/constat_/$constatId/pdf'
       path: '/constat/$constatId/pdf'
@@ -307,7 +388,11 @@ const rootRouteChildren: RootRouteChildren = {
   ConnexionRoute: ConnexionRoute,
   InscriptionRoute: InscriptionRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
+  PolitiqueConfidentialiteRoute: PolitiqueConfidentialiteRoute,
   ServiceRoute: ServiceRoute,
+  AdminLazyRoute: AdminLazyRoute,
+  StatsLazyRoute: StatsLazyRoute,
+  ConstatValidationTokenRoute: ConstatValidationTokenRoute,
   ConstatConstatIdRoute: ConstatConstatIdRoute,
   EditReportIdRoute: EditReportIdRoute,
   PdfReportIdRoute: PdfReportIdRoute,

@@ -1,0 +1,1 @@
+ALTER TABLE "report_attachment" ADD COLUMN "label" text;

@@ -1,7 +1,16 @@
-import { Font, Image, Text, View, ViewProps } from "@react-pdf/renderer";
-import React from "react";
-import { StateReportAlert } from "../../frontend/src/db/AppSchema";
+import { Font } from "@react-pdf/renderer";
+import {
+  StateReport,
+  StateReportAlert,
+  StateReportAlertAttachment,
+  StateReportAttachment,
+  VisitedSection,
+  VisitedSectionAttachment,
+} from "../../frontend/src/db/AppSchema";
 import linkifyHtml from "linkify-html";
+import { MinimalAlert } from "./stateReport";
+import { format } from "date-fns";
+
 export const initFonts = (folder: string = "") => {
   Font.register({
     family: "Marianne",
@@ -26,60 +35,12 @@ export const initFonts = (folder: string = "") => {
   });
 };
 
-export const MarianneHeader = ({
-  marianneUrl,
-  styles,
-}: {
-  marianneUrl: string;
-  styles?: ({ pageNumber }: { pageNumber: number }) => ViewProps["style"];
-}) => {
-  return (
-    <View
-      fixed
-      render={({ pageNumber }) => (
-        <View
-          style={{
-            position: "absolute",
-            top: -36,
-            left: 40,
-            height: 13,
-            width: 34,
-            ...styles?.({ pageNumber }),
-          }}
-          fixed
-        >
-          <Image
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-            }}
-            src={marianneUrl}
-          />
-        </View>
-      )}
-    />
-  );
-};
-
-export const Pagination = () => {
-  return (
-    <View fixed style={{ position: "absolute", bottom: 40, right: 40, fontSize: 10 }}>
-      <Text
-        render={({ pageNumber, totalPages }) => (
-          <Text style={{ fontSize: 8 }}>
-            Page {pageNumber} sur {totalPages}
-          </Text>
-        )}
-      />
-    </View>
-  );
-};
-
 const minifyHtml = (htmlString: string) => {
   return htmlString.split("\n").join("").split("  ").join("");
 };
 const breakUrl = (url: string) => url.replace(/([/\-._])/g, "$1\u200B");
+
+export const addSIfPlural = (count: number) => (count > 1 ? "s" : "");
 
 export const processHtml = (htmlString: string) => {
   return minifyHtml(
@@ -102,13 +63,38 @@ export const deserializeMandatoryEmails = (data: string): { service: string; ema
   });
 };
 
-export const getIsAlertVisited = (alertSection: any) => {
-  return !!alertSection.commentaires || !!alertSection.objet_ou_mobilier;
+export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
+  // OBJETS_MOBILIERS_SECTION
+  const isObjetsMobiliers = alert.alert === OBJETS_MOBILIERS_SECTION;
+
+  const hasAttachments = !!alert.attachments && alert.attachments.length > 0;
+  const hasDescription = !!alert.commentaires && alert.commentaires.trim() !== "";
+
+  if (isObjetsMobiliers) {
+    const hasProblem = !!alert.probleme;
+    const hasObjet = !!alert.objet_ou_mobilier_name;
+
+    return hasProblem || hasObjet || hasAttachments || hasDescription;
+  }
+
+  return Boolean(hasAttachments || hasDescription);
 };
 
 export const getIsSectionVisited = (section: any) => {
-  return section?.etat_general && section?.proportion_dans_cet_etat;
+  return (section?.etat_general && section?.proportion_dans_cet_etat) || section?.attachments?.length;
 };
+
+function cleanString(str: string): string {
+  return str
+    .normalize("NFD") // Decompose accented characters
+    .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
+    .toLowerCase() // Convert to lowercase
+    .trim() // Remove leading/trailing spaces
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/[^\w-]/g, "") // Remove special characters (keep letters, numbers, hyphens)
+    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+}
 
 export const OBJETS_MOBILIERS_SECTION = "Objets et mobiliers";
 export const EDIFICE_EN_PERIL_SECTION = "Édifice en péril";
@@ -117,3 +103,19 @@ export const ARCHEOLOGIE_SECTION = "Archéologie";
 export const SITE_CLASSE_OU_INSCRIT_SECTION = "Site classé ou inscrit";
 export const BIODIVERSITE_SECTION = "Biodiversité";
 export const SECURITE_SECTION = "Sécurité";
+
+export type AlertWithAttachments = Omit<StateReportAlert, "should_send"> & {
+  attachments: (StateReportAlertAttachment & { file: string })[];
+  should_send: Booleanish;
+};
+
+export type Booleanish = boolean | number | null | undefined;
+
+export type StateReportWithUserAndAttachments = StateReport & {
+  attachments: (StateReportAttachment & { file: string })[];
+  createdByName: string | null;
+};
+
+export type SectionWithAttachments = VisitedSection & {
+  attachments: (VisitedSectionAttachment & { file: string })[];
+};

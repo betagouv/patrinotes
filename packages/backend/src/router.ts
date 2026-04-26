@@ -16,6 +16,10 @@ import { syncPlugin } from "./routes/syncRoutes";
 import { authPlugin } from "./routes/authRoutes";
 import { isDev } from "./envVars";
 import { stateReportPlugin } from "./routes/stateReportRoutes";
+import { validationPlugin } from "./routes/validationRoutes";
+import { adminPlugin } from "./routes/adminRoutes";
+import { statsPlugin } from "./routes/statsRoutes";
+import { attachmentRedirectPlugin } from "./routes/attachmentRedirectRoutes";
 
 const debug = makeDebug("fastify");
 
@@ -70,10 +74,15 @@ export const initFastify = async () => {
       await instance.register(uploadPlugin, { prefix: "/upload" });
       await instance.register(pdfPlugin, { prefix: "/pdf" });
       await instance.register(stateReportPlugin, { prefix: "/state-report" });
+      await instance.register(validationPlugin);
       await instance.register(syncPlugin);
+      await instance.register(adminPlugin, { prefix: "/admin" });
+      await instance.register(statsPlugin, { prefix: "/stats" });
     },
     { prefix: "/api" },
   );
+
+  await fastifyInstance.register(attachmentRedirectPlugin);
 
   await fastifyInstance.ready();
 

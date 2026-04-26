@@ -17,23 +17,24 @@ import { downloadFile } from "../utils";
 import { datePresets, DateRangePicker, SuccessAlert } from "./service";
 import { ReactNode, useEffect, useState } from "react";
 import { format } from "date-fns";
-import { getPDFInMailName } from "@cr-vif/pdf";
+import { getPDFInMailName } from "@patrinotes/pdf";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Accordion, Button, Center, Input, Select, Summary } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
-import { getStateReportMailName } from "@cr-vif/pdf/constat";
+import { getStateReportMailName } from "@patrinotes/pdf/constat";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import { ToggleSwitch } from "@codegouvfr/react-dsfr/ToggleSwitch";
 import { useActiveSection } from "../hooks/useActiveSection";
 
 const accountSections = [
   { linkProps: { href: "#profile" }, text: "Mon profil" },
   { linkProps: { href: "#default-recipient" }, text: "Destinataires par défaut" },
   { linkProps: { href: "#share" }, text: "Droit d'édition partagé" },
-  // { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
+  { linkProps: { href: "#validation" }, text: "Validation de mes constats" },
   { linkProps: { href: "#download-ce" }, text: "Télécharger mes constats" },
   { linkProps: { href: "#download-cr" }, text: "Télécharger mes CR" },
   { linkProps: { href: "#change-service" }, text: "Changer de service" },
@@ -106,6 +107,8 @@ const AccountPage = () => {
         <DefaultRecipient />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <Share />
+        <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
+        <ConstatValidation />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DownloadCEs />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
@@ -235,7 +238,7 @@ const DefaultRecipient = () => {
     },
   });
 
-  const canSave = defaultEmails.join(",") !== userSettings?.default_emails;
+  const canSave = defaultEmails.join(",") !== userSettings?.default_emails?.replaceAll(" ", "");
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
@@ -418,6 +421,115 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
   );
 };
 
+type ConstatValidationForm = {
+  validationEnabled: boolean;
+  validationEmail: string;
+  validationNom: string;
+  validationPrenom: string;
+};
+
+const ConstatValidation = () => {
+  const user = useUser()!;
+  const { userSettings, isLoading, existing } = useUserSettings();
+
+  const form = useForm<ConstatValidationForm>({
+    values: {
+      validationEnabled: !!userSettings?.validation_enabled,
+      validationEmail: userSettings?.validation_email ?? "",
+      validationNom: userSettings?.validation_nom ?? "",
+      validationPrenom: userSettings?.validation_prenom ?? "",
+    },
+  });
+
+  const validationEnabled = useWatch({ control: form.control, name: "validationEnabled" });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: ConstatValidationForm) => {
+      const doesExist =
+        existing ||
+        !!(await db
+          .selectFrom("user_settings")
+          .where("user_id", "=", user.id)
+          .where("service_id", "=", user.service_id)
+          .selectAll()
+          .executeTakeFirst());
+
+      const values = {
+        validation_enabled: data.validationEnabled ? 1 : 0,
+        validation_email: data.validationEnabled ? data.validationEmail : null,
+        validation_nom: data.validationEnabled ? data.validationNom : null,
+        validation_prenom: data.validationEnabled ? data.validationPrenom : null,
+      };
+
+      if (doesExist) {
+        return db
+          .updateTable("user_settings")
+          .set(values)
+          .where("user_id", "=", user.id)
+          .where("service_id", "=", user.service_id)
+          .execute();
+      }
+
+      return db
+        .insertInto("user_settings")
+        .values({ id: v4(), user_id: user.id, service_id: user.service_id, ...values })
+        .execute();
+    },
+  });
+
+  if (isLoading) return null;
+
+  return (
+    <Stack width="100%" maxWidth="690px">
+      <Title anchor="validation">4. Validation de mes constats</Title>
+      <ToggleSwitch
+        label="Envoyer les constats sous couvert de validation"
+        checked={validationEnabled}
+        onChange={(checked) => form.setValue("validationEnabled", checked)}
+        showCheckedHint={false}
+      />
+      {validationEnabled && (
+        <Stack mt="16px">
+          <Flex gap="8px" alignItems="center" mt="16px">
+            <Box flex="1">
+              <Input label="Nom" nativeInputProps={{ ...form.register("validationNom") }} />
+            </Box>
+            <Box flex="1">
+              <Input label="Prénom" nativeInputProps={{ ...form.register("validationPrenom") }} />
+            </Box>
+          </Flex>
+          <Input
+            label="Courriel du validateur"
+            state={form.formState.errors.validationEmail ? "error" : "default"}
+            stateRelatedMessage={form.formState.errors.validationEmail?.message}
+            nativeInputProps={{
+              type: "email",
+              ...form.register("validationEmail", {
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "Veuillez saisir une adresse courriel valide",
+                },
+              }),
+            }}
+            sx={{ mt: "16px" }}
+          />
+        </Stack>
+      )}
+      <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
+        <Button
+          iconId="ri-save-3-line"
+          iconPosition="left"
+          type="button"
+          onClick={form.handleSubmit((data) => saveMutation.mutate(data))}
+          disabled={saveMutation.isPending}
+        >
+          Enregistrer
+        </Button>
+      </Flex>
+    </Stack>
+  );
+};
+
 const DownloadCEs = () => {
   const [startDate, setStartDate] = useState(datePresets[0].startDate);
   const [endDate, setEndDate] = useState(datePresets[0].endDate);
@@ -460,7 +572,7 @@ const DownloadCEs = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
-      <Title anchor="download-ce">4. Télécharger mes CE</Title>
+      <Title anchor="download-ce">5. Télécharger mes CE</Title>
       <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
       <Box mb="16px">
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
@@ -526,7 +638,7 @@ const DownloadCRs = () => {
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
-      <Title anchor="download-cr">5. Télécharger mes CR</Title>
+      <Title anchor="download-cr">6. Télécharger mes CR</Title>
       <DateRangePicker startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
       <Box mb="16px">
         Pour une expérience optimale, nous vous invitons à <b>privilégier le mode Wi-Fi</b> pour le téléchargement de
@@ -584,7 +696,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
-      <Title anchor="change-service">6. Changer de service</Title>
+      <Title anchor="change-service">7. Changer de service</Title>
       {/* @ts-ignore */}
       <Alert
         style={{

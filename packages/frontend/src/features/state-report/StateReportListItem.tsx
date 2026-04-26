@@ -14,15 +14,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { StateReportActions } from "./StateReportActions";
 
-export const StateReportListItem = ({
-  report,
-  isLast,
-  onClick,
-}: {
-  report: StateReportWithUser;
-  isLast?: boolean;
-  onClick?: () => void;
-}) => {
+export const StateReportListItem = ({ report, isLast }: { report: StateReportWithUser; isLast?: boolean }) => {
   const ref = useRef<HTMLButtonElement>(null);
 
   const { css } = useStyles();
@@ -31,6 +23,8 @@ export const StateReportListItem = ({
   const whereText = report.commune ? `à ${report.commune}` : null;
   const byText = report.redacted_by ? `par ${report.redacted_by}` : null;
   const isDraft = !report.attachment_id;
+
+  const status = (report.validation_status as "pending" | "accepted" | "declined") || (isDraft ? "draft" : "published");
 
   return (
     <Flex className="report-list-item" position="relative" flexDirection="column" width="100%">
@@ -41,7 +35,6 @@ export const StateReportListItem = ({
             backgroundColor: "initial !important",
           },
         })}
-        onClick={onClick}
         to={"/constat/$constatId"}
         params={{ constatId: report.id }}
         search={{ step: report.reference_pop ? "constat-general" : "informations", mode: "view" }}
@@ -75,7 +68,7 @@ export const StateReportListItem = ({
             {byText}
           </Box>
           <Box mt="8px" mb={whereText ? "0" : "24px"}>
-            <ReportBadge status={isDraft ? "draft" : "published"} />
+            <ReportBadge status={status} />
           </Box>
         </Box>
       </Link>
@@ -166,11 +159,27 @@ const MenuMobileModalContent = ({ onClose, report }: MenuProps) => {
 
 type MenuProps = { onClose: (e: Event) => void; report: StateReportWithUser };
 
-type ReportStatus = "draft" | "published";
+type ReportStatus = "draft" | "pending" | "accepted" | "declined" | "published";
 const ReportBadge = ({ status }: { status: ReportStatus }) => {
+  const labels: Record<ReportStatus, string> = {
+    draft: "Brouillon",
+    pending: "En attente de validation",
+    accepted: "Envoyé",
+    declined: "Refusé",
+    published: "Envoyé",
+  };
+
+  const severities: Record<ReportStatus, "info" | "success" | "error"> = {
+    draft: "info",
+    pending: "info",
+    accepted: "success",
+    declined: "info",
+    published: "success",
+  };
+
   return (
     <Badge
-      severity={status === "draft" ? "info" : "success"}
+      severity={severities[status]}
       noIcon
       small
       style={{
@@ -190,7 +199,7 @@ const ReportBadge = ({ status }: { status: ReportStatus }) => {
         }}
       />
       <Typography ml="4px" fontSize="12px" fontWeight="bold">
-        {status === "draft" ? "Brouillon" : "Envoyé"}
+        {labels[status]}
       </Typography>
     </Badge>
   );
@@ -198,10 +207,16 @@ const ReportBadge = ({ status }: { status: ReportStatus }) => {
 
 const icons: Record<ReportStatus, string> = {
   draft: "ri-timer-fill",
+  pending: "ri-time-line",
+  accepted: "ri-send-plane-fill",
+  declined: "ri-close-line",
   published: "ri-send-plane-fill",
 };
 
 const colors: Record<ReportStatus, [string, string]> = {
   draft: ["#716043", "#FEECC2"] as const,
+  pending: ["#695240", "#FFE9E6"] as const,
+  accepted: ["#18753C", "#D1F1D9"] as const,
+  declined: ["#B00020", "#FFCDD2"] as const,
   published: ["#18753C", "#D1F1D9"] as const,
 };

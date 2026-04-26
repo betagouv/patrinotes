@@ -6,6 +6,12 @@ export namespace Schemas {
 export namespace Endpoints {
   // <Endpoints>
 
+  export type get_Health = {
+    method: "GET";
+    path: "/health";
+    parameters: never;
+    response: unknown;
+  };
   export type post_Apiauthenticate = {
     method: "POST";
     path: "/api/authenticate";
@@ -232,11 +238,13 @@ export namespace Endpoints {
       courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
-  export type post_Apiuploadattachment = {
-    method: "POST";
-    path: "/api/upload/attachment";
-    parameters: never;
-    response: unknown;
+  export type get_ApiuploadattachmentpresignedUrl = {
+    method: "GET";
+    path: "/api/upload/attachment/presigned-url";
+    parameters: {
+      query: { filePath: string };
+    };
+    response: { url: string };
   };
   export type get_Apiuploadattachment = {
     method: "GET";
@@ -244,21 +252,19 @@ export namespace Endpoints {
     parameters: never;
     response: unknown;
   };
-  export type post_ApiuploadpicturePictureIdlines = {
+  export type post_ApipdfreportuploadUrl = {
     method: "POST";
-    path: "/api/upload/picture/{pictureId}/lines";
+    path: "/api/pdf/report/upload-url";
     parameters: {
-      path: { pictureId: string };
-
-      body: { lines: Array<{ points: Array<{ x: number; y: number }>; color: string }> };
+      body: { reportId: string };
     };
-    response: string;
+    response: { uploadUrl: string; pdfPath: string };
   };
   export type post_Apipdfreport = {
     method: "POST";
     path: "/api/pdf/report";
     parameters: {
-      body: { htmlString: string; reportId: string; recipients: string };
+      body: { pdfPath: string; reportId: string; recipients: string };
     };
     response: string;
   };
@@ -283,7 +289,8 @@ export namespace Endpoints {
     path: "/api/pdf/state-report";
     parameters: {
       body: {
-        htmlString: string;
+        needValidation?: boolean | undefined;
+        pdfPath: string;
         stateReportId: string;
         recipients: string;
         alerts?:
@@ -297,12 +304,20 @@ export namespace Endpoints {
               objet_ou_mobilier: string | Schemas.null | Array<string | Schemas.null>;
               objet_ou_mobilier_name: string | Schemas.null | Array<string | Schemas.null>;
               probleme: string | Schemas.null | Array<string | Schemas.null>;
-              shouldSend: boolean | number | Schemas.null | Array<boolean | number | Schemas.null>;
+              should_send: boolean | number | Schemas.null | Array<boolean | number | Schemas.null>;
             }>
           | undefined;
       };
     };
     response: string;
+  };
+  export type post_ApipdfstateReportuploadUrl = {
+    method: "POST";
+    path: "/api/pdf/state-report/upload-url";
+    parameters: {
+      body: { stateReportId: string };
+    };
+    response: { uploadUrl: string; pdfPath: string };
   };
   export type get_ApistateReportobjetsImages = {
     method: "GET";
@@ -319,6 +334,42 @@ export namespace Endpoints {
       copyright?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
+  export type get_ApiconstatValidationToken = {
+    method: "GET";
+    path: "/api/constat-validation/{token}";
+    parameters: {
+      path: { token: string };
+    };
+    response: Partial<{}>;
+  };
+  export type get_ApiconstatValidationTokenpdf = {
+    method: "GET";
+    path: "/api/constat-validation/{token}/pdf";
+    parameters: {
+      path: { token: string };
+    };
+    response: unknown;
+  };
+  export type post_ApiconstatValidationTokenaccept = {
+    method: "POST";
+    path: "/api/constat-validation/{token}/accept";
+    parameters: {
+      path: { token: string };
+
+      body: Partial<{ comment: string }>;
+    };
+    response: { message: string };
+  };
+  export type post_ApiconstatValidationTokendecline = {
+    method: "POST";
+    path: "/api/constat-validation/{token}/decline";
+    parameters: {
+      path: { token: string };
+
+      body: { comment: string };
+    };
+    response: { message: string };
+  };
   export type post_ApiuploadData = {
     method: "POST";
     path: "/api/upload-data";
@@ -334,12 +385,177 @@ export namespace Endpoints {
     };
     response: Partial<{}>;
   };
+  export type get_Apiadminme = {
+    method: "GET";
+    path: "/api/admin/me";
+    parameters: never;
+    response: {
+      id: string;
+      name: string;
+      service_id: string;
+      service: {
+        id: string;
+        department: string;
+        completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+        name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+        courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      };
+      job: string | Schemas.null | Array<string | Schemas.null>;
+    };
+  };
+  export type get_Apiadminwhitelist = {
+    method: "GET";
+    path: "/api/admin/whitelist";
+    parameters: {
+      query: Partial<{ page: number; limit: number }>;
+    };
+    response: { data: Array<{ email: string; createdAt: string }>; total: number; page: number; limit: number };
+  };
+  export type post_Apiadminwhitelist = {
+    method: "POST";
+    path: "/api/admin/whitelist";
+    parameters: {
+      body: { email: string };
+    };
+    response: { email: string };
+  };
+  export type delete_Apiadminwhitelist = {
+    method: "DELETE";
+    path: "/api/admin/whitelist";
+    parameters: {
+      body: { email: string };
+    };
+    response: { message: string };
+  };
+  export type get_Apiadminwhitelistexport = {
+    method: "GET";
+    path: "/api/admin/whitelist/export";
+    parameters: never;
+    response: Array<{ email: string; createdAt: string }>;
+  };
+  export type get_Apiadminusersexport = {
+    method: "GET";
+    path: "/api/admin/users/export";
+    parameters: {
+      query: Partial<{ search: string }>;
+    };
+    response: Array<{
+      id: string;
+      name: string;
+      email: string;
+      job: string | Schemas.null | Array<string | Schemas.null>;
+      serviceId: string;
+      serviceName: string | Schemas.null | Array<string | Schemas.null>;
+      serviceDepartment: string | Schemas.null | Array<string | Schemas.null>;
+      role: string | Schemas.null | Array<string | Schemas.null>;
+      createdAt: string;
+    }>;
+  };
+  export type get_Apiadminusers = {
+    method: "GET";
+    path: "/api/admin/users";
+    parameters: {
+      query: Partial<{ page: number; limit: number; search: string }>;
+    };
+    response: {
+      users: Array<{
+        id: string;
+        name: string;
+        email: string;
+        job: string | Schemas.null | Array<string | Schemas.null>;
+        serviceId: string;
+        serviceName: string | Schemas.null | Array<string | Schemas.null>;
+        serviceDepartment: string | Schemas.null | Array<string | Schemas.null>;
+        role: string | Schemas.null | Array<string | Schemas.null>;
+        createdAt: string;
+      }>;
+      total: number;
+      page: number;
+      limit: number;
+    };
+  };
+  export type get_Apistatspublic = {
+    method: "GET";
+    path: "/api/stats/public";
+    parameters: {
+      query: Partial<{ from: string; to: string }>;
+    };
+    response: {
+      totalConstats: number;
+      totalReports: number;
+      totalUsers: number;
+      usersWithNoDocuments: number;
+      activeUsersInPeriod: number;
+      deployedUdapCount: number;
+      deployedCrmhCount: number;
+      periodFrom: string;
+      periodTo: string;
+    };
+  };
+  export type get_Apistatsadmin = {
+    method: "GET";
+    path: "/api/stats/admin";
+    parameters: never;
+    response: {
+      constatsByService: Array<{
+        serviceId: string;
+        serviceName: string | Schemas.null | Array<string | Schemas.null>;
+        sentConstats: number;
+        totalConstats: number;
+      }>;
+      abandonedConstats: number;
+      totalConstats: number;
+      totalUsers: number;
+    };
+  };
+  export type get_AttachmentIdFilename_ = {
+    method: "GET";
+    path: "/attachment/{id}/{filename}?";
+    parameters: {
+      path: { id: string; filename: string };
+    };
+    response: unknown;
+  };
 
   // </Endpoints>
 }
 
 // <EndpointByMethod>
 export type EndpointByMethod = {
+  get: {
+    "/health": Endpoints.get_Health;
+    "/api/services": Endpoints.get_Apiservices;
+    "/api/upload/attachment/presigned-url": Endpoints.get_ApiuploadattachmentpresignedUrl;
+    "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
+    "/api/pdf/report": Endpoints.get_Apipdfreport;
+    "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
+    "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
+    "/api/constat-validation/{token}": Endpoints.get_ApiconstatValidationToken;
+    "/api/constat-validation/{token}/pdf": Endpoints.get_ApiconstatValidationTokenpdf;
+    "/api/admin/me": Endpoints.get_Apiadminme;
+    "/api/admin/whitelist": Endpoints.get_Apiadminwhitelist;
+    "/api/admin/whitelist/export": Endpoints.get_Apiadminwhitelistexport;
+    "/api/admin/users/export": Endpoints.get_Apiadminusersexport;
+    "/api/admin/users": Endpoints.get_Apiadminusers;
+    "/api/stats/public": Endpoints.get_Apistatspublic;
+    "/api/stats/admin": Endpoints.get_Apistatsadmin;
+    "/attachment/{id}/{filename}?": Endpoints.get_AttachmentIdFilename_;
+  };
   post: {
     "/api/authenticate": Endpoints.post_Apiauthenticate;
     "/api/refresh-token": Endpoints.post_ApirefreshToken;
@@ -348,26 +564,26 @@ export type EndpointByMethod = {
     "/api/change-service": Endpoints.post_ApichangeService;
     "/api/send-reset-password": Endpoints.post_ApisendResetPassword;
     "/api/reset-password": Endpoints.post_ApiresetPassword;
-    "/api/upload/attachment": Endpoints.post_Apiuploadattachment;
-    "/api/upload/picture/{pictureId}/lines": Endpoints.post_ApiuploadpicturePictureIdlines;
+    "/api/pdf/report/upload-url": Endpoints.post_ApipdfreportuploadUrl;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
+    "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;
+    "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenaccept;
+    "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokendecline;
     "/api/upload-data": Endpoints.post_ApiuploadData;
+    "/api/admin/whitelist": Endpoints.post_Apiadminwhitelist;
   };
-  get: {
-    "/api/services": Endpoints.get_Apiservices;
-    "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
-    "/api/pdf/report": Endpoints.get_Apipdfreport;
-    "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
-    "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
+  delete: {
+    "/api/admin/whitelist": Endpoints.delete_Apiadminwhitelist;
   };
 };
 
 // </EndpointByMethod>
 
 // <EndpointByMethod.Shorthands>
-export type PostEndpoints = EndpointByMethod["post"];
 export type GetEndpoints = EndpointByMethod["get"];
+export type PostEndpoints = EndpointByMethod["post"];
+export type DeleteEndpoints = EndpointByMethod["delete"];
 export type AllEndpoints = EndpointByMethod[keyof EndpointByMethod];
 // </EndpointByMethod.Shorthands>
 
@@ -425,6 +641,15 @@ export class ApiClient {
     return this;
   }
 
+  // <ApiClient.get>
+  get<Path extends keyof GetEndpoints, TEndpoint extends GetEndpoints[Path]>(
+    path: Path,
+    ...params: MaybeOptionalArg<TEndpoint["parameters"]>
+  ): Promise<TEndpoint["response"]> {
+    return this.fetcher("get", this.baseUrl + path, params[0]);
+  }
+  // </ApiClient.get>
+
   // <ApiClient.post>
   post<Path extends keyof PostEndpoints, TEndpoint extends PostEndpoints[Path]>(
     path: Path,
@@ -434,14 +659,14 @@ export class ApiClient {
   }
   // </ApiClient.post>
 
-  // <ApiClient.get>
-  get<Path extends keyof GetEndpoints, TEndpoint extends GetEndpoints[Path]>(
+  // <ApiClient.delete>
+  delete<Path extends keyof DeleteEndpoints, TEndpoint extends DeleteEndpoints[Path]>(
     path: Path,
     ...params: MaybeOptionalArg<TEndpoint["parameters"]>
   ): Promise<TEndpoint["response"]> {
-    return this.fetcher("get", this.baseUrl + path, params[0]);
+    return this.fetcher("delete", this.baseUrl + path, params[0]);
   }
-  // </ApiClient.get>
+  // </ApiClient.delete>
 }
 
 export function createApiClient(fetcher: Fetcher, baseUrl?: string) {

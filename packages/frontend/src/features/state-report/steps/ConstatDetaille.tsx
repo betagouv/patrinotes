@@ -6,16 +6,16 @@ import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
 import { Box, Dialog, DialogTitle, Grid, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useDebounce from "react-use/lib/useDebounce";
-import { v4, v7 } from "uuid";
-import { useLiveUser, useUser } from "../../../contexts/AuthContext";
+import { v4 } from "uuid";
+import { useUser } from "../../../contexts/AuthContext";
 import { VisitedSection } from "../../../db/AppSchema";
-import { attachmentQueue, attachmentStorage, db, useDbQuery } from "../../../db/db";
+import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
-import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
-import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
-import { defaultSections } from "@cr-vif/pdf/constat";
+import { UploadImageModal } from "../../upload/UploadImageButton";
+import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
+import { defaultSections } from "@patrinotes/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
@@ -23,7 +23,8 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { chunk } from "pastable";
-import { getIsSectionVisited } from "@cr-vif/pdf/utils";
+import { getIsSectionVisited } from "@patrinotes/pdf/utils";
+import { useClickAway } from "react-use";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -192,6 +193,11 @@ const SectionModal = ({
 }) => {
   const isCustom = selectedSection && !defaultSections.includes(selectedSection.section!);
 
+  const ref = useRef<HTMLDivElement>(null);
+  useClickAway(ref, () => {
+    onClose();
+  });
+
   return (
     <Dialog
       open={selectedSection !== null}
@@ -206,7 +212,7 @@ const SectionModal = ({
         },
       }}
     >
-      <Box p={{ xs: "16px" }}>
+      <Box p={{ xs: "16px" }} ref={ref}>
         <ModalCloseButton onClose={onClose} />
 
         <DialogTitle
@@ -248,6 +254,13 @@ const SectionForm = ({
       setValues((values) => ({ ...values, commentaires: (values.commentaires || "") + " " + text }));
     },
   });
+
+  // sync form values when modal is closed
+  useEffect(() => {
+    return () => {
+      syncMutation.mutate();
+    };
+  }, []);
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -316,6 +329,7 @@ const SectionForm = ({
             sx={{ mb: "16px !important" }}
             textArea
             disabled={isDisabled || isRecording}
+            hintText="Cause(s) probable(s) des désordres, incidences sur d’autres éléments…"
             label="Commentaires"
             nativeTextAreaProps={{
               rows: 6,
@@ -341,7 +355,7 @@ const SectionForm = ({
           onClose();
         }}
       >
-        Enregistrer
+        Valider
       </FullWidthButton>
       <FullWidthButton
         disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}
@@ -364,78 +378,31 @@ const SectionForm = ({
 };
 
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { constatId } = routeApi.useParams();
-  const user = useLiveUser()!;
-
-  const sectionAttachmentQuery = useDbQuery(
-    db
-      .selectFrom("visited_section_attachment")
-      .selectAll()
-      .where("visited_section_id", "=", section.id)
-      .where("is_deprecated", "=", 0)
-      .orderBy("created_at", "asc"),
+  const { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
+    { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
+    constatId,
   );
-
-  const sectionAttachments = sectionAttachmentQuery.data || [];
-
-  const onClose = () => setSelectedAttachment(null);
-  const onEdit = (image: { id: string; url: string }) => setSelectedAttachment(image);
-  const onDelete = async (section: { id: string }) => {
-    await attachmentStorage.deleteFile(section.id);
-    await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", section.id).execute();
-  };
-
-  const addSectionAttachmentMutation = useMutation({
-    mutationFn: async ({ file }: { file: File }) => {
-      const processedFile = await processImage(file);
-      const attachmentId = `${constatId}/images/${v7()}.jpg`;
-      await attachmentQueue.saveAttachment({
-        attachmentId,
-        buffer: processedFile,
-        mediaType: "image/jpeg",
-      });
-
-      await db
-        .insertInto("visited_section_attachment")
-        .values({
-          id: attachmentId,
-          visited_section_id: section.id,
-          attachment_id: attachmentId,
-          label: "",
-          service_id: user.service_id,
-          created_at: new Date().toISOString(),
-          is_deprecated: 0,
-        })
-        .execute();
-
-      return attachmentId;
-    },
-  });
-
-  const onLabelChange = async (attachmentId: string, newLabel: string) => {
-    await db
-      .updateTable("visited_section_attachment")
-      .set({ label: newLabel })
-      .where("id", "=", attachmentId)
-      .execute();
-  };
 
   return (
     <Box width="100%">
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={onClose}
-        imageTable="visited_section_attachment"
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
         onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
 
       <UploadImage
-        onFiles={async (files) => addSectionAttachmentMutation.mutateAsync({ file: files[0] })}
+        onFiles={async (files) => {
+          for (const file of files) await addMutation.mutateAsync(file);
+        }}
         multiple
-        attachments={sectionAttachments}
-        onClick={(a) => setSelectedAttachment(a!)}
-        onDelete={(section) => onDelete(section)}
+        attachments={attachments}
+        onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
+        onDelete={(section) => deleteMutation.mutate(section)}
         isDisabled={isDisabled}
       />
     </Box>

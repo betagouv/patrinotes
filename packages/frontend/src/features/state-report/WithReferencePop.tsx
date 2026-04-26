@@ -1,5 +1,5 @@
 import { useWatch } from "react-hook-form";
-import { db, useDbQuery } from "../../db/db";
+import { attachmentLocalStorage, attachmentRemoteStorage, db, useDbQuery } from "../../db/db";
 import { StateReportFormType, StateReportStep, useIsStateReportDisabled, useStateReportFormContext } from "./utils";
 import { Box, Dialog, DialogTitle, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -18,10 +18,13 @@ import { pick } from "pastable";
 import { immeubleMapping } from "../ImmeubleAutocomplete";
 import { ModalCloseButton } from "../menu/MenuTitle";
 import { useStateReportAlerts } from "./alerts/StateReportAlerts.hook";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
 import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
 import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
+import { useUnsyncedAttachments } from "./hooks/useUnsyncedAttachments";
+import { ImageSyncModal } from "./ImageSyncModal";
+import { constatPdfQueries } from "./pdf/ConstatPdf.queries";
 
 export const WithReferencePop = () => {
   const form = useStateReportFormContext();
@@ -30,8 +33,6 @@ export const WithReferencePop = () => {
 
   const hasReferencePop = !!referencePop;
   if (!hasReferencePop) return null;
-
-  console.log(referencePop);
 
   return (
     <>
@@ -233,6 +234,7 @@ const CreateButton = () => {
   const [alertErrors, setAlertErrors] = useAlertErrors();
 
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const [isImageSyncModalOpen, setIsImageSyncModalOpen] = useState(false);
 
   const { constatId } = routeApi.useParams();
   const navigate = routeApi.useNavigate();
@@ -240,7 +242,15 @@ const CreateButton = () => {
   const form = useStateReportFormContext();
   const isDisabled = useIsStateReportDisabled();
 
-  const alertsQuery = useStateReportAlerts(constatId);
+  const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
+  // const unsyncedAttachments = useUnsyncedAttachments(constatId);
+  const proceedToFinalize = () => {
+    navigate({
+      to: "/constat/$constatId/pdf",
+      params: { constatId },
+      search: { mode: "view" },
+    });
+  };
 
   const onSubmit = () => {
     const values = form.getValues();
@@ -261,21 +271,14 @@ const CreateButton = () => {
       })
       .filter((alertErrors) => alertErrors.errors.email.length);
 
-    if (!missingFields.length && !alertErrors?.length) {
-      navigate({
-        to: "/constat/$constatId/pdf",
-        params: {
-          constatId,
-        },
-        search: { mode: "view" },
-      });
+    if (missingFields.length || alertErrors?.length) {
+      setAlertErrors(alertErrors ?? []);
+      setMissingFields(missingFields);
+      setIsErrorModalOpen(true);
       return;
     }
 
-    setAlertErrors(alertErrors ?? []);
-    setMissingFields(missingFields);
-
-    setIsErrorModalOpen(true);
+    proceedToFinalize();
   };
 
   const formErrors = {
@@ -286,6 +289,15 @@ const CreateButton = () => {
   return (
     <>
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
+      {isImageSyncModalOpen ? (
+        <ImageSyncModal
+          onClose={() => setIsImageSyncModalOpen(false)}
+          onIgnoreAll={() => {
+            setIsImageSyncModalOpen(false);
+            proceedToFinalize();
+          }}
+        />
+      ) : null}
       <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
         {isDisabled ? "Voir le constat" : "Finaliser le constat"}
       </RightButton>
@@ -329,6 +341,13 @@ const FormErrorModal = ({
   const navigate = routeApi.useNavigate();
   const navigateToField = (field: string) => {
     (formErrorsNavigate as any)[field]?.({ navigate });
+
+    const element = document.querySelector(`[name="${field}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      (element as HTMLElement).focus();
+    }
+
     onClose();
   };
 
@@ -410,7 +429,7 @@ const FormErrorModal = ({
             {alertErrors && alertErrors.length ? (
               <>
                 <Typography mt="16px" fontWeight="600">
-                  Alertes
+                  Alertes MH
                 </Typography>
                 <ul style={{ listStyleType: "none" }}>
                   {alertErrors.map(({ alert, errors }) => (
@@ -433,6 +452,7 @@ const FormErrorModal = ({
     </Dialog>
   );
 };
+
 const InformationsButtons = ({
   navigateToStep,
   isCustom,

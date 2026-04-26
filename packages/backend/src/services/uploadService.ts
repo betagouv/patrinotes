@@ -2,13 +2,8 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import { ENV } from "../envVars";
 import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
-import { S3 } from "@aws-sdk/client-s3";
-import { applyLinesToPicture } from "../features/image";
-import { Database, db } from "../db/db";
+import { db } from "../db/db";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import path from "path";
-import { Prettify } from "pastable";
-import { Transaction } from "kysely";
 import { sentry } from "../features/sentry";
 
 const debug = makeDebug("upload");
@@ -23,10 +18,15 @@ const client = new S3Client({
 
 export const upload = async () => {};
 const bucketUrl = `${ENV.MINIO_URL}/${ENV.MINIO_BUCKET}`;
-
 const addAttachmentPrefix = (filePath: string) => "attachment/" + filePath;
 
 export class UploadService {
+  async getPresignedUploadUrl({ filePath, contentType }: { filePath: string; contentType?: string }) {
+    const key = addAttachmentPrefix(filePath);
+    const command = new PutObjectCommand({ Bucket: bucketUrl, Key: key, ContentType: contentType });
+    return getSignedUrl(client as any, command as any, { expiresIn: 3600 });
+  }
+
   async uploadAttachment({ buffer, filePath }: { buffer: Buffer; filePath: string }) {
     debug("Uploading attachment to S3", filePath);
     const command = new PutObjectCommand({
@@ -78,7 +78,6 @@ export class UploadService {
       .where("attachment_id", "like", "%.pdf")
       .selectAll()
       .executeTakeFirst();
-    console.log(attachment);
     if (!attachment) throw new AppError(404, "PDF not found");
 
     const command = new GetObjectCommand({ Bucket: bucketUrl, Key: addAttachmentPrefix(attachment.attachment_id) });
@@ -89,85 +88,25 @@ export class UploadService {
 
     return Buffer.from(buffer);
   }
-
-  async handleNotifyPictureLines({
-    pictureId,
-    serviceId,
-    onNewImage,
-    // lines,
-  }: {
-    pictureId: string;
-    serviceId: string;
-    onNewImage?: OnNewImage;
-    // lines: Array<{ points: { x: number; y: number }[]; color: string }>;
-  }) {
-    debug("Handling picture lines", pictureId);
-    const linesQuery = await db.selectFrom("picture_lines").where("attachmentId", "=", pictureId).selectAll().execute();
-    const lines = JSON.parse(linesQuery?.[0]?.lines || "[]");
-
-    console.log(linesQuery?.[0]);
-
-    const pictureUrl = await generatePresignedUrl(addAttachmentPrefix(pictureId));
-
-    let buffer: Buffer;
-    try {
-      buffer = await applyLinesToPicture({ pictureUrl: pictureUrl, lines });
-    } catch (error) {
-      sentry?.captureException(error, { extra: { pictureId } });
-      throw error;
-    }
-
-    const name = getPictureName(pictureId, Math.round(Date.now() / 1000));
-
-    debug("Uploading picture to S3", pictureId);
-    await this.uploadAttachment({ buffer, filePath: name });
-    debug("Picture uploaded", pictureId);
-
-    const url = path.join(`https://${bucketUrl}`, name);
-
-    await db.transaction().execute(async (tx) => {
-      if (onNewImage) {
-        await onNewImage(tx, {
-          originalName: pictureId,
-          newName: name,
-          url,
-          attachmentId: pictureId,
-          serviceId: serviceId,
-        });
-      }
-      await tx
-        .deleteFrom("picture_lines")
-        .where(
-          "id",
-          "in",
-          linesQuery.map((line) => line.id),
-        )
-        .execute();
-    });
-
-    debug(url);
-    return url;
-  }
 }
-export type OnNewImage = (
-  tx: Transaction<Database>,
-  {
-    originalName,
-    newName,
-    url,
-    attachmentId,
-    serviceId,
-  }: { originalName: string; newName: string; url: string; attachmentId: string; serviceId: string },
-) => Promise<void> | void;
 
-export async function generatePresignedUrl(key: string) {
+export async function getObjectByKey(key: string): Promise<{ buffer: Buffer; contentType?: string }> {
+  const command = new GetObjectCommand({ Bucket: bucketUrl, Key: key });
+  const response = await client.send(command);
+  const buffer = await response.Body?.transformToByteArray();
+  if (!buffer) throw new AppError(404, "Attachment not found");
+  return { buffer: Buffer.from(buffer), contentType: response.ContentType };
+}
+
+export async function generatePresignedUrl(key: string, expiresIn = 3600, filename?: string) {
   const command = new GetObjectCommand({
     Bucket: bucketUrl,
     Key: key,
+    ...(filename && { ResponseContentDisposition: `inline; filename="${filename}"` }),
   });
 
   const presignedUrl = await getSignedUrl(client as any, command as any, {
-    expiresIn: 3600,
+    expiresIn,
   });
 
   const url = new URL(presignedUrl);

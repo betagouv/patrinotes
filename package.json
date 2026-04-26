@@ -1,19 +1,20 @@
 {
-  "name": "cr-vif",
+  "name": "patrinotes",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "frontend": "pnpm --filter @cr-vif/frontend",
-    "backend": "pnpm --filter @cr-vif/backend",
-    "pdf": "pnpm --filter @cr-vif/pdf",
+    "frontend": "pnpm --filter @patrinotes/frontend",
+    "backend": "pnpm --filter @patrinotes/backend",
+    "pdf": "pnpm --filter @patrinotes/pdf",
     "migration:generate": "pnpm backend drizzle generate",
     "migration:up-test": "cross-env NODE_ENV=test pnpm backend drizzle migrate",
     "migration:up": "pnpm backend drizzle migrate",
     "client:json": "pnpm backend dev --create-only",
     "client:ts": "typed-openapi ./packages/backend/openapi.json --output ./packages/frontend/src/api.gen.ts",
     "client:generate": "pnpm client:json && pnpm client:ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "adb:forward-ports": "adb reverse tcp:5173 tcp:5173 && adb reverse tcp:3002 tcp:3002 && adb reverse tcp:8080 tcp:8080"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +32,7 @@
     "prettier": "^3.2.5",
     "tsx": "^4.20.6",
     "typed-openapi": "^0.4.1",
+    "uuid": "^13.0.0",
     "vite-node": "^1.4.0"
   },
   "pnpm": {

@@ -1,18 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
 import { db } from "../db/db";
-import { type UseFormReturn, useWatch } from "react-hook-form";
+import { type UseFormReturn, useFormContext, useWatch } from "react-hook-form";
 import useDebounce from "react-use/lib/useDebounce";
 import { Banner } from "./Banner";
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { fr } from "@codegouvfr/react-dsfr";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
-import { useIsFormDisabled } from "../features/DisabledContext";
 import { Report, Service, StateReport } from "../db/AppSchema";
 import { useAppStatus } from "../hooks/useAppStatus";
 import { Box, BoxProps, styled, Typography } from "@mui/material";
 import { Flex } from "./ui/Flex";
 import { Button, Center, Input } from "./MUIDsfr";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export const useSyncForm = <T extends Report | StateReport | Service>({
   form,
@@ -27,6 +26,14 @@ export const useSyncForm = <T extends Report | StateReport | Service>({
 }) => {
   const newObject = useWatch({ control: form.control });
   const diff = disabled ? {} : getDiff(newObject, baseObject);
+
+  // Sync when unmounting so no data is lost
+  useEffect(() => {
+    return () => {
+      syncMutation.mutate();
+    };
+  }, []);
+
   const syncMutation = useMutation({
     mutationFn: async () => {
       if (Object.keys(diff).length === 0) return;
@@ -34,13 +41,13 @@ export const useSyncForm = <T extends Report | StateReport | Service>({
     },
   });
 
-  useDebounce(() => syncMutation.mutate(), 500, [diff]);
+  const [, cancelSync] = useDebounce(() => syncMutation.mutate(), 500, [diff]);
 
-  return { newObject };
+  return { newObject, syncMutation, cancelSync };
 };
 
-export function SyncFormBanner({ form, baseObject }: { form: UseFormReturn<Report>; baseObject: Report }) {
-  const { newObject } = useSyncForm({ form, baseObject, disabled: useIsFormDisabled(), syncObject });
+export function SyncFormBanner({ newObject }: { newObject: Partial<Report> }) {
+  const form = useFormContext<Report>();
   const navigate = useNavigate();
   const goBack = () => navigate({ to: "/", search: { document: "compte-rendus" } });
 
@@ -263,7 +270,7 @@ const messagesColor: Record<SyncFormStatus, string> = {
 
 export type SyncFormStatus = "offline" | "pending" | "saved" | "saving";
 
-async function syncObject(id: string, diff: Record<string, any>) {
+export async function syncObject(id: string, diff: Record<string, any>) {
   console.log("saving", id, diff);
 
   await db.updateTable("report").where("id", "=", id).set(diff).execute();

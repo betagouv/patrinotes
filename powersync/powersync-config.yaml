@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DATABASE_URL
+
+      # SSL settings
+      sslmode: disable # 'verify-full' (default) or 'verify-ca' or 'disable'
+
+# Connection settings for sync bucket storage
+storage:
+  type: mongodb
+  uri: mongodb://mongo:27017/powersync_demo
+
+# The port which the PowerSync API server will listen on
+port: !env PS_PORT
+sync_config:
+  path: sync-config.yaml
+
+# Settings for client authentication
+client_auth:
+  jwks_uri: http://keycloak:8080/realms/master/protocol/openid-connect/certs
+  issuer: "http://keycloak:8080/realms/master"
+  audience: ["account"]
+
+  # Settings for telemetry reporting
+  # See https://docs.powersync.com/self-hosting/telemetry
+  telemetry:
+    # Opt out of reporting anonymized usage metrics to PowerSync telemetry service
+    disable_telemetry_sharing: false

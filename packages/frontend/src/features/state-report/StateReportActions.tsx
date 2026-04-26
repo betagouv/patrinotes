@@ -10,7 +10,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { api } from "../../api";
 import { useCanEditReport } from "../../hooks/useCanEditReport";
 import { db } from "../../db/db";
-import { getPDFInMailName } from "@cr-vif/pdf";
+import { getPDFInMailName } from "@patrinotes/pdf";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { useStyles } from "tss-react";
@@ -19,22 +19,9 @@ import { StateReport } from "../../db/AppSchema";
 import { ModalCloseButton } from "../menu/MenuTitle";
 import { ConfirmationModal } from "#components/ui/ConfirmationModal.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
-
-const getStateReportMailName = (stateReport: StateReport) => {
-  return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
-};
-
-function cleanString(str: string): string {
-  return str
-    .normalize("NFD") // Decompose accented characters
-    .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
-    .toLowerCase() // Convert to lowercase
-    .trim() // Remove leading/trailing spaces
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/[^\w-]/g, "") // Remove special characters (keep letters, numbers, hyphens)
-    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
-}
+import { emptyStateReport } from "./StateReportForm";
+import { format } from "date-fns";
+import { getStateReportMailName } from "@patrinotes/pdf/constat";
 
 export const StateReportActions = forwardRef<HTMLDivElement, { report: StateReportWithUser }>(({ report }, ref) => {
   const user = useUser()!;
@@ -69,22 +56,40 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
         "service_id",
         "attachment_id",
         "createdByName",
+        "validation_status",
       ]);
 
-      return db
-        .insertInto("state_report")
-        .values({
-          ...payload,
-          id: v4(),
-          titre_edifice: `${report.titre_edifice ?? "Sans titre"}`,
-          created_at: new Date().toISOString(),
-          created_by: user.id,
-          disabled: 0,
-          service_id: user.service_id,
-          redacted_by: user.name,
-          date_visite: new Date().toISOString(),
-        })
+      const visitedSections = await db
+        .selectFrom("visited_section")
+        .selectAll()
+        .where("state_report_id", "=", report.id)
         .execute();
+
+      const newReportId = v4();
+
+      const visitedSectionValues = visitedSections.map((section) => ({
+        ...section,
+        id: v4(),
+        state_report_id: newReportId,
+      }));
+
+      return db.transaction().execute(async (trx) => {
+        await trx
+          .insertInto("state_report")
+          .values({
+            ...payload,
+            id: newReportId,
+            titre_edifice: `${report.titre_edifice ?? "Sans titre"}`,
+            created_at: new Date().toISOString(),
+            created_by: user.id,
+            disabled: 0,
+            service_id: user.service_id,
+            redacted_by: user.name,
+            date_visite: new Date().toISOString(),
+          })
+          .execute();
+        await trx.insertInto("visited_section").values(visitedSectionValues).execute();
+      });
     },
   });
 

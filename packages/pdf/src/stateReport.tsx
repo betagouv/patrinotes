@@ -10,28 +10,27 @@ import {
 import {
   ABORDS_DE_L_EDIFICE_SECTION,
   ARCHEOLOGIE_SECTION,
+  AlertWithAttachments,
   BIODIVERSITE_SECTION,
   EDIFICE_EN_PERIL_SECTION,
-  MarianneHeader,
   OBJETS_MOBILIERS_SECTION,
-  Pagination,
   SECURITE_SECTION,
   SITE_CLASSE_OU_INSCRIT_SECTION,
+  SectionWithAttachments,
+  StateReportWithUserAndAttachments,
+  addSIfPlural,
   deserializeMandatoryEmails,
+  getIsAlertVisited,
   getIsSectionVisited,
   initFonts,
   processHtml,
 } from "./utils";
+import { MarianneHeader } from "./components/MarianneHeader";
+import { Pagination } from "./components/Pagination";
 import { Html } from "react-pdf-html";
-import { StateReportWithUser } from "../../frontend/src/features/report/ReportList";
 import React from "react";
 import { groupBy } from "pastable";
 import { format } from "date-fns";
-import type {
-  AlertWithAttachments,
-  SectionWithAttachments,
-  StateReportWithUserAndAttachments,
-} from "../../frontend/src/features/state-report/pdf/ConstatPdfContext";
 
 export const StateReportPDFDocument = ({ service, htmlString, images }: StateReportPDFDocumentProps) => {
   return (
@@ -235,22 +234,25 @@ export const transformHeaderText = (text: string | null | undefined) => {
   if (!text) return "";
 
   const cleanString = text.normalize("NFC").replaceAll("\n", " ").replaceAll("  ", " ").trim();
+  const uppercaseString = cleanString.toUpperCase();
 
-  if (cleanString.startsWith("Préfet") || cleanString.startsWith("Préfète")) {
+  if (uppercaseString.startsWith("PRÉFET") || uppercaseString.startsWith("PRÉFÈTE")) {
     return addBreaksAfterWords(cleanString, ["Préfet", "Préfète", "région"]);
   }
 
-  if (cleanString.match(/Direction (régionale )?des affaires culturelles/)) {
+  if (
+    uppercaseString.startsWith("DIRECTION DES AFFAIRES CULTURELLES") ||
+    uppercaseString.startsWith("DIRECTION RÉGIONALE DES AFFAIRES CULTURELLES")
+  ) {
     return addBreaksAfterWords(cleanString, ["culturelles"]);
   }
 
-  if (cleanString.startsWith("Unité départementale de")) {
-    console.log("matched");
-    return addBreaksAfterWords(cleanString, ["départementale de", "patrimoine"]);
+  if (uppercaseString.startsWith("UNITÉ DÉPARTEMENTALE DE")) {
+    return addBreaksAfterWords(cleanString, ["DÉPARTEMENTALE DE", "PATRIMOINE"]);
   }
 
-  if (cleanString.startsWith("Conservation régionale des monuments historiques")) {
-    return addBreaksAfterWords(cleanString, ["monuments"]);
+  if (uppercaseString.startsWith("CONSERVATION RÉGIONALE DES MONUMENTS HISTORIQUES")) {
+    return addBreaksAfterWords(cleanString, ["MONUMENTS"]);
   }
 
   return cleanString;
@@ -274,10 +276,9 @@ export const getStateReportHtmlString = ({
 }) => {
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
-  const planSituationAttachment = stateReport.attachments.find((att) => stateReport.plan_situation === att.id);
-  const planEdificeAttachment = stateReport.attachments.find((att) => stateReport.plan_edifice === att.id);
-  const vuesGeneralesIds = stateReport.vue_generale ? stateReport.vue_generale.split(";") : [];
-  const vuesGeneralesAttachments = stateReport.attachments.filter((att) => vuesGeneralesIds.includes(att.id));
+  const planSituationAttachment = stateReport.attachments.find((att) => att.type === "plan_situation");
+  const planEdificeAttachment = stateReport.attachments.find((att) => att.type === "plan_edifice");
+  const vuesGeneralesAttachments = stateReport.attachments.filter((att) => att.type === "vue_generale");
 
   const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 
@@ -290,6 +291,8 @@ export const getStateReportHtmlString = ({
     .filter(Boolean)
     .join(" ");
 
+  const filteredAlerts = (alerts || []).filter((alert) => alert.show_in_report).filter(getIsAlertVisited);
+
   // accessibilité
   // h1 pour les deux premières lignes
   // h2 pour les titres de sections
@@ -301,7 +304,7 @@ export const getStateReportHtmlString = ({
       ${stateReport.titre_edifice ? `<span style="font-size: 20pt"><b>${stateReport.titre_edifice}</b></span><br/><br/>` : ""}
     </p>
     <p>
-      Constat dressé par <b>${stateReport.createdByName}</b> suite à la visite  ${isPartielle ? " partielle" : ""}
+      Constat dressé par <b>${stateReport.redacted_by ?? stateReport.createdByName}</b> suite à la visite  ${isPartielle ? " partielle" : ""}
       ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}.
 
       <br/>
@@ -409,20 +412,21 @@ export const getStateReportHtmlString = ({
         <br/>
         <div>
           ${preconisationsHtml}
+        </div>
         </div>`
           : ""
       }
 
       ${
-        alerts?.filter((alert) => alert.show_in_report).length
+        filteredAlerts.length
           ? `<div id="alertes">
-        <h2>Alertes</h2>
-        <b>
-          Suite à la visite, ${alerts.length} ont été signalées et transmises aux services concernés :
-        </b>
-        <br/>
-        ${generateAlertsTable(alerts)}
-        </div>`
+              <h2>Alertes</h2>
+              <b>
+                Suite à la visite, ${filteredAlerts.length} alerte${filteredAlerts.length > 1 ? "s ont été" : " a été"} signalée${filteredAlerts.length > 1 ? "s" : ""} et transmise${filteredAlerts.length > 1 ? "s" : ""} aux services concernés :
+              </b>
+              <br/>
+              ${generateAlertsTable(filteredAlerts)}
+            </div>`
           : ""
       }
 
@@ -495,37 +499,36 @@ const uppercaseFirstLetter = (str: string) => {
 
 type Image = { url: string; label?: string; title?: string; attachmentId: string };
 
-const generateImagesTable = (images: (Image | undefined)[]) => {
+const generateImagesTable = (images: (Image | undefined)[], options: { hideTitle?: boolean } = {}) => {
   const rows = [];
   for (let i = 0; i < images.length; i += 2) {
     const firstImage = images[i];
     const secondImage = images[i + 1];
 
     rows.push(`<div class="column-block">
-      ${generateImageCell(firstImage)}
-      ${generateImageCell(secondImage)}
+      ${generateImageCell(firstImage, options)}
+      ${generateImageCell(secondImage, options)}
     </div><div></div>
     `);
   }
   return `${rows.join("")}`;
 };
 
-const generateImageCell = (image: Image | undefined) => {
-  if (!image) return '<div class="column"></div>';
+const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?: boolean } = {}) => {
+  if (!image) return "";
   return `<unbreakable class="column">
       ${
         image.title
           ? `<p>
           <span style="font-size: 16pt"><strong>${image.title}</strong></span>
           </p>`
-          : `<p style="height: 16pt"></p>`
+          : hideTitle
+            ? ""
+            : `<p style="height: 16pt"></p>`
       }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%;  margin-bottom: 30px;" />
-      <div style="position:relative">
-        <div style="position:absolute; bottom:0; left:0; right:0; top:-30px;text-align:center; font-size:8pt; color:gray;">
-        ${image.label ? `<span>${image.label}</span>` : ""}
-
-        </div>
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%; margin-bottom: 0px;" />
+      <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
+        ${image.label ? image.label : ""}
       </div>
   </unbreakable>`;
 };
@@ -608,15 +611,22 @@ const generateAlertTableRow = (alert: MinimalAlert) => {
   if (alert.alert === OBJETS_MOBILIERS_SECTION) {
     return `
       <div>- ${alert.objet_ou_mobilier_name} (<a href="${`https://pop.culture.gouv.fr/notice/palissy/${alert.objet_ou_mobilier}`}">${alert.objet_ou_mobilier}</a>) : ${alert.probleme}</div>
-      <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}</div>
-      ${generateImagesTable(alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })))}
+      <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}<br/>
+      ${generateImagesTable(
+        alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })),
+        { hideTitle: true },
+      )}</div>
     `;
   }
 
   return `<div>
-  <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}</div>
-
-  ${generateImagesTable(alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })))}
+  <div style="margin-bottom: 8px;">
+    <u>Commentaires :</u> ${alert.commentaires || "Aucun"}
+  </div>
+  ${generateImagesTable(
+    alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })),
+    { hideTitle: true },
+  )}
   
   </div>`;
 };
@@ -730,8 +740,8 @@ type Images = {
   marianneFooter: string;
 };
 
-export const getStateReportMailName = (stateReport: { titre_edifice?: string | null }) => {
-  return `constat-d-etat-${cleanString(stateReport.titre_edifice || "")}.pdf`;
+export const getStateReportMailName = ({ titre_edifice }: { titre_edifice?: string | null }) => {
+  return `constat-d-etat${titre_edifice ? `-${cleanString(titre_edifice || "")}` : ""}_${format(new Date(), "ddMMyyyy")}.pdf`;
 };
 
 function cleanString(str: string): string {

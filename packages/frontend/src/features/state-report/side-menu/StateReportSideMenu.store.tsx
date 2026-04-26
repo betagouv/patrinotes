@@ -63,6 +63,7 @@ export const useIsEditingAlertEmail = () => {
 
 export const useAlertErrors = () => {
   const alertErrors = useSelector(stateReportSideMenuStore, (state) => state.context.alertErrors);
+
   const setAlertErrors = (alertErrors: { alert: string; errors: AlertErrors }[] | null) =>
     stateReportSideMenuStore.send({ type: "setAlertErrors", alertErrors });
 

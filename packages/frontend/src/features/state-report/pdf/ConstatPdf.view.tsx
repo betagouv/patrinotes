@@ -1,47 +1,64 @@
-import { useQuery } from "@tanstack/react-query";
-import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@cr-vif/pdf/constat";
-import { pdf } from "@react-pdf/renderer";
-import { Center } from "#components/MUIDsfr.tsx";
-import { Spinner } from "#components/Spinner.tsx";
-import { PdfCanvas } from "../../../routes/pdf.$reportId";
+import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
+import { BlobProvider } from "@react-pdf/renderer";
+import { JSX, useEffect, useMemo } from "react";
 import { useUser } from "../../../contexts/AuthContext";
 import { useHtmlString } from "./ConstatPdf.hook";
+import { Center } from "#components/MUIDsfr.tsx";
+import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
+import { Spinner } from "#components/Spinner.tsx";
+import { useSendConstatFormContext } from "./ConstatPdfContext";
+import { AlertsReminder } from "./AlertsReminder";
+import { Box } from "@mui/material";
 
-export const ViewConstatPdf = () => {
+export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => {
   const htmlString = useHtmlString();
   const user = useUser()!;
+  const document = useMemo(
+    () => (
+      <StateReportPDFDocument
+        htmlString={htmlString}
+        images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
+        service={user.service as any}
+      />
+    ),
+    [htmlString, user.service?.id],
+  );
 
   return (
-    <Center>
-      <Center width="800px" flexDirection="column">
-        <View
-          htmlString={htmlString}
-          images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
-          service={user.service as any}
-        />
+    <Center flexDirection="column">
+      <Center width={{ xs: "100%", lg: "944px" }} flexDirection="column" marginBottom="96px">
+        {step === "send" ? <AlertsReminder /> : null}
+        <Box mt={{ xs: "16px", lg: "80px" }}>
+          <BlobProvider document={document}>
+            {({ blob, loading, error }) => {
+              if (loading) {
+                return (
+                  <Center mt="64px">
+                    <Spinner />
+                  </Center>
+                );
+              }
+              if (error) {
+                return <div>Error: {error.message}</div>;
+              }
+              return (
+                <BlobSync blob={blob!}>
+                  <PDFViewerPaginated blob={blob!} />
+                </BlobSync>
+              );
+            }}
+          </BlobProvider>
+        </Box>
       </Center>
     </Center>
   );
 };
 
-const View = (props: StateReportPDFDocumentProps) => {
-  const query = useQuery({
-    queryKey: ["state-report-pdf", props.htmlString],
-    queryFn: async () => {
-      const blob = await pdf(<StateReportPDFDocument {...props} />).toBlob();
-      return blob;
-    },
-    gcTime: 0,
-    refetchOnWindowFocus: false,
-    enabled: !!props.htmlString,
-  });
-
-  if (query.isLoading || !query.data)
-    return (
-      <Center height="100%" mt="100px">
-        <Spinner />
-      </Center>
-    );
-
-  return <PdfCanvas blob={query.data as Blob} />;
+// TODO: do better
+const BlobSync = ({ blob, children }: { blob: Blob; children: JSX.Element }) => {
+  const form = useSendConstatFormContext();
+  useEffect(() => {
+    form.setValue("pdfBlob", blob);
+  }, [blob]);
+  return <>{children}</>;
 };

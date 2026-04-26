@@ -36,6 +36,39 @@ export const getReportQueries = (
   return { baseQuery, countQuery };
 };
 
+export const getSearchReportQueries = (
+  search: string,
+  scope: "my" | "all",
+  user: { id: string; service_id: string | null },
+) => {
+  let baseQuery = reportQueries.base.where((eb) =>
+    eb.or([
+      eb("title", "like", `%${search}%`),
+      eb("redactedBy", "like", `%${search}%`),
+      eb("applicantName", "like", `%${search}%`),
+      eb("applicantAddress", "like", `%${search}%`),
+      eb("city", "like", `%${search}%`),
+      eb("zipCode", "like", `%${search}%`),
+    ]),
+  );
+  let countQuery = reportQueries.count.where((eb) =>
+    eb.or([
+      eb("title", "like", `%${search}%`),
+      eb("redactedBy", "like", `%${search}%`),
+      eb("applicantName", "like", `%${search}%`),
+      eb("applicantAddress", "like", `%${search}%`),
+      eb("city", "like", `%${search}%`),
+      eb("zipCode", "like", `%${search}%`),
+    ]),
+  );
+  if (scope === "my") {
+    baseQuery = baseQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
+    countQuery = countQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
+  }
+
+  return { baseQuery, countQuery };
+};
+
 const stateReportQueries = {
   base: db
     .selectFrom("state_report")
@@ -66,6 +99,39 @@ export const getStateReportQueries = (
   } else {
     baseQuery = baseQuery.where("state_report.service_id", "=", user.service_id);
     countQuery = countQuery.where("state_report.service_id", "=", user.service_id);
+  }
+
+  return { baseQuery, countQuery };
+};
+
+export const getSearchStateReportQueries = (
+  search: string,
+  scope: "my" | "all",
+  user: { id: string; service_id: string | null },
+) => {
+  let baseQuery = stateReportQueries.base.where((eb) =>
+    eb.or([
+      eb("titre_edifice", "like", `%${search}%`),
+      eb("redacted_by", "like", `%${search}%`),
+      eb("commune", "like", `%${search}%`),
+      eb("commune_historique", "like", `%${search}%`),
+      eb("reference_pop", "like", `%${search}%`),
+      eb("code_postal", "like", `%${search}%`),
+    ]),
+  );
+  let countQuery = stateReportQueries.count.where((eb) =>
+    eb.or([
+      eb("titre_edifice", "like", `%${search}%`),
+      eb("redacted_by", "like", `%${search}%`),
+      eb("commune", "like", `%${search}%`),
+      eb("commune_historique", "like", `%${search}%`),
+      eb("reference_pop", "like", `%${search}%`),
+      eb("code_postal", "like", `%${search}%`),
+    ]),
+  );
+  if (scope === "my") {
+    baseQuery = baseQuery.where("created_by", "=", user.id);
+    countQuery = countQuery.where("created_by", "=", user.id);
   }
 
   return { baseQuery, countQuery };

@@ -7,12 +7,13 @@ import { PopImmeuble } from "../db/AppSchema";
 import { useFormContext, useWatch } from "react-hook-form";
 import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "./state-report/utils";
 import { Spinner } from "#components/Spinner.tsx";
+import { useStatus, useSyncStream } from "@powersync/react";
 import { fr } from "@codegouvfr/react-dsfr";
 import Highlighter from "react-highlight-words";
 import { Flex } from "#components/ui/Flex.tsx";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ModalCloseButton } from "./menu/MenuTitle";
-import { Alert, Button } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Center } from "#components/MUIDsfr.tsx";
 
 type FilterablePopImmeubles = Pick<
   PopImmeuble,
@@ -61,6 +62,8 @@ export const ImmeubleAutocomplete = () => {
   );
   const rawItems = immeubleQuery.data ?? [null];
   const searchEngine = new Fuse(rawItems, fuseOptions);
+
+  const popSynced = useSyncStream({ name: "pop_stream" })?.subscription.hasSynced;
 
   const setValue = async (item: FilterablePopImmeubles | null) => {
     if (isDisabled) return;
@@ -180,6 +183,7 @@ export const ImmeubleAutocomplete = () => {
           popper: "immeubles-autocomplete-popper",
           noOptions: "immeubles-autocomplete-no-options",
         }}
+        disabled={isDisabled}
         open={areSuggestionsShown}
         clearOnBlur={false}
         disablePortal
@@ -192,10 +196,18 @@ export const ImmeubleAutocomplete = () => {
         // TODO: use coordinates to sort results
         filterOptions={(x, state) => {
           if (!state.inputValue) return [];
+
           const searchResults = searchEngine
             .search(state.inputValue)
             .map((result) => result.item)
             .slice(0, 15);
+
+          const isReferenceSearch = state.inputValue.trim().startsWith("PA000");
+          if (isReferenceSearch) {
+            return searchResults.filter((result) =>
+              result.reference?.toLowerCase().startsWith(state.inputValue.trim().toLowerCase()),
+            );
+          }
 
           return [
             ...(isCustom
@@ -299,7 +311,9 @@ export const ImmeubleAutocomplete = () => {
         )}
         noOptionsText={
           !referencePop && inputValue ? (
-            <Box>{immeubleQuery.isLoading ? <Spinner size={20} /> : "Aucun résultat"}</Box>
+            <Center height="80px">
+              {immeubleQuery.isLoading || !popSynced ? <Spinner size={50} /> : "Aucun résultat"}
+            </Center>
           ) : null
         }
       />
@@ -310,6 +324,7 @@ export const ImmeubleAutocomplete = () => {
             priority="secondary"
             sx={{ width: { xs: "100%", lg: "unset" }, justifyContent: { xs: "center", lg: "unset" } }}
             onClick={() => form.setValue("reference_pop", "CUSTOM")}
+            disabled={isDisabled}
           >
             Créer un constat sans lien MH
           </Button>

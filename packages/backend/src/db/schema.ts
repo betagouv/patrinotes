@@ -40,6 +40,7 @@ export const internalUser = pgTable(
     temporaryLinkExpiresAt: text(),
     userId: text().notNull(),
     newsletter: boolean().default(false),
+    createdAt: timestamp({ mode: "string" }).defaultNow(),
   },
   (table) => [
     foreignKey({
@@ -82,6 +83,7 @@ export const serviceInstructeurs = pgTable("service_instructeurs", {
 
 export const whitelist = pgTable("whitelist", {
   email: text().primaryKey().notNull(),
+  createdAt: timestamp({ mode: "string" }).defaultNow(),
 });
 
 export const service = pgTable("service", {
@@ -158,7 +160,9 @@ export const report = pgTable(
 export const reportAttachment = pgTable("report_attachment", {
   id: text().primaryKey().notNull(),
   isDeprecated: boolean("is_deprecated"),
+  isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
+  label: text(),
   reportId: text("report_id").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }),
   service_id: text("service_id"),
@@ -167,10 +171,12 @@ export const reportAttachment = pgTable("report_attachment", {
 export const stateReportAttachment = pgTable("state_report_attachment", {
   id: text().primaryKey().notNull(),
   isDeprecated: boolean("is_deprecated"),
+  isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   stateReportId: text("state_report_id").notNull(),
-  createdAt: timestamp("created_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
   label: text(),
+  type: text().$type<"plan_situation" | "plan_edifice" | "vue_generale">(),
   service_id: text("service_id"),
 });
 
@@ -192,6 +198,7 @@ export const stateReportAlert = pgTable("state_report_alert", {
 export const stateReportAlertAttachment = pgTable("state_report_alert_attachment", {
   id: text().primaryKey().notNull(),
   isDeprecated: boolean("is_deprecated"),
+  isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   stateReportAlertId: text("state_report_alert_id").notNull(),
   label: text(),
@@ -205,15 +212,6 @@ export const pdfSnapshot = pgTable("pdf_snapshot", {
   html: text(),
   report: text(),
   userId: text("user_id"),
-});
-
-export const pictureLines = pgTable("picture_lines", {
-  id: text().primaryKey().notNull(),
-  attachmentId: text("attachmentId").notNull(),
-  lines: text().notNull(),
-  createdAt: timestamp({ mode: "string" }),
-  table: text().notNull(),
-  serviceId: text("service_id"),
 });
 
 export const pictures = pgTable(
@@ -297,6 +295,24 @@ export const userSettings = pgTable("user_settings", {
   id: text().primaryKey().notNull(),
   userId: text("user_id"),
   defaultEmails: text("default_emails"),
+  serviceId: text("service_id"),
+  validationEnabled: boolean("validation_enabled").default(false),
+  validationEmail: text("validation_email"),
+  validationNom: text("validation_nom"),
+  validationPrenom: text("validation_prenom"),
+});
+
+export const constatValidation = pgTable("constat_validation", {
+  id: text().primaryKey().notNull(),
+  stateReportId: text("state_report_id"),
+  token: text().notNull(),
+  tokenExpiresAt: text("token_expires_at").notNull(),
+  validatorEmail: text("validator_email").notNull(),
+  status: text().notNull().default("pending"),
+  comment: text(),
+  recipients: text().notNull(),
+  pdfPath: text("pdf_path").notNull(),
+  createdAt: text("created_at").notNull(),
   serviceId: text("service_id"),
 });
 
@@ -634,7 +650,8 @@ export const stateReport = pgTable(
     // contexte de la visite
     natureVisite: text("nature_visite"),
     visite_partielle_details: text("visite_partielle_details"),
-    bilanQuinquennal: text("bilan_quinquennal"),
+    visite_details: text("visite_details"),
+    bilanQuinquennal: boolean("bilan_quinquennal").default(true),
     dateVisite: timestamp("date_visite", { mode: "string" }),
     redactedBy: text("redacted_by"),
     personnes_presentes: text("personnes_presentes"),
@@ -648,9 +665,6 @@ export const stateReport = pgTable(
     etatGeneral: text("etat_general"),
     proportionDansCetEtat: text("proportion_dans_cet_etat"),
     etatCommentaires: text("etat_commentaires"),
-    planSituation: text("plan_situation"),
-    planEdifice: text("plan_edifice"),
-    vueGenerale: text("vue_generale"),
     preconisations: text(),
     preconisations_commentaires: text("preconisations_commentaires"),
 
@@ -662,6 +676,8 @@ export const stateReport = pgTable(
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     disabled: boolean(),
+    validationStatus: text("validation_status"),
+    alertsSent: boolean("alerts_sent").default(false),
   },
   (table) => [
     foreignKey({
@@ -695,6 +711,7 @@ export const visitedSection = pgTable(
 export const visitedSectionAttachment = pgTable("visited_section_attachment", {
   id: text().primaryKey().notNull(),
   isDeprecated: boolean("is_deprecated"),
+  isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   visitedSectionId: text("visited_section_id").notNull(),
   label: text(),
@@ -725,4 +742,13 @@ export const popImages = pgTable("pop_images", {
   label: text(),
   copyright: text(),
   dept_number: text("dept_number"),
+});
+
+export const attachment_redirection = pgTable("attachment_redirection", {
+  id: text().primaryKey().notNull(),
+  s3Key: text("s3_key").notNull(),
+  name: text(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+  createdBy: text("created_by").notNull(),
+  sentTo: text("sent_to").notNull(),
 });

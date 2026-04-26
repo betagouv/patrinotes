@@ -33,7 +33,6 @@ export type Database = {
   report: Kyselify<typeof tables.report>;
   report_attachment: Kyselify<typeof tables.reportAttachment>;
   pdf_snapshot: Kyselify<typeof tables.pdfSnapshot>;
-  picture_lines: Kyselify<typeof tables.pictureLines>;
   transactions: Kyselify<typeof tables.transactions>;
   sent_email: Kyselify<typeof tables.sentEmail>;
   state_report_sent_email: Kyselify<typeof tables.stateReportSentEmail>;
@@ -50,4 +49,6 @@ export type Database = {
   visited_section: Kyselify<typeof tables.visitedSection>;
   visited_section_attachment: Kyselify<typeof tables.visitedSectionAttachment>;
   pop_images: Kyselify<typeof tables.popImages>;
+  constat_validation: Kyselify<typeof tables.constatValidation>;
+  attachment_redirection: Kyselify<typeof tables.attachment_redirection>;
 };

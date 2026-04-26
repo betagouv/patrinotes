@@ -1,25 +1,24 @@
-import { Box, BoxProps, Stack, Typography } from "@mui/material";
-import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "../utils";
-import { UseFormReturn, useWatch } from "react-hook-form";
-import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
-import Checkbox from "@codegouvfr/react-dsfr/Checkbox";
 import { Button, Input } from "#components/MUIDsfr.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
-import { v7 } from "uuid";
-import { PictureThumbnail, processImage } from "../../upload/UploadReportImage";
-import { attachmentQueue, attachmentStorage, db } from "../../../db/db";
-import { useLiveUser } from "../../../contexts/AuthContext";
-import { UploadImageModal, UploadImageWithEditModal } from "../../upload/UploadImageButton";
 import { Flex } from "#components/ui/Flex.tsx";
-import { StateReport } from "../../../db/AppSchema";
-import { useRef, useState } from "react";
-import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
-import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
-import { deserializePreconisations, serializePreconisations } from "@cr-vif/pdf/constat";
+import Checkbox from "@codegouvfr/react-dsfr/Checkbox";
+import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
+import { deserializePreconisations, serializePreconisations } from "@patrinotes/pdf/constat";
+import { Box, BoxProps, Stack, Typography } from "@mui/material";
+import { getRouteApi } from "@tanstack/react-router";
+import { useActorRef, useSelector } from "@xstate/react";
+import { useCallback, useRef, useState } from "react";
+import { v7 } from "uuid";
+import { useWatch } from "react-hook-form";
+import { useLiveUser } from "../../../contexts/AuthContext";
+import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../../../db/db";
+import { useIsDesktop } from "../../../hooks/useIsDesktop";
+import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { attachmentUploadMachine } from "../../upload/machines/attachmentUploadMachine";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
+import { UploadImageModal } from "../../upload/UploadImageButton";
+import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { ButtonsSwitch } from "../WithReferencePop";
 
 const routeApi = getRouteApi("/constat/$constatId");
@@ -126,72 +125,54 @@ const PlanSituation = ({
   setSelectedAttachment,
   isDisabled,
 }: {
-  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  setSelectedAttachment: (attachment: MinimalAttachment, blobUrl: string) => void;
   isDisabled: boolean;
 }) => {
-  const form = useStateReportFormContext();
-  const value = useWatch({ control: form.control, name: "plan_situation" });
+  const { constatId } = routeApi.useParams();
 
-  const attachmentQuery = useStateReportAttachmentQuery(value);
+  const attachmentQuery = useTypeAttachmentQuery(constatId, "plan_situation");
   const attachment = attachmentQuery.data;
 
-  const addPlanSituationFileMutation = useAddStateReportFileMutation("plan_situation");
-  const deletePlanSituationFileMutation = useDeleteAttachmentMutation("plan_situation");
+  const { addMutation, deleteMutation } = useStateReportAttachmentUpload({ constatId, type: "plan_situation" });
 
   return (
     <Box flex="1">
       <Typography mb="8px">Plan de situation</Typography>
       <UploadImage
-        onFiles={async (files) => addPlanSituationFileMutation.mutateAsync({ file: files[0] })}
+        onFiles={async (files) => addMutation.mutateAsync(files[0])}
         attachments={attachment ? [attachment] : []}
         multiple={false}
-        onClick={() => setSelectedAttachment(attachment!)}
-        onDelete={() => deletePlanSituationFileMutation.mutate(attachment!.id)}
+        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
+        onDelete={() => deleteMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
       />
     </Box>
   );
 };
 
-const useDeleteAttachmentMutation = (property: keyof StateReport) => {
-  const { constatId } = routeApi.useParams();
-  return useMutation({
-    mutationFn: async (attachmentId: string) => {
-      await attachmentStorage.deleteFile(attachmentId);
-      await db
-        .updateTable("state_report")
-        .set({ [property]: null })
-        .where("id", "=", constatId)
-        .execute();
-    },
-  });
-};
-
 const PlanEdifice = ({
   setSelectedAttachment,
   isDisabled,
 }: {
-  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  setSelectedAttachment: (attachment: MinimalAttachment, blobUrl: string) => void;
   isDisabled: boolean;
 }) => {
-  const form = useStateReportFormContext();
-  const value = useWatch({ control: form.control, name: "plan_edifice" });
+  const { constatId } = routeApi.useParams();
 
-  const attachmentQuery = useStateReportAttachmentQuery(value);
+  const attachmentQuery = useTypeAttachmentQuery(constatId, "plan_edifice");
   const attachment = attachmentQuery.data;
 
-  const addPlanEdificeFileMutation = useAddStateReportFileMutation("plan_edifice");
-  const deletePlanEdificeFileMutation = useDeleteAttachmentMutation("plan_edifice");
+  const { addMutation, deleteMutation } = useStateReportAttachmentUpload({ constatId, type: "plan_edifice" });
 
   return (
     <Box flex="1">
       <Typography mb="8px">Plan de l'édifice</Typography>
       <UploadImage
-        onFiles={async (files) => addPlanEdificeFileMutation.mutateAsync({ file: files[0] })}
+        onFiles={async (files) => addMutation.mutateAsync(files[0])}
         attachments={attachment ? [attachment] : []}
         multiple={false}
-        onClick={() => setSelectedAttachment(attachment!)}
-        onDelete={() => deletePlanEdificeFileMutation.mutate(attachment!.id)}
+        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
+        onDelete={() => deleteMutation.mutate(attachment!.id)}
         isDisabled={isDisabled}
       />
     </Box>
@@ -202,184 +183,211 @@ const VuesGenerales = ({
   setSelectedAttachment,
   isDisabled,
 }: {
-  setSelectedAttachment: (attachment: MinimalAttachment | null) => void;
+  setSelectedAttachment: (attachment: MinimalAttachment, blobUrl: string) => void;
   isDisabled: boolean;
 }) => {
   const { constatId } = routeApi.useParams();
-  const user = useLiveUser()!;
 
-  const form = useStateReportFormContext();
-  const value = useWatch({ control: form.control, name: "vue_generale" });
+  const attachmentsQuery = useDbQuery(
+    db
+      .selectFrom("state_report_attachment")
+      .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
+      .where("state_report_attachment.state_report_id", "=", constatId)
+      .where("state_report_attachment.type", "=", "vue_generale")
+      .where("state_report_attachment.is_deprecated", "!=", 1)
+      .orderBy("state_report_attachment.created_at", "asc")
+      .select((eb) => [
+        "state_report_attachment.id",
+        "state_report_attachment.label",
+        "attachments.local_uri",
+        "attachments.state",
+        eb.ref("attachments.media_type").as("mediaType"),
+      ]) as any,
+  );
 
-  const attachmentsQuery = useQuery({
-    queryKey: ["attachments", value],
-    queryFn: async () => {
-      if (!value) return [];
-      const ids = value.split(";");
-      return db.selectFrom("state_report_attachment").where("id", "in", ids).selectAll().execute();
-    },
-  });
+  const attachments = (attachmentsQuery.data ?? []) as MinimalAttachment[];
 
-  const attachments = attachmentsQuery.data;
-
-  const addVueGeneraleFilesMutation = useMutation({
-    mutationFn: async ({ files }: { files: File[] }) => {
-      let newValue = value || "";
-      for (const file of files) {
-        const attachmentId = await uploadFile({ constatId, serviceId: user.service_id!, file });
-        newValue = newValue ? `${newValue};${attachmentId}` : attachmentId;
-      }
-      form.setValue("vue_generale", newValue);
-      return newValue;
-    },
-  });
-
-  const deleteVueGeneraleFileMutation = useMutation({
-    mutationFn: async (attachmentId: string) => {
-      await attachmentStorage.deleteFile(attachmentId);
-      const newValue = value
-        ?.split(";")
-        .filter((id) => id !== attachmentId)
-        .join(";");
-
-      form.setValue("vue_generale", newValue || null);
-    },
-  });
+  const { addMutation, deleteMutation } = useStateReportAttachmentUpload({ constatId, type: "vue_generale" });
 
   return (
     <Box flex="1">
       <Typography mb="8px">Vues générales de l'édifice</Typography>
       <UploadImage
-        onFiles={async (files) => addVueGeneraleFilesMutation.mutateAsync({ files: Array.from(files) })}
-        attachments={attachments ?? []}
+        onFiles={async (files) => {
+          for (const file of files) {
+            await addMutation.mutateAsync(file);
+          }
+        }}
+        attachments={attachments}
         multiple
-        onClick={(attachment) => setSelectedAttachment(attachment!)}
-        onDelete={(attachment) => deleteVueGeneraleFileMutation.mutate(attachment!.id)}
+        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
+        onDelete={({ id }) => deleteMutation.mutate(id)}
         isDisabled={isDisabled}
       />
     </Box>
   );
 };
 
-const useStateReportAttachmentQuery = (attachmentId: string | null) => {
-  return useQuery({
-    queryKey: ["attachment", attachmentId],
-    queryFn: async () => {
-      return db.selectFrom("state_report_attachment").where("id", "=", attachmentId).selectAll().executeTakeFirst();
-    },
-    enabled: !!attachmentId,
-  });
-};
+const useTypeAttachmentQuery = (constatId: string, type: "plan_situation" | "plan_edifice") => {
+  const result = useDbQuery(
+    db
+      .selectFrom("state_report_attachment")
+      .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
+      .where("state_report_attachment.state_report_id", "=", constatId)
+      .where("state_report_attachment.type", "=", type)
+      .where((eb) =>
+        eb.or([
+          eb("state_report_attachment.is_deprecated", "=", 0),
+          eb("state_report_attachment.is_deprecated", "is", null),
+        ]),
+      )
+      .select((eb) => [
+        "state_report_attachment.id",
+        "state_report_attachment.label",
+        "attachments.local_uri",
+        "attachments.state",
+        eb.ref("attachments.media_type").as("mediaType"),
+      ]),
+  );
 
-const useAddStateReportFileMutation = (property: keyof StateReport) => {
-  const { constatId } = routeApi.useParams();
-  const user = useLiveUser()!;
-  const form = useStateReportFormContext();
-
-  return useMutation({
-    mutationFn: async ({ file }: { file: File }) => {
-      const attachmentId = await uploadFile({ constatId, serviceId: user.service_id!, file });
-      form.setValue(property, attachmentId);
-      return attachmentId;
-    },
-  });
+  return { data: (result.data?.[0] as MinimalAttachment) ?? null };
 };
 
 const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
-
-  const queryClient = useQueryClient();
-
-  const onEdit = (props: { id: string; url: string }) => {
-    setSelectedAttachment(props);
-  };
-
-  const onClose = () => {
-    setSelectedAttachment(null);
-  };
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
+  const { constatId } = routeApi.useParams();
+  const user = useLiveUser()!;
 
   const onLabelChange = async (attachmentId: string, newLabel: string) => {
     await db.updateTable("state_report_attachment").set({ label: newLabel }).where("id", "=", attachmentId).execute();
-    await queryClient.invalidateQueries({ queryKey: ["attachment", attachmentId] });
+  };
+
+  const replaceAttachment = async (oldId: string, data: ArrayBuffer): Promise<string> => {
+    const newId = `${constatId}/images/${v7()}.jpg`;
+    const oldAttachment = await db
+      .selectFrom("state_report_attachment")
+      .where("id", "=", oldId)
+      .select(["type", "created_at"])
+      .executeTakeFirst();
+    await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
+    await db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto("state_report_attachment")
+        .values({
+          id: v7(),
+          attachment_id: newId,
+          state_report_id: constatId,
+          service_id: user.service_id,
+          created_at: oldAttachment?.created_at ?? new Date().toISOString(),
+          is_deprecated: 0,
+          type: oldAttachment?.type ?? null,
+        })
+        .execute();
+      await trx.updateTable("state_report_attachment").set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
+    });
+    return newId;
   };
 
   return (
     <Flex width="100%" flexWrap="wrap" gap={{ xs: "20px", lg: "16px" }} flexDirection={{ xs: "column", lg: "column" }}>
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={onClose}
-        imageTable="state_report_attachment"
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
         onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
-      <PlanSituation setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
-      <PlanEdifice setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
-      <VuesGenerales setSelectedAttachment={setSelectedAttachment} isDisabled={isDisabled} />
+      <PlanSituation
+        setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
+        isDisabled={isDisabled}
+      />
+      <PlanEdifice
+        setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
+        isDisabled={isDisabled}
+      />
+      <VuesGenerales
+        setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
+        isDisabled={isDisabled}
+      />
     </Flex>
   );
 };
 
-const useUpdateImageMutation = ({
+function useStateReportAttachmentUpload({
   constatId,
-  onSuccess,
+  type,
 }: {
   constatId: string;
-  onSuccess: (attachmentId: string) => void | Promise<void>;
-}) => {
-  const user = useLiveUser();
-  return useMutation({
-    mutationFn: async ({ files }: { files: File[] }) => {
-      for (const file of files) {
-        const attachmentId = `${constatId}/images/${v7()}.jpg`;
-        const buffer = await processImage(file);
+  type: "plan_situation" | "plan_edifice" | "vue_generale";
+}) {
+  const user = useLiveUser()!;
 
-        await attachmentQueue.saveAttachment({
-          attachmentId: attachmentId,
-          buffer,
-          mediaType: "image/jpeg",
+  const insertRecordImplRef = useRef<(id: string) => Promise<void>>(null!);
+  insertRecordImplRef.current = async (attachmentId: string) => {
+    await db
+      .insertInto("state_report_attachment")
+      .values({
+        id: v7(),
+        attachment_id: attachmentId,
+        state_report_id: constatId,
+        service_id: user.service_id,
+        created_at: new Date().toISOString(),
+        is_deprecated: 0,
+        type,
+      })
+      .execute();
+  };
+
+  const stableInsertRecord = useCallback((id: string) => insertRecordImplRef.current(id), []);
+
+  const uploadActorRef = useActorRef(attachmentUploadMachine, {
+    input: { parentId: constatId, insertRecord: stableInsertRecord },
+  });
+
+  const uploadState = useSelector(uploadActorRef, (snap) => snap.value);
+  const uploadError = useSelector(uploadActorRef, (snap) => snap.context.error);
+
+  const mutateAsync = useCallback(
+    (file: File): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
+        uploadActorRef.send({ type: "UPLOAD_FILE", file });
+        const sub = uploadActorRef.subscribe((snap) => {
+          if (snap.matches("idle")) {
+            sub.unsubscribe();
+            resolve();
+          } else if (snap.matches("failed")) {
+            sub.unsubscribe();
+            reject(new Error(snap.context.error ?? "Upload failed"));
+          }
         });
+      }),
+    [uploadActorRef],
+  );
 
-        await db
-          .insertInto("state_report_attachment")
-          .values({
-            id: attachmentId,
-            attachment_id: attachmentId,
-            state_report_id: constatId,
-            created_at: new Date().toISOString(),
-            is_deprecated: 0,
-            service_id: user!.service_id,
-          })
-          .execute();
+  const isUploading = uploadState === "compressing" || uploadState === "saving" || uploadState === "inserting";
 
-        await onSuccess(attachmentId);
-      }
+  return {
+    addMutation: {
+      mutateAsync,
+      isPending: isUploading,
+      isError: uploadState === "failed",
+      error: uploadError,
+      retry: () => uploadActorRef.send({ type: "RETRY" }),
+      dismiss: () => uploadActorRef.send({ type: "DISMISS" }),
     },
-  });
-};
-
-const uploadFile = async ({ constatId, serviceId, file }: { constatId: string; serviceId: string; file: File }) => {
-  const attachmentId = `${constatId}/images/${v7()}.jpg`;
-  const buffer = await processImage(file);
-
-  await attachmentQueue.saveAttachment({
-    attachmentId: attachmentId,
-    buffer,
-    mediaType: "image/jpeg",
-  });
-
-  await db
-    .insertInto("state_report_attachment")
-    .values({
-      id: attachmentId,
-      attachment_id: attachmentId,
-      state_report_id: constatId,
-      created_at: new Date().toISOString(),
-      is_deprecated: 0,
-      service_id: serviceId,
-    })
-    .execute();
-
-  return attachmentId;
-};
+    deleteMutation: {
+      mutate: async (rowId: string) => {
+        const row = await db
+          .selectFrom("state_report_attachment")
+          .select("attachment_id")
+          .where("id", "=", rowId)
+          .executeTakeFirst();
+        if (row) await attachmentLocalStorage.deleteFile(row.attachment_id!);
+        await db.updateTable("state_report_attachment").set({ is_deprecated: 1 }).where("id", "=", rowId).execute();
+      },
+    },
+  };
+}
 
 export const EtatGeneralRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
   const form = useStateReportFormContext();

@@ -77,7 +77,7 @@ test.describe("Constat d'état flow", () => {
     await dialog.locator("textarea").fill("Bon état général, pas de dégradation visible.");
 
     // Save and close modal
-    await dialog.getByRole("button", { name: "Enregistrer" }).click();
+    await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
 
     // Navigate to Constat général
@@ -128,6 +128,8 @@ test.describe("Constat d'état flow", () => {
     // Step 8: Verify the email reached mailpit
     // ---------------------------------------------------------------------------
     const mailpitPort = process.env.MAILPIT_WEB_PORT ?? "3018";
+    const backendPort = process.env.BACKEND_PORT ?? "3011";
+
     const mailResponse = await page.request.get(`http://localhost:${mailpitPort}/api/v1/messages`);
     expect(mailResponse.ok()).toBeTruthy();
 
@@ -137,5 +139,23 @@ test.describe("Constat d'état flow", () => {
     const lastMail = mailData.messages[0];
     const recipients: { Address: string }[] = lastMail.To;
     expect(recipients.some((r) => r.Address === `jean.dupont+${mailId}@example.com`)).toBe(true);
+
+    // ---------------------------------------------------------------------------
+    // Step 9: Verify the email contains an /attachment/ redirect link (not a
+    // direct S3 URL), and that following it resolves to the PDF
+    // ---------------------------------------------------------------------------
+    const messageResp = await page.request.get(`http://localhost:${mailpitPort}/api/v1/message/${lastMail.ID}`);
+    const messageData = await messageResp.json();
+    const emailHtml: string = messageData.HTML ?? messageData.Text ?? "";
+
+    const linkMatch = emailHtml.match(/href="(https?:\/\/[^"]+\/attachment\/[^"]+)"/);
+    expect(linkMatch, "Email should contain an /attachment/ redirect link").not.toBeNull();
+
+    const attachmentUrl = linkMatch![1].replace(/&amp;/g, "&");
+    expect(attachmentUrl).toContain(`localhost:${backendPort}/attachment/`);
+
+    // Following the redirect should resolve to the actual PDF
+    const pdfResponse = await page.request.get(attachmentUrl);
+    expect(pdfResponse.ok(), "Redirect should resolve to the PDF file").toBeTruthy();
   });
 });

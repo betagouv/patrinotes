@@ -7,7 +7,7 @@ import { useClickAway } from "react-use";
 import { useUser } from "../contexts/AuthContext";
 import { db } from "../db/db";
 import { createSuggestionMachine } from "../features/suggestionsMachine";
-import { Box, Stack } from "@mui/material";
+import { Box, Stack, StackProps } from "@mui/material";
 import { Button, Input } from "./MUIDsfr";
 import { Flex } from "./ui/Flex";
 import { useIsDesktop } from "../hooks/useIsDesktop";
@@ -19,11 +19,15 @@ export const EmailInput = ({
   nativeInputProps,
   value,
   onValueChange,
+  disabled,
   single,
+  sx,
 }: Partial<InputProps> & {
   value: string[];
+  disabled?: boolean;
   single?: boolean;
   onValueChange: (value: string[]) => void;
+  sx?: StackProps["sx"];
 }) => {
   const [state, send] = useMachine(emailMachine, {
     input: {
@@ -83,9 +87,10 @@ export const EmailInput = ({
   const isDesktop = useIsDesktop();
 
   return (
-    <Stack>
+    <Stack sx={sx}>
       <Box ref={wrapperRef} position="relative" width="100%">
         <Input
+          disabled={disabled}
           sx={{
             mb: "1.5rem",
             "& > input": {

@@ -1,5 +1,5 @@
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
-import { Center, Select } from "#components/MUIDsfr.tsx";
+import { Alert, Center, Select } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -11,7 +11,7 @@ import { Fragment, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { PopObjet, StateReportAlert } from "../../../db/AppSchema";
 import { db } from "../../../db/db";
-import { uppercaseFirstLetterIf } from "../../../utils";
+import { Awaitable, uppercaseFirstLetterIf } from "../../../utils";
 import { MenuTitle, ModalBackButton } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { SectionCommentaires, SectionPhotos, ShouldSendToggle, ShowInReportToggle } from "./SectionCommentaires";
@@ -19,6 +19,7 @@ import { AlertErrors, checkAlertErrors } from "./StateReportAlert.utils";
 import { StateReportAlertsEmailInput } from "./StateReportAlertsEmailInput";
 import { AlertSectionFieldArray, AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { useIsEditingAlertEmail } from "../side-menu/StateReportSideMenu.store";
+import { AlertWithAttachments } from "@patrinotes/pdf/utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -26,6 +27,7 @@ export const StateReportAlertObjetSectionForm = ({
   title,
   onClose,
   onBack,
+  onSave,
   alerts,
   form,
   appendAlert,
@@ -33,8 +35,9 @@ export const StateReportAlertObjetSectionForm = ({
 }: {
   title: string;
   onClose: () => void;
-  onBack: (data?: StateReportAlert[]) => void;
-  alerts: { alert: StateReportAlert; name: AlertSectionName }[];
+  onBack: (data?: AlertWithAttachments[]) => void;
+  onSave: () => Awaitable<void>;
+  alerts: { alert: AlertWithAttachments; name: AlertSectionName }[];
   form: AlertSectionsForm;
   appendAlert: () => Promise<void>;
   errors: AlertErrors | null;
@@ -60,7 +63,33 @@ export const StateReportAlertObjetSectionForm = ({
 
   const [isEditingEmail, setIsEditingEmail] = useIsEditingAlertEmail();
 
+  if (!alerts || alerts.length === 0) {
+    return (
+      <Center>
+        <Spinner />
+      </Center>
+    );
+  }
+
   const { mandatory_emails, additional_emails } = alerts[0].alert;
+
+  if (!objetsQuery.isLoading && objetsQuery.data?.length === 0) {
+    return (
+      <Stack>
+        <MenuTitle onClose={onClose} hideDivider>
+          <ModalBackButton onClick={onBack} />
+        </MenuTitle>
+        <Center width="100%">
+          <Alert
+            sx={{ width: "100%" }}
+            title={""}
+            severity="info"
+            description="Aucun objet ou mobilier trouvé pour ce constat d’état."
+          />
+        </Center>
+      </Stack>
+    );
+  }
 
   return (
     <Stack>
@@ -118,11 +147,11 @@ export const StateReportAlertObjetSectionForm = ({
 
               <FullWidthButton
                 type="button"
-                onClick={() => onBack()}
+                onClick={() => onSave()}
                 disabled={isFormDisabled}
                 style={{ marginTop: "16px" }}
               >
-                Enregistrer
+                Valider
               </FullWidthButton>
             </Flex>
           </Stack>
@@ -170,6 +199,9 @@ const ObjetSelect = ({
 
   return (
     <Select
+      sx={{
+        option: { textOverflow: "clip" },
+      }}
       label="Objet ou mobilier concerné"
       disabled={isFormDisabled}
       nativeSelectProps={{

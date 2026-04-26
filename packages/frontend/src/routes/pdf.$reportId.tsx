@@ -1,16 +1,15 @@
 import "@ungap/with-resolvers";
+import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Banner } from "../components/Banner";
 import { EnsureUser } from "../components/EnsureUser";
 import { Spinner } from "../components/Spinner";
 import { fr } from "@codegouvfr/react-dsfr";
-import { PdfImage, ReportPDFDocument, ReportPDFDocumentProps, getReportHtmlString } from "@cr-vif/pdf";
-import { usePdf } from "@mikecousins/react-pdf";
+import { PdfImage, ReportPDFDocument, ReportPDFDocumentProps, getReportHtmlString } from "@patrinotes/pdf";
 import { pdf } from "@react-pdf/renderer";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Editor } from "@tiptap/react";
-import { makeArrayOf } from "pastable";
-import { PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { v4 } from "uuid";
 import { api } from "../api";
@@ -19,7 +18,7 @@ import { EmailInput } from "../components/EmailInput";
 import { getDiff } from "../components/SyncForm";
 import { useUser } from "../contexts/AuthContext";
 import { Clause_v2, Pictures, Report, Service } from "../db/AppSchema";
-import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, db, useDbQuery } from "../db/db";
 import { useChipOptions } from "../features/chips/useChipOptions";
 import { transformBold } from "../features/menu/ClauseMenu";
 import { TextEditor } from "../features/text-editor/TextEditor";
@@ -30,7 +29,6 @@ import { format } from "date-fns";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
-import { isDev } from "../envVars";
 
 type Mode = "edit" | "view" | "send" | "sent";
 
@@ -45,7 +43,23 @@ export const PDF = () => {
   const navigate = useNavigate();
   const generatePdfMutation = useMutation({
     mutationFn: async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
-      await api.post("/api/pdf/report", { body: { reportId, htmlString, recipients } });
+      const { uploadUrl, pdfPath } = await api.post("/api/pdf/report/upload-url", { body: { reportId } });
+
+      const pictures = (reportQuery.data?.pictures ?? []).map((p: any) => ({ url: p.url }));
+      const blob = await pdf(
+        (
+          <ReportPDFDocument
+            service={service as any}
+            htmlString={htmlString}
+            images={{ marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" }}
+            pictures={pictures}
+          />
+        ) as any,
+      ).toBlob();
+
+      await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+
+      await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients } });
     },
     onSuccess: () => {
       navigate({ search: { mode: "sent" } as any });
@@ -62,14 +76,28 @@ export const PDF = () => {
       const reportQuery = await db.selectFrom("report").where("id", "=", reportId).selectAll().execute();
       const picturesQuery = await db
         .selectFrom("report_attachment")
-        .where("report_id", "=", reportId)
-        .where("is_deprecated", "=", 0)
-        .orderBy("created_at", "asc")
-        .selectAll()
+        .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
+        .where("report_attachment.report_id", "=", reportId)
+        .where("report_attachment.is_deprecated", "=", 0)
+        .where("attachments.media_type", "like", "image/%")
+        .orderBy("report_attachment.created_at", "asc")
+        .select([
+          "report_attachment.attachment_id",
+          "report_attachment.label",
+          "attachments.local_uri",
+          "attachments.media_type",
+        ])
         .execute();
 
       const pictures = await Promise.all(
-        picturesQuery.map((pic) => getAttachmentUrl(pic.attachment_id!).then((url) => ({ ...pic, url }))),
+        picturesQuery
+          .filter((pic) => pic.local_uri)
+          .map((pic) =>
+            attachmentLocalStorage.readFile(pic.local_uri!).then((buffer) => ({
+              ...pic,
+              url: URL.createObjectURL(new Blob([buffer], { type: pic.media_type ?? "image/jpeg" })),
+            })),
+          ),
       );
 
       const report = reportQuery?.[0];
@@ -587,7 +615,7 @@ export const WithReport = ({
 
 const View = (props: ReportPDFDocumentProps) => {
   const query = useQuery({
-    queryKey: ["report-pdf", props.htmlString],
+    queryKey: ["report-pdf", props.htmlString, (props.pictures ?? []).map((p) => p.url)],
     queryFn: async () => {
       const blob = await pdf(<ReportPDFDocument {...props} />).toBlob();
       return blob;
@@ -606,64 +634,8 @@ const View = (props: ReportPDFDocumentProps) => {
 
   return (
     <Box px="16px">
-      <PdfCanvas blob={query.data as Blob} />
+      <PDFViewerPaginated blob={query.data as Blob} />
     </Box>
-  );
-};
-
-export const PdfCanvas = ({ blob }: { blob: Blob }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const file = useMemo(() => URL.createObjectURL(blob), [blob]);
-  const { pdfDocument } = usePdf({
-    file,
-    canvasRef,
-    workerSrc: "/pdfjs/build/pdf.worker.min.mjs",
-  });
-
-  const nbPages = pdfDocument?.numPages;
-
-  return (
-    <>
-      {isDev ? (
-        <Button
-          type="button"
-          onClick={() => {
-            const link = document.createElement("a");
-            link.href = file;
-            link.download = "report.pdf";
-            link.click();
-          }}
-          sx={{ position: "fixed", bottom: 16, left: 16, zIndex: 10 }}
-        >
-          Télécharger le pdf
-        </Button>
-      ) : null}
-      {makeArrayOf(nbPages ?? 1).map((_, page) => (
-        <PdfCanvasPage key={page} file={file} page={page + 1} />
-      ))}
-    </>
-  );
-};
-
-const PdfCanvasPage = ({ file, page }: { file: string; page: number }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  usePdf({
-    scale: 1.2,
-    file,
-    page: page,
-    canvasRef,
-    workerSrc: "/pdfjs/build/pdf.worker.min.mjs",
-  });
-
-  return (
-    <Box
-      ref={canvasRef}
-      component="canvas"
-      width={{ xs: "100%", lg: "800px" }}
-      my="16px"
-      boxShadow="0px 10.18px 30.54px 0px #00001229"
-    />
   );
 };
 

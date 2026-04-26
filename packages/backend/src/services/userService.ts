@@ -23,6 +23,7 @@ export class UserService {
     const deptNumbers = service[0].dept_numbers?.split(",").map((num) => num.trim());
 
     if (deptNumbers && deptNumbers.length) {
+      debug("Updating departments for user", userId, "to", deptNumbers);
       await db.transaction().execute(async (trx) => {
         await trx.deleteFrom("user_dept").where("user_id", "=", userId).execute();
         for (const deptNumber of deptNumbers) {

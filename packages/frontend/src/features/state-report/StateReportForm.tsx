@@ -7,7 +7,7 @@ import { WithReferencePop } from "./WithReferencePop";
 import { Box, Typography } from "@mui/material";
 import { useBannerBgColor } from "#components/Banner.tsx";
 import { useSyncForm } from "#components/SyncForm.tsx";
-import { db } from "../../db/db";
+import { db, useDbQuery } from "../../db/db";
 import { useFormWithFocus, useRefreshForm } from "../../hooks/useFormWithFocus";
 import { StateReportSideMenu } from "./side-menu/StateReportSideMenu";
 
@@ -87,7 +87,7 @@ const SyncForm = ({ report }: { report: StateReport }) => {
   return null;
 };
 
-const emptyStateReport: StateReport = {
+export const emptyStateReport: StateReport = {
   id: "",
   notes: "",
   nature_edifice: null,
@@ -118,12 +118,10 @@ const emptyStateReport: StateReport = {
   etat_general: null,
   proportion_dans_cet_etat: null,
   etat_commentaires: "",
-  plan_situation: null,
-  plan_edifice: null,
-  vue_generale: null,
   preconisations: null,
   preconisations_commentaires: "",
   bilan_quinquennal: null,
   visite_partielle_details: null,
   attachment_id: null,
+  validation_status: null,
 };

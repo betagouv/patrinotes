@@ -58,6 +58,11 @@ graph LR
     Backend -->|pictures and pdf| PatrinotesS3[Patrinotes S3]
 ```
 
+Les données patrimoniales proviennent de deux sources externes : **data.gouv.fr**, qui fournit les fichiers CSV des
+monuments historiques et du mobilier, ainsi que l'API d'adresse ; et **POP** (Plateforme Ouverte du Patrimoine), dont
+les images sont récupérées par scraping. Le backend agrège et structure ces données avant de les persister dans la base
+de données Postgres.
+
 # Framework et dépendances
 
 ## Architecture du repo

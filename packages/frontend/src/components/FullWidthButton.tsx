@@ -2,14 +2,15 @@ import Button, { type ButtonProps } from "@codegouvfr/react-dsfr/Button";
 import { useStyles } from "tss-react";
 
 // TODO: refactor using MUI (in MuiDsfr.tsx)
-export const FullWidthButton = ({ className, type, linkProps, ...props }: ButtonProps) => {
+export const FullWidthButton = ({ className, type, linkProps, size, ...props }: ButtonProps) => {
   const { cx, css } = useStyles();
 
   return (
     <Button
       {...(props as any)}
-      className={cx(css({ display: "block", width: "100%", textAlign: "center" }), className)}
+      className={cx(css({ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }), className)}
       linkProps={linkProps ? { ...linkProps, className: cx(css({ width: "100%" })) } : undefined}
+      size={size}
     />
   );
 };

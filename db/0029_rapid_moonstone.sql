@@ -1,0 +1,1 @@
+ALTER TABLE "attachment_redirection" ADD COLUMN "name" text;

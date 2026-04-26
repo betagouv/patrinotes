@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useConstatPdfContext } from "./ConstatPdfContext";
-import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@cr-vif/pdf/constat";
+import { getStateReportHtmlString, StateReportPDFDocument, StateReportPDFDocumentProps } from "@patrinotes/pdf/constat";
 import { pdf } from "@react-pdf/renderer";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";

@@ -1,7 +1,7 @@
 import { Spinner } from "#components/Spinner.tsx";
-import { alertSectionStaticData } from "@cr-vif/pdf/constat";
+import { alertSectionStaticData } from "@patrinotes/pdf/constat";
 import { Box, Stack, Typography } from "@mui/material";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -23,13 +23,20 @@ import { getEmailsForSection } from "./StateReportAlert.utils";
 import { StateReportAlertObjetSectionForm } from "./StateReportAlertObjetSectionForm";
 import { useStateReportAlerts } from "./StateReportAlerts.hook";
 import { StateReportAlertSectionForm } from "./StateReportAlertSectionForm";
-import { getIsAlertVisited, OBJETS_MOBILIERS_SECTION, serializeMandatoryEmails } from "@cr-vif/pdf/utils";
+import {
+  AlertWithAttachments,
+  getIsAlertVisited,
+  OBJETS_MOBILIERS_SECTION,
+  serializeMandatoryEmails,
+} from "@patrinotes/pdf/utils";
 import { useDebounce } from "react-use";
 import { getDiff } from "#components/SyncForm.tsx";
 import { useAlertErrors, useSelectedAlertSection } from "../side-menu/StateReportSideMenu.store";
-import { chunk, pick } from "pastable";
+import { chunk, omit, pick } from "pastable";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { Flex } from "#components/ui/Flex.tsx";
+import { Center } from "#components/MUIDsfr.tsx";
+import { constatPdfQueries } from "../pdf/ConstatPdf.queries";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -37,7 +44,7 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
   const [selectedSection, setSelectedSection] = useSelectedAlertSection();
 
   const { constatId } = routeApi.useParams();
-  const existingSectionsQuery = useStateReportAlerts(constatId);
+  const existingSectionsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
   const existingSections = existingSectionsQuery.data ?? [];
 
   return (
@@ -45,7 +52,7 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
       {!selectedSection ? (
         <>
           <MenuTitle hideDivider onClose={onClose}>
-            Alertes
+            Alertes MH
           </MenuTitle>
           <Typography mb="24px">
             Vous avez remarqué un problème lié au monument historique ?<br />
@@ -80,11 +87,11 @@ export const StateReportAlertsMenu = ({ onClose }: StateReportAlertModalContentP
   );
 };
 
-export type AlertSectionsForm = UseFormReturn<{ alertSections: StateReportAlert[] }>;
+export type AlertSectionsForm = UseFormReturn<{ alertSections: AlertWithAttachments[] }>;
 export type AlertSectionName = `alertSections.${number}`;
 export type AlertSectionFieldArray = UseFieldArrayReturn<
   {
-    alertSections: StateReportAlert[];
+    alertSections: AlertWithAttachments[];
   },
   "alertSections",
   "id"
@@ -96,13 +103,35 @@ const AlertSectionsForm = ({
   selectedSection,
   setSelectedSection,
 }: {
-  alertSections: StateReportAlert[];
+  alertSections: AlertWithAttachments[];
   onClose: () => void;
   selectedSection: string | null;
   setSelectedSection: (section: string | null) => void;
 }) => {
-  const sectionsForm = useForm<{ alertSections: StateReportAlert[] }>({
-    defaultValues: { alertSections },
+  const constatId = routeApi.useParams().constatId;
+  const updateAlertMutation = useMutation({
+    mutationFn: async () => {
+      const toUpdate = getChangesToPush(alertSections, sectionsForm.getValues("alertSections"));
+
+      return await db.transaction().execute(async (tx) => {
+        for (const { id, changes } of toUpdate) {
+          await tx
+            .updateTable("state_report_alert")
+            .where("id", "=", id)
+            .set(omit(changes, ["attachments"]) as any)
+            .execute();
+        }
+      });
+    },
+    onSuccess(_data, _variables, _onMutateResult, context) {
+      context.client.invalidateQueries({
+        queryKey: constatPdfQueries.alerts({ constatId }).queryKey,
+      });
+    },
+  });
+
+  const sectionsForm = useForm<{ alertSections: AlertWithAttachments[]; syncMutation?: typeof updateAlertMutation }>({
+    defaultValues: { alertSections, syncMutation: updateAlertMutation },
   });
   const fieldArray = useFieldArray({ name: "alertSections", control: sectionsForm.control });
 
@@ -132,7 +161,7 @@ const AlertSectionsList = ({
   selectedSection: string | null;
   setSelectedSection: (section: string | null) => void;
   sectionsForm: AlertSectionsForm;
-  alertSections: StateReportAlert[];
+  alertSections: AlertWithAttachments[];
   onClose: () => void;
   fieldArray: AlertSectionFieldArray;
 }) => {
@@ -158,7 +187,7 @@ const AlertSectionsList = ({
         .returningAll()
         .execute();
 
-      fieldArray.append(newAlert[0]);
+      fieldArray.append({ ...newAlert[0], attachments: [] });
     },
   });
 
@@ -181,12 +210,20 @@ const AlertSectionsList = ({
       onBack: () => {
         setSelectedSection(null);
       },
+      onSave: () => {
+        sectionsForm
+          .getValues("syncMutation" as any)
+          ?.mutateAsync()
+          .then(() => {
+            setSelectedSection(null);
+          });
+      },
       form: sectionsForm,
       title: selectedSection,
     };
 
     if (selectedSection === OBJETS_MOBILIERS_SECTION) {
-      const alerts = [] as { alert: StateReportAlert; name: AlertSectionName }[];
+      const alerts = [] as { alert: AlertWithAttachments; name: AlertSectionName }[];
       fieldArray.fields.forEach((field, index) => {
         if (field.alert === OBJETS_MOBILIERS_SECTION) {
           alerts.push({ alert: sectionsForm.getValues(`alertSections.${index}`), name: `alertSections.${index}` });
@@ -205,7 +242,12 @@ const AlertSectionsList = ({
 
     const alertIndex = fieldArray.fields.findIndex((f) => f.alert === selectedSection);
     const alert = sectionsForm.getValues(`alertSections.${alertIndex}`);
-
+    if (!alert)
+      return (
+        <Center>
+          <Spinner />
+        </Center>
+      );
     return (
       <StateReportAlertSectionForm
         alert={alert}
@@ -217,7 +259,6 @@ const AlertSectionsList = ({
   }
 
   const chunked = chunk(alertSectionStaticData, isDesktop ? 2 : 1);
-
   return (
     <>
       {chunked.map((chunk, index) => (
@@ -243,41 +284,37 @@ const AlertSectionsList = ({
   );
 };
 
+const getChangesToPush = (baseAlerts: AlertWithAttachments[], currentAlerts: AlertWithAttachments[]) => {
+  const toUpdate: { id: string; changes: Partial<AlertWithAttachments> }[] = [];
+
+  for (const alert of baseAlerts) {
+    const id = alert.id;
+
+    const base = baseAlerts.find((a) => a.id === id);
+    const current = currentAlerts.find((a) => a.id === id);
+
+    if (!base || !current) continue;
+
+    const diff: Partial<AlertWithAttachments> = getDiff(current, base);
+    if (Object.keys(diff).length === 0) continue;
+
+    toUpdate.push({ id, changes: diff });
+  }
+
+  return toUpdate;
+};
+
 // this component is used to sync the form state with the local db
 // it listens to changes in the form and updates the db after a debounce delay
 // this enables the auto-saving feature without forcing the user to click a "save" button
-const AlertSectionSync = ({ form, baseAlerts }: { form: AlertSectionsForm; baseAlerts: StateReportAlert[] }) => {
+const AlertSectionSync = ({ form }: { form: AlertSectionsForm; baseAlerts: AlertWithAttachments[] }) => {
   const currentValues = useWatch({ control: form.control, name: "alertSections" });
 
-  const updateAlertMutation = useMutation({
-    mutationFn: async (newAlerts: { id: string; changes: Partial<StateReportAlert> }[]) => {
-      await db.transaction().execute(async (tx) => {
-        for (const { id, changes } of newAlerts) {
-          await tx.updateTable("state_report_alert").where("id", "=", id).set(changes).execute();
-        }
-      });
-    },
-  });
+  const updateAlertMutation = useWatch({ control: form.control, name: "syncMutation" as any });
 
-  useDebounce(
+  const [, cancel] = useDebounce(
     () => {
-      const toUpdate: { id: string; changes: Partial<StateReportAlert> }[] = [];
-
-      for (const alert of baseAlerts) {
-        const id = alert.id;
-
-        const base = baseAlerts.find((a) => a.id === id);
-        const current = currentValues.find((a) => a.id === id);
-
-        if (!base || !current) continue;
-
-        const diff: Partial<StateReportAlert> = getDiff(current, base);
-        if (Object.keys(diff).length === 0) continue;
-
-        toUpdate.push({ id, changes: diff });
-      }
-
-      updateAlertMutation.mutateAsync(toUpdate);
+      updateAlertMutation.mutateAsync();
     },
     500,
     [currentValues],

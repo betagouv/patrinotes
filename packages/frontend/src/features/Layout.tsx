@@ -6,7 +6,8 @@ import Box from "@mui/material/Box/Box";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { type PropsWithChildren } from "react";
 import { useIsLoggedIn } from "../contexts/AuthContext";
-import { MenuButton, MenuModal, StatusBadge } from "../features/menu/MenuButton";
+import { MenuButton, MenuModal } from "../features/menu/MenuButton";
+import { StatusBadge } from "./menu/StatusBadge";
 import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
 
@@ -90,17 +91,22 @@ const AppFooter = () => {
         <div className="fr-footer__bottom">
           <ul className="fr-footer__bottom-list">
             <li className="fr-footer__bottom-item">
+              <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
+            </li>
+            <li className="fr-footer__bottom-item">
               <Link to="/mentions-legales" className="fr-footer__bottom-link">
                 Mentions légales
+              </Link>
+            </li>
+            <li className="fr-footer__bottom-item">
+              <Link to="/politique-confidentialite" className="fr-footer__bottom-link">
+                Politique de confidentialité
               </Link>
             </li>
             <li className="fr-footer__bottom-item">
               <Link to="/cgu" className="fr-footer__bottom-link">
                 Conditions générales d'utilisation
               </Link>
-            </li>
-            <li className="fr-footer__bottom-item">
-              <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
             </li>
           </ul>
 
@@ -148,6 +154,13 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
       <header
         role="banner"
         id="fr-header"
+        style={
+          isDesktop
+            ? undefined
+            : {
+                boxShadow: "0 1px 3px var(--shadow-color)",
+              }
+        }
         className="fr-header [&amp;_.fr-btn--menu]:opacity_0 [&amp;_.fr-btn--menu]:pointer-events_none"
       >
         <div className="fr-header__body">
@@ -184,14 +197,12 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
                   </div>
                   {isDesktop ? (
                     <div className="fr-header__service lg:d_unset">
-                      <p className="fr-header__service-title">
-                        <Flex alignItems="center" gap="24px">
-                          Patrinotes{" "}
-                          <Box>
-                            <StatusBadge noProvider={noProvider} />
-                          </Box>
-                        </Flex>
-                      </p>
+                      <Flex alignItems="center" gap="24px" className="fr-header__service-title">
+                        Patrinotes{" "}
+                        <Box>
+                          <StatusBadge noProvider={noProvider} />
+                        </Box>
+                      </Flex>
                     </div>
                   ) : undefined}
                 </Box>

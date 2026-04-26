@@ -9,10 +9,9 @@ export const config = {
   database: ENV.POSTGRES_DB,
 };
 
-export const usersDatabaseUrl = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "../../db",
   dialect: "postgresql",
-  dbCredentials: { ...config, ssl: isProd },
+  dbCredentials: { ...config, ssl: false },
 });

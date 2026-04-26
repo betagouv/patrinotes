@@ -10,7 +10,7 @@ import {
   VisitedSection,
   VisitedSectionAttachment,
 } from "../db/AppSchema";
-import { attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
 import { useMutation, useQuery, UseMutationResult, useMutationState } from "@tanstack/react-query";
 import {
   SendConstatForm,
@@ -22,7 +22,7 @@ import { Button, Center } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
 import { EditConstatPdf } from "../features/state-report/pdf/ConstatPdf.edit";
 import { TextEditorToolbar } from "../features/text-editor/TextEditorToolbar";
-import { getStateReportHtmlString } from "@cr-vif/pdf/constat";
+import { getStateReportHtmlString, getStateReportMailName } from "@patrinotes/pdf/constat";
 import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";
@@ -38,6 +38,9 @@ import { last } from "pastable";
 import { checkAlertErrors } from "../features/state-report/alerts/StateReportAlert.utils";
 import { getIsStateReportDisabled, useIsStateReportDisabled } from "../features/state-report/utils";
 import { useUserSettings } from "../hooks/useUserSettings";
+import { useLiveService, useUser } from "../contexts/AuthContext";
+import { getIsAlertVisited } from "@patrinotes/pdf/utils";
+import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -67,19 +70,23 @@ const ConstatPdf = () => {
       stateReport: null as any,
       recipients: [],
       alerts: [],
+      selectedAlertIds: [],
       htmlString: "",
       alertErrors: [],
       checkErrors: () => {},
       isStateReportDisabled: false,
+      pdfBlob: null,
     },
   });
 
   const userSettings = useUserSettings();
+  const { service } = useUser()!;
 
-  const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId }));
+  const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId, service: service as any }));
 
   const checkAllAlertsError = (alerts: SendConstatForm["alerts"]) => {
-    const alertToSend = alerts.filter((alert) => alert.shouldSend);
+    const selectedIds = form.getValues("selectedAlertIds");
+    const alertToSend = alerts.filter((alert) => selectedIds.includes(alert.id));
     const alertErrors = alertToSend.map(checkAlertErrors);
     form.setValue("alertErrors", alertErrors);
     return alertErrors;
@@ -115,8 +122,10 @@ const ConstatPdf = () => {
   const alerts = alertsQuery.data;
 
   // sync recipients with state report owner emails
+  // and needValidation with userSettings
   useEffect(() => {
     if (!stateReport) return;
+    form.setValue("stateReport", stateReport);
     if (userSettings.isLoading) return;
     if (form.getValues("recipients").length > 0) return;
 
@@ -130,34 +139,47 @@ const ConstatPdf = () => {
     const emailsArray = Array.from(emails).filter(Boolean);
 
     form.setValue("recipients", emailsArray);
+
+    const needValidation = userSettings?.userSettings.validation_enabled && userSettings?.userSettings.validation_email;
+    form.setValue("needValidation", !!needValidation);
   }, [stateReportQuery.data, userSettings, form]);
 
   // sync alerts with form since they can be edited in the alert accordion
   useEffect(() => {
     if (!alerts) return;
-    const alertsWithShouldSend = alerts.map((alert) => ({ ...alert, shouldSend: true }));
 
-    form.setValue("alerts", alertsWithShouldSend);
+    const visitedAlerts = alerts.filter((alert) => !!alert.should_send).filter(getIsAlertVisited);
 
-    checkAllAlertsError(alertsWithShouldSend);
+    form.setValue("alerts", visitedAlerts);
+    form.setValue(
+      "selectedAlertIds",
+      visitedAlerts.map((a) => a.id),
+    );
+
+    checkAllAlertsError(visitedAlerts);
   }, [alerts, form]);
 
   // generate html string (only once since displaying it is a heavy operation)
   const isSetRef = useRef(false);
+
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
+    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections as any, alerts });
 
-    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections, alerts });
     form.setValue("htmlString", htmlString);
 
     isSetRef.current = true;
+
+    return () => {
+      isSetRef.current = false;
+    };
   }, [sections, stateReport, alerts]);
 
   // propagate isDisabled to children
   useEffect(() => {
     if (!stateReport) return;
-    const isStateReportDisabled = getIsStateReportDisabled({ attachment_id: stateReport.attachment_id });
+    const isStateReportDisabled = getIsStateReportDisabled({ ...stateReport });
     form.setValue("isStateReportDisabled", isStateReportDisabled);
   }, [stateReport]);
 
@@ -165,7 +187,7 @@ const ConstatPdf = () => {
 
   if (isLoading) {
     return (
-      <Center height="100%">
+      <Center height="100%" mb="160px">
         <Spinner />
       </Center>
     );
@@ -185,98 +207,135 @@ const ConstatPdf = () => {
 type PageMode = "view" | "send" | "sent";
 
 const BannerAndContent = ({ mode }: { mode: PageMode }) => {
-  const { bannerProps, Component } = contentMap[mode];
+  const { bannerProps } = contentMap[mode];
+
   return (
     <>
       <Banner {...bannerProps} />
-      <Component />
+
+      {mode !== "sent" ? (
+        <Box>
+          <ViewConstatPdf step={mode} />
+        </Box>
+      ) : (
+        <SentConstatPdf />
+      )}
     </>
   );
 };
 
-const contentMap: Record<PageMode, { bannerProps: BannerProps; Component: () => ReactNode }> = {
+const contentMap: Record<PageMode, { bannerProps: BannerProps }> = {
   view: {
     bannerProps: {
-      content: () => "Prévisualisation du constat",
-      buttons: () => {
-        const navigate = useNavigate();
-        const { constatId } = Route.useParams();
-
-        const isDisabled = useIsSendConstatFormDisabled();
-
-        return (
-          <Flex gap="8px">
-            <Button
-              type="button"
-              disabled={isDisabled}
-              onClick={() =>
-                navigate({
-                  to: "/constat/$constatId/pdf",
-                  params: { constatId },
-                  search: { mode: "send" },
-                })
-              }
-            >
-              Continuer
-            </Button>
-          </Flex>
-        );
-      },
+      content: () => <ViewBannerContent />,
+      buttons: noop,
     },
-    Component: ViewConstatPdf,
   },
   send: {
     bannerProps: {
       content: () => <SendBannerContent />,
-      buttons: () => null,
+      buttons: noop,
       alignTop: true,
     },
-    Component: SendConstatPdf,
   },
   sent: {
     bannerProps: {
       content: noop,
       buttons: noop,
     },
-    Component: SentConstatPdf,
   },
 };
 
+const ViewButtons = () => {
+  const navigate = useNavigate();
+  const { constatId } = Route.useParams();
+
+  const isDisabled = useIsSendConstatFormDisabled();
+  const form = useSendConstatFormContext();
+  const pdfBlob = form.watch("pdfBlob");
+
+  const handleDownload = () => {
+    if (!pdfBlob) return;
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    const name = getStateReportMailName({
+      titre_edifice: form.getValues("stateReport")?.titre_edifice ?? undefined,
+    });
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }} width="100%">
+      <Button
+        type="button"
+        iconId="ri-download-line"
+        priority="secondary"
+        disabled={!pdfBlob}
+        onClick={handleDownload}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          width: "100%",
+          justifyContent: "center",
+        }}
+      >
+        Télécharger
+      </Button>
+      <Button
+        type="button"
+        disabled={isDisabled}
+        onClick={() =>
+          navigate({
+            to: "/constat/$constatId/pdf",
+            params: { constatId },
+            search: { mode: "send" },
+          })
+        }
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          width: "100%",
+          justifyContent: "center",
+        }}
+      >
+        Continuer
+      </Button>
+    </Flex>
+  );
+};
+
 type BannerProps = { content: () => ReactNode; buttons: () => ReactNode; alignTop?: boolean };
-const Banner = ({ content, buttons, alignTop }: BannerProps) => {
-  if (content === noop && buttons === noop) {
+const Banner = ({ content }: BannerProps) => {
+  if (content === noop) {
     return null;
   }
 
   const Content = content;
-  const Buttons = buttons;
 
   return (
     <SimpleBanner minHeight="80px" position="sticky" top="0" zIndex="appBar" py={{ xs: "8px", lg: "0" }}>
       <Flex
         alignItems="center"
-        maxWidth="1200px"
         width="100%"
         flexDirection={{ xs: "column", lg: "row" }}
         gap={{ xs: "8px", lg: "0" }}
+        flex="1"
       >
-        <Flex justifyContent="flex-start" alignItems={alignTop ? "flex-start" : "center"} width="100%" pl="8px">
-          <Box mt={alignTop ? { xs: "6px", lg: "22px" } : "0"} pl={alignTop ? { xs: "16px", lg: "0" } : "0"}>
+        <Flex justifyContent="center" flex="1" alignItems={"center"} width="100%">
+          {/* <Box mt={alignTop ? { xs: "0", lg: "28px" } : "0"} pl={alignTop ? { xs: "0", lg: "0" } : "0"}>
             <GoBackButton />
-          </Box>
-          <Box ml={{ xs: "8px", lg: "50px" }} flex="1" fontWeight="bold">
-            <Content />
-          </Box>
+          </Box> */}
+          <Content />
         </Flex>
-        <Box>
-          <Buttons />
-        </Box>
       </Flex>
     </SimpleBanner>
   );
 };
 
-const GoBackButton = () => {
+const GoBackButton = ({ sx }: { sx?: BoxProps["sx"] } = {}) => {
   const { constatId } = Route.useParams();
   const navigate = useNavigate();
   const goBack = () => {
@@ -297,6 +356,7 @@ const GoBackButton = () => {
           width: "16px !important",
           mr: "4px",
         },
+        ...sx,
       }}
       fontSize="16px"
       whiteSpace="nowrap"
@@ -318,7 +378,7 @@ const SendBannerContent = () => {
 
   const sendMutationStatus = useMutationState({
     filters: {
-      mutationKey: constatPdfMutations.send({ constatId }).mutationKey,
+      mutationKey: constatPdfMutations.send({ constatId, service: null as any }).mutationKey,
     },
     select: ({ state }) => state.status,
   });
@@ -331,80 +391,122 @@ const SendBannerContent = () => {
   };
 
   return (
-    <>
-      {/* // TODO */}
-      {/* <AlertEmailErrorModal errors={alertErrors} onClose={() => setAlertErrors(null)} onAlertClick={() => {}} /> */}
-      <Flex
-        flexDirection={{ xs: "column", lg: "row" }}
-        width="100%"
-        alignItems={{ xs: "center", lg: "flex-start" }}
-        gap="16px"
-        py={{ xs: "8px", lg: "24px" }}
-      >
-        <Typography pt={{ xs: 0, lg: "8px" }} mr="16px" fontWeight="bold" alignSelf="flex-start">
-          Courriels
-        </Typography>
-        {!isDisabled ? (
-          <Box flex="1" width="100%" pr="16px" ml={{ xs: "-48px", lg: "0" }}>
-            <EmailInput value={recipients} onValueChange={setRecipients} />
-          </Box>
-        ) : null}
-
-        <Box mr="100px" ml="8px">
-          <Button type="submit" iconId="ri-send-plane-fill" disabled={isPending || isDisabled}>
-            {isPending ? "Envoi en cours..." : "Envoyer"}
-          </Button>
-        </Box>
+    <Flex
+      flexDirection={{ xs: "column", lg: "row" }}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+      gap="16px"
+      py={{ xs: "0", lg: "24px" }}
+      px={{ xs: "16px", lg: "0" }}
+    >
+      <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
+        <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
       </Flex>
-    </>
+      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "row" }}>
+        <EmailInput
+          sx={{ width: "100%" }}
+          label={
+            <Flex mt={{ xs: "8px", lg: "0" }}>
+              <Box mr="8px" display={{ xs: "block", lg: "none" }}>
+                <GoBackButton />
+              </Box>
+              <Box fontWeight="bold">Courriels</Box>
+            </Flex>
+          }
+          value={recipients}
+          onValueChange={setRecipients}
+        />
+        <ValidationToggle />
+      </Flex>
+      <Box flex="1" display="flex" justifyContent="flex-start" alignItems="flex-start">
+        <Button
+          type="submit"
+          iconId="ri-send-plane-fill"
+          disabled={isPending || isDisabled}
+          sx={{
+            mt: { xs: "0", lg: "32px" },
+
+            display: { xs: "flex" },
+            alignItems: { xs: "center" },
+            justifyContent: { xs: "center" },
+            width: { xs: "100%", lg: "auto" },
+          }}
+        >
+          {isPending ? "Envoi en cours..." : "Envoyer"}
+        </Button>
+      </Box>
+    </Flex>
   );
 };
 
-const AlertEmailErrorModal = ({
-  errors,
-  onClose,
-  onAlertClick,
-}: {
-  errors: Array<{ id: string; alert: string }> | null;
-  onClose: () => void;
-  onAlertClick: (alertId: string) => void;
-}) => {
+const ViewBannerContent = () => {
   return (
-    <Dialog open={!!errors?.length} onClose={onClose}>
-      <Box p="24px" maxWidth="500px">
-        <Flex justifyContent="space-between" alignItems="flex-start" mb="16px">
-          <Flex alignItems="center" gap="8px">
-            <Box
-              className="fr-icon-error-warning-fill"
-              sx={{ color: fr.colors.decisions.text.actionHigh.redMarianne.default }}
-            />
-            <Typography variant="h6" fontWeight="bold">
-              Alertes sans courriel
-            </Typography>
-          </Flex>
-          <ModalCloseButton onClose={onClose} />
+    <Flex
+      flexDirection={{ xs: "column", lg: "row" }}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+      gap="16px"
+      py={{ xs: "0", lg: "24px" }}
+      px={{ xs: "16px", lg: "0" }}
+    >
+      <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
+        <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
+      </Flex>
+      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "row" }} justifyContent={"space-between"}>
+        <Flex mt={{ xs: "8px", lg: "0" }}>
+          <Box mr="8px" display={{ xs: "block", lg: "none" }}>
+            <GoBackButton />
+          </Box>
+          <Box fontWeight="bold">Prévisualisation du constat</Box>
         </Flex>
-        <Typography mb="16px">Veuillez renseigner un courriel pour les alertes suivantes :</Typography>
-        <Stack component="ul" gap="8px" pl="16px">
-          {errors?.map(({ id, alert }) => (
-            <li key={id}>
-              <Typography
-                onClick={() => onAlertClick(id)}
-                sx={{
-                  cursor: "pointer",
-                  color: fr.colors.decisions.text.actionHigh.redMarianne.default,
-                  textDecoration: "underline",
-                  "&:hover": {
-                    textDecoration: "none",
-                  },
-                }}
-              >
-                {alert}
-              </Typography>
-            </li>
-          ))}
-        </Stack>
-      </Box>
-    </Dialog>
+        <Flex mt={{ xs: "16px", lg: "0" }} mb={{ xs: "8px", lg: "0" }}>
+          <ViewButtons />
+        </Flex>
+      </Flex>
+      <Box flex="1" display={{ xs: "none", lg: "flex" }} justifyContent="flex-start" alignItems="flex-start"></Box>
+    </Flex>
+  );
+};
+
+const ValidationToggle = () => {
+  const form = useSendConstatFormContext();
+  const needValidation = useWatch({ control: form.control, name: "needValidation" });
+
+  const userSettings = useUserSettings();
+  const initialNeedValidation =
+    userSettings?.userSettings.validation_enabled && userSettings?.userSettings.validation_email;
+
+  if (!initialNeedValidation) {
+    return null;
+  }
+  return (
+    <Box
+      width="100%"
+      maxWidth="220px"
+      mt={{ xs: "24px", lg: "42px" }}
+      mr={{ xs: "0", lg: "16px" }}
+      ml={{ xs: "0", lg: "16px" }}
+      sx={{
+        "& label": {
+          width: "220px",
+          overflowWrap: "normal",
+        },
+        "& label::before": {
+          marginRight: "16px",
+          background: "var(--data-uri-svg), white;",
+        },
+      }}
+    >
+      <ToggleSwitch
+        inputTitle="Envoi sous-couvert"
+        showCheckedHint={false}
+        labelPosition="right"
+        label={<Typography>Envoi sous-couvert</Typography>}
+        checked={needValidation}
+        onChange={(checked) => form.setValue("needValidation", checked)}
+      />
+    </Box>
   );
 };

@@ -1,19 +1,36 @@
 import { exec, execSync, spawnSync } from "child_process";
 import { db, makeDb } from "../packages/backend/src/db/db";
-import { mockPopImmeuble, mockServices, mockUsers } from "./utils";
+import { mockClauses, mockPopImmeuble, mockPopObjets, mockServiceInstructeur, mockServices, mockUsers } from "./utils";
 import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
 export const resetDatabase = async () => {
   // Delete child tables first to satisfy foreign key constraints
+  await db.deleteFrom("whitelist").execute();
   await db.deleteFrom("visited_section_attachment").execute();
   await db.deleteFrom("visited_section").execute();
+  await db.deleteFrom("state_report_alert_attachment").execute();
+  await db.deleteFrom("state_report_alert").execute();
   await db.deleteFrom("state_report_attachment").execute();
   await db.deleteFrom("state_report_sent_email").execute();
+  await db.deleteFrom("constat_validation").execute();
+  await db.deleteFrom("attachment_redirection").execute();
   await db.deleteFrom("state_report").execute();
+  await db.deleteFrom("user_settings").execute();
 
   await db.deleteFrom("report_attachment").execute();
   await db.deleteFrom("sent_email").execute();
   await db.deleteFrom("report").execute();
+
+  // cleanup mock reference data
+  await db.deleteFrom("service_instructeurs").where("id", "in", [mockServiceInstructeur.id]).execute();
+  await db
+    .deleteFrom("clause_v2")
+    .where(
+      "id",
+      "in",
+      mockClauses.map((c) => c.id),
+    )
+    .execute();
 
   // delete keycloak users
   for (const user of mockUsers) {
@@ -36,12 +53,28 @@ export const resetDatabase = async () => {
   await db.deleteFrom("whitelist").execute();
 
   await db.insertInto("service").values(mockServices).execute();
+  await db.insertInto("service_instructeurs").values(mockServiceInstructeur).execute();
+  await db.insertInto("clause_v2").values(mockClauses).execute();
 
   await db.deleteFrom("pop_immeubles").where("reference", "=", mockPopImmeuble.reference).execute();
   await db
     .insertInto("pop_immeubles")
     .values(mockPopImmeuble as any)
     .execute();
+
+  await db
+    .deleteFrom("pop_objets")
+    .where(
+      "reference",
+      "in",
+      mockPopObjets.map((o) => o.reference as string),
+    )
+    .execute();
+  await db
+    .insertInto("pop_objets")
+    .values(mockPopObjets as any)
+    .execute();
+
   await db
     .insertInto("whitelist")
     .values(mockUsers.map((u) => ({ email: u.email })))

@@ -1,4 +1,4 @@
-import { Schema, Table, column } from "@powersync/web";
+import { AttachmentRecord, AttachmentTable, AttachmentTableOptions, Schema, Table, column } from "@powersync/web";
 
 const report = new Table({
   title: column.text,
@@ -90,14 +90,6 @@ const pictures = new Table({
   finalUrl: column.text,
 });
 
-const picture_lines = new Table({
-  attachmentId: column.text,
-  lines: column.text,
-  createdAt: column.text,
-  table: column.text,
-  service_id: column.text,
-});
-
 const transactions = new Table({
   id: column.text,
   entity_id: column.text,
@@ -132,6 +124,10 @@ const user_settings = new Table({
   user_id: column.text,
   default_emails: column.text,
   service_id: column.text,
+  validation_enabled: column.integer,
+  validation_email: column.text,
+  validation_nom: column.text,
+  validation_prenom: column.text,
 });
 
 const pop_immeubles = new Table({
@@ -231,6 +227,7 @@ const state_report = new Table({
 
   nature_visite: column.text,
   visite_partielle_details: column.text,
+  visite_details: column.text,
   date_visite: column.text,
   personnes_presentes: column.text,
   redacted_by: column.text,
@@ -241,9 +238,6 @@ const state_report = new Table({
   etat_general: column.text,
   proportion_dans_cet_etat: column.text,
   etat_commentaires: column.text,
-  plan_situation: column.text,
-  plan_edifice: column.text,
-  vue_generale: column.text,
   preconisations: column.text,
   preconisations_commentaires: column.text,
 
@@ -256,6 +250,7 @@ const state_report = new Table({
   created_by: column.text,
   created_at: column.text,
   disabled: column.integer,
+  validation_status: column.text,
 });
 
 const pop_objets = new Table({
@@ -356,6 +351,7 @@ const visited_section_attachment = new Table({
   visited_section_id: column.text,
   attachment_id: column.text,
   is_deprecated: column.integer,
+  is_ignored: column.integer,
   label: column.text,
   created_at: column.text,
   service_id: column.text,
@@ -363,8 +359,10 @@ const visited_section_attachment = new Table({
 
 const report_attachment = new Table({
   report_id: column.text,
+  label: column.text,
   attachment_id: column.text,
   is_deprecated: column.integer,
+  is_ignored: column.integer,
   service_id: column.text,
   created_at: column.text,
 });
@@ -373,7 +371,9 @@ const state_report_attachment = new Table({
   state_report_id: column.text,
   attachment_id: column.text,
   is_deprecated: column.integer,
+  is_ignored: column.integer,
   label: column.text,
+  type: column.text,
   service_id: column.text,
   created_at: column.text,
 });
@@ -405,6 +405,7 @@ const state_report_alert_attachment = new Table({
   state_report_alert_id: column.text,
   attachment_id: column.text,
   is_deprecated: column.integer,
+  is_ignored: column.integer,
   label: column.text,
   created_at: column.text,
   service_id: column.text,
@@ -419,7 +420,6 @@ export const AppSchema = new Schema({
   service_instructeurs,
   clause_v2,
   pictures,
-  picture_lines,
   transactions,
   sent_email,
   suggested_email,
@@ -435,9 +435,19 @@ export const AppSchema = new Schema({
   pop_images,
   state_report_alert,
   state_report_alert_attachment,
-  attachments: new AttachmentTable({
-    name: "attachments",
-  }),
+  attachments: new AttachmentTable() as any as typeof _attachmentTable,
+});
+
+const _attachmentTable = new Table({
+  id: column.text,
+  filename: column.text,
+  local_uri: column.text,
+  timestamp: column.integer,
+  size: column.integer,
+  media_type: column.text,
+  state: column.integer,
+  has_synced: column.integer,
+  meta_data: column.text,
 });
 
 export type Database = (typeof AppSchema)["types"];
@@ -449,7 +459,6 @@ export type PdfSnapshot = Database["pdf_snapshot"];
 export type ServiceInstructeurs = Database["service_instructeurs"];
 export type Clause_v2 = Database["clause_v2"];
 export type Pictures = Database["pictures"];
-export type PictureLines = Database["picture_lines"];
 export type Transactions = Database["transactions"];
 export type SentEmail = Database["sent_email"];
 export type SuggestedEmail = Database["suggested_email"];
@@ -467,7 +476,6 @@ export type StateReportAlert = Database["state_report_alert"];
 export type StateReportAlertAttachment = Database["state_report_alert_attachment"];
 
 import type { Database as BackendDatabase } from "../../../backend/src/db/db";
-import { AttachmentTable } from "@powersync/attachments";
 
 type SharedTables = Extract<keyof Database, keyof BackendDatabase> & Extract<keyof BackendDatabase, keyof Database>;
 type CheckTables = {
@@ -489,7 +497,6 @@ const _checkTables: { [K in SharedTables]: IsTableOk<K> } = {
   clause_v2: true,
   report_attachment: true,
   state_report_attachment: true,
-  picture_lines: true,
   transactions: true,
   sent_email: true,
   suggested_email: true,

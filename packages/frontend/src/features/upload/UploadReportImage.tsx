@@ -1,136 +1,44 @@
-import { useState, useRef, ChangeEvent, useEffect, RefObject } from "react";
-import { v4, v7 } from "uuid";
-import { deleteImageFromIdb, getPicturesStore, getUploadStatusStore } from "../idb";
-import { InputGroup } from "#components/InputGroup.tsx";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { del, get, set } from "idb-keyval";
-import { useFormContext } from "react-hook-form";
-import { createModal } from "@codegouvfr/react-dsfr/Modal";
-import { ImageCanvas, Line } from "./DrawingCanvas";
-import { api } from "../../api";
-import { attachmentQueue, attachmentStorage, db, getAttachmentUrl, useDbQuery } from "../../db/db";
-import { Pictures, Report, ReportAttachment } from "../../db/AppSchema";
+import { useState, useEffect, useRef } from "react";
 import imageCompression from "browser-image-compression";
-import { Box, Grid, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Badge, Button, Center } from "#components/MUIDsfr.tsx";
-import { useLiveUser } from "../../contexts/AuthContext";
-import { AttachmentState } from "@powersync/attachments";
-import { UploadImageButton, UploadImageModal, UploadImageWithEditModal } from "./UploadImageButton";
+import { Badge, Button } from "#components/MUIDsfr.tsx";
+import { AttachmentState } from "@powersync/web";
+import { UploadImageModal } from "./UploadImageButton";
 import { fr } from "@codegouvfr/react-dsfr";
 import { MinimalAttachment, UploadImage } from "./UploadImage";
+import { useActor } from "@xstate/react";
+import { thumbnailMachine } from "./machines/thumbnailMachine";
+import { useAttachmentImages } from "./hooks/useAttachmentImages";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
-  const form = useFormContext<Report>();
-  const [selectedAttachment, setSelectedAttachment] = useState<MinimalAttachment | null>(null);
-  const user = useLiveUser();
-
-  const addImageFileMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const attachmentId = `${reportId}/images/${v7()}.jpg`;
-      const buffer = await processImage(file);
-
-      await attachmentQueue.saveAttachment({
-        attachmentId,
-        buffer,
-        mediaType: "image/jpeg",
-      });
-
-      await db
-        .insertInto("report_attachment")
-        .values({
-          id: attachmentId,
-          attachment_id: attachmentId,
-          report_id: reportId,
-          service_id: user!.service_id,
-          created_at: new Date().toISOString(),
-          is_deprecated: 0,
-        })
-        .execute();
-
-      return attachmentId;
-    },
-  });
-
-  const picturesQuery = useDbQuery(
-    db
-      .selectFrom("report_attachment")
-      .where("is_deprecated", "=", 0)
-      .where("attachment_id", "like", "%.jpg")
-      .where("report_id", "=", reportId)
-      .selectAll()
-      .orderBy("created_at", "asc"),
+  const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
+  const { attachments, addMutation, deleteMutation, replaceAttachment, onLabelChange } = useAttachmentImages(
+    { table: "report_attachment", fkColumn: "report_id", fkValue: reportId },
+    reportId,
   );
-
-  const pictures = picturesQuery.data ?? [];
-
-  const deletePictureMutation = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
-      await attachmentStorage.deleteFile(id);
-      await db.updateTable("report_attachment").set({ is_deprecated: 1 }).where("id", "=", id).execute();
-    },
-  });
 
   return (
     <Box flex="1">
       <UploadImageModal
-        selectedAttachment={selectedAttachment}
-        onClose={() => setSelectedAttachment(null)}
-        imageTable="report_attachment"
-        onSave={() => {}}
-        hideLabelInput
+        selectedAttachment={selected?.attachment ?? null}
+        blobUrl={selected?.blobUrl ?? null}
+        onClose={() => setSelected(null)}
+        onSave={({ id, label }) => onLabelChange(id, label || "")}
+        onReplaceAttachment={replaceAttachment}
       />
       <UploadImage
-        onFiles={async (files) => addImageFileMutation.mutateAsync(files[0])}
+        onFiles={async (files) => {
+          for (const file of files) {
+            await addMutation.mutateAsync(file);
+          }
+        }}
         multiple
-        attachments={pictures}
-        onDelete={({ id }) => deletePictureMutation.mutate({ id })}
-        onClick={(attachment) => setSelectedAttachment(attachment)}
+        attachments={attachments}
+        onDelete={({ id }) => deleteMutation.mutate({ id })}
+        onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
       />
     </Box>
-  );
-};
-
-const useReportAttachmentQuery = (attachmentId: string | null) => {
-  return useQuery({
-    queryKey: ["report-attachment", attachmentId],
-    queryFn: async () => {
-      return db.selectFrom("report_attachment").where("id", "=", attachmentId).selectAll().executeTakeFirst();
-    },
-    enabled: !!attachmentId,
-  });
-};
-const ReportPictures = ({
-  onEdit,
-  onDelete,
-  pictures,
-}: {
-  onEdit: (props: { id: string; url: string }) => void;
-  onDelete: (props: { id: string }) => void;
-  pictures: ReportAttachment[];
-}) => {
-  if (!pictures?.length) return null;
-
-  return (
-    <Flex flexDirection="column" width="100%" my="40px">
-      <InputGroup>
-        <Grid
-          display="grid"
-          gap="16px"
-          gridTemplateColumns={{ xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" }}
-        >
-          {pictures?.map((picture, index) => (
-            <PictureThumbnail
-              key={picture.id}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              picture={picture}
-              label={`N° ${index + 1}`}
-            />
-          ))}
-        </Grid>
-      </InputGroup>
-    </Flex>
   );
 };
 
@@ -141,95 +49,79 @@ export const PictureThumbnail = ({
   onDelete,
   isDisabled,
 }: {
-  picture: { id: string };
+  picture: MinimalAttachment;
   label: string;
-  onEdit: (props: { id: string; url: string }) => void;
+  onEdit: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete: (props: { id: string }) => void;
   isDisabled?: boolean;
 }) => {
-  const idbStatusQuery = useDbQuery(db.selectFrom("attachments").where("id", "=", picture.id).select("state"));
-  const status = idbStatusQuery.data?.[0]?.state;
-  const bgUrlQuery = useQuery({
-    queryKey: ["picture", picture.id, status],
-    queryFn: async () => {
-      const buffer = await getAttachmentUrl(picture.id);
-      return buffer;
-    },
-    refetchOnWindowFocus: false,
-    enabled: status === AttachmentState.SYNCED || status === AttachmentState.QUEUED_UPLOAD,
+  const [snapshot, send] = useActor(thumbnailMachine, {
+    input: { attachment: picture, hasLines: false },
   });
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const pictureLines = useDbQuery(db.selectFrom("picture_lines").where("attachmentId", "=", picture.id).selectAll());
-
+  // Push attachment changes into the machine.
+  const prevPictureRef = useRef(picture);
   useEffect(() => {
-    drawCanvas();
-  }, [pictureLines.data, bgUrlQuery.data]);
+    if (picture !== prevPictureRef.current) {
+      send({ type: "ATTACHMENT_UPDATED", attachment: picture, hasLines: false });
+      prevPictureRef.current = picture;
+    }
+  }, [picture, send]);
 
-  const drawCanvas = () => {
-    if (!canvasRef.current) return;
-    if (!bgUrlQuery.data) return;
-    if (!pictureLines.data) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d")!;
-
-    const rect = canvas.getBoundingClientRect();
-    const displayWidth = rect.width;
-    const displayHeight = rect.height;
-
-    const image = new Image();
-    image.src = bgUrlQuery.data!;
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-
-    ctx.scale(dpr, dpr);
-
-    image.onload = () => {
-      const scaleX = displayWidth / image.width;
-      const scaleY = displayHeight / image.height;
-      const initialScale = Math.max(scaleX, scaleY);
-
-      const xOffset = (displayWidth - image.width * initialScale) / 2;
-      const yOffset = (displayHeight - image.height * initialScale) / 2;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-
-      ctx.translate(xOffset, yOffset);
-      ctx.scale(initialScale, initialScale);
-
-      ctx.drawImage(image, 0, 0, image.width, image.height);
-
-      const lines = JSON.parse(pictureLines.data?.[0]?.lines ?? "[]");
-
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      lines.forEach((line: any) => {
-        ctx.beginPath();
-        ctx.strokeStyle = line.color;
-        if (line.points.length > 0) {
-          ctx.moveTo(line.points[0].x, line.points[0].y);
-          for (let i = 1; i < line.points.length; i++) {
-            ctx.lineTo(line.points[i].x, line.points[i].y);
-          }
-          ctx.stroke();
-        }
-      });
+  // Revoke the final blob URL on unmount (machine handles intermediate revocations).
+  const blobUrlRef = useRef<string | null>(null);
+  blobUrlRef.current = snapshot.context.blobUrl;
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
     };
-  };
-  const finalStatus = idbStatusQuery.data?.[0]?.state ?? AttachmentState.QUEUED_UPLOAD;
+  }, []);
+
+  const { blobUrl, attachment, error: loadError, retryCount } = snapshot.context;
+  const machineState = snapshot.value;
+
+  const isLoading = machineState === "init" || machineState === "waitingForUri" || machineState === "loadingBlob";
+  // Only show the error state after the first silent retry (retryCount > 1).
+  // The first failure (retryCount === 1) is a known IndexedDB write-commit race
+  // on fresh uploads — it resolves in ~100 ms and should not flash "Erreur".
+  const hasError = machineState === "blobError" && retryCount > 1;
+
+  const badgeStatus = (() => {
+    if (hasError) return AttachmentState.ARCHIVED;
+    if (isLoading) return AttachmentState.QUEUED_UPLOAD;
+    return attachment.state ?? AttachmentState.QUEUED_UPLOAD;
+  })();
 
   return (
-    <Stack gap="4px" width={{ xs: "180px", sm: "200px", md: "240px" }}>
-      <ReportStatus status={finalStatus as any} />
+    <Stack gap="4px" width={{ xs: "100%", sm: "100%", md: "calc(50% - 8px)" }}>
+      <ReportStatus status={badgeStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
-        <Box ref={canvasRef} component="canvas" flex="1"></Box>
+        <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
+          {hasError ? (
+            <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
+              <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
+                {loadError ?? "Impossible de charger l'image"}
+              </Typography>
+              <Button
+                type="button"
+                size="small"
+                priority="tertiary no outline"
+                iconId="fr-icon-refresh-line"
+                onClick={() => send({ type: "RETRY" })}
+              >
+                Réessayer
+              </Button>
+            </Flex>
+          ) : blobUrl ? (
+            <Box
+              onClick={() => blobUrl && onEdit(picture, blobUrl)}
+              component="img"
+              src={blobUrl}
+              data-picture-id={picture.id}
+              sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover", cursor: "pointer" }}
+            />
+          ) : null}
+        </Box>
         <Flex
           display={isDisabled ? "none" : "flex"}
           bgcolor="white"
@@ -239,17 +131,17 @@ export const PictureThumbnail = ({
           height="40px"
         >
           {isDisabled ? null : (
-            <Box
-              onClick={() => {
-                onEdit({ id: picture.id, url: bgUrlQuery.data! });
-              }}
-              borderRight="1px solid"
-              borderColor={fr.colors.decisions.border.default.grey.default}
-            >
+            <Box borderRight="1px solid" borderColor={fr.colors.decisions.border.default.grey.default}>
               <Button
                 type="button"
                 iconId="ri-pencil-fill"
                 priority="tertiary no outline"
+                nativeButtonProps={{
+                  "aria-label": "Annoter",
+                  onClick: () => {
+                    if (blobUrl) onEdit(picture, blobUrl);
+                  },
+                }}
                 sx={{
                   "::before": {
                     marginRight: "0 !important",
@@ -339,8 +231,8 @@ const statusData: Record<AttachmentState, any> = {
     icon: "fr-icon-refresh-line",
   },
   [AttachmentState.SYNCED]: { label: "Ok", bgColor: "#B8FEC9", color: "#18753C", icon: "fr-icon-success-line" },
-  [AttachmentState.ARCHIVED]: { label: "Erreur", bgColor: "#FEC9C9", color: "#853C3C", icon: "fr-icon-warning-line" },
-  [AttachmentState.QUEUED_SYNC]: {
+  [AttachmentState.ARCHIVED]: { label: "Ok", bgColor: "#B8FEC9", color: "#18753C", icon: "fr-icon-success-line" },
+  [AttachmentState.QUEUED_DELETE]: {
     label: "En cours",
     bgColor: "#FEE7FC",
     color: "#855080",

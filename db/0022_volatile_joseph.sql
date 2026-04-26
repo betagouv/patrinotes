@@ -1,0 +1,1 @@
+ALTER TABLE "state_report" ADD COLUMN "alerts_sent" boolean DEFAULT false;

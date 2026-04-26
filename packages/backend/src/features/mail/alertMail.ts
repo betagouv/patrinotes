@@ -1,6 +1,7 @@
 import { Selectable } from "kysely";
 import { Database } from "../../db/db";
-import { MinimalAlert } from "@cr-vif/pdf/constat";
+import { MinimalAlert } from "@patrinotes/pdf/constat";
+import { wrapWithDsfrMail } from "./dsfrMailWrapper";
 import {
   ABORDS_DE_L_EDIFICE_SECTION,
   ARCHEOLOGIE_SECTION,
@@ -9,7 +10,7 @@ import {
   OBJETS_MOBILIERS_SECTION,
   SECURITE_SECTION,
   SITE_CLASSE_OU_INSCRIT_SECTION,
-} from "@cr-vif/pdf/utils";
+} from "@patrinotes/pdf/utils";
 import { AuthUser } from "../../routes/authMiddleware";
 import { getServices } from "../../services/services";
 
@@ -48,7 +49,7 @@ export const createAlertEmailContent = async ({
   const alertAttachments = alert.attachments.filter((att) => !att.is_deprecated);
   const mailAttachments = await Promise.all(
     alertAttachments.map(async (attachment) => {
-      const buffer = await uploadService.getAttachment({ filePath: attachment.id });
+      const buffer = await uploadService.getAttachment({ filePath: attachment.attachment_id! });
 
       return {
         filename: attachment.label || "Photo",
@@ -59,9 +60,9 @@ export const createAlertEmailContent = async ({
     }),
   );
 
-  const html = `
+  const innerHtml = `
     <p>Madame, Monsieur,</p>
-    <p>Dans le cadre d’un constat d’état réalisé sur le monument historique <b>${uppercaseFirstLetter(stateReport.titre_edifice!)}</b>${stateReport.commune ? `, situé à ${stateReport.commune}` : ``},
+    <p>Dans le cadre d’un constat d’état réalisé sur le monument historique <b>${stateReport.titre_edifice ? uppercaseFirstLetter(stateReport.titre_edifice) : ""}</b>${stateReport.commune ? `, situé à ${stateReport.commune}` : ``},
   ${getProblemDescription({ alert, user })} l’agent ${getServicePronom(user.service.name!)}, en charge du contrôle scientifique et technique, ${user.name} :</p>
 
   ${alert.commentaires ? `<p>${alert.commentaires}</p>` : ""}
@@ -78,13 +79,14 @@ export const createAlertEmailContent = async ({
   <b>${user.email}</b>
   </p>
   <p>Merci,</p>
-
-  <p>Ministère de la culture</p>
-
-  <p>(Envoi automatique depuis le service numérique Patrinotes)</p>
   `;
 
-  return { html, attachments: mailAttachments };
+  const { html, attachments: dsfrAttachments } = wrapWithDsfrMail({
+    title: `Alerte ${alert.alert}${stateReport.titre_edifice ? ` — ${stateReport.titre_edifice}` : ""}`,
+    content: innerHtml,
+  });
+
+  return { html, attachments: [...dsfrAttachments, ...mailAttachments] };
 };
 
 const getServicePronom = (serviceName: string) => {

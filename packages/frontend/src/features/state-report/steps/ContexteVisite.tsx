@@ -27,7 +27,7 @@ export const ContexteVisite = () => {
       pt={{ xs: "16px", lg: "14px" }}
       mb="40px"
       sx={{
-        input: {
+        "input, textarea": {
           maxWidth: "588px",
         },
       }}
@@ -47,8 +47,18 @@ export const ContexteVisite = () => {
         Contexte de la visite
       </Typography>
       <MandatoryFieldReminder />
+
       <NatureVisiteRadioButtons isDisabled={isDisabled} />
+      <Input
+        textArea
+        hintText="Déclenchement de la visite, durée, conditions..."
+        nativeTextAreaProps={{
+          rows: 4,
+        }}
+        label="Détails de la visite"
+      />
       <BilanQuinquennalRadioButtons isDisabled={isDisabled} />
+
       <Divider mb="16px" />
       <DateInput
         isDisabled={isDisabled}
@@ -224,7 +234,7 @@ const NatureVisiteRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
   }));
 
   return (
-    <Stack gap={0} mb="16px">
+    <Stack gap={0} mb="1.5rem">
       <RadioButtons
         disabled={isDisabled}
         orientation={isDesktop ? "horizontal" : "vertical"}
@@ -234,7 +244,12 @@ const NatureVisiteRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
         style={{ marginBottom: 0 }}
       />
       {value === "partielle (préciser)" ? (
-        <Input disabled={isDisabled} label={null} nativeInputProps={{ ...form.register("visite_partielle_details") }} />
+        <Input
+          sx={{ mt: "16px" }}
+          label="Partie visitée"
+          disabled={isDisabled}
+          nativeInputProps={{ ...form.register("visite_partielle_details") }}
+        />
       ) : null}
     </Stack>
   );

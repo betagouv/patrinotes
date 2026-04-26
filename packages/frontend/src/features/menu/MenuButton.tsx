@@ -5,7 +5,6 @@ import { useIsDesktop, useIsXL } from "../../hooks/useIsDesktop";
 import { ClauseMenu } from "./ClauseMenu";
 import { HelpMenu } from "./HelpMenu";
 import { MenuActions } from "./MenuActions";
-import Badge from "@codegouvfr/react-dsfr/Badge";
 
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { ReportSearch } from "#components/ReportSearch.tsx";
@@ -15,7 +14,7 @@ import { useLocation, useRouter } from "@tanstack/react-router";
 import { useLogout } from "../../contexts/AuthContext";
 import { menuActor, MenuStates } from "./menuMachine";
 import { ModalCloseButton } from "./MenuTitle";
-import { useStatus } from "@powersync/react";
+import { StatusBadge } from "./StatusBadge";
 
 export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
   const logout = useLogout();
@@ -114,53 +113,25 @@ export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
             </Box>
             <Button
               sx={{
-                "::before": { width: "24px", height: "24px" },
                 p: 0,
+                width: "40px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
-              iconId="ri-menu-fill"
               priority="tertiary no outline"
               nativeButtonProps={{
                 onClick: () => menuActor.send({ type: "OPEN" }),
                 type: "button",
               }}
             >
-              {null}
+              <i className="fr-icon ri-menu-fill" />
             </Button>
           </Center>
         )}
       </Flex>
     </>
-  );
-};
-
-export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
-  const status = noProvider ? null : useStatus();
-
-  if (noProvider) {
-    return (
-      <Badge small as="span" noIcon severity="info">
-        Beta
-      </Badge>
-    );
-  }
-
-  const getTimeSinceLastSync = () => {
-    const now = Date.now();
-    const lastSync = status?.lastSyncedAt ? new Date(status.lastSyncedAt).getTime() : null;
-
-    if (!lastSync) return -1;
-
-    return Math.floor((now - lastSync) / 1000);
-  };
-
-  const timeSinceLastSync = getTimeSinceLastSync();
-
-  const isConnected = status?.connected || timeSinceLastSync < 180;
-
-  return (
-    <Badge small as="span" noIcon severity={status ? (isConnected ? "success" : "error") : "success"}>
-      {status ? (isConnected ? "En ligne" : "Hors ligne") : "Beta"}
-    </Badge>
   );
 };
 

@@ -1,8 +1,11 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
-import { db, getAttachmentUrl } from "../../../db/db";
-import { AlertWithAttachments, SendConstatForm } from "./ConstatPdfContext";
+import { attachmentLocalStorage, db } from "../../../db/db";
+import { SendConstatForm } from "./ConstatPdfContext";
 import { api } from "../../../api";
-import { MinimalAlert } from "@cr-vif/pdf/constat";
+import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
+import { pdf } from "@react-pdf/renderer";
+import React from "react";
+import { Service } from "../../../db/AppSchema";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
@@ -23,20 +26,41 @@ export const constatPdfQueries = {
         }
 
         const stateReport = stateReportQuery[0];
-
         const attachmentQuery = await db
           .selectFrom("state_report_attachment")
-          .where("is_deprecated", "=", 0)
-          .selectAll()
-          .where("state_report_id", "=", constatId)
+          .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
+          .select([
+            "state_report_attachment.id",
+            "state_report_attachment.attachment_id",
+            "state_report_attachment.label",
+            "state_report_attachment.type",
+            "attachments.local_uri",
+            "attachments.state",
+            "attachments.media_type",
+            "state_report_attachment.created_at",
+            "state_report_attachment.service_id",
+            "state_report_attachment.is_deprecated",
+            "state_report_attachment.is_ignored",
+            "state_report_attachment.state_report_id",
+          ])
+          .where("state_report_attachment.state_report_id", "=", constatId)
+          .where((eb) =>
+            eb.or([
+              eb("state_report_attachment.is_deprecated", "=", 0),
+              eb("state_report_attachment.is_deprecated", "is", null),
+            ]),
+          )
+          .orderBy("state_report_attachment.created_at", "asc")
           .execute();
 
         const attachmentsWithFiles = await Promise.all(
           attachmentQuery.map(async (attachment) => {
-            const file = await getAttachmentUrl(attachment.id);
+            const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
+            const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+
             return {
               ...attachment,
-              file,
+              file: url,
             };
           }),
         );
@@ -47,7 +71,6 @@ export const constatPdfQueries = {
         };
       },
       refetchOnWindowFocus: false,
-      gcTime: 0,
     }),
 
   sections: ({ constatId }: { constatId: string }) =>
@@ -62,21 +85,46 @@ export const constatPdfQueries = {
 
         const visitedSectionAttachments = await db
           .selectFrom("visited_section_attachment")
-          .selectAll()
+          .leftJoin("attachments", "attachments.id", "visited_section_attachment.attachment_id")
+          .select([
+            "visited_section_attachment.id",
+            "visited_section_attachment.attachment_id",
+            "visited_section_attachment.label",
+            "visited_section_attachment.visited_section_id",
+            "visited_section_attachment.is_deprecated",
+            "visited_section_attachment.is_ignored",
+            "visited_section_attachment.created_at",
+            "visited_section_attachment.service_id",
+            "attachments.local_uri",
+            "attachments.state",
+            "attachments.media_type",
+          ])
           .where(
             "visited_section_id",
             "in",
             visitedSections.map((vs) => vs.id),
           )
-          .where("is_deprecated", "=", 0)
+          .where((eb) =>
+            eb.or([
+              eb("visited_section_attachment.is_deprecated", "=", 0),
+              eb("visited_section_attachment.is_deprecated", "is", null),
+            ]),
+          )
           .execute();
 
         const attachments = await Promise.all(
           visitedSectionAttachments.map(async (attachment) => {
-            const file = await getAttachmentUrl(attachment.id);
+            if (!attachment.local_uri) {
+              return {
+                ...attachment,
+                file: null,
+              };
+            }
+            const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
+            const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
             return {
               ...attachment,
-              file,
+              file: url,
             };
           }),
         );
@@ -88,6 +136,7 @@ export const constatPdfQueries = {
       },
       refetchOnWindowFocus: false,
       gcTime: 0,
+      throwOnError: true,
     }),
 
   alerts: ({ constatId }: { constatId: string }) =>
@@ -102,21 +151,40 @@ export const constatPdfQueries = {
 
         const alertAttachments = await db
           .selectFrom("state_report_alert_attachment")
-          .selectAll()
+          .leftJoin("attachments", "attachments.id", "state_report_alert_attachment.attachment_id")
+          .select([
+            "state_report_alert_attachment.id",
+            "state_report_alert_attachment.attachment_id",
+            "state_report_alert_attachment.label",
+            "state_report_alert_attachment.state_report_alert_id",
+            "attachments.local_uri",
+            "attachments.state",
+            "attachments.media_type",
+            "state_report_alert_attachment.is_deprecated",
+            "state_report_alert_attachment.is_ignored",
+            "state_report_alert_attachment.created_at",
+            "state_report_alert_attachment.service_id",
+          ])
           .where(
             "state_report_alert_id",
             "in",
             alerts.map((alert) => alert.id),
           )
-          .where("is_deprecated", "=", 0)
+          .where((eb) =>
+            eb.or([
+              eb("state_report_alert_attachment.is_deprecated", "=", 0),
+              eb("state_report_alert_attachment.is_deprecated", "is", null),
+            ]),
+          )
           .execute();
 
         const attachments = await Promise.all(
           alertAttachments.map(async (attachment) => {
-            const file = await getAttachmentUrl(attachment.id);
+            const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
+            const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
             return {
               ...attachment,
-              file,
+              file: url,
             };
           }),
         );
@@ -132,16 +200,32 @@ export const constatPdfQueries = {
 };
 
 export const constatPdfMutations = {
-  send: ({ constatId }: { constatId: string }) =>
+  send: ({ constatId, service }: { constatId: string; service: Service }) =>
     mutationOptions({
       mutationKey: ["send-constat-pdf", constatId],
-      mutationFn: async ({ alerts, htmlString, recipients }: SendConstatForm) => {
+      mutationFn: async ({ alerts, selectedAlertIds, htmlString, recipients, needValidation }: SendConstatForm) => {
+        const alertsToSend = alerts.filter((a) => selectedAlertIds.includes(a.id));
+        const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
+          body: { stateReportId: constatId },
+        });
+
+        const blob = await pdf(
+          React.createElement(StateReportPDFDocument, {
+            htmlString: htmlString!,
+            images: { marianne: "/marianne.png", marianneFooter: "/marianne_footer.png" },
+            service: service as any,
+          }) as any,
+        ).toBlob();
+
+        await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+
         await api.post("/api/pdf/state-report", {
           body: {
             stateReportId: constatId,
-            htmlString: htmlString!,
+            pdfPath,
             recipients: recipients.join(","),
-            alerts: alerts,
+            alerts: alertsToSend,
+            needValidation,
           },
         });
       },
