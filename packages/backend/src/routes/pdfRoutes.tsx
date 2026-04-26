@@ -15,6 +15,9 @@ import { AppError } from "../features/errors";
 import { randomInt } from "crypto";
 import base62 from "base62";
 import { ENV } from "../envVars";
+import { sentry } from "../features/sentry";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { parseHTML } from "linkedom";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -264,7 +267,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
           debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.join(",")}`);
         } catch (alertError) {
-          debug(`Failed to send alert email for alert ${alert.id}: ${alertError}`);
+          sentry?.captureException(alertError, { extra: { alertId: alert.id } });
           console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
         }
       }
@@ -318,7 +321,12 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       sentTo: recipients.join(","),
       name: getStateReportMailName({ titre_edifice: stateReportQuery.titre_edifice }),
     });
-    await sendStateReportMail({ recipients: recipients.join(","), pdfUrl: pdfMailUrl, stateReport: stateReport!, user });
+    await sendStateReportMail({
+      recipients: recipients.join(","),
+      pdfUrl: pdfMailUrl,
+      stateReport: stateReport!,
+      user,
+    });
 
     // update mandatory emails since they might have been filled before sending
     await db.transaction().execute(async (tx) => {

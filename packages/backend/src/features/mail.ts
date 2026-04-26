@@ -20,7 +20,7 @@ const transporter = createTransport({
   },
 });
 
-export const sendStateReportMail = ({
+export const sendStateReportMail = async ({
   recipients,
   pdfUrl,
   stateReport,
@@ -44,7 +44,7 @@ export const sendStateReportMail = ({
   });
 };
 
-export const sendReportMail = ({
+export const sendReportMail = async ({
   recipients,
   pdfBuffer,
   report,
@@ -171,14 +171,21 @@ export const sendAlertEmail = async ({
     extra: { to, alertType: alert.alert, monumentName: stateReport.titre_edifice || "" },
   });
 
-  const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
-  const subject = getAlertMailSubject(alert.alert!, stateReport.titre_edifice || "");
+  try {
+    const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
+    const subject = getAlertMailSubject(alert.alert!, stateReport.titre_edifice || "");
 
-  return transporter.sendMail({
-    from: ENV.EMAIL_EMITTER,
-    to,
-    subject,
-    html,
-    attachments,
-  });
+    return await transporter.sendMail({
+      from: ENV.EMAIL_EMITTER,
+      to,
+      subject,
+      html,
+      attachments,
+    });
+  } catch (error) {
+    sentry?.captureException(error, {
+      extra: { to, alertType: alert.alert, monumentName: stateReport.titre_edifice || "" },
+    });
+    throw error;
+  }
 };

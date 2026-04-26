@@ -2,9 +2,9 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import { ENV } from "../envVars";
 import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
-import { S3 } from "@aws-sdk/client-s3";
 import { db } from "../db/db";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { sentry } from "../features/sentry";
 
 const debug = makeDebug("upload");
 
@@ -34,7 +34,12 @@ export class UploadService {
       Body: buffer,
       Key: addAttachmentPrefix(filePath),
     });
-    await client.send(command);
+    try {
+      await client.send(command);
+    } catch (error) {
+      sentry?.captureException(error, { extra: { filePath } });
+      throw error;
+    }
   }
 
   async getAttachment({ filePath }: { filePath: string }) {
@@ -54,7 +59,12 @@ export class UploadService {
       Body: buffer,
       Key: name,
     });
-    await client.send(command);
+    try {
+      await client.send(command);
+    } catch (error) {
+      sentry?.captureException(error, { extra: { reportId, name } });
+      throw error;
+    }
 
     const url = `https://${bucketUrl}/${name}`;
     debug(url);
