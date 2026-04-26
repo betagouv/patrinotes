@@ -69,3 +69,4 @@ keycloak-theme/*
 *.csv
 
 .playwright-mcp
+.claude

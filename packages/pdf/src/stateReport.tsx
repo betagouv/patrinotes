@@ -404,7 +404,7 @@ export const getStateReportHtmlString = ({
 
       ${
         preconisationsHtml
-          ? `<unbreakable id="preconisations">
+          ? `<div id="preconisations">
         <h2>Préconisations générales</h2>
         <b>
           Suite à la visite, il est préconisé d'entreprendre les travaux suivants sur l'édifice :
@@ -413,20 +413,20 @@ export const getStateReportHtmlString = ({
         <div>
           ${preconisationsHtml}
         </div>
-        </unbreakable>`
+        </div>`
           : ""
       }
 
       ${
         filteredAlerts.length
-          ? `<unbreakable id="alertes">
+          ? `<div id="alertes">
               <h2>Alertes</h2>
               <b>
                 Suite à la visite, ${filteredAlerts.length} alerte${filteredAlerts.length > 1 ? "s ont été" : " a été"} signalée${filteredAlerts.length > 1 ? "s" : ""} et transmise${filteredAlerts.length > 1 ? "s" : ""} aux services concernés :
               </b>
               <br/>
               ${generateAlertsTable(filteredAlerts)}
-            </unbreakable>`
+            </div>`
           : ""
       }
 
