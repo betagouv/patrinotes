@@ -1,0 +1,1 @@
+ALTER TABLE "state_report" RENAME COLUMN "visite_partielle_parties" TO "visite_details";

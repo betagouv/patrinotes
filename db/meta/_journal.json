@@ -211,6 +211,13 @@
       "when": 1776775161943,
       "tag": "0029_rapid_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1777378078204,
+      "tag": "0030_gigantic_invisible_woman",
+      "breakpoints": true
     }
   ]
 }
