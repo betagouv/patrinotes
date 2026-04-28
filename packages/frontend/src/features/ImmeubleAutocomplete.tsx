@@ -67,6 +67,7 @@ export const ImmeubleAutocomplete = () => {
 
   const setValue = async (item: FilterablePopImmeubles | null) => {
     if (isDisabled) return;
+    form.setValue("disabled", 0);
     form.setValue("reference_pop", item ? item.id : null);
 
     setIsChanging(false);
@@ -323,7 +324,10 @@ export const ImmeubleAutocomplete = () => {
           <Button
             priority="secondary"
             sx={{ width: { xs: "100%", lg: "unset" }, justifyContent: { xs: "center", lg: "unset" } }}
-            onClick={() => form.setValue("reference_pop", "CUSTOM")}
+            onClick={() => {
+              form.setValue("disabled", 0);
+              form.setValue("reference_pop", "CUSTOM");
+            }}
             disabled={isDisabled}
           >
             Créer un constat sans lien MH
