@@ -88,7 +88,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
             date_visite: new Date().toISOString(),
           })
           .execute();
-        await trx.insertInto("visited_section").values(visitedSectionValues).execute();
+        if (visitedSections.length) await trx.insertInto("visited_section").values(visitedSectionValues).execute();
       });
     },
   });
