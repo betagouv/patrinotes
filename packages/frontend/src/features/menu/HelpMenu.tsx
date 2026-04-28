@@ -9,18 +9,24 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Button, Alert } from "#components/MUIDsfr.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Flex } from "#components/ui/Flex.tsx";
+import { useMutation } from "@tanstack/react-query";
 
 export const HelpMenu = () => {
   const [showClipboardSuccess, setShowClipboardSuccess] = useState(false);
 
-  const deleteLocalData = () => {
-    localStorage.clear();
-    indexedDB.deleteDatabase("crvif.db");
-    unregisterSWs();
-    clearDb().then(() => {
+  const deleteLocalData = useMutation({
+    mutationFn: async () => {
+      await clearDb();
+      unregisterSWs();
+      localStorage.clear();
+
+      const dbs = await indexedDB.databases();
+      await Promise.all(dbs.map((db) => indexedDB.deleteDatabase(db.name!)));
+
       window.location.reload();
-    });
-  };
+    },
+  });
+
   return (
     <>
       <MenuTitle backButtonOnClick={() => menuActor.send({ type: "BACK" })}>Aide</MenuTitle>
@@ -85,7 +91,8 @@ export const HelpMenu = () => {
             sx={{
               mt: "16px",
             }}
-            onClick={() => deleteLocalData()}
+            disabled={deleteLocalData.isPending}
+            onClick={() => deleteLocalData.mutate()}
           >
             Réinitialiser les données locales
           </Button>
