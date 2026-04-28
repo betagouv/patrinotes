@@ -293,6 +293,12 @@ export const getStateReportHtmlString = ({
 
   const filteredAlerts = (alerts || []).filter((alert) => alert.show_in_report).filter(getIsAlertVisited);
 
+  const personnesPresentes = stateReport.personnes_presentes
+    ?.split("\n")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .join(", ");
+
   // accessibilité
   // h1 pour les deux premières lignes
   // h2 pour les titres de sections
@@ -305,7 +311,7 @@ export const getStateReportHtmlString = ({
     </p>
     <p>
       Constat dressé par <b>${stateReport.redacted_by ?? stateReport.createdByName}</b> suite à la visite  ${isPartielle ? " partielle" : ""}
-      ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}.
+      ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}${personnesPresentes ? `, en présence de ${personnesPresentes}` : ""}.
 
       <br/>
       <br/>

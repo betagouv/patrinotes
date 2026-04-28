@@ -95,26 +95,30 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
         db
           .selectFrom("service")
-          .innerJoin("state_report", (join) =>
-            join
-              .onRef("state_report.service_id", "=", "service.id")
-              .on("state_report.disabled", "is not", true)
-              .on("state_report.alerts_sent", "=", true),
+          .where("id", "ilike", "%udap%")
+          .where((eb) =>
+            eb.exists(
+              eb
+                .selectFrom("state_report")
+                .whereRef("state_report.service_id", "=", "service.id")
+                .select("state_report.id"),
+            ),
           )
-          .where("service.name", "ilike", "%udap%")
-          .select(db.fn.count<number>("service.department").distinct().as("count"))
+          .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
 
         db
           .selectFrom("service")
-          .innerJoin("state_report", (join) =>
-            join
-              .onRef("state_report.service_id", "=", "service.id")
-              .on("state_report.disabled", "is not", true)
-              .on("state_report.alerts_sent", "=", true),
+          .where("id", "ilike", "%crmh%")
+          .where((eb) =>
+            eb.exists(
+              eb
+                .selectFrom("state_report")
+                .whereRef("state_report.service_id", "=", "service.id")
+                .select("state_report.id"),
+            ),
           )
-          .where("service.name", "ilike", "%crmh%")
-          .select(db.fn.count<number>("service.department").distinct().as("count"))
+          .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
       ]);
 
