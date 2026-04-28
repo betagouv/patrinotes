@@ -437,7 +437,7 @@ const ServiceInstructeurForm = ({
 
 const Clauses = () => {
   return (
-    <Flex gap="16px" flexDirection="column" width="100%" maxWidth="690px">
+    <Flex gap="16px" flexDirection="column" width="100%">
       <Title anchor="clauses-departementales">3. Clauses départementales pour les comptes-rendus</Title>
       <div>Pensez à faire des contenus courts et explicites pour vos lecteurs.</div>
 
