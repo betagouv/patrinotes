@@ -2,7 +2,7 @@ import { type UseFormReturn, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Flex } from "#components/ui/Flex.tsx";
 import { getErrorMessage, RouterInputs, unauthenticatedApi } from "../../api";
-import { Alert, Checkbox, Input, Select } from "#components/MUIDsfr.tsx";
+import { Alert, Center, Checkbox, Input, Select } from "#components/MUIDsfr.tsx";
 import { Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { useAuthContext } from "../../contexts/AuthContext";
@@ -13,6 +13,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { omit } from "pastable";
 import { scrollToTop } from "../state-report/StateReportSummary";
 import { fr } from "@codegouvfr/react-dsfr";
+import { Notice } from "@codegouvfr/react-dsfr/Notice";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -56,8 +57,21 @@ export const SignupForm = () => {
   const { error: mutationError } = mutation;
 
   return (
-    <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }} width={{ xs: "100%", lg: "600px" }} mx="auto" mt="32px">
-      <Typography variant="h4" mb="24px">
+    <Flex
+      flexDirection="column"
+      px={{ lg: 0, xs: "16px" }}
+      width={{ xs: "100%", lg: "600px" }}
+      mx="auto"
+      mt={{ lg: "32px", sm: "0" }}
+    >
+      <Notice
+        iconDisplayed
+        isClosable={false}
+        severity="info"
+        title="Compte-rendu VIF est intégré à Patrinotes à partir du 4 mai."
+        description="Retrouvez vos CR en vous créant un compte avec le même courriel."
+      />
+      <Typography variant="h4" mb="24px" mt="24px">
         Inscription
       </Typography>
       <Typography fontSize="14px" color={fr.colors.decisions.text.default.grey.default} mb="32px">
