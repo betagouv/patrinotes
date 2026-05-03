@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="refresh" content="0; url=https://app.patrinotes.beta.gouv.fr" />
+    <script>
+      // Force unregister just in case
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          for (let reg of regs) reg.unregister();
+        });
+      }
+      window.location.href = "https://app.patrinotes.beta.gouv.fr";
+    </script>
+  </head>
+  <body>
+    Vous allez être redirigé vers <a href="https://app.patrinotes.beta.gouv.fr">Patrinotes</a>...
+  </body>
+</html>
