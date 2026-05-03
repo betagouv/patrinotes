@@ -19,6 +19,7 @@ function buildQuery(config: AttachmentTableConfig) {
         .leftJoin("attachments", "attachments.id", "report_attachment.attachment_id")
         .where("report_attachment.report_id", "=", config.fkValue)
         .where("report_attachment.is_deprecated", "=", 0)
+        .where("report_attachment.attachment_id", "not like", "%.pdf")
         .select((eb) => [
           "report_attachment.id",
           "report_attachment.label",
