@@ -348,31 +348,35 @@ const SectionForm = ({
           )}
         </Flex>
       </Stack>
-      <FullWidthButton
-        disabled={isDisabled}
-        onClick={() => {
-          syncMutation.mutate();
-          onClose();
-        }}
-      >
-        Valider
-      </FullWidthButton>
-      <FullWidthButton
-        disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}
-        onClick={() =>
-          setValues((values) => ({
-            ...values,
-            commentaires: null,
-            etat_general: null,
-            proportion_dans_cet_etat: null,
-          }))
-        }
-        priority="tertiary no outline"
-        iconId="ri-arrow-go-back-line"
-        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-      >
-        Effacer les informations
-      </FullWidthButton>
+      <Flex justifyContent="flex-end" gap="8px" flexDirection={{ xs: "column", lg: "row" }}>
+        <Button
+          disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}
+          onClick={() =>
+            setValues((values) => ({
+              ...values,
+              commentaires: null,
+              etat_general: null,
+              proportion_dans_cet_etat: null,
+            }))
+          }
+          priority="tertiary no outline"
+          iconId="ri-arrow-go-back-line"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+          sx={{ width: { xs: "100%", lg: "fit-content" }, display: "flex", justifyContent: "center" }}
+        >
+          Effacer les informations
+        </Button>
+        <Button
+          disabled={isDisabled}
+          onClick={() => {
+            syncMutation.mutate();
+            onClose();
+          }}
+          sx={{ width: { xs: "100%", lg: "fit-content" }, display: "flex", justifyContent: "center" }}
+        >
+          Valider
+        </Button>
+      </Flex>
     </Stack>
   );
 };
