@@ -66,7 +66,7 @@ export const UploadImageModal = ({
   blobUrl: string | null;
   onClose: () => void;
   onSave?: (props: MinimalAttachment & { url: string }) => void;
-  onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
+  onReplaceAttachment?: (oldId: string, data: ArrayBuffer, label?: string) => Promise<string>;
   hideLabelInput?: boolean;
 }) => {
   if (!selectedAttachment) return null;

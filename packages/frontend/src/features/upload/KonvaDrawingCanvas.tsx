@@ -33,7 +33,7 @@ export const ImageCanvas = ({
   onSave?: (props: MinimalAttachment & { url: string }) => void;
   /** When provided, the canvas will generate a composite image on save, create a
    *  new attachment locally (with local_uri set immediately), and deprecate the old one. */
-  onReplaceAttachment?: (oldId: string, data: ArrayBuffer) => Promise<string>;
+  onReplaceAttachment?: (oldId: string, data: ArrayBuffer, label?: string) => Promise<string>;
   closeModal: () => void;
   hideLabelInput?: boolean;
 }) => {
@@ -374,9 +374,11 @@ export const ImageCanvas = ({
         }
         const blob = await new Promise<Blob>((resolve) => offscreen.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
         const buffer = await blob.arrayBuffer();
-        savedId = await onReplaceAttachment(pictureId, buffer);
+        await onReplaceAttachment(pictureId, buffer, internalLabel);
+      } else if (lines.length === 0) {
+        onSave?.({ ...attachment, id: pictureId, label: internalLabel, url });
       }
-      onSave?.({ ...attachment, id: savedId, label: internalLabel, url });
+
       closeModal();
     },
   });
