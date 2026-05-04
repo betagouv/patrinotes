@@ -69,14 +69,17 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   const attachments = (result.data ?? []) as MinimalAttachment[];
 
   // Keep the latest insert implementation in a ref so the stable callback never goes stale.
-  const insertRecordImplRef = useRef<(attachmentId: string) => Promise<void>>(null!);
-  insertRecordImplRef.current = async (attachmentId: string) => {
+  const insertRecordImplRef = useRef<
+    (attachmentId: string, data?: { label?: string; created_at?: string }) => Promise<void>
+  >(null!);
+  insertRecordImplRef.current = async (attachmentId, data) => {
     switch (config.table) {
       case "report_attachment":
         await db
           .insertInto("report_attachment")
           .values({
-            id: v7(),
+            ...data,
+            id: attachmentId,
             attachment_id: attachmentId,
             label: "",
             report_id: config.fkValue,
@@ -90,7 +93,8 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("visited_section_attachment")
           .values({
-            id: v7(),
+            ...data,
+            id: attachmentId,
             attachment_id: attachmentId,
             visited_section_id: config.fkValue,
             label: "",
@@ -104,7 +108,8 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("state_report_alert_attachment")
           .values({
-            id: v7(),
+            ...data,
+            id: attachmentId,
             attachment_id: attachmentId,
             state_report_alert_id: config.fkValue,
             label: "",
@@ -178,10 +183,11 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
    * Returns the new attachment ID so the caller can write picture_lines with newAttachmentId.
    */
   const replaceAttachment = useCallback(
-    async (oldId: string, data: ArrayBuffer): Promise<string> => {
+    async (oldId: string, data: ArrayBuffer, label?: string): Promise<string> => {
       const newId = `${parentId}/images/${v7()}.jpg`;
       await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
-      await insertRecordImplRef.current(newId);
+
+      await insertRecordImplRef.current(newId, { label: label ?? "" });
       await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
       return newId;
     },

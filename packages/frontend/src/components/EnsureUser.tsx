@@ -1,4 +1,4 @@
-import { getRouteApi, Navigate } from "@tanstack/react-router";
+import { Navigate } from "@tanstack/react-router";
 import type { PropsWithChildren } from "react";
 import { useUser } from "../contexts/AuthContext";
 

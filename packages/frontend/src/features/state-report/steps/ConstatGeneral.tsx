@@ -262,12 +262,12 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
     await db.updateTable("state_report_attachment").set({ label: newLabel }).where("id", "=", attachmentId).execute();
   };
 
-  const replaceAttachment = async (oldId: string, data: ArrayBuffer): Promise<string> => {
+  const replaceAttachment = async (oldId: string, data: ArrayBuffer, label?: string): Promise<string> => {
     const newId = `${constatId}/images/${v7()}.jpg`;
     const oldAttachment = await db
       .selectFrom("state_report_attachment")
       .where("id", "=", oldId)
-      .select(["type", "created_at"])
+      .select(["type", "created_at", "label"])
       .executeTakeFirst();
     await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
     await db.transaction().execute(async (trx) => {
@@ -278,6 +278,7 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
           attachment_id: newId,
           state_report_id: constatId,
           service_id: user.service_id,
+          label: label ?? oldAttachment?.label ?? "",
           created_at: oldAttachment?.created_at ?? new Date().toISOString(),
           is_deprecated: 0,
           type: oldAttachment?.type ?? null,
