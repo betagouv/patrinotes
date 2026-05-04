@@ -179,9 +179,9 @@ export const Route = createFileRoute("/")({
   ),
   validateSearch: (search) => {
     const parsed = appDocumentEnum.safeParse(search?.document);
-
     return {
       document: parsed.success ? parsed.data : "constats",
+      from: search?.from,
     };
   },
 });

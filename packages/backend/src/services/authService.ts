@@ -11,6 +11,8 @@ import { AppError } from "../features/errors";
 import { getServices } from "./services";
 import { AuthUser } from "../routes/authMiddleware";
 import { makeDebug } from "../features/debug";
+import { v7 } from "uuid";
+import { omit } from "pastable";
 const debug = makeDebug("auth-service");
 const authFullUrl = `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`;
 
@@ -85,7 +87,7 @@ export class AuthService {
     const checked = await this.checkToken(token);
 
     const userPayload = {
-      id: checked.sub!,
+      id: v7(),
       name: checked.name ?? checked.preferred_username!,
       service_id: "no-service",
       email: checked.email,
@@ -101,7 +103,8 @@ export class AuthService {
 
   async getUserFromToken(token: string) {
     const checked = await this.checkToken(token);
-    const user = await db.selectFrom("user").where("id", "=", checked.sub!).selectAll().executeTakeFirst();
+    const user = await db.selectFrom("user").where("email", "=", checked.email!).selectAll().executeTakeFirst();
+
     if (!user) return null;
     return populateService(user);
   }
@@ -180,29 +183,49 @@ export class AuthService {
 
       debug("fetched keycloak user", keycloakUser);
 
-      const user = await db.transaction().execute(async (tx) => {
-        const u = await tx
-          .insertInto("user")
-          .values({
-            id: keycloakUser!.id,
-            name: userData.name,
-            service_id: userData.service_id,
-            email: userData.email,
-            job: userData.job,
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
+      const existingUser = await db
+        .selectFrom("user")
+        .where("email", "=", userData.email)
+        .selectAll()
+        .executeTakeFirst();
 
-        await tx
-          .insertInto("internal_user")
-          .values({
-            id: keycloakUser!.id,
-            userId: keycloakUser!.id,
-            email: userData.email,
-            newsletter: userData.newsletter,
-            role: "user",
-          })
-          .execute();
+      const userId = existingUser?.id || v7();
+      const user = await db.transaction().execute(async (tx) => {
+        const userPayload = {
+          id: userId,
+          name: userData.name,
+          service_id: userData.service_id,
+          email: userData.email,
+          job: userData.job,
+        };
+
+        const internalUserPayload = {
+          id: v7(),
+          userId,
+          email: userData.email,
+          newsletter: userData.newsletter,
+          role: "user",
+        };
+
+        if (existingUser) {
+          const u = await tx
+            .updateTable("user")
+            .set(omit(userPayload, ["id"]))
+            .where("id", "=", existingUser.id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+
+          await tx
+            .updateTable("internal_user")
+            .set(omit(internalUserPayload, ["id"]))
+            .where("userId", "=", existingUser.id)
+            .execute();
+
+          return u;
+        }
+
+        const u = await tx.insertInto("user").values(userPayload).returningAll().executeTakeFirstOrThrow();
+        await tx.insertInto("internal_user").values(internalUserPayload).execute();
 
         return u;
       });
