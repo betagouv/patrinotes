@@ -36,8 +36,13 @@ export const AlertsReminder = () => {
   const otherAlerts = visibleAlerts.filter((a) => a.alert !== OBJETS_MOBILIERS_SECTION);
 
   return (
-    <Stack width="100%" px={{ xs: 0, lg: "16px" }}>
+    <Stack width="100%" px={{ xs: "8px", lg: "0" }} mt={{ xs: "16px", lg: "24px" }}>
       <Accordion
+        sx={{
+          ".fr-accordion__btn": {
+            backgroundColor: fr.colors.decisions.background.open.blueFrance.default,
+          },
+        }}
         label={
           <Flex pr="8px" alignItems="center">
             <i className="fr-icon ri-alarm-warning-fill" style={{ marginRight: "8px" }} />
