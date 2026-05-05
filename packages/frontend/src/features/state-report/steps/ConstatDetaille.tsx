@@ -308,7 +308,7 @@ const SectionForm = ({
       <Stack>
         {isCustom ? (
           <Input
-            label="Partie visitée"
+            label={<Box className="mandatory-field">Partie visitée</Box>}
             nativeInputProps={{
               value: values.section || "",
               onChange: (e) => setValues({ ...values, section: e.target.value }),

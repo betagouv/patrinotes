@@ -284,25 +284,27 @@ const ViewButtons = () => {
       >
         Télécharger
       </Button>
-      <Button
-        type="button"
-        disabled={isDisabled}
-        onClick={() =>
-          navigate({
-            to: "/constat/$constatId/pdf",
-            params: { constatId },
-            search: { mode: "send" },
-          })
-        }
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
-          justifyContent: "center",
-        }}
-      >
-        Continuer
-      </Button>
+      {!isDisabled ? (
+        <Button
+          type="button"
+          disabled={isDisabled}
+          onClick={() =>
+            navigate({
+              to: "/constat/$constatId/pdf",
+              params: { constatId },
+              search: { mode: "send" },
+            })
+          }
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            width: "100%",
+            justifyContent: "center",
+          }}
+        >
+          Continuer
+        </Button>
+      ) : null}
     </Flex>
   );
 };
