@@ -1,6 +1,6 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, BoxProps, Stack, Typography } from "@mui/material";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
-import { Input } from "#components/MUIDsfr.tsx";
+import { Alert, Input } from "#components/MUIDsfr.tsx";
 import { InputGroup } from "#components/InputGroup.tsx";
 import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
 import { UseFormReturn, useWatch } from "react-hook-form";
@@ -46,12 +46,14 @@ export const ContexteVisite = () => {
       >
         Contexte de la visite
       </Typography>
+      <EditDisabled />
       <MandatoryFieldReminder />
 
       <NatureVisiteRadioButtons isDisabled={isDisabled} />
       <Input
         textArea
         hintText="Déclenchement de la visite, durée, conditions..."
+        disabled={isDisabled}
         nativeTextAreaProps={{
           rows: 4,
         }}
@@ -279,4 +281,18 @@ const BilanQuinquennalRadioButtons = ({ isDisabled }: { isDisabled: boolean }) =
       options={options}
     />
   );
+};
+
+export const EditDisabled = (props: BoxProps) => {
+  const form = useStateReportFormContext();
+  const isSent = useWatch({ control: form.control, name: "attachment_id" });
+  return isSent ? (
+    <Box mb="32px" {...props}>
+      <Alert
+        severity="info"
+        description="Vous ne pouvez pas modifier les informations d'un constat envoyé."
+        small
+      ></Alert>
+    </Box>
+  ) : null;
 };

@@ -20,6 +20,7 @@ import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { ButtonsSwitch } from "../WithReferencePop";
+import { EditDisabled } from "./ContexteVisite";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -42,6 +43,7 @@ export const ConstatGeneral = () => {
       >
         Constat général
       </Typography>
+      <EditDisabled />
       <MandatoryFieldReminder />
       <EtatGeneralRadioButtons isDisabled={isDisabled} />
       <ProportionsRadioButtons isDisabled={isDisabled} />

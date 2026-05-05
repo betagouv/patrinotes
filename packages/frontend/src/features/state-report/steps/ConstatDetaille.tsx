@@ -25,6 +25,7 @@ import { ButtonsSwitch } from "../WithReferencePop";
 import { chunk } from "pastable";
 import { getIsSectionVisited } from "@patrinotes/pdf/utils";
 import { useClickAway } from "react-use";
+import { EditDisabled } from "./ContexteVisite";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -43,11 +44,14 @@ export const ConstatDetaille = () => {
         fontSize="16px !important"
         variant="h3"
         fontWeight="500"
+        mb="40px"
         pt="0 !important"
         color={fr.colors.decisions.text.actionHigh.blueFrance.default}
       >
         Constat détaillé
       </Typography>
+
+      <EditDisabled mb="0" />
 
       <Typography fontSize="14px" mb="32px" mt={{ xs: "0", lg: "40px" }}>
         Renseignez vos observations pour chaque partie visitée. À défaut, chacune sera notée comme non-visitée.
