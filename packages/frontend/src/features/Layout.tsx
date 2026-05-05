@@ -203,7 +203,7 @@ const LoggedInHeader = () => {
             backgroundColor: fr.colors.decisions.background.raised.grey.hover + " !important",
           },
           ".fr-btns-group li": {
-            borderBottom: "1px solid",
+            borderBottom: { xs: "1px solid", lg: "none" },
             borderColor: "#ddd",
           },
           ".fr-btns-group li:last-child": {

@@ -29,7 +29,9 @@ export const HelpMenu = () => {
 
   return (
     <>
-      <MenuTitle>Aide</MenuTitle>
+      <Box pl="16px">
+        <MenuTitle>Aide</MenuTitle>
+      </Box>
 
       <Stack mb="64px">
         <Stack px="16px">
