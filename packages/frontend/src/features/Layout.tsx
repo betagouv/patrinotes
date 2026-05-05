@@ -5,11 +5,13 @@ import { Typography } from "@mui/material";
 import Box from "@mui/material/Box/Box";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { type PropsWithChildren } from "react";
-import { useIsLoggedIn } from "../contexts/AuthContext";
+import { useIsLoggedIn, useLogout } from "../contexts/AuthContext";
 import { MenuButton, MenuModal } from "../features/menu/MenuButton";
 import { StatusBadge } from "./menu/StatusBadge";
 import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
+import { Header } from "#components/MUIDsfr.tsx";
+import { menuActor } from "./menu/menuMachine";
 
 export const Layout = ({ children }: PropsWithChildren) => {
   const location = useLocation();
@@ -91,7 +93,19 @@ const AppFooter = () => {
         <div className="fr-footer__bottom">
           <ul className="fr-footer__bottom-list">
             <li className="fr-footer__bottom-item">
-              <span className="fr-footer__bottom-link">Accessibilité: non conforme</span>
+              <Link to="/stats" className="fr-footer__bottom-link">
+                Matrice d'impact
+              </Link>
+            </li>
+            <li className="fr-footer__bottom-item">
+              <a href="https://github.com/betagouv/patrinotes" target="_blank" className="fr-footer__bottom-link">
+                Code source
+              </a>
+            </li>
+            <li className="fr-footer__bottom-item">
+              <Link to="/accessibilite" className="fr-footer__bottom-link">
+                Accessibilité: non conforme
+              </Link>
             </li>
             <li className="fr-footer__bottom-item">
               <Link to="/mentions-legales" className="fr-footer__bottom-link">
@@ -145,9 +159,127 @@ const VersionDisplay = () => {
   );
 };
 
+const LoggedOutHeader = () => {
+  return (
+    <Header
+      brandTop={
+        <>
+          Ministère
+          <br />
+          de la culture
+        </>
+      }
+      homeLinkProps={{
+        href: "/",
+        title: "Accueil - Patrinotes",
+      }}
+      serviceTagline={"Les outils du patrimoine en mobilité"}
+      serviceTitle="Patrinotes"
+      quickAccessItems={[]}
+    />
+  );
+};
+
+const LoggedInHeader = () => {
+  const isDesktop = useIsDesktop();
+  const logout = useLogout();
+
+  return (
+    <>
+      {!isDesktop ? (
+        <Box position="absolute" zIndex="751" right="64px" top="14px">
+          <StatusBadge />
+        </Box>
+      ) : null}
+      <Header
+        sx={{
+          ".fr-header": {
+            position: "relative",
+          },
+          ".fr-header__menu-links::after": {
+            display: "none",
+          },
+          ".fr-btns-group .fr-btn:hover": {
+            backgroundColor: fr.colors.decisions.background.raised.grey.hover + " !important",
+          },
+          ".fr-btns-group li": {
+            borderBottom: "1px solid",
+            borderColor: "#ddd",
+          },
+          ".fr-btns-group li:last-child": {
+            borderBottom: "none",
+          },
+          ".fr-btns-group": {
+            userSelect: "none !important",
+          },
+          ".fr-header__service": {
+            display: { xs: "none", lg: "flex" },
+          },
+        }}
+        brandTop={
+          <>
+            Ministère
+            <br />
+            de la culture
+          </>
+        }
+        homeLinkProps={{
+          href: "/",
+          title: "Accueil - Patrinotes",
+        }}
+        serviceTitle={
+          isDesktop ? (
+            <Flex alignItems="center" gap="8px">
+              <Box>Patrinotes</Box>
+              <Box>
+                <StatusBadge />
+              </Box>
+            </Flex>
+          ) : null
+        }
+        quickAccessItems={[
+          {
+            iconId: "fr-icon-account-circle-fill",
+            text: "Mon compte",
+            linkProps: { to: "/account" },
+          },
+          {
+            iconId: "fr-icon-france-fill",
+            text: "Service",
+            linkProps: { to: "/service" },
+          },
+          {
+            iconId: "fr-icon-info-fill",
+            text: "Aide",
+            type: "button",
+            buttonProps: {
+              onClick: () => {
+                menuActor.send({ type: "GO_TO_HELP" });
+              },
+            },
+          },
+          {
+            iconId: "fr-icon-logout-box-r-line",
+            text: "Déconnexion",
+            type: "button",
+            buttonProps: {
+              onClick: () => {
+                logout();
+              },
+            },
+          },
+        ]}
+      />
+      <MenuModal />
+    </>
+  );
+};
+
 const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
   const isDesktop = useIsDesktop();
-  const isLoggedIn = noProvider ? null : useIsLoggedIn();
+  const isLoggedIn = useIsLoggedIn();
+
+  return isLoggedIn ? <LoggedInHeader /> : <LoggedOutHeader />;
 
   return (
     <>
@@ -214,7 +346,6 @@ const AppHeader = ({ noProvider }: { noProvider?: boolean }) => {
           </Box>
         </div>
       </header>
-      <MenuModal />
     </>
   );
 };

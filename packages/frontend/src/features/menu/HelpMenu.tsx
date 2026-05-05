@@ -29,7 +29,7 @@ export const HelpMenu = () => {
 
   return (
     <>
-      <MenuTitle backButtonOnClick={() => menuActor.send({ type: "BACK" })}>Aide</MenuTitle>
+      <MenuTitle>Aide</MenuTitle>
 
       <Stack mb="64px">
         <Stack px="16px">

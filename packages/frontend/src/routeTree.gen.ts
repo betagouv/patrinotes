@@ -28,6 +28,7 @@ import { Route as ConstatConstatIdPdfRouteImport } from './routes/constat_.$cons
 
 const StatsLazyRouteImport = createFileRoute('/stats')()
 const AdminLazyRouteImport = createFileRoute('/admin')()
+const AccessibiliteLazyRouteImport = createFileRoute('/accessibilite')()
 const ResetPasswordIndexLazyRouteImport = createFileRoute('/reset-password/')()
 
 const StatsLazyRoute = StatsLazyRouteImport.update({
@@ -40,6 +41,11 @@ const AdminLazyRoute = AdminLazyRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/admin.lazy').then((d) => d.Route))
+const AccessibiliteLazyRoute = AccessibiliteLazyRouteImport.update({
+  id: '/accessibilite',
+  path: '/accessibilite',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/accessibilite.lazy').then((d) => d.Route))
 const ServiceRoute = ServiceRouteImport.update({
   id: '/service',
   path: '/service',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/mentions-legales': typeof MentionsLegalesRoute
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
+  '/accessibilite': typeof AccessibiliteLazyRoute
   '/admin': typeof AdminLazyRoute
   '/stats': typeof StatsLazyRoute
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/mentions-legales': typeof MentionsLegalesRoute
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
+  '/accessibilite': typeof AccessibiliteLazyRoute
   '/admin': typeof AdminLazyRoute
   '/stats': typeof StatsLazyRoute
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/mentions-legales': typeof MentionsLegalesRoute
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/service': typeof ServiceRoute
+  '/accessibilite': typeof AccessibiliteLazyRoute
   '/admin': typeof AdminLazyRoute
   '/stats': typeof StatsLazyRoute
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/mentions-legales'
     | '/politique-confidentialite'
     | '/service'
+    | '/accessibilite'
     | '/admin'
     | '/stats'
     | '/constat-validation/$token'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/mentions-legales'
     | '/politique-confidentialite'
     | '/service'
+    | '/accessibilite'
     | '/admin'
     | '/stats'
     | '/constat-validation/$token'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/mentions-legales'
     | '/politique-confidentialite'
     | '/service'
+    | '/accessibilite'
     | '/admin'
     | '/stats'
     | '/constat-validation/$token'
@@ -246,6 +258,7 @@ export interface RootRouteChildren {
   MentionsLegalesRoute: typeof MentionsLegalesRoute
   PolitiqueConfidentialiteRoute: typeof PolitiqueConfidentialiteRoute
   ServiceRoute: typeof ServiceRoute
+  AccessibiliteLazyRoute: typeof AccessibiliteLazyRoute
   AdminLazyRoute: typeof AdminLazyRoute
   StatsLazyRoute: typeof StatsLazyRoute
   ConstatValidationTokenRoute: typeof ConstatValidationTokenRoute
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accessibilite': {
+      id: '/accessibilite'
+      path: '/accessibilite'
+      fullPath: '/accessibilite'
+      preLoaderRoute: typeof AccessibiliteLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/service': {
@@ -390,6 +410,7 @@ const rootRouteChildren: RootRouteChildren = {
   MentionsLegalesRoute: MentionsLegalesRoute,
   PolitiqueConfidentialiteRoute: PolitiqueConfidentialiteRoute,
   ServiceRoute: ServiceRoute,
+  AccessibiliteLazyRoute: AccessibiliteLazyRoute,
   AdminLazyRoute: AdminLazyRoute,
   StatsLazyRoute: StatsLazyRoute,
   ConstatValidationTokenRoute: ConstatValidationTokenRoute,
