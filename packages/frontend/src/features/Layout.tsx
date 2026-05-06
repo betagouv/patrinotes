@@ -213,7 +213,8 @@ const LoggedInHeader = () => {
             userSelect: "none !important",
           },
           ".fr-header__service": {
-            display: { xs: "none", lg: "flex" },
+            padding: { xs: "0 !important", lg: "unset" },
+            margin: { xs: "0 !important", lg: "unset" },
           },
         }}
         brandTop={
