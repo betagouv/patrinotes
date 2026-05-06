@@ -215,6 +215,8 @@ const DateInput = ({
             form.setValue(name, null);
             return;
           }
+
+          date.setHours(12, 0, 0, 0); // to avoid timezone issues
           form.setValue(name, date.toISOString());
         },
       }}
