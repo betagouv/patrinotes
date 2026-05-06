@@ -203,7 +203,7 @@ export const ImmeubleAutocomplete = () => {
             .map((result) => result.item)
             .slice(0, 15);
 
-          const isReferenceSearch = state.inputValue.trim().startsWith("PA000");
+          const isReferenceSearch = state.inputValue.trim().startsWith("PA");
           if (isReferenceSearch) {
             return searchResults.filter((result) =>
               result.reference?.toLowerCase().startsWith(state.inputValue.trim().toLowerCase()),
