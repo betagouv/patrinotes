@@ -2,7 +2,7 @@ import { EnsureUser } from "#components/EnsureUser.tsx";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import Download from "@codegouvfr/react-dsfr/Download";
 import { useUserSettings } from "../hooks/useUserSettings";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, UseMutationResult, useQuery } from "@tanstack/react-query";
 import { db, useDbQuery } from "../db/db";
 import { useLiveUser, useRefreshUser, useSetService, useUser } from "../contexts/AuthContext";
 import { v4 } from "uuid";
@@ -551,17 +551,39 @@ const ConstatValidation = () => {
         </Stack>
       )}
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
-        <Button
-          iconId="ri-save-3-line"
-          iconPosition="left"
-          type="button"
-          onClick={form.handleSubmit((data) => saveMutation.mutate(data))}
-          disabled={saveMutation.isPending}
-        >
-          Enregistrer
-        </Button>
+        <SaveValidationButton form={form} saveMutation={saveMutation} defaultValues={userSettings as any} />
       </Flex>
     </Stack>
+  );
+};
+
+const SaveValidationButton = ({
+  form,
+  saveMutation,
+  defaultValues,
+}: {
+  form: ReturnType<typeof useForm<ConstatValidationForm>>;
+  saveMutation: UseMutationResult<any, unknown, ConstatValidationForm, unknown>;
+  defaultValues: any;
+}) => {
+  const values = useWatch({ control: form.control });
+
+  const canSave =
+    !!defaultValues.validation_enabled != !!values.validationEnabled ||
+    (defaultValues.validation_email || "") != (values.validationEmail || "") ||
+    (defaultValues.validation_nom || "") != (values.validationNom || "") ||
+    (defaultValues.validation_prenom || "") != (values.validationPrenom || "");
+
+  return (
+    <Button
+      iconId="ri-save-3-line"
+      iconPosition="left"
+      type="button"
+      onClick={form.handleSubmit((data) => saveMutation.mutate(data))}
+      disabled={saveMutation.isPending || !canSave}
+    >
+      Enregistrer
+    </Button>
   );
 };
 
