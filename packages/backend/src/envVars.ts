@@ -15,6 +15,11 @@ export const isTest = process.env.NODE_ENV === "test";
 export const isProd = !isDev && !isTest;
 
 const stringOrNumberAsNumber = z.string().or(z.number()).transform(Number);
+const anythingAsBoolean = z.any().transform((val) => {
+  if (typeof val === "boolean") return val;
+  if (typeof val === "string") return val.toLowerCase() === "true";
+  return Boolean(val);
+});
 
 const envSchema = z.object({
   POSTGRES_PORT: stringOrNumberAsNumber.default(5432),
@@ -49,6 +54,8 @@ const envSchema = z.object({
   AUTH_ADMIN_CLIENT_SECRET: z.string(),
   AUTH_CLIENT_SECRET: z.string(),
   // COLLECTIF_OBJETS_DATASETTE_URL: z.string(),
+
+  FORCE_REFETCH_POP: anythingAsBoolean.default(false),
 
   ASSETS_DIR: z.string().optional(),
 });

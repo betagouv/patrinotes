@@ -49,13 +49,32 @@ export class KyselyBatchWriter<RowType> extends Writable {
         (c) => c.name,
       ) || [];
 
+    const pkCol = String(this.primaryKeyColumn);
+    const seen = new Set<unknown>();
+    const deduped = this.batch.filter((row) => {
+      const key = (row as any)[pkCol];
+      if (seen.has(key)) {
+        debug(`Duplicate ${pkCol}="${key}" in batch, keeping first occurrence`);
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+    const rows = deduped.map((row) => pick(row, tableColumns as any));
+    const updateColumns = tableColumns.filter((c) => c !== pkCol && c !== "id");
+
     await db
       .insertInto(this.tableName as any)
-      .values(this.batch.map((row) => pick(row, tableColumns as any)))
-      .onConflict((oc) => oc.doNothing())
+      .values(rows)
+      .onConflict((oc) =>
+        oc.column(String(this.primaryKeyColumn) as any).doUpdateSet(
+          Object.fromEntries(updateColumns.map((c) => [c, (eb: any) => eb.ref(`excluded.${c}`)])) as any,
+        ),
+      )
       .execute();
 
-    debug(`Inserted ${this.batch.length} rows into ${this.tableName}`);
+    debug(`Inserted ${rows.length} rows into ${this.tableName} (${this.batch.length - rows.length} duplicates skipped)`);
     this.batch = [];
   }
 }

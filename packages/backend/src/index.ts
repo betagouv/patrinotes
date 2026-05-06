@@ -13,7 +13,7 @@ const start = async () => {
   await registerViteHmrServerRestart();
   await initEmptyService();
 
-  if (!isTest) {
+  if (ENV.FORCE_REFETCH_POP) {
     await initPopImmeubles();
     await initPopObjets();
   }

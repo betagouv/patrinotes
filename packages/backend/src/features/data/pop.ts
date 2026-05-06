@@ -14,12 +14,6 @@ import { parseHTML, Element } from "linkedom";
 const debug = makeDebug("sync-pop");
 
 export const initPopImmeubles = async () => {
-  const isTableEmpty = (await db.selectFrom("pop_immeubles").selectAll().limit(1).execute()).length === 0;
-  if (!isTableEmpty) {
-    debug("POP immeubles table is not empty, skipping import");
-    return;
-  }
-
   await fetchPopCSV(immeublesCsvPath);
 
   debug("Importing POP immeubles from CSV");
@@ -27,7 +21,7 @@ export const initPopImmeubles = async () => {
   await pipeline(
     fs.createReadStream(immeublesCsvPath.dest),
     csv({
-      separator: ";",
+      separator: "|",
       mapHeaders: ({ header }) => header.trim().toLowerCase(),
     }),
     new KyselyBatchWriter<ImmeubleResult>("pop_immeubles", 500, "reference"),
@@ -75,7 +69,7 @@ export const initPopObjets = async () => {
   await pipeline(
     fs.createReadStream(objetsCsvPath.dest),
     csv({
-      separator: ";",
+      separator: "|",
       mapHeaders: ({ header }) => header.trim().toLowerCase(),
     }),
     new KyselyBatchWriter<ImmeubleResult>("pop_objets", 500, "reference"),
@@ -257,12 +251,12 @@ const getImageFromElement = (el: Element) => {
 };
 
 const immeublesCsvPath = {
-  origin: `${ENV.DATAGOUV_API}/liste-des-immeubles-proteges-au-titre-des-monuments-historiques/exports/csv?delimiter=%3B`,
-  dest: "./data/liste-des-immeubles-proteges-au-titre-des-monuments-historiques.csv",
+  origin: `https://object.data.gouv.fr/ministere-culture/POP/merimee.csv`,
+  dest: "./data/merimee.csv",
 };
 const objetsCsvPath = {
-  origin: `${ENV.DATAGOUV_API}/liste-des-objets-mobiliers-propriete-publique-classes-au-titre-des-monuments/exports/csv?delimiter=%3B`,
-  dest: "./data/liste-des-objets-mobiliers-propriete-publique-classes-au-titre-des-monuments.csv",
+  origin: `https://object.data.gouv.fr/ministere-culture/POP/palissy.csv`,
+  dest: "./data/palissy.csv",
 };
 
 export const fetchPopCSV = async ({ origin, dest }: { origin: string; dest: string }) => {
@@ -272,7 +266,6 @@ export const fetchPopCSV = async ({ origin, dest }: { origin: string; dest: stri
 
   const nodeStream = Readable.fromWeb(stream as any);
   const writer = createWriteStream(dest);
-  nodeStream.pipe(writer);
 
   await pipeline(nodeStream, writer);
   debug("Done");
