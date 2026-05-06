@@ -176,10 +176,8 @@ const Profile = () => {
         nativeInputProps={{ value: userData.name, onChange: (e) => setUserData({ ...userData, name: e.target.value }) }}
         sx={{ mb: "24px" }}
       />
-      <Input
-        label="Fonction"
-        nativeInputProps={{ value: userData.job, onChange: (e) => setUserData({ ...userData, job: e.target.value }) }}
-      />
+      <JobSelect job={userData.job} onChange={(job) => setUserData({ ...userData, job })} />
+
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
         <Button
           iconId="ri-save-3-line"
@@ -194,6 +192,43 @@ const Profile = () => {
     </Stack>
   );
 };
+
+export const JobSelect = ({ job, onChange }: { job: string; onChange: (job: string) => void }) => {
+  const shouldShowInput = job && !jobOptions.includes(job);
+  const selectedOption = job && (jobOptions.includes(job) ? job : "Autre...");
+
+  return (
+    <Stack>
+      <Select
+        sx={{ mb: "8px !important" }}
+        label="Fonction"
+        nativeSelectProps={{ value: selectedOption, onChange: (e) => onChange(e.target.value) }}
+      >
+        <option value="" disabled>
+          Sélectionnez votre fonction
+        </option>
+        {jobOptions.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </Select>
+      {shouldShowInput && (
+        <Input label={null} nativeInputProps={{ value: job, onChange: (e) => onChange(e.target.value) }} />
+      )}
+    </Stack>
+  );
+};
+
+const jobOptions = [
+  "Agent en charge du CST",
+  "Conservateur",
+  "ABF",
+  "Ingénieur des services culturels",
+  "CAOA",
+  "Technicien",
+  "Autre...",
+];
 
 const DefaultRecipient = () => {
   const user = useUser()!;
@@ -798,7 +833,7 @@ const Title = ({ children, anchor }: { children: React.ReactNode; anchor?: strin
 export const GoHomeButton = () => {
   const navigate = useNavigate();
   const goBack = () => {
-    navigate({ to: "/", search: { document: "compte-rendus" } });
+    navigate({ to: "/", search: { document: "compte-rendus" } as any });
   };
 
   return (

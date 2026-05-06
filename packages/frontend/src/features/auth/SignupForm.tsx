@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Flex } from "#components/ui/Flex.tsx";
 import { getErrorMessage, RouterInputs, unauthenticatedApi } from "../../api";
 import { Alert, Center, Checkbox, Input, Select } from "#components/MUIDsfr.tsx";
-import { Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { useAuthContext } from "../../contexts/AuthContext";
 import { InputGroup } from "#components/InputGroup.tsx";
@@ -14,6 +14,7 @@ import { omit } from "pastable";
 import { scrollToTop } from "../state-report/StateReportSummary";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Notice } from "@codegouvfr/react-dsfr/Notice";
+import { JobSelect } from "../../routes/account";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -50,7 +51,7 @@ export const SignupForm = () => {
     const valuesWithName = { ...omit(values, ["nom", "prenom"]), name };
     const response = await mutation.mutateAsync(valuesWithName, { onError: () => scrollToTop() });
     setAuth(response as any);
-    navigate({ to: "/", search: { document: "constats" } });
+    navigate({ to: "/", search: { document: "constats" } as any });
   };
 
   const { errors: formErrors } = form.formState;
@@ -124,12 +125,14 @@ export const SignupForm = () => {
             stateRelatedMessage={formErrors.prenom?.message}
           />
 
-          <Input
+          <SignupJobSelect form={form} />
+
+          {/* <Input
             label="Fonction"
             nativeInputProps={{ ...form.register("job", { required: "La fonction est requise" }) }}
             state={formErrors.job ? "error" : undefined}
             stateRelatedMessage={formErrors.job?.message}
-          />
+          /> */}
           <Select
             label="Service"
             nativeSelectProps={form.register("service_id", { required: "Le service est requis" })}
@@ -213,6 +216,16 @@ export const SignupForm = () => {
         Se connecter
       </FullWidthButton>
     </Flex>
+  );
+};
+
+const SignupJobSelect = ({ form }: { form: UseFormReturn<SignupFormProps> }) => {
+  const job = useWatch({ control: form.control, name: "job" });
+
+  return (
+    <Box sx={{ mb: "16px" }}>
+      <JobSelect job={job} onChange={(job) => form.setValue("job", job, { shouldDirty: true })} />
+    </Box>
   );
 };
 
