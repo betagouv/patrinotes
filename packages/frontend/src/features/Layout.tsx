@@ -61,10 +61,10 @@ const AppFooter = () => {
                 <a
                   className="fr-footer__content-link"
                   target="_blank"
-                  href="https://gouvernement.fr"
-                  title="gouvernement.fr - ouvre une nouvelle fenêtre"
+                  href="https://info.gouv.fr"
+                  title="info.gouv.fr - ouvre une nouvelle fenêtre"
                 >
-                  gouvernement.fr
+                  info.gouv.fr
                 </a>
               </li>
               <li className="fr-footer__content-item">
