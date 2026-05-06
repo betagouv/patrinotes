@@ -93,16 +93,6 @@ const AppFooter = () => {
         <div className="fr-footer__bottom">
           <ul className="fr-footer__bottom-list">
             <li className="fr-footer__bottom-item">
-              <Link to="/stats" className="fr-footer__bottom-link">
-                Matrice d'impact
-              </Link>
-            </li>
-            <li className="fr-footer__bottom-item">
-              <a href="https://github.com/betagouv/patrinotes" target="_blank" className="fr-footer__bottom-link">
-                Code source
-              </a>
-            </li>
-            <li className="fr-footer__bottom-item">
               <Link to="/accessibilite" className="fr-footer__bottom-link">
                 Accessibilité: non conforme
               </Link>
@@ -121,6 +111,16 @@ const AppFooter = () => {
               <Link to="/cgu" className="fr-footer__bottom-link">
                 Conditions générales d'utilisation
               </Link>
+            </li>
+            <li className="fr-footer__bottom-item">
+              <Link to="/stats" className="fr-footer__bottom-link">
+                Statistiques
+              </Link>
+            </li>
+            <li className="fr-footer__bottom-item">
+              <a href="https://github.com/betagouv/patrinotes" target="_blank" className="fr-footer__bottom-link">
+                Code source
+              </a>
             </li>
           </ul>
 
