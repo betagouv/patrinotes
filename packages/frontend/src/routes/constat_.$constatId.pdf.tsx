@@ -80,7 +80,7 @@ const ConstatPdf = () => {
   });
 
   const userSettings = useUserSettings();
-  const { service } = useUser()!;
+  const { service, ...user } = useUser()!;
 
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId, service: service as any }));
 
@@ -165,7 +165,12 @@ const ConstatPdf = () => {
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
-    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections as any, alerts });
+    const htmlString = getStateReportHtmlString({
+      stateReport: stateReport,
+      visitedSections: sections as any,
+      alerts,
+      user,
+    });
 
     form.setValue("htmlString", htmlString);
 
@@ -174,7 +179,7 @@ const ConstatPdf = () => {
     return () => {
       isSetRef.current = false;
     };
-  }, [sections, stateReport, alerts]);
+  }, [sections, stateReport, alerts, user]);
 
   // propagate isDisabled to children
   useEffect(() => {

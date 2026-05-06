@@ -269,10 +269,12 @@ export const getStateReportHtmlString = ({
   stateReport,
   visitedSections: sections,
   alerts,
+  user,
 }: {
   stateReport: StateReportWithUserAndAttachments;
   visitedSections: SectionWithAttachments[];
   alerts?: MinimalAlert[];
+  user: { name: string; job: string };
 }) => {
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
@@ -310,7 +312,7 @@ export const getStateReportHtmlString = ({
       ${stateReport.titre_edifice ? `<span style="font-size: 20pt"><b>${stateReport.titre_edifice}</b></span><br/><br/>` : ""}
     </p>
     <p>
-      Constat dressé par <b>${stateReport.redacted_by ?? stateReport.createdByName}</b> suite à la visite  ${isPartielle ? " partielle" : ""}
+      Constat dressé par <b>${user.name} (${user.job})</b> suite à la visite  ${isPartielle ? " partielle" : ""}
       ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}${personnesPresentes ? `, en présence de ${personnesPresentes}` : ""}.
 
       <br/>
