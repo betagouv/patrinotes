@@ -107,31 +107,35 @@ export const StateReportAlertObjetSectionForm = ({
             Alerte : {title}
           </Typography>
 
-          <Box mt="16px">
-            <ShouldSendToggle form={form} names={alerts.map((alert) => alert.name)} />
-          </Box>
+          <Alert
+            severity="info"
+            sx={{ mt: "24px", mb: "24px" }}
+            description="Un constat d'état séparé peut être réalisé pour un objet classé ou inscrit."
+            small
+          ></Alert>
 
-          <StateReportAlertsEmailInput
-            form={form}
-            names={alerts.map((alert) => alert.name)}
-            mandatory_emails={mandatory_emails}
-            additional_emails={additional_emails}
-            isEditingEmail={isEditingEmail}
-            setIsEditingEmail={setIsEditingEmail}
-            errors={errors}
-          />
-
-          <Stack mt="24px">
+          <Stack>
             {alerts.map(({ alert, name }, index) => (
               <Fragment key={alert.id}>
-                <AlertObjetForm form={form} name={name} objets={objetsQuery.data ?? []} />
+                <AlertObjetForm form={form} name={name} objets={objetsQuery.data ?? []} index={index} />
                 {index < alerts.length - 1 && <Divider my="24px" />}
               </Fragment>
             ))}
 
-            <Box mt="16px">
+            <Divider my="24px" />
+            <Stack gap="24px" mb="16px">
               <ShowInReportToggle form={form} names={alerts.map((alert) => alert.name)} />
-            </Box>
+              <ShouldSendToggle form={form} names={alerts.map((alert) => alert.name)} />
+            </Stack>
+            <StateReportAlertsEmailInput
+              form={form}
+              names={alerts.map((alert) => alert.name)}
+              mandatory_emails={mandatory_emails}
+              additional_emails={additional_emails}
+              isEditingEmail={isEditingEmail}
+              setIsEditingEmail={setIsEditingEmail}
+              errors={errors}
+            />
 
             <Flex gap="8px" mb="16px">
               <FullWidthButton
@@ -165,10 +169,12 @@ const AlertObjetForm = ({
   form,
   name,
   objets,
+  index,
 }: {
   form: AlertSectionsForm;
   name: AlertSectionName;
   objets: Pick<PopObjet, "titre_editorial" | "reference">[];
+  index?: number;
 }) => {
   const constatId = routeApi.useParams().constatId;
 
@@ -177,7 +183,7 @@ const AlertObjetForm = ({
 
   return (
     <Stack>
-      <ObjetSelect form={form} name={name} objets={objets} />
+      <ObjetSelect form={form} name={name} objets={objets} index={index} />
       <ProblemeRadioButtons form={form} name={name} />
 
       <SectionCommentaires form={form} name={name} />
@@ -190,10 +196,12 @@ const ObjetSelect = ({
   form,
   name,
   objets,
+  index,
 }: {
   form: AlertSectionsForm;
   name: AlertSectionName;
   objets: Pick<PopObjet, "titre_editorial" | "reference">[];
+  index?: number;
 }) => {
   const isFormDisabled = useIsStateReportDisabled();
 
@@ -202,7 +210,7 @@ const ObjetSelect = ({
       sx={{
         option: { textOverflow: "clip" },
       }}
-      label="Objet ou mobilier concerné"
+      label={<b>Objet ou mobilier concerné ({index! + 1})</b>}
       disabled={isFormDisabled}
       nativeSelectProps={{
         ...form.register(`${name}.objet_ou_mobilier`),

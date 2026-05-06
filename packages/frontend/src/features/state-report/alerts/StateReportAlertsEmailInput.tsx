@@ -58,7 +58,11 @@ export const StateReportAlertsEmailInput = ({
           <AdditionalEmailsForm initialValues={additionalEmails} form={form} names={names} />
         </Stack>
       ) : (
-        <Flex alignItems={{ xs: "start", lg: "center" }} flexDirection={{ xs: "column", sm: "row" }}>
+        <Flex
+          alignItems={{ xs: "start", lg: "center" }}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={{ xs: 0, sm: "8px" }}
+        >
           <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
             {[...mandatoryEmails.map((e) => e.email), ...additionalEmails].filter(Boolean).join(", ") ||
               "Aucun courriel configuré"}
