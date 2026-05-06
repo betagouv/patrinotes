@@ -341,7 +341,7 @@ const AdminPage = () => {
 
   return (
     <Stack maxWidth="960px" mx="auto" px="1.5rem" py="2rem" gap="1.5rem">
-      <Typography variant="h4" component="h1">
+      <Typography variant="h1" component="h1">
         Administration
       </Typography>
 
