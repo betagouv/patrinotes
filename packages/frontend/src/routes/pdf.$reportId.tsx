@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
+import { useSyncStream } from "@powersync/react";
 
 type Mode = "edit" | "view" | "send" | "sent";
 
@@ -674,10 +675,27 @@ const SendReportPage = ({ children }: PropsWithChildren) => {
 
 // const validateEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const WithReportAttachments = ({ children }: PropsWithChildren) => {
+  const { reportId } = Route.useParams();
+  const stream = useSyncStream({ name: "report_attachments_stream", parameters: { report_id: reportId } });
+
+  if (!stream?.subscription.hasSynced) {
+    return (
+      <Center>
+        <Spinner />
+      </Center>
+    );
+  }
+
+  return <>{children}</>;
+};
+
 export const Route = createFileRoute("/pdf/$reportId")({
   component: () => (
     <EnsureUser>
-      <PDF />
+      <WithReportAttachments>
+        <PDF />
+      </WithReportAttachments>
     </EnsureUser>
   ),
   validateSearch: (search: Record<string, unknown>) => {
