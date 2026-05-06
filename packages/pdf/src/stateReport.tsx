@@ -379,7 +379,7 @@ export const getStateReportHtmlString = ({
             .join("")}
         </ul>
 
-        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires}</p>` : ""}
+        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
 
       <hr />
 
@@ -392,7 +392,7 @@ export const getStateReportHtmlString = ({
                   <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "N/A"}.
                 </li>
               </ul>
-                <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires}` : "Aucun"}
+                <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
 
               ${generateImagesTable(
                 section.attachments.map((attachment) => ({
@@ -463,7 +463,7 @@ const generatePreconisations = (rawValue: string | null) => {
         .map(
           (item) =>
             `<li>
-              <b>${item.preconisation}</b>${item.commentaire ? ` : ${item.commentaire}` : ""}</li>`,
+              <b>${item.preconisation}</b>${item.commentaire ? ` : ${item.commentaire.replaceAll("\n", "<br />")}` : ""}</li>`,
         )
         .join("<br/>")}
     
