@@ -1,4 +1,5 @@
 import { FastifyPluginAsyncTypebox, Type } from "@fastify/type-provider-typebox";
+import { sql } from "kysely";
 import { AppError } from "../features/errors";
 import { db } from "../db/db";
 import { loginTSchema } from "./authRoutes";
@@ -31,6 +32,9 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
               Type.Object({
                 email: Type.String(),
                 createdAt: Type.String(),
+                hasUser: Type.Boolean(),
+                lastCreatedStateReport: Type.Union([Type.String(), Type.Null()]),
+                lastFinishedStateReport: Type.Union([Type.String(), Type.Null()]),
               }),
             ),
             total: Type.Number(),
@@ -47,12 +51,51 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       const offset = (page - 1) * limit;
       debug("Fetching whitelist page", page, "with limit", limit);
       const [rows, countResult] = await Promise.all([
-        db.selectFrom("whitelist").selectAll().orderBy("createdAt", "desc").limit(limit).offset(offset).execute(),
+        db
+          .selectFrom("whitelist")
+          .select((eb) => [
+            "whitelist.email",
+            "whitelist.createdAt",
+            eb
+              .selectFrom("user")
+              .whereRef("user.email", "=", "whitelist.email")
+              .select(sql<boolean>`true`)
+              .limit(1)
+              .as("hasUser"),
+            eb
+              .selectFrom("state_report")
+              .innerJoin("user", "user.id", "state_report.created_by")
+              .whereRef("user.email", "=", "whitelist.email")
+              .select(eb.fn.max("state_report.created_at"))
+              .as("lastCreatedStateReport"),
+            eb
+              .selectFrom("state_report")
+              .innerJoin("user", "user.id", "state_report.created_by")
+              .innerJoin(
+                "state_report_attachment",
+                "state_report_attachment.state_report_id",
+                "state_report.id",
+              )
+              .whereRef("user.email", "=", "whitelist.email")
+              .where("state_report.attachment_id", "is not", null)
+              .select(eb.fn.max("state_report_attachment.created_at"))
+              .as("lastFinishedStateReport"),
+          ])
+          .orderBy("whitelist.createdAt", "desc")
+          .limit(limit)
+          .offset(offset)
+          .execute(),
         db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst(),
       ]);
 
       return {
-        data: rows.map((r) => ({ email: r.email, createdAt: r.createdAt! })),
+        data: rows.map((r) => ({
+          email: r.email,
+          createdAt: r.createdAt!,
+          hasUser: r.hasUser ?? false,
+          lastCreatedStateReport: r.lastCreatedStateReport ?? null,
+          lastFinishedStateReport: r.lastFinishedStateReport ?? null,
+        })),
         total: Number(countResult?.count ?? 0),
         page,
         limit,

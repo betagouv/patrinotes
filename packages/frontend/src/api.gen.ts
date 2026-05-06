@@ -424,7 +424,18 @@ export namespace Endpoints {
     parameters: {
       query: Partial<{ page: number; limit: number }>;
     };
-    response: { data: Array<{ email: string; createdAt: string }>; total: number; page: number; limit: number };
+    response: {
+      data: Array<{
+        email: string;
+        createdAt: string;
+        hasUser: boolean;
+        lastCreatedStateReport: string | Schemas.null | Array<string | Schemas.null>;
+        lastFinishedStateReport: string | Schemas.null | Array<string | Schemas.null>;
+      }>;
+      total: number;
+      page: number;
+      limit: number;
+    };
   };
   export type post_Apiadminwhitelist = {
     method: "POST";

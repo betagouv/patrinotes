@@ -82,9 +82,12 @@ const WhitelistPanel = () => {
   });
 
   const tableData =
-    data?.data.map(({ email, createdAt }) => [
+    data?.data.map(({ email, createdAt, hasUser, lastCreatedStateReport, lastFinishedStateReport }) => [
       email,
       createdAt ? new Date(createdAt).toLocaleString() : "—",
+      hasUser ? "Oui" : "Non",
+      lastCreatedStateReport ? new Date(lastCreatedStateReport).toLocaleString() : "—",
+      lastFinishedStateReport ? new Date(lastFinishedStateReport).toLocaleString() : "—",
       <Button
         key={email}
         priority="tertiary no outline"
@@ -154,7 +157,7 @@ const WhitelistPanel = () => {
         <Table
           id="whitelist-table"
           caption={`${data?.total ?? 0} email${(data?.total ?? 0) !== 1 ? "s" : ""} autorisé${(data?.total ?? 0) !== 1 ? "s" : ""}`}
-          headers={["Email", "Date de création", ""]}
+          headers={["Email", "Date de création", "Compte créé", "Dernier constat créé", "Dernier constat finalisé", ""]}
           data={tableData}
           noCaption={false}
         />
