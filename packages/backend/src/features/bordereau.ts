@@ -56,6 +56,7 @@ dans les abords de votre monument historique sont soumis à autorisation préala
 <b>${user.name}, ${user.email}</b>
 
 <br/><br/>
+<div style='font-size: 12px;'>
 <p>Pour aller plus loin, consultez le site du ministère de la Culture :</p>
 <p>
   - <a href="https://www.culture.gouv.fr/thematiques/monuments-sites/interventions-demarches/travaux-sur-un-objet-un-immeuble-un-espace">Informations sur les procédures de travaux</a>
@@ -69,9 +70,10 @@ dans les abords de votre monument historique sont soumis à autorisation préala
 
 <p>
 Références réglementaires et ressources :  <br />
-- Code du patrimoine, livre VI, R621-18 (MH classés) et R621-63 (MH inscrits)  <br />
+- <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000024241967">Code du patrimoine, livre VI, R621-18 (MH classés)</a> et <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000024242080">R621-63 (MH inscrits)</a>  <br />
 - <a href="https://www.legifrance.gouv.fr/download/pdf/circ?id=30077">Circulaire n° 2009-024 du 1er décembre 2009 relative au contrôle scientifique et technique des services de l'État sur la conservation des monuments historiques classés et inscrits</a>  <br />
 - <a href="https://www.culture.gouv.fr/thematiques/monuments-sites/ressources/les-essentiels/glossaire-des-termes-relatifs-aux-interventions-sur-les-monuments-historiques">Glossaire des termes relatifs aux interventions sur les monuments historiques</a>  <br />
-</p>`;
+</p></div>`;
+
   return wrapWithDsfrMail({ title, content: inner });
 };
