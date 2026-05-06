@@ -44,12 +44,6 @@ const sectionIds = accountSections.map((section) => section.linkProps.href.repla
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
-  const setService = useSetService();
-  const onSuccess = (service: AuthUser["service"]) => {
-    setService(service);
-    setIsSuccess(true);
-    scrollToTop();
-  };
 
   const activeSection = useActiveSection(sectionIds);
 
@@ -101,7 +95,6 @@ const AccountPage = () => {
         <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="64px">
           Mon compte
         </Typography>
-        {isSuccess ? <SuccessAlert /> : null}
         <Profile />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DefaultRecipient />
@@ -114,7 +107,7 @@ const AccountPage = () => {
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DownloadCRs />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
-        <ChangeService onSuccess={onSuccess} />
+        <ChangeService />
       </Stack>
     </Flex>
   );
@@ -189,6 +182,8 @@ const Profile = () => {
           Enregistrer
         </Button>
       </Flex>
+
+      {saveUserMutation.isSuccess ? <SuccessAlert /> : null}
     </Stack>
   );
 };
@@ -304,6 +299,7 @@ const DefaultRecipient = () => {
               Enregistrer
             </Button>
           </Flex>
+          {saveEmailsMutation.isSuccess ? <SuccessAlert /> : null}
         </Stack>
       )}
     </Flex>
@@ -553,6 +549,7 @@ const ConstatValidation = () => {
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
         <SaveValidationButton form={form} saveMutation={saveMutation} defaultValues={userSettings as any} />
       </Flex>
+      {saveMutation.isSuccess ? <SuccessAlert /> : null}
     </Stack>
   );
 };
@@ -719,7 +716,7 @@ const DownloadCRs = () => {
   );
 };
 
-const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]) => void }) => {
+const ChangeService = () => {
   const user = useUser()!;
   const service = user.service;
 
@@ -736,6 +733,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
       return filteredResponse;
     },
   });
+  const setService = useSetService();
 
   const changeServiceMutation = useMutation({
     mutationFn: async (service_id: string) => {
@@ -745,7 +743,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
         body: { service_id },
       });
 
-      onSuccess?.(service as AuthUser["service"]);
+      setService(service);
     },
   });
 
@@ -819,6 +817,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
           Enregistrer
         </Button>
       </Flex>
+      {changeServiceMutation.isSuccess ? <SuccessAlert /> : null}
     </Flex>
   );
 };
