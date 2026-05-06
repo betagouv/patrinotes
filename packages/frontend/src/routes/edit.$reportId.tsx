@@ -12,17 +12,16 @@ import { db, useDbQuery } from "../db/db";
 import { Report, StateReport } from "../db/AppSchema";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box } from "@mui/material";
-import Button from "@codegouvfr/react-dsfr/Button";
 import { Tabs } from "#components/Tabs.tsx";
 import { Center } from "#components/MUIDsfr.tsx";
-import { useStatus } from "@powersync/react";
+import { useStatus, useSyncStream } from "@powersync/react";
 import { useFormWithFocus, useRefreshForm } from "../hooks/useFormWithFocus";
 
 const EditReport = () => {
   const { reportId } = Route.useParams();
+  useSyncStream({ name: "report_attachments_stream", parameters: { report_id: reportId } });
 
   const reportQuery = useDbQuery(db.selectFrom("report").where("id", "=", reportId).selectAll());
-
   const report = reportQuery.data?.[0];
 
   return <Flex flexDirection="column">{report ? <WithReport report={report} /> : null}</Flex>;

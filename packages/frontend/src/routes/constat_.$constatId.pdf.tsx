@@ -41,6 +41,7 @@ import { useUserSettings } from "../hooks/useUserSettings";
 import { useLiveService, useUser } from "../contexts/AuthContext";
 import { getIsAlertVisited } from "@patrinotes/pdf/utils";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
+import { useSyncStream } from "@powersync/react";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -57,6 +58,15 @@ export const Route = createFileRoute("/constat_/$constatId/pdf")({
 const noop = () => null;
 
 function RouteComponent() {
+  const { constatId } = Route.useParams();
+
+  const stream = useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
+  if (!stream?.subscription.hasSynced)
+    return (
+      <Center>
+        <Spinner />
+      </Center>
+    );
   return <ConstatPdf />;
 }
 

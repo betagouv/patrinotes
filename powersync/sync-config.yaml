@@ -31,6 +31,19 @@ streams:
       - SELECT * FROM pdf_snapshot WHERE user_id = auth.user_id()
       - SELECT * FROM user_settings WHERE user_id = auth.user_id()
 
+  state_report_attachments_stream:
+    queries:
+      - SELECT * FROM state_report_attachment WHERE state_report_id = subscription.parameter('state_report_id') AND
+        is_deprecated = 0
+      - SELECT * FROM visited_section_attachment WHERE visited_section_id IN (SELECT id FROM visited_section WHERE
+        state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
+      - SELECT * FROM state_report_alert_attachment WHERE state_report_alert_id IN (SELECT id FROM state_report_alert
+        WHERE state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
+
+  report_attachments_stream:
+    queries:
+      - SELECT * FROM report_attachment WHERE report_id = subscription.parameter('report_id') AND is_deprecated = 0
+
   reports_stream:
     auto_subscribe: true
     priority: 2
@@ -40,11 +53,7 @@ streams:
       - SELECT * FROM report WHERE service_id IN current_service
       - SELECT * FROM state_report WHERE service_id IN current_service
       - SELECT * FROM visited_section WHERE service_id IN current_service
-      - SELECT * FROM visited_section_attachment WHERE service_id IN current_service
-      - SELECT * FROM report_attachment WHERE service_id IN current_service
-      - SELECT * FROM state_report_attachment WHERE service_id IN current_service
       - SELECT * FROM state_report_alert WHERE service_id IN current_service
-      - SELECT * FROM state_report_alert_attachment WHERE service_id IN current_service
       - SELECT id, state_report_id, status, service_id FROM constat_validation WHERE service_id IN current_service
 
   pop_stream:

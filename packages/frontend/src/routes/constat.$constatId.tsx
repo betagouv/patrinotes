@@ -9,6 +9,7 @@ import { db, useDbQuery } from "../db/db";
 import { StateReportForm } from "../features/state-report/StateReportForm";
 import { stateReportStepSchema } from "../features/state-report/utils";
 import z from "zod";
+import { useSyncStream } from "@powersync/react/lib/hooks/streams";
 
 export const Route = createFileRoute("/constat/$constatId")({
   component: RouteComponent,
@@ -43,6 +44,8 @@ function RouteComponent() {
 
 const WithStateReport = () => {
   const { constatId } = Route.useParams();
+  useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
+
   const reportQuery = useDbQuery(db.selectFrom("state_report").where("id", "=", constatId).selectAll());
 
   if (reportQuery.isLoading) {
