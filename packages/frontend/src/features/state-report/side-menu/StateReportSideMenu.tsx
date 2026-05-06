@@ -28,7 +28,7 @@ export const StateReportSideMenu = () => {
         <Button
           priority="secondary"
           onClick={() => setSideMenu("alerts")}
-          sx={{ width: "254px", justifyContent: "center" }}
+          sx={{ width: { xs: "100%", lg: "254px" }, justifyContent: "center" }}
           iconId="ri-alarm-warning-fill"
         >
           Alertes MH
