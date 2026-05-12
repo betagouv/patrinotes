@@ -58,25 +58,12 @@ export const SignupForm = () => {
   const { error: mutationError } = mutation;
 
   return (
-    <Flex
-      flexDirection="column"
-      px={{ lg: 0, xs: "16px" }}
-      width={{ xs: "100%", lg: "600px" }}
-      mx="auto"
-      mt={{ lg: "32px", sm: "0" }}
-    >
-      <Notice
-        iconDisplayed
-        isClosable={false}
-        severity="info"
-        title="Compte-rendu VIF est intégré à Patrinotes à partir du 4 mai."
-        description="Retrouvez vos CR en vous créant un compte avec le même courriel."
-      />
-      <Typography variant="h4" mb="24px" mt="24px">
-        Inscription
+    <Flex flexDirection="column" px={{ lg: 0, xs: "16px" }} width={{ xs: "100%", lg: "600px" }} mx="auto">
+      <Typography variant="h4" mb="24px">
+        Création de compte
       </Typography>
-      <Typography fontSize="14px" color={fr.colors.decisions.text.default.grey.default} mb="32px">
-        Choisissez vos identifiants pour créer votre compte. Tous les champs sont obligatoires.
+      <Typography fontSize="12px" color={fr.colors.decisions.text.default.grey.default} mb="32px">
+        Tous les champs sont obligatoires.
       </Typography>
       <form onSubmit={form.handleSubmit(signup)}>
         {mutationError ? (
@@ -203,15 +190,15 @@ export const SignupForm = () => {
         </FullWidthButton>
       </form>
 
-      <Divider my="20px" color="#DDDDDD" />
+      <Divider my="40px" color="#DDDDDD" />
 
       <h5>Vous avez déjà un compte ?</h5>
 
       <FullWidthButton
+        sx={{ mb: { xs: "64px", lg: "80px" } }}
         size="large"
         priority="secondary"
         linkProps={{ to: "/connexion" }}
-        style={{ marginBottom: "32px" }}
       >
         Se connecter
       </FullWidthButton>

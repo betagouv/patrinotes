@@ -14,7 +14,7 @@ streams:
     auto_subscribe: true
     priority: 1
     with:
-      current_service: SELECT service_id FROM "user" WHERE id = auth.user_id()
+      current_service: SELECT service_id FROM "user" WHERE email = auth.parameter('email')
     queries:
       - SELECT * FROM service WHERE id IN current_service
       - SELECT id, name, service_id FROM "user" WHERE service_id IN current_service
@@ -26,10 +26,25 @@ streams:
   user_stream:
     auto_subscribe: true
     priority: 2
+    with:
+      current_user_id: SELECT id FROM "user" WHERE email = auth.parameter('email')
     queries:
-      - SELECT * FROM delegation WHERE "createdBy" = auth.user_id() OR "delegatedTo" = auth.user_id()
-      - SELECT * FROM pdf_snapshot WHERE user_id = auth.user_id()
-      - SELECT * FROM user_settings WHERE user_id = auth.user_id()
+      - SELECT * FROM delegation WHERE "createdBy" IN current_user_id OR "delegatedTo" IN current_user_id
+      - SELECT * FROM pdf_snapshot WHERE user_id IN current_user_id
+      - SELECT * FROM user_settings WHERE user_id IN current_user_id
+
+  state_report_attachments_stream:
+    queries:
+      - SELECT * FROM state_report_attachment WHERE state_report_id = subscription.parameter('state_report_id') AND
+        is_deprecated = 0
+      - SELECT * FROM visited_section_attachment WHERE visited_section_id IN (SELECT id FROM visited_section WHERE
+        state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
+      - SELECT * FROM state_report_alert_attachment WHERE state_report_alert_id IN (SELECT id FROM state_report_alert
+        WHERE state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
+
+  report_attachments_stream:
+    queries:
+      - SELECT * FROM report_attachment WHERE report_id = subscription.parameter('report_id') AND is_deprecated = 0
 
   state_report_attachments_stream:
     queries:
@@ -48,7 +63,7 @@ streams:
     auto_subscribe: true
     priority: 2
     with:
-      current_service: SELECT service_id FROM "user" WHERE id = auth.user_id()
+      current_service: SELECT service_id FROM "user" WHERE email = auth.parameter('email')
     queries:
       - SELECT * FROM report WHERE service_id IN current_service
       - SELECT * FROM state_report WHERE service_id IN current_service
@@ -60,7 +75,7 @@ streams:
     auto_subscribe: true
     priority: 3
     with:
-      my_depts: SELECT dept_number FROM "user_dept" WHERE user_id = auth.user_id()
+      my_depts: SELECT dept_number FROM "user_dept" WHERE user_id IN (SELECT id FROM "user" WHERE email = auth.parameter('email'))
     queries:
       - SELECT * FROM pop_immeubles WHERE departement_format_numerique IN my_depts
       - SELECT * FROM pop_objets WHERE departement_format_numerique IN my_depts

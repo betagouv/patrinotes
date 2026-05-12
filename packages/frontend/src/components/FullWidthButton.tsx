@@ -1,8 +1,9 @@
 import Button, { type ButtonProps } from "@codegouvfr/react-dsfr/Button";
+import { styled } from "@mui/material";
 import { useStyles } from "tss-react";
 
 // TODO: refactor using MUI (in MuiDsfr.tsx)
-export const FullWidthButton = ({ className, type, linkProps, size, ...props }: ButtonProps) => {
+const FullWidthButtonBase = ({ className, type, linkProps, size, ...props }: ButtonProps) => {
   const { cx, css } = useStyles();
 
   return (
@@ -14,6 +15,8 @@ export const FullWidthButton = ({ className, type, linkProps, size, ...props }: 
     />
   );
 };
+
+export const FullWidthButton = styled(FullWidthButtonBase)({});
 // type HTMLAnchorProps = DetailedHTMLProps<AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>;
 
 // type LinkPropsWithoutChildren<LinkProps> =
