@@ -46,19 +46,6 @@ streams:
     queries:
       - SELECT * FROM report_attachment WHERE report_id = subscription.parameter('report_id') AND is_deprecated = 0
 
-  state_report_attachments_stream:
-    queries:
-      - SELECT * FROM state_report_attachment WHERE state_report_id = subscription.parameter('state_report_id') AND
-        is_deprecated = 0
-      - SELECT * FROM visited_section_attachment WHERE visited_section_id IN (SELECT id FROM visited_section WHERE
-        state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
-      - SELECT * FROM state_report_alert_attachment WHERE state_report_alert_id IN (SELECT id FROM state_report_alert
-        WHERE state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
-
-  report_attachments_stream:
-    queries:
-      - SELECT * FROM report_attachment WHERE report_id = subscription.parameter('report_id') AND is_deprecated = 0
-
   reports_stream:
     auto_subscribe: true
     priority: 2
@@ -75,7 +62,9 @@ streams:
     auto_subscribe: true
     priority: 3
     with:
-      my_depts: SELECT dept_number FROM "user_dept" WHERE user_id IN (SELECT id FROM "user" WHERE email = auth.parameter('email'))
+      my_depts:
+        SELECT dept_number FROM "user_dept" WHERE user_id IN (SELECT id FROM "user" WHERE email =
+        auth.parameter('email'))
     queries:
       - SELECT * FROM pop_immeubles WHERE departement_format_numerique IN my_depts
       - SELECT * FROM pop_objets WHERE departement_format_numerique IN my_depts
