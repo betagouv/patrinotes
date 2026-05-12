@@ -189,28 +189,44 @@ const Profile = () => {
 };
 
 export const JobSelect = ({ job, onChange }: { job: string; onChange: (job: string) => void }) => {
-  const shouldShowInput = job && !jobOptions.includes(job);
-  const selectedOption = job && (jobOptions.includes(job) ? job : "Autre...");
+  const getIsCustom = (job: string) => {
+    return job && !jobOptions.includes(job);
+  };
+
+  const [isCustom, setIsCustom] = useState(getIsCustom(job));
+
+  const selectedOption = isCustom ? "Autre..." : job;
+
+  const allOptions = [...jobOptions, "Autre..."];
 
   return (
     <Stack>
       <Select
         sx={{ mb: "8px !important" }}
         label="Fonction"
-        nativeSelectProps={{ value: selectedOption, onChange: (e) => onChange(e.target.value) }}
+        nativeSelectProps={{
+          value: selectedOption,
+          onChange: (e) => {
+            if (getIsCustom(e.target.value)) {
+              setIsCustom(true);
+              onChange("");
+            } else {
+              setIsCustom(false);
+              onChange(e.target.value);
+            }
+          },
+        }}
       >
         <option value="" disabled>
           Sélectionnez votre fonction
         </option>
-        {jobOptions.map((option) => (
+        {allOptions.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
         ))}
       </Select>
-      {shouldShowInput && (
-        <Input label={null} nativeInputProps={{ value: job, onChange: (e) => onChange(e.target.value) }} />
-      )}
+      {isCustom && <Input label={null} nativeInputProps={{ value: job, onChange: (e) => onChange(e.target.value) }} />}
     </Stack>
   );
 };
@@ -222,7 +238,6 @@ const jobOptions = [
   "Ingénieur des services culturels",
   "CAOA",
   "Technicien",
-  "Autre...",
 ];
 
 const DefaultRecipient = () => {
