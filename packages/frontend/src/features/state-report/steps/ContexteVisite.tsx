@@ -76,7 +76,7 @@ export const ContexteVisite = () => {
           ...form.register("redacted_by"),
         }}
       />
-      <PeopleList />
+      <PeopleList isDisabled={isDisabled} form={form} name="personnes_presentes" />
       <Divider mb="16px" />
       <Flex flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "16px" }}>
         <Input
@@ -121,15 +121,22 @@ export const ContexteVisite = () => {
   );
 };
 
-const PeopleList = () => {
-  const form = useStateReportFormContext();
-  const isFormDisabled = useIsStateReportDisabled();
-
-  const personnesPresentesRaw = useWatch({ control: form.control, name: "personnes_presentes" });
+export const PeopleList = ({
+  isDisabled,
+  form,
+  name,
+  showInitialInput = false,
+}: {
+  isDisabled: boolean;
+  form: UseFormReturn<any>;
+  name: string;
+  showInitialInput?: boolean;
+}) => {
+  const personnesPresentesRaw: string = useWatch({ control: form.control, name });
 
   // the format of the field is "person1\nperson2\nperson3"
   // the shouldShowEmptyInput is only used when the field is empty since the input must be hidden before the user clicks on "add"
-  const [showNewInput, setShowNewInput] = useState(false);
+  const [showNewInput, setShowNewInput] = useState(showInitialInput);
   const shouldShowEmptyInput = !personnesPresentesRaw && showNewInput;
   const personnesPresentes = shouldShowEmptyInput
     ? [""]
@@ -137,12 +144,10 @@ const PeopleList = () => {
       ? personnesPresentesRaw.split("\n")
       : [];
 
-  const isDisabled = useIsStateReportDisabled();
-
   const onChange = (index: number, value: string) => {
     const newPeople = [...personnesPresentes];
     newPeople[index] = value;
-    form.setValue("personnes_presentes", newPeople.join("\n"));
+    form.setValue(name, newPeople.join("\n"));
   };
 
   return (
@@ -164,14 +169,14 @@ const PeopleList = () => {
       <Box>
         <IconLink
           icon="ri-add-line"
-          disabled={isFormDisabled}
+          disabled={isDisabled}
           onClick={(e) => {
             e.preventDefault();
             if (!personnesPresentes?.length) {
               setShowNewInput(true);
               return;
             }
-            form.setValue("personnes_presentes", [...personnesPresentes, ""].join("\n"));
+            form.setValue(name, [...personnesPresentes, ""].join("\n"));
           }}
           type="button"
         >

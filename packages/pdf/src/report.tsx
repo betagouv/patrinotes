@@ -299,6 +299,13 @@ export const getReportHtmlString = (
 
   const address = [report.applicantAddress, report.city].filter(Boolean).join(" ");
 
+  const personnesPresentes = report.personnes_presentes
+    ? report.personnes_presentes
+        .split("\n")
+        .map((person) => person.trim())
+        .filter(Boolean)
+    : [];
+  const personnesPresentesString = personnesPresentes.length ? `, en présence de ${personnesPresentes.join(", ")}` : "";
   return processHtml(`
     <p class="meeting-date">
     ${
@@ -308,7 +315,7 @@ export const getReportHtmlString = (
         year: "numeric",
         month: "long",
         day: "numeric",
-      })}
+      })}${personnesPresentesString}
     </span><br/><br/>`
         : ""
     }

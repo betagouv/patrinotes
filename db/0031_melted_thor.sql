@@ -1,0 +1,1 @@
+ALTER TABLE "report" ADD COLUMN "personnes_presentes" text;

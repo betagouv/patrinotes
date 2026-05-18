@@ -145,6 +145,7 @@ export const report = pgTable(
     serviceId: text("service_id"),
     redactedById: text(),
     applicantEmail: text(),
+    personnes_presentes: text(),
     city: text(),
     zipCode: text(),
   },
