@@ -239,7 +239,9 @@ const state_report = new Table({
   proprietaire_representant: column.text,
   proprietaire_representant_email: column.text,
   etat_general: column.text,
-  proportion_dans_cet_etat: column.text,
+  proportion_dans_cet_etat: column.text, // V1
+  taux_degradation: column.integer, // V2
+  vitesse_degradation: column.text, // V2
   etat_commentaires: column.text,
   preconisations: column.text,
   preconisations_commentaires: column.text,

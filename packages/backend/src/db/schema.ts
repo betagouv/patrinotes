@@ -666,7 +666,9 @@ export const stateReport = pgTable(
 
     // constat général
     etatGeneral: text("etat_general"),
-    proportionDansCetEtat: text("proportion_dans_cet_etat"),
+    proportionDansCetEtat: text("proportion_dans_cet_etat"), // v1
+    tauxDegradation: integer("taux_degradation"), // v2
+    vitesseDegradation: text("vitesse_degradation"), // v2
     etatCommentaires: text("etat_commentaires"),
     preconisations: text(),
     preconisations_commentaires: text("preconisations_commentaires"),
