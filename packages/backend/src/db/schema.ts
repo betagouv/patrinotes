@@ -632,6 +632,7 @@ export const stateReport = pgTable(
   "state_report",
   {
     id: text().primaryKey().notNull(),
+    version: integer("version").notNull().default(1),
     // monument
     natureEdifice: text("nature_edifice"),
     redactedByName: text("redacted_by_name"),
@@ -698,7 +699,9 @@ export const visitedSection = pgTable(
     section: text(),
     etatGeneral: text("etat_general"),
     proportionDansCetEtat: text("proportion_dans_cet_etat"),
+    niveauDegradation: text("niveau_degradation"),
     commentaires: text(),
+    preconisations: text(),
     service_id: text("service_id").notNull(),
   },
   (table) => [

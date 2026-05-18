@@ -442,14 +442,27 @@ const ProportionsRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
 
 const Preconisations = ({ isDisabled }: { isDisabled: boolean }) => {
   const form = useStateReportFormContext();
-  const rawValue = useWatch({ control: form.control, name: "preconisations" });
+  const value = useWatch({ control: form.control, name: "preconisations" });
 
-  const commentairesCache = useRef<Record<string, string>>({});
-
-  const value = deserializePreconisations(rawValue);
   const setValue = (formValue: { preconisation: string; commentaire?: string }[]) => {
     form.setValue("preconisations", serializePreconisations(formValue));
   };
+
+  return <PreconisationsCheckboxes isDisabled={isDisabled} value={value} setValue={setValue} />;
+};
+
+export const PreconisationsCheckboxes = ({
+  isDisabled,
+  value: rawValue,
+  setValue,
+}: {
+  isDisabled: boolean;
+  value: string | null;
+  setValue: (formValue: { preconisation: string; commentaire?: string }[]) => void;
+}) => {
+  const commentairesCache = useRef<Record<string, string>>({});
+
+  const value = deserializePreconisations(rawValue);
 
   const selectedNames: string[] = value.map((item) => item.preconisation);
 
@@ -537,6 +550,9 @@ const SectionCommentaire = ({
   return (
     <Box mb="24px" mt="16px">
       <Input
+        sx={{
+          marginBottom: "16px !important",
+        }}
         label="Commentaire"
         disabled={isDisabled}
         textArea

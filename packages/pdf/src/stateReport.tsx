@@ -277,6 +277,7 @@ export const getStateReportHtmlString = ({
   alerts?: MinimalAlert[];
   user: { name: string; job: string };
 }) => {
+  const stateReportVersion = stateReport.version || 1;
   const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
 
   const planSituationAttachment = stateReport.attachments.find((att) => att.type === "plan_situation");
@@ -452,6 +453,48 @@ export const getStateReportHtmlString = ({
       </b>
 
   `);
+};
+
+const generateSection = (section: SectionWithAttachments, version: number) => {
+  if (version === 1) {
+    return `
+      <ul>
+        <li>
+          <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+        </li>
+      </ul>
+        <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
+
+      ${generateImagesTable(
+        section.attachments.map((attachment) => ({
+          title: "",
+          url: attachment.file!,
+          label: attachment.label ?? undefined,
+          attachmentId: attachment.id,
+        })),
+      )}
+    `;
+  }
+
+  if (version === 2) {
+    return `
+      <ul>
+        <li>
+          <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+        </li>
+      </ul>
+        <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
+
+      ${generateImagesTable(
+        section.attachments.map((attachment) => ({
+          title: "",
+          url: attachment.file!,
+          label: attachment.label ?? undefined,
+          attachmentId: attachment.id,
+        })),
+      )}
+    `;
+  }
 };
 
 const generatePreconisations = (rawValue: string | null) => {

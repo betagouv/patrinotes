@@ -81,7 +81,11 @@ export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
 };
 
 export const getIsSectionVisited = (section: any) => {
-  return (section?.etat_general && section?.proportion_dans_cet_etat) || section?.attachments?.length;
+  return (
+    (section?.etat_general && section?.proportion_dans_cet_etat) ||
+    section?.niveau_degradation ||
+    section?.attachments?.length
+  );
 };
 
 function cleanString(str: string): string {
