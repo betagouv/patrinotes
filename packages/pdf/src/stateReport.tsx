@@ -319,14 +319,14 @@ export const getStateReportHtmlString = ({
       <br/>
 
       <b>Parties visitées</b> : ${isPartielle ? stateReport.visite_partielle_details || "" : "Visite complète de l'édifice"}<br/>
-      <b>Adresse</b> : ${address || "N/A"}<br/>
-      <b>Référence cadastrale</b> : ${stateReport.reference_cadastrale || "N/A"}<br/>
-      <b>Propriétaire</b> : ${stateReport.proprietaire ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})` : "N/A"}<br/>
-      ${stateReport.proprietaire_representant ? `Représentant : ${stateReport.proprietaire_representant ? `${stateReport.proprietaire_representant} (${stateReport.proprietaire_representant_email})` : "N/A"}` : ""}
+      <b>Adresse</b> : ${address || "Non renseignée"}<br/>
+      <b>Référence cadastrale</b> : ${stateReport.reference_cadastrale || "Non renseignée"}<br/>
+      <b>Propriétaire</b> : ${stateReport.proprietaire ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})` : "Non renseigné"}<br/>
+      ${stateReport.proprietaire_representant ? `Représentant : ${stateReport.proprietaire_representant ? `${stateReport.proprietaire_representant} (${stateReport.proprietaire_representant_email})` : "Non renseigné"}` : ""}
     </p>
 
     <p><span style="font-size: 16pt"><b>Protection de l'édifice</b></span></p>    
-      ${uppercaseFirstLetter(stateReport.nature_protection || "N/A")}<br/><br/>Parties protégées : ${stateReport.parties_protegees || "N/A"}
+      ${uppercaseFirstLetter(stateReport.nature_protection || "Non renseignée")}<br/><br/>Parties protégées : ${stateReport.parties_protegees || "Non renseignées"}
 
       <hr />
 
@@ -360,7 +360,7 @@ export const getStateReportHtmlString = ({
 
         ${planSituationAttachment || planEdificeAttachment || vuesGeneralesAttachments?.length ? "<hr />" : ""}
         <p><span style="font-size: 16pt"><b>État général</b></span></p>
-        <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "N/A"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
+        <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
         <ul>
           ${defaultSections
             ?.map((section) => {
@@ -371,7 +371,7 @@ export const getStateReportHtmlString = ({
                 <b>${section}</b> : ${
                   !sectionData
                     ? "partie non visitée"
-                    : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "N/A"}.`
+                    : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.`
                 }
               </li>
             `;
@@ -389,7 +389,7 @@ export const getStateReportHtmlString = ({
             (section) => `
               <ul>
                 <li>
-                  <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "N/A"}.
+                  <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
                 </li>
               </ul>
                 <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
@@ -608,7 +608,7 @@ const formatArrayWithCommasAnd = (items: string[]) => {
         return `
             <li>
               <b>${a.alert}</b><br/>
-              <i>Alerte transmise par courriel ${alertSections.find((section) => section.title === a.alert)?.pronom ?? "à"} ${a.email || "N/A"}</i>
+              <i>Alerte transmise par courriel ${alertSections.find((section) => section.title === a.alert)?.pronom ?? "à"} ${a.email || "Non renseigné"}</i>
             </li>
           `;
       })
