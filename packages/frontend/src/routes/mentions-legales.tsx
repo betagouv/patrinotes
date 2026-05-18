@@ -41,7 +41,7 @@ const MentionLegales = () => {
       </Typography>
       <Typography variant="h2">Directrice de la publication</Typography>
       <Typography variant="body1">
-        La directrice de la publication est Madame Rachida DATI, ministre de la Culture.
+        La directrice de la publication est Madame Catherine PÉGARD, ministre de la Culture.
       </Typography>
 
       <Typography variant="h2">Hébergement de la plateforme</Typography>

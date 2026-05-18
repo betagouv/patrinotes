@@ -5,7 +5,7 @@ import { useUserSettings } from "../hooks/useUserSettings";
 import { useMutation, UseMutationResult, useQuery } from "@tanstack/react-query";
 import { db, useDbQuery } from "../db/db";
 import { useLiveUser, useRefreshUser, useSetService, useUser } from "../contexts/AuthContext";
-import { v4 } from "uuid";
+import { v4, v7 } from "uuid";
 import { Spinner } from "#components/Spinner";
 import { EmailInput } from "../components/EmailInput";
 import { Delegation, User } from "../db/AppSchema";
@@ -234,9 +234,9 @@ export const JobSelect = ({ job, onChange }: { job: string; onChange: (job: stri
 const jobOptions = [
   "Agent en charge du CST",
   "Conservateur",
-  "ABF",
+  "Architecte des bâtiments de France",
   "Ingénieur des services culturels",
-  "CAOA",
+  "Conservateur des antiquités et objets d'art",
   "Technicien",
 ];
 
@@ -434,7 +434,7 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
 
       await db
         .insertInto("delegation")
-        .values({ ...delegation, id: v4() })
+        .values({ ...delegation, id: v7() })
         .execute();
     },
   });
