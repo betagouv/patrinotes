@@ -11,6 +11,7 @@ import Badge from "@codegouvfr/react-dsfr/Badge";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { StateReportActions } from "./StateReportActions";
+import { MobileModalActions } from "#components/MobileModalActions.tsx";
 
 export const getStateReportStatus = (report: StateReportWithUser) => {
   const isDraft = !report.attachment_id;
@@ -140,21 +141,9 @@ const MenuPopoverTrigger = ({ report, ...props }: { report: StateReportWithUser;
 
 const MenuMobileModalContent = ({ onClose, report }: MenuProps) => {
   return (
-    <Box
-      bgcolor="rgba(0,0,0,.8)"
-      display={{ xs: "block", lg: "none" }}
-      position="fixed"
-      zIndex="200000"
-      top="0"
-      left="0"
-      right="0"
-      bottom="0"
-      onClick={(e) => onClose(e.nativeEvent)}
-    >
-      <Box bgcolor="white" position="absolute" left="0" right="0" bottom="0" onClick={(e) => e.stopPropagation()}>
-        <StateReportActions report={report} />
-      </Box>
-    </Box>
+    <MobileModalActions onClose={onClose}>
+      <StateReportActions report={report} />
+    </MobileModalActions>
   );
 };
 
