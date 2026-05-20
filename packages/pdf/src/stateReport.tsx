@@ -508,6 +508,15 @@ const uppercaseFirstLetter = (str: string) => {
 type Image = { url: string; label?: string; title?: string; attachmentId: string };
 
 const generateImagesTable = (images: (Image | undefined)[], options: { hideTitle?: boolean } = {}) => {
+  return `<div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 8px; margin-bottom: 8px; width: 100%; flex-direction: row;">
+    ${images
+      .map((image) => {
+        if (!image) return "";
+        return `<div>${generateImageCell(image, options)}</div>`;
+      })
+      .join("")}
+  </div>`;
+
   const rows = [];
   for (let i = 0; i < images.length; i += 2) {
     const firstImage = images[i];
@@ -524,7 +533,7 @@ const generateImagesTable = (images: (Image | undefined)[], options: { hideTitle
 
 const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?: boolean } = {}) => {
   if (!image) return "";
-  return `<unbreakable class="column">
+  return `<unbreakable>
       ${
         image.title
           ? `<p>
@@ -534,7 +543,7 @@ const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?
             ? ""
             : `<p style="height: 16pt"></p>`
       }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: 100%; margin-bottom: 0px;" />
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: auto; height:180px; margin-bottom: 0px;" />
       <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
         ${image.label ? image.label : ""}
       </div>
@@ -660,18 +669,6 @@ export const servicePronoms = [
 ];
 
 export const stateReportExtraCss = {
-  ".column-block": {
-    width: "100%",
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: "24px",
-  },
-
-  ".column": {
-    width: "48%",
-  },
-
   ".ProseMirror-focused .column": {
     border: "1px gray dashed",
     borderRadius: "8px",
