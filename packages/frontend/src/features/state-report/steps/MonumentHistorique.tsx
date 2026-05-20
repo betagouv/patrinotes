@@ -11,11 +11,12 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../../api";
 import { db, useDbQuery } from "../../../db/db";
-import { PopImage, PopObjet } from "../../../db/AppSchema";
+import { PopImage, PopObjet, StateReport } from "../../../db/AppSchema";
 import { getRouteApi } from "@tanstack/react-router";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
+import { Accordion } from "#components/MUIDsfr.tsx";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -140,6 +141,8 @@ export const MonumentHistorique = () => {
           />
         </Flex>
 
+        {referencePop ? <PreviousConstats referencePop={referencePop} /> : null}
+
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
         <Flex
@@ -239,9 +242,68 @@ export const MonumentHistorique = () => {
   );
 };
 
-const getNbToShow = (page: number) => {
-  let baseNb = 2;
-  return baseNb + (page - 1) * 6;
+const PreviousConstats = ({ referencePop }: { referencePop: string }) => {
+  const { constatId } = routeApi.useParams();
+  const constatsQuery = useDbQuery(
+    db
+      .selectFrom("state_report")
+      .selectAll()
+      .where("reference_pop", "like", "%" + referencePop.trim())
+      .where("id", "<>", constatId ?? "")
+      .where("disabled", "<>", 1)
+      .where("attachment_id", "is not", null)
+      .orderBy("created_at", "desc"),
+    [referencePop],
+  );
+
+  const constats = constatsQuery.data ?? [];
+
+  if (!referencePop || referencePop === "CUSTOM") return null;
+  if (!constats.length) return null;
+
+  return (
+    <Box mt="16px">
+      <Accordion
+        label="Constats antérieurs"
+        sx={{
+          bgcolor: "#ECECFE",
+          borderRadius: "4px",
+          "::before": {
+            boxShadow: "none",
+          },
+        }}
+      >
+        <PreviousConstatsList constats={constats} />
+      </Accordion>
+    </Box>
+  );
+};
+
+const PreviousConstatsList = ({ constats }: { constats: StateReport[] }) => {
+  return (
+    <Stack gap="8px" px="16px">
+      {constats.map((constat, index) => (
+        <Stack key={constat.id}>
+          <Typography
+            component="a"
+            href={`/constat/${constat.id}/pdf`}
+            target="_blank"
+            rel="noopener external"
+            className="fr-link"
+            sx={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
+          >
+            {new Date(constat.created_at!).toLocaleDateString("fr-FR")} - visite{" "}
+            {constat.nature_visite === "complète" ? "complète" : "partielle"}
+          </Typography>
+          <Typography mt="2px" color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
+            Par {constat.redacted_by}
+          </Typography>
+
+          {index !== constats.length - 1 ? <Divider my="8px" /> : null}
+        </Stack>
+      ))}
+    </Stack>
+  );
 };
 
 const MonumentObjetsEdition = () => {
