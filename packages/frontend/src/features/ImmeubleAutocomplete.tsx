@@ -20,7 +20,7 @@ type FilterablePopImmeubles = Pick<
   "reference" | "id" | "titre_editorial_de_la_notice" | "commune_forme_editoriale" | "adresse_forme_index"
 >;
 const fuseOptions: IFuseOptions<FilterablePopImmeubles> = {
-  keys: ["titre_editorial_de_la_notice", "commune_forme_editoriale", "id"],
+  keys: ["titre_editorial_de_la_notice", "commune_forme_editoriale", "id", "adresse_forme_index"],
   shouldSort: true,
   distance: 1000,
   threshold: 0.5,

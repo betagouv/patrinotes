@@ -328,7 +328,7 @@ export const getStateReportHtmlString = ({
     <p><span style="font-size: 16pt"><b>Protection de l'édifice</b></span></p>    
       ${uppercaseFirstLetter(stateReport.nature_protection || "Non renseignée")}<br/><br/>Parties protégées : ${stateReport.parties_protegees || "Non renseignées"}
 
-      <hr />
+      <hr style="margin-top: 16px;" />
 
       ${generateImagesTable([
         planSituationAttachment
@@ -543,7 +543,7 @@ const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?
             ? ""
             : `<p style="height: 16pt"></p>`
       }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: auto; height:180px; margin-bottom: 0px;" />
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: auto; height:180px; margin-bottom: 8px;" />
       <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
         ${image.label ? image.label : ""}
       </div>
