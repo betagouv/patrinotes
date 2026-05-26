@@ -239,7 +239,7 @@ export const PDF = () => {
 
   if (mode === "sent") {
     return (
-      <Center flexDirection="column" width="100%" mt="24px">
+      <Center flexDirection="column" width="100%" mt="24px" mb={{ xs: "48px", lg: "80px" }}>
         <Box component="img" src={sentImage} alt="Courriel envoyé" width={{ xs: "80px", lg: "120px" }} mt="100px" />
         <Box mt="16px" color="text-title-blue-france" textAlign="center" fontSize={{ xs: "18px", lg: "24px" }}>
           Votre compte-rendu a bien été envoyé !

@@ -46,18 +46,43 @@ export const sendStateReportMail = async ({
 
 export const sendReportMail = async ({
   recipients,
-  pdfBuffer,
+  pdfUrl,
   report,
 }: {
   recipients: string;
-  pdfBuffer: Buffer;
+  pdfUrl: string;
   report: Selectable<Database["report"]>;
 }) => {
   sentry?.captureMessage("Sending report mail", { extra: { recipients, report } });
 
   const { html: reportHtml, attachments: reportAttachments } = wrapWithDsfrMail({
     title: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
-    content: `<p>Bonjour,</p><p>Vous trouverez ci-joint le compte-rendu de notre rendez-vous.</p><p>Cordialement</p>`,
+    content: `
+      <p>Madame, Monsieur,</p>
+
+<p>Suite à notre rencontre du ${
+      report.meetDate
+        ? new Date(report.meetDate).toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : ""
+    } pour échanger sur votre projet ${report.title || ""}, veuillez trouver le rapport établi en cliquant sur le lien suivant : <a href="${pdfUrl}">Télécharger le constat d'état</a> (lien valable 1 mois).</p>
+
+<p>
+<b>Rappel important :</b> Ce compte-rendu ne remplace pas la demande d’autorisation de travaux.
+</p>
+<p>
+<b>Pour aller plus loin :</b>
+</p>
+<ul>
+<li>Plus d’information sur la mission des UDAP : <a href="https://www.culture.gouv.fr/regions/les-unites-departementales-de-l-architecture-et-du-patrimoine-udap">Site du ministère de la culture</a></li>
+<li>Entreprendre des travaux en sites protégés : <a href="https://www.culture.gouv.fr/catalogue-des-demarches-et-subventions/mes-travaux-en-site-protege">En savoir plus</a></li>
+</ul>
+
+Cordialement, ${report.redactedBy}
+    `,
   });
 
   return transporter.sendMail({
@@ -65,13 +90,7 @@ export const sendReportMail = async ({
     to: recipients,
     subject: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
     html: reportHtml,
-    attachments: [
-      ...reportAttachments,
-      {
-        filename: getPDFInMailName(report),
-        content: pdfBuffer,
-      },
-    ],
+    attachments: [...reportAttachments],
   });
 };
 

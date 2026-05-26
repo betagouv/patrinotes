@@ -14,6 +14,12 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { StateReportActions } from "./StateReportActions";
 
+export const getStateReportStatus = (report: StateReportWithUser) => {
+  const isDraft = !report.attachment_id;
+  const status = (report.validation_status as "pending" | "accepted" | "declined") || (isDraft ? "draft" : "published");
+  return status as "draft" | "pending" | "accepted" | "declined" | "published";
+};
+
 export const StateReportListItem = ({ report, isLast }: { report: StateReportWithUser; isLast?: boolean }) => {
   const ref = useRef<HTMLButtonElement>(null);
 
@@ -22,9 +28,10 @@ export const StateReportListItem = ({ report, isLast }: { report: StateReportWit
   const title = report.titre_edifice;
   const whereText = report.commune ? `à ${report.commune}` : null;
   const byText = report.redacted_by ? `par ${report.redacted_by}` : null;
-  const isDraft = !report.attachment_id;
 
-  const status = (report.validation_status as "pending" | "accepted" | "declined") || (isDraft ? "draft" : "published");
+  const status = getStateReportStatus(report);
+
+  const to = status === "draft" ? "/constat/$constatId" : "/constat/$constatId/pdf";
 
   return (
     <Flex className="report-list-item" position="relative" flexDirection="column" width="100%">
@@ -35,7 +42,7 @@ export const StateReportListItem = ({ report, isLast }: { report: StateReportWit
             backgroundColor: "initial !important",
           },
         })}
-        to={"/constat/$constatId"}
+        to={to}
         params={{ constatId: report.id }}
         search={{ step: report.reference_pop ? "constat-general" : "informations", mode: "view" }}
       >

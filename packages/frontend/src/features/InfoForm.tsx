@@ -16,6 +16,7 @@ import { db, useDbQuery } from "../db/db";
 import { useIsFormDisabled } from "./DisabledContext";
 import { ServiceInstructeurSelect } from "./ServiceInstructeurSelect";
 import { useSpeechToTextV2 } from "./audio-record/SpeechRecorder.hook";
+import { PeopleList } from "./state-report/steps/ContexteVisite";
 
 export const InfoForm = () => {
   const form = useFormContext<Report>();
@@ -125,7 +126,7 @@ export const InfoForm = () => {
           />
         </Box>
 
-        <Flex gap="16px" flexDirection="row" mt="32px">
+        <Flex gap="16px" flexDirection="row" mt="8px">
           <Input
             sx={{ flex: { xs: "none", lg: 1 }, mb: { xs: "16px", lg: undefined } }}
             disabled={isFormDisabled}
@@ -139,6 +140,10 @@ export const InfoForm = () => {
             nativeInputProps={{ type: "time", onChange: setTime, value: meetDateRef.current.time }}
           />
         </Flex>
+
+        <Box>
+          <PeopleList isDisabled={isFormDisabled} form={form} name="personnes_presentes" showInitialInput />
+        </Box>
       </InputGroupWithTitle>
 
       <Divider mt="20px" mb="52px" />

@@ -47,6 +47,7 @@ const DSFR_CSS = `
   :root {
     color-scheme: light dark;
     supported-color-schemes: light dark;
+    font-size: 14px;
   }
   @media (prefers-color-scheme: dark) {
     body {
@@ -239,7 +240,7 @@ export function wrapWithDsfrMail({
           <table style="min-width:600px; margin:0 auto; width:600px; border-left:1px #e5e5e5 solid; border-right:1px #e5e5e5 solid;" class="wlkm-mw darkmode-4" width="600" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ECECFE" align="center">
             <tr><td>
               <table style="width:100%;" class="wlkm-cl darkmode" width="496" cellspacing="0" cellpadding="0" role="presentation" border="0" bgcolor="#ECECFE" align="center">
-                <tr><td class="darkmode-4" width="496" align="left" valign="top" style="padding:20px 10px 20px 10px; line-height:32px; font-size:24px; color:#161616; font-family:'Marianne',Arial,Helvetica,sans-serif;">
+                <tr><td class="darkmode-4" width="496" align="left" valign="top" style="padding:20px 10px 20px 10px; line-height:32px; font-size:24px; color:#000091; font-family:'Marianne',Arial,Helvetica,sans-serif;">
                   <span style="font-family:'Marianne',Arial,Helvetica,sans-serif !important;"><strong>${escapeHtml(title)}</strong></span>
                 </td></tr>
               </table>

@@ -12,6 +12,7 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import { Checkbox as DsfrCheckbox } from "@codegouvfr/react-dsfr/Checkbox";
 import { Summary as DsfrSummary } from "@codegouvfr/react-dsfr/Summary";
 import { SearchBar as DsfrSearchBar } from "@codegouvfr/react-dsfr/SearchBar";
+import { Header as DsfrHeader } from "@codegouvfr/react-dsfr/Header";
 
 export const Center = styled(Box)({
   display: "flex",
@@ -32,3 +33,4 @@ export const Summary = styled(DsfrSummary)();
 export const Table = styled(DsfrTable)();
 export const Pagination = styled(DsfrPagination)();
 export const SearchBar = styled(DsfrSearchBar)();
+export const Header = styled(DsfrHeader)();

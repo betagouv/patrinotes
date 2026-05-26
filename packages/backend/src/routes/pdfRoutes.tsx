@@ -18,6 +18,7 @@ import { ENV } from "../envVars";
 import { sentry } from "../features/sentry";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
+import { getPDFInMailName } from "@patrinotes/pdf";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -94,7 +95,15 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     const reportsQuery = await db.selectFrom("report").where("id", "=", reportId).selectAll().execute();
     const report = reportsQuery[0] as Selectable<Database["report"]>;
-    await sendReportMail({ recipients: recipients.join(","), pdfBuffer: pdf, report: report! });
+
+    const pdfMailUrl = await createAttachmentRedirection({
+      s3Key: "attachment/" + pdfPath,
+      createdBy: request.user.id,
+      sentTo: recipients.join(","),
+      name: getPDFInMailName(report),
+    });
+
+    await sendReportMail({ recipients: recipients.join(","), pdfUrl: pdfMailUrl, report: report! });
 
     for (const recipient of recipients) {
       const id = v4();

@@ -2,10 +2,10 @@ import { EnsureUser } from "#components/EnsureUser.tsx";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import Download from "@codegouvfr/react-dsfr/Download";
 import { useUserSettings } from "../hooks/useUserSettings";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, UseMutationResult, useQuery } from "@tanstack/react-query";
 import { db, useDbQuery } from "../db/db";
 import { useLiveUser, useRefreshUser, useSetService, useUser } from "../contexts/AuthContext";
-import { v4 } from "uuid";
+import { v4, v7 } from "uuid";
 import { Spinner } from "#components/Spinner";
 import { EmailInput } from "../components/EmailInput";
 import { Delegation, User } from "../db/AppSchema";
@@ -44,12 +44,6 @@ const sectionIds = accountSections.map((section) => section.linkProps.href.repla
 
 const AccountPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
-  const setService = useSetService();
-  const onSuccess = (service: AuthUser["service"]) => {
-    setService(service);
-    setIsSuccess(true);
-    scrollToTop();
-  };
 
   const activeSection = useActiveSection(sectionIds);
 
@@ -101,7 +95,6 @@ const AccountPage = () => {
         <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="64px">
           Mon compte
         </Typography>
-        {isSuccess ? <SuccessAlert /> : null}
         <Profile />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DefaultRecipient />
@@ -114,7 +107,7 @@ const AccountPage = () => {
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
         <DownloadCRs />
         <Divider my={{ xs: "48px", lg: "80px" }} color="background-action-low-blue-france-hover" />
-        <ChangeService onSuccess={onSuccess} />
+        <ChangeService />
       </Stack>
     </Flex>
   );
@@ -176,10 +169,8 @@ const Profile = () => {
         nativeInputProps={{ value: userData.name, onChange: (e) => setUserData({ ...userData, name: e.target.value }) }}
         sx={{ mb: "24px" }}
       />
-      <Input
-        label="Fonction"
-        nativeInputProps={{ value: userData.job, onChange: (e) => setUserData({ ...userData, job: e.target.value }) }}
-      />
+      <JobSelect job={userData.job} onChange={(job) => setUserData({ ...userData, job })} />
+
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
         <Button
           iconId="ri-save-3-line"
@@ -191,9 +182,63 @@ const Profile = () => {
           Enregistrer
         </Button>
       </Flex>
+
+      {saveUserMutation.isSuccess ? <SuccessAlert /> : null}
     </Stack>
   );
 };
+
+export const JobSelect = ({ job, onChange }: { job: string; onChange: (job: string) => void }) => {
+  const getIsCustom = (job: string) => {
+    return job && !jobOptions.includes(job);
+  };
+
+  const [isCustom, setIsCustom] = useState(getIsCustom(job));
+
+  const selectedOption = isCustom ? "Autre..." : job;
+
+  const allOptions = [...jobOptions, "Autre..."];
+
+  return (
+    <Stack>
+      <Select
+        sx={{ mb: "8px !important" }}
+        label="Fonction"
+        nativeSelectProps={{
+          value: selectedOption,
+          onChange: (e) => {
+            if (getIsCustom(e.target.value)) {
+              setIsCustom(true);
+              onChange("");
+            } else {
+              setIsCustom(false);
+              onChange(e.target.value);
+            }
+          },
+        }}
+      >
+        <option value="" disabled>
+          Sélectionnez votre fonction
+        </option>
+        {allOptions.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </Select>
+      {isCustom && <Input label={null} nativeInputProps={{ value: job, onChange: (e) => onChange(e.target.value) }} />}
+    </Stack>
+  );
+};
+
+const jobOptions = [
+  "Agent en charge du CST",
+  "Conservateur",
+  "Architecte des bâtiments de France",
+  "Ingénieur des services culturels",
+  "Conservateur des antiquités et objets d'art",
+  "Technicien",
+];
 
 const DefaultRecipient = () => {
   const user = useUser()!;
@@ -269,6 +314,7 @@ const DefaultRecipient = () => {
               Enregistrer
             </Button>
           </Flex>
+          {saveEmailsMutation.isSuccess ? <SuccessAlert /> : null}
         </Stack>
       )}
     </Flex>
@@ -388,7 +434,7 @@ const ManageDelegations = ({ coworkers, delegations }: { coworkers: User[]; dele
 
       await db
         .insertInto("delegation")
-        .values({ ...delegation, id: v4() })
+        .values({ ...delegation, id: v7() })
         .execute();
     },
   });
@@ -516,17 +562,40 @@ const ConstatValidation = () => {
         </Stack>
       )}
       <Flex gap="16px" justifyContent="flex-end" width="100%" mt="16px">
-        <Button
-          iconId="ri-save-3-line"
-          iconPosition="left"
-          type="button"
-          onClick={form.handleSubmit((data) => saveMutation.mutate(data))}
-          disabled={saveMutation.isPending}
-        >
-          Enregistrer
-        </Button>
+        <SaveValidationButton form={form} saveMutation={saveMutation} defaultValues={userSettings as any} />
       </Flex>
+      {saveMutation.isSuccess ? <SuccessAlert /> : null}
     </Stack>
+  );
+};
+
+const SaveValidationButton = ({
+  form,
+  saveMutation,
+  defaultValues,
+}: {
+  form: ReturnType<typeof useForm<ConstatValidationForm>>;
+  saveMutation: UseMutationResult<any, unknown, ConstatValidationForm, unknown>;
+  defaultValues: any;
+}) => {
+  const values = useWatch({ control: form.control });
+
+  const canSave =
+    !!defaultValues.validation_enabled != !!values.validationEnabled ||
+    (defaultValues.validation_email || "") != (values.validationEmail || "") ||
+    (defaultValues.validation_nom || "") != (values.validationNom || "") ||
+    (defaultValues.validation_prenom || "") != (values.validationPrenom || "");
+
+  return (
+    <Button
+      iconId="ri-save-3-line"
+      iconPosition="left"
+      type="button"
+      onClick={form.handleSubmit((data) => saveMutation.mutate(data))}
+      disabled={saveMutation.isPending || !canSave}
+    >
+      Enregistrer
+    </Button>
   );
 };
 
@@ -662,7 +731,7 @@ const DownloadCRs = () => {
   );
 };
 
-const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]) => void }) => {
+const ChangeService = () => {
   const user = useUser()!;
   const service = user.service;
 
@@ -679,6 +748,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
       return filteredResponse;
     },
   });
+  const setService = useSetService();
 
   const changeServiceMutation = useMutation({
     mutationFn: async (service_id: string) => {
@@ -688,7 +758,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
         body: { service_id },
       });
 
-      onSuccess?.(service as AuthUser["service"]);
+      setService(service);
     },
   });
 
@@ -762,6 +832,7 @@ const ChangeService = ({ onSuccess }: { onSuccess: (service: AuthUser["service"]
           Enregistrer
         </Button>
       </Flex>
+      {changeServiceMutation.isSuccess ? <SuccessAlert /> : null}
     </Flex>
   );
 };
@@ -798,7 +869,7 @@ const Title = ({ children, anchor }: { children: React.ReactNode; anchor?: strin
 export const GoHomeButton = () => {
   const navigate = useNavigate();
   const goBack = () => {
-    navigate({ to: "/", search: { document: "compte-rendus" } });
+    navigate({ to: "/", search: { document: "compte-rendus" } as any });
   };
 
   return (

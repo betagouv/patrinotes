@@ -43,7 +43,7 @@ export const MenuTitle = ({
           xs: buttons ? "none" : "block",
           lg: "block",
         }}
-        pl={backButtonOnClick ? "16px" : 0}
+        pl={backButtonOnClick ? "16px" : "0"}
         textOverflow="ellipsis"
         fontSize="20px"
         fontWeight="bold"

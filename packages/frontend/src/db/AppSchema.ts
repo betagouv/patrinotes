@@ -24,6 +24,7 @@ const report = new Table({
   applicantEmail: column.text,
   city: column.text,
   zipCode: column.text,
+  personnes_presentes: column.text,
 });
 
 const service = new Table({

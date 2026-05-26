@@ -67,14 +67,29 @@ export const StateReportAlertSectionForm = ({
         <ModalBackButton onClick={onBack} />
       </MenuTitle>
 
-      <Typography fontSize="16px" fontWeight="bold">
+      <Typography fontSize="16px" fontWeight="bold" mb="16px">
         Alerte : {title}
       </Typography>
 
-      <Box mt="16px">
-        <ShouldSendToggle form={form} names={[name]} />
+      <SectionCommentaires form={form} name={name} />
+      <Box
+        width="100%"
+        sx={{
+          button: {
+            display: "flex",
+            width: { xs: "100%", lg: "initial" },
+            justifyContent: { xs: "center", lg: "initial" },
+          },
+        }}
+      >
+        <SectionPhotos alertId={alert?.id} constatId={constatId} isDisabled={isFormDisabled} />
       </Box>
 
+      <Divider my="24px" />
+      <Stack gap="24px" mb="16px">
+        <ShowInReportToggle form={form} names={[name]} />
+        <ShouldSendToggle form={form} names={[name]} />
+      </Stack>
       <StateReportAlertsEmailInput
         form={form}
         names={[name]}
@@ -84,15 +99,7 @@ export const StateReportAlertSectionForm = ({
         setIsEditingEmail={setIsEditingEmail}
         errors={errors}
       />
-
-      <SectionCommentaires form={form} name={name} />
-      <SectionPhotos alertId={alert?.id} constatId={constatId} isDisabled={isFormDisabled} />
-
-      <Divider my="16px" />
-
-      <ShowInReportToggle form={form} names={[name]} />
-
-      <FullWidthButton type="button" onClick={() => onSave()} disabled={isFormDisabled} style={{ marginTop: "16px" }}>
+      <FullWidthButton type="button" onClick={() => onSave()} disabled={isFormDisabled} style={{ marginTop: "24px" }}>
         Valider
       </FullWidthButton>
     </Stack>

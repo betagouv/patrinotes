@@ -1,6 +1,6 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, BoxProps, Stack, Typography } from "@mui/material";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
-import { Input } from "#components/MUIDsfr.tsx";
+import { Alert, Input } from "#components/MUIDsfr.tsx";
 import { InputGroup } from "#components/InputGroup.tsx";
 import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
 import { UseFormReturn, useWatch } from "react-hook-form";
@@ -46,12 +46,14 @@ export const ContexteVisite = () => {
       >
         Contexte de la visite
       </Typography>
+      <EditDisabled />
       <MandatoryFieldReminder />
 
       <NatureVisiteRadioButtons isDisabled={isDisabled} />
       <Input
         textArea
         hintText="Déclenchement de la visite, durée, conditions..."
+        disabled={isDisabled}
         nativeTextAreaProps={{
           rows: 4,
         }}
@@ -74,7 +76,7 @@ export const ContexteVisite = () => {
           ...form.register("redacted_by"),
         }}
       />
-      <PeopleList />
+      <PeopleList isDisabled={isDisabled} form={form} name="personnes_presentes" />
       <Divider mb="16px" />
       <Flex flexDirection={{ xs: "column", lg: "row" }} gap={{ xs: "0", lg: "16px" }}>
         <Input
@@ -119,15 +121,22 @@ export const ContexteVisite = () => {
   );
 };
 
-const PeopleList = () => {
-  const form = useStateReportFormContext();
-  const isFormDisabled = useIsStateReportDisabled();
-
-  const personnesPresentesRaw = useWatch({ control: form.control, name: "personnes_presentes" });
+export const PeopleList = ({
+  isDisabled,
+  form,
+  name,
+  showInitialInput = false,
+}: {
+  isDisabled: boolean;
+  form: UseFormReturn<any>;
+  name: string;
+  showInitialInput?: boolean;
+}) => {
+  const personnesPresentesRaw: string = useWatch({ control: form.control, name });
 
   // the format of the field is "person1\nperson2\nperson3"
   // the shouldShowEmptyInput is only used when the field is empty since the input must be hidden before the user clicks on "add"
-  const [showNewInput, setShowNewInput] = useState(false);
+  const [showNewInput, setShowNewInput] = useState(showInitialInput);
   const shouldShowEmptyInput = !personnesPresentesRaw && showNewInput;
   const personnesPresentes = shouldShowEmptyInput
     ? [""]
@@ -135,12 +144,10 @@ const PeopleList = () => {
       ? personnesPresentesRaw.split("\n")
       : [];
 
-  const isDisabled = useIsStateReportDisabled();
-
   const onChange = (index: number, value: string) => {
     const newPeople = [...personnesPresentes];
     newPeople[index] = value;
-    form.setValue("personnes_presentes", newPeople.join("\n"));
+    form.setValue(name, newPeople.join("\n"));
   };
 
   return (
@@ -162,14 +169,14 @@ const PeopleList = () => {
       <Box>
         <IconLink
           icon="ri-add-line"
-          disabled={isFormDisabled}
+          disabled={isDisabled}
           onClick={(e) => {
             e.preventDefault();
             if (!personnesPresentes?.length) {
               setShowNewInput(true);
               return;
             }
-            form.setValue("personnes_presentes", [...personnesPresentes, ""].join("\n"));
+            form.setValue(name, [...personnesPresentes, ""].join("\n"));
           }}
           type="button"
         >
@@ -213,6 +220,8 @@ const DateInput = ({
             form.setValue(name, null);
             return;
           }
+
+          date.setHours(12, 0, 0, 0); // to avoid timezone issues
           form.setValue(name, date.toISOString());
         },
       }}
@@ -279,4 +288,18 @@ const BilanQuinquennalRadioButtons = ({ isDisabled }: { isDisabled: boolean }) =
       options={options}
     />
   );
+};
+
+export const EditDisabled = (props: BoxProps) => {
+  const form = useStateReportFormContext();
+  const isSent = useWatch({ control: form.control, name: "attachment_id" });
+  return isSent ? (
+    <Box mb="32px" {...props}>
+      <Alert
+        severity="info"
+        description="Vous ne pouvez pas modifier les informations d'un constat envoyé."
+        small
+      ></Alert>
+    </Box>
+  ) : null;
 };

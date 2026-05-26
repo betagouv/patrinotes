@@ -28,7 +28,7 @@ export const StateReportSideMenu = () => {
         <Button
           priority="secondary"
           onClick={() => setSideMenu("alerts")}
-          sx={{ width: "254px", justifyContent: "center" }}
+          sx={{ width: { xs: "100%", lg: "254px" }, justifyContent: "center" }}
           iconId="ri-alarm-warning-fill"
         >
           Alertes MH
@@ -100,38 +100,48 @@ const StateReportNotesMenu = ({ onClose }: StateReportAlertModalContentProps) =>
       <MenuTitle hideDivider onClose={onClose}>
         Notes
       </MenuTitle>
-      <Typography mb="24px">Ces notes n’apparaîtront pas dans le document envoyé pour le constat d’état.</Typography>
-      <Stack
-        flexWrap="wrap"
-        flexDirection="row"
-        sx={{
-          ".fr-tile__content": { paddingBottom: "0 !important" },
-        }}
-      >
-        <Input
-          sx={{ width: "100%" }}
-          textArea
-          label=""
-          nativeTextAreaProps={{
-            ...textAreaProps,
-            rows: 10,
-          }}
-          disabled={(isFormDisabled || isRecording) ?? false}
-        />
-
-        <Flex justifyContent="space-between" alignItems="center" mt="-8px" width="100%">
-          <Button
-            disabled={isFormDisabled}
-            type="button"
-            priority={isRecording ? "primary" : "tertiary"}
-            iconId="ri-mic-fill"
-            onClick={() => toggle()}
+      {isFormDisabled ? (
+        <Typography color="#161616" fontSize="16px">
+          {value}
+        </Typography>
+      ) : (
+        <>
+          <Typography mb="24px">
+            Ces notes n’apparaîtront pas dans le document envoyé pour le constat d’état.
+          </Typography>
+          <Stack
+            flexWrap="wrap"
+            flexDirection="row"
+            sx={{
+              ".fr-tile__content": { paddingBottom: "0 !important" },
+            }}
           >
-            {isRecording ? <>En cours</> : <>Dicter</>}
-          </Button>
-          <Typography fontSize="12px">Sauvegarde automatique.</Typography>
-        </Flex>
-      </Stack>
+            <Input
+              sx={{ width: "100%" }}
+              textArea
+              label=""
+              nativeTextAreaProps={{
+                ...textAreaProps,
+                rows: 10,
+              }}
+              disabled={(isFormDisabled || isRecording) ?? false}
+            />
+
+            <Flex justifyContent="space-between" alignItems="center" mt="-8px" width="100%">
+              <Button
+                disabled={isFormDisabled}
+                type="button"
+                priority={isRecording ? "primary" : "tertiary"}
+                iconId="ri-mic-fill"
+                onClick={() => toggle()}
+              >
+                {isRecording ? <>En cours</> : <>Dicter</>}
+              </Button>
+              <Typography fontSize="12px">Sauvegarde automatique.</Typography>
+            </Flex>
+          </Stack>
+        </>
+      )}
     </Stack>
   );
 };

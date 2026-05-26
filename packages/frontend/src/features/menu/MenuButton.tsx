@@ -136,7 +136,7 @@ export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
 };
 
 const modalContents: Record<MenuStates, (props: ModalContentProps) => ReactNode> = {
-  main: (_props) => <MenuActions />,
+  main: (_props) => null,
   help: (_props) => <HelpMenu />,
   clauses: (_props) => <ClauseMenu />,
   closed: () => null,

@@ -90,7 +90,7 @@ const ConstatPdf = () => {
   });
 
   const userSettings = useUserSettings();
-  const { service } = useUser()!;
+  const { service, ...user } = useUser()!;
 
   const sendConstatMutation = useMutation(constatPdfMutations.send({ constatId, service: service as any }));
 
@@ -175,7 +175,12 @@ const ConstatPdf = () => {
   useEffect(() => {
     if (isSetRef.current) return;
     if (!sections || !stateReport || !alerts) return;
-    const htmlString = getStateReportHtmlString({ stateReport: stateReport, visitedSections: sections as any, alerts });
+    const htmlString = getStateReportHtmlString({
+      stateReport: stateReport,
+      visitedSections: sections as any,
+      alerts,
+      user,
+    });
 
     form.setValue("htmlString", htmlString);
 
@@ -184,7 +189,7 @@ const ConstatPdf = () => {
     return () => {
       isSetRef.current = false;
     };
-  }, [sections, stateReport, alerts]);
+  }, [sections, stateReport, alerts, user]);
 
   // propagate isDisabled to children
   useEffect(() => {
@@ -294,25 +299,27 @@ const ViewButtons = () => {
       >
         Télécharger
       </Button>
-      <Button
-        type="button"
-        disabled={isDisabled}
-        onClick={() =>
-          navigate({
-            to: "/constat/$constatId/pdf",
-            params: { constatId },
-            search: { mode: "send" },
-          })
-        }
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
-          justifyContent: "center",
-        }}
-      >
-        Continuer
-      </Button>
+      {!isDisabled ? (
+        <Button
+          type="button"
+          disabled={isDisabled}
+          onClick={() =>
+            navigate({
+              to: "/constat/$constatId/pdf",
+              params: { constatId },
+              search: { mode: "send" },
+            })
+          }
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            width: "100%",
+            justifyContent: "center",
+          }}
+        >
+          Continuer
+        </Button>
+      ) : null}
     </Flex>
   );
 };

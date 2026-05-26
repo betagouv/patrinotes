@@ -16,7 +16,7 @@ import { useLiveService, useRefreshUser, useService, useUser } from "../contexts
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";
 import { useActiveSection } from "../hooks/useActiveSection";
@@ -33,11 +33,6 @@ const sectionIds = serviceSections.map((section) => section.linkProps.href.repla
 
 const ServicePage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
-
-  const onSuccess = () => {
-    setIsSuccess(true);
-    scrollToTop();
-  };
 
   const activeSection = useActiveSection(sectionIds);
 
@@ -90,7 +85,7 @@ const ServicePage = () => {
           Service
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
-        <ServiceForm onSuccess={onSuccess} />
+        <ServiceForm />
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
         <ServicesList />
         <Divider my={{ xs: "48px", lg: "48px" }} color="background-action-low-blue-france-hover" />
@@ -130,14 +125,17 @@ const format = {
   },
 };
 
-const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
+const ServiceForm = () => {
   const service = useUser()!.service;
-  const [serviceData, setServiceData] = useState({
-    ...service,
+  const defaultValues = {
+    phone: service.phone ?? "",
+    email: service.email ?? "",
     marianne_text: replaceCarriageReturn(service.marianne_text ?? ""),
     drac_text: replaceCarriageReturn(service.drac_text ?? ""),
     service_text: replaceCarriageReturn(service.service_text ?? ""),
-  });
+  };
+
+  const [serviceData, setServiceData] = useState({ ...defaultValues });
 
   const refreshServiceMutation = useRefreshUser();
 
@@ -152,9 +150,12 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       await db.updateTable("service").set(value).where("id", "=", service.id).execute();
       await refreshServiceMutation.mutateAsync();
-      onSuccess?.();
     },
   });
+
+  const canSave = Object.keys(defaultValues).some(
+    (key) => serviceData[key as keyof typeof serviceData] !== defaultValues[key as keyof typeof defaultValues],
+  );
 
   return (
     <Flex gap="0px" flexDirection="column" width="100%" maxWidth="690px">
@@ -217,10 +218,12 @@ const ServiceForm = ({ onSuccess }: { onSuccess: () => void }) => {
           onClick={() => {
             saveServiceMutation.mutate(serviceData);
           }}
+          disabled={!canSave || saveServiceMutation.isPending}
         >
           Enregistrer
         </Button>
       </Flex>
+      {saveServiceMutation.isSuccess ? <SuccessAlert /> : null}
     </Flex>
   );
 };
@@ -782,7 +785,7 @@ export const SuccessAlert = () => {
   return (
     // @ts-ignore title is required by DSFR
     <Alert
-      style={{ marginBottom: "32px" }}
+      style={{ marginBottom: "8px", marginTop: "16px" }}
       severity="success"
       closable={false}
       small={false}
@@ -868,16 +871,26 @@ const AlertesForm = ({ service }: { service: Service }) => {
       <Input label="Courriel OFB" nativeInputProps={{ ...form.register("courriel_ofb") }} /> */}
 
       <Flex>
-        <Button
-          sx={{ mt: "24px", ml: "auto" }}
-          iconId="ri-save-3-line"
-          iconPosition="left"
-          type="submit"
-          disabled={saveMutation.isPending}
-        >
-          Enregistrer
-        </Button>
+        <AlertesSaveButton form={form} defaultValues={service} saveMutation={saveMutation} />
       </Flex>
+      {saveMutation.isSuccess ? <SuccessAlert /> : null}
     </Stack>
+  );
+};
+
+const AlertesSaveButton = ({ form, defaultValues, saveMutation }: any) => {
+  const values = useWatch({ control: form.control });
+  const canSave = Object.keys(values).some((key) => values[key] !== defaultValues[key]);
+  console.log({ defaultValues, values, canSave });
+  return (
+    <Button
+      sx={{ mt: "24px", ml: "auto" }}
+      iconId="ri-save-3-line"
+      iconPosition="left"
+      type="submit"
+      disabled={!canSave || saveMutation.isPending}
+    >
+      Enregistrer
+    </Button>
   );
 };

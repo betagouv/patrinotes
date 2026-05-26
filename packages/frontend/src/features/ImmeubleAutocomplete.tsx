@@ -17,7 +17,7 @@ import { Alert, Button, Center } from "#components/MUIDsfr.tsx";
 
 type FilterablePopImmeubles = Pick<
   PopImmeuble,
-  "reference" | "id" | "titre_editorial_de_la_notice" | "commune_forme_editoriale"
+  "reference" | "id" | "titre_editorial_de_la_notice" | "commune_forme_editoriale" | "adresse_forme_index"
 >;
 const fuseOptions: IFuseOptions<FilterablePopImmeubles> = {
   keys: ["titre_editorial_de_la_notice", "commune_forme_editoriale", "id"],
@@ -29,7 +29,7 @@ const fuseOptions: IFuseOptions<FilterablePopImmeubles> = {
 export const immeubleMapping: Partial<Record<keyof PopImmeuble, keyof StateReportFormType>> = {
   reference: "reference_pop",
   denomination_de_l_edifice: "nature_edifice",
-  adresse_forme_editoriale: "adresse",
+  adresse_forme_index: "adresse",
   commune_forme_editoriale: "commune",
   commune_forme_index: "commune_historique",
   cadastre: "reference_cadastrale",
@@ -58,7 +58,7 @@ export const ImmeubleAutocomplete = () => {
   const immeubleQuery = useDbQuery(
     db
       .selectFrom("pop_immeubles")
-      .select(["reference", "id", "titre_editorial_de_la_notice", "commune_forme_editoriale"]),
+      .select(["reference", "id", "titre_editorial_de_la_notice", "commune_forme_editoriale", "adresse_forme_index"]),
   );
   const rawItems = immeubleQuery.data ?? [null];
   const searchEngine = new Fuse(rawItems, fuseOptions);
@@ -203,7 +203,7 @@ export const ImmeubleAutocomplete = () => {
             .map((result) => result.item)
             .slice(0, 15);
 
-          const isReferenceSearch = state.inputValue.trim().startsWith("PA000");
+          const isReferenceSearch = state.inputValue.trim().startsWith("PA");
           if (isReferenceSearch) {
             return searchResults.filter((result) =>
               result.reference?.toLowerCase().startsWith(state.inputValue.trim().toLowerCase()),
@@ -218,6 +218,7 @@ export const ImmeubleAutocomplete = () => {
                     id: "CUSTOM",
                     reference: "CUSTOM",
                     titre_editorial_de_la_notice: state.inputValue,
+                    adresse_forme_index: "",
                   },
                 ]
               : []),
@@ -265,6 +266,7 @@ export const ImmeubleAutocomplete = () => {
                 </Box>
               ) : null}
               <Box component="span" fontSize="16px">
+                {/* @ts-ignore */}
                 <Highlighter
                   searchWords={state.inputValue.split(" ")}
                   autoEscape
@@ -279,10 +281,11 @@ export const ImmeubleAutocomplete = () => {
                 />
               </Box>
               <Box component="span" fontSize="12px">
+                {/* @ts-ignore */}
                 <Highlighter
                   searchWords={state.inputValue.split(" ")}
                   autoEscape
-                  textToHighlight={option.commune_forme_editoriale ?? ""}
+                  textToHighlight={getSecondaryText(option)}
                   activeStyle={{}}
                   unhighlightStyle={{}}
                   highlightStyle={{
@@ -344,4 +347,9 @@ export const ImmeubleAutocomplete = () => {
       ) : null}
     </Box>
   );
+};
+
+const getSecondaryText = (option: FilterablePopImmeubles) => {
+  if (!option.adresse_forme_index) return option.commune_forme_editoriale || "";
+  return [option.commune_forme_editoriale, option.adresse_forme_index].filter(Boolean).join(" - ");
 };
