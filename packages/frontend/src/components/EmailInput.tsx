@@ -172,46 +172,38 @@ export const EmailInput = ({
           </Box>
         ) : null}
       </Box>
-
       {!single ? (
-        <Button
-          sx={{
-            zIndex: 1,
-            mt: "-16px",
-            bgcolor: "white",
-          }}
-          type="button"
-          priority="tertiary"
-          iconId="ri-add-line"
-          onClick={onClick}
-        >
-          Ajouter
-        </Button>
-      ) : null}
-
-      {!single ? (
-        <Flex
-          gap="8px"
-          justifyContent="flex-start"
-          alignItems="center"
-          mt={!single ? "16px" : "-16px"}
-          width="100%"
-          flexWrap="wrap"
-        >
-          {value.filter(Boolean).map((email) => (
-            <Tag
-              key={email}
-              dismissible
-              nativeButtonProps={{
-                type: "button",
-                onClick: () => {
-                  onValueChange(value.filter((v) => v !== email));
-                },
+        <Flex gap="12px" flexDirection={{ xs: "column", lg: "row" }}>
+          <Box>
+            <Button
+              sx={{
+                zIndex: 1,
               }}
+              type="button"
+              priority="secondary"
+              iconId="ri-add-line"
+              onClick={onClick}
             >
-              {email}
-            </Tag>
-          ))}
+              Ajouter
+            </Button>
+          </Box>
+
+          <Flex gap="8px" justifyContent="flex-start" alignItems="center" width="100%" flexWrap="wrap" mt="4px">
+            {value.filter(Boolean).map((email) => (
+              <Tag
+                key={email}
+                dismissible
+                nativeButtonProps={{
+                  type: "button",
+                  onClick: () => {
+                    onValueChange(value.filter((v) => v !== email));
+                  },
+                }}
+              >
+                {email}
+              </Tag>
+            ))}
+          </Flex>
         </Flex>
       ) : null}
     </Stack>

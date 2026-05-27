@@ -420,7 +420,7 @@ const SendBannerContent = () => {
       <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
         <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
       </Flex>
-      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "row" }}>
+      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "column" }}>
         <EmailInput
           sx={{ width: "100%" }}
           label={
@@ -502,7 +502,7 @@ const ValidationToggle = () => {
     <Box
       width="100%"
       maxWidth="220px"
-      mt={{ xs: "24px", lg: "42px" }}
+      mt={{ xs: "36px", lg: "36px" }}
       mr={{ xs: "0", lg: "16px" }}
       ml={{ xs: "0", lg: "16px" }}
       sx={{
@@ -520,7 +520,14 @@ const ValidationToggle = () => {
         inputTitle="Envoi sous-couvert"
         showCheckedHint={false}
         labelPosition="right"
-        label={<Typography>Envoi sous-couvert</Typography>}
+        label={
+          <Stack mt="-12px">
+            <Typography>Envoi sous-couvert</Typography>
+            <Typography fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
+              {userSettings?.userSettings.validation_email}
+            </Typography>
+          </Stack>
+        }
         checked={needValidation}
         onChange={(checked) => form.setValue("needValidation", checked)}
       />
