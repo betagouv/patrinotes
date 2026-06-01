@@ -56,6 +56,7 @@ export const ContexteVisite = () => {
         disabled={isDisabled}
         nativeTextAreaProps={{
           rows: 4,
+          ...form.register("visite_details"),
         }}
         label="Détails de la visite"
       />

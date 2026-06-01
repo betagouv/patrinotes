@@ -107,15 +107,15 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
                 text-transform: uppercase;
               }
 
+              
               .right-texts {
-                text-align: left;
+                text-align: right;
                 margin-top: 13px;
                 display: flex;
-                align-items: flex-start;
+                align-items: flex-end;
                 flex-direction: column;
                 justify-content: flex-start;
-                font-size: 14px;
-                margin-right: 50px;
+                font-size: 12px;
                 max-width: 290px;
               }
 
@@ -128,6 +128,24 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
               .right-texts > div:nth-child(2) {
               }
 
+
+              li p {
+                display: inline;
+                margin: 0;
+                padding: 0;
+              }
+              ul, ol {
+                padding-left: 20px;
+                margin: 0;
+              }
+
+              li {
+                display: list-item !important;
+                list-style-position: inside;
+              }
+
+              ul li { list-style-type: disc; }
+              ol li { list-style-type: decimal; }
 
 
               .meeting-date {
@@ -243,16 +261,17 @@ const PicturesGrid = ({ pictures, marianneUrl }: { pictures: PdfImage[]; mariann
                     </Text>
                   ) : null}
                 </View>
-                <Text
-                  style={{
-                    fontSize: "10px",
-                    textAlign: "left",
-                    width: "100%",
-                    display: image.label ? "none" : undefined,
-                  }}
-                >
-                  N° {pageIndex * picturesPerPage + index + 1}
-                </Text>
+                {image.label ? null : (
+                  <Text
+                    style={{
+                      fontSize: "10px",
+                      textAlign: "left",
+                      width: "100%",
+                    }}
+                  >
+                    N°{pageIndex * picturesPerPage + index + 1}
+                  </Text>
+                )}
               </View>
             ))}
           </View>

@@ -143,6 +143,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
                 flex-direction: column;
                 justify-content: flex-start;
                 font-size: 12px;
+                max-width: 290px;
                 
               }
 
