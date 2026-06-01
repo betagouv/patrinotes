@@ -261,16 +261,17 @@ const PicturesGrid = ({ pictures, marianneUrl }: { pictures: PdfImage[]; mariann
                     </Text>
                   ) : null}
                 </View>
-                <Text
-                  style={{
-                    fontSize: "10px",
-                    textAlign: "left",
-                    width: "100%",
-                    display: image.label ? "none" : undefined,
-                  }}
-                >
-                  N° {pageIndex * picturesPerPage + index + 1}
-                </Text>
+                {image.label ? null : (
+                  <Text
+                    style={{
+                      fontSize: "10px",
+                      textAlign: "left",
+                      width: "100%",
+                    }}
+                  >
+                    N°{pageIndex * picturesPerPage + index + 1}
+                  </Text>
+                )}
               </View>
             ))}
           </View>
