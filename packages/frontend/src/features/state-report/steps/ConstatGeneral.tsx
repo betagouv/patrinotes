@@ -459,10 +459,14 @@ const TauxDegradationRange = ({ isDisabled }: { isDisabled: boolean }) => {
   const value = useWatch({ control: form.control, name: "taux_degradation" });
   return (
     <Range
+      style={{
+        marginBottom: "16px",
+      }}
       label={<Box className="mandatory-field">Taux de dégradation</Box>}
       min={0}
       max={100}
       step={10}
+      suffix="%"
       nativeInputProps={{
         value: value ?? 0,
         onChange: (e) => form.setValue("taux_degradation", Number(e.target.value)),
