@@ -78,13 +78,12 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("report_attachment")
           .values({
-            ...data,
             id: attachmentId,
             attachment_id: attachmentId,
-            label: "",
+            label: data?.label ?? "",
             report_id: config.fkValue,
             service_id: user.service_id,
-            created_at: new Date().toISOString(),
+            created_at: data?.created_at ?? new Date().toISOString(),
             is_deprecated: 0,
           })
           .execute();
@@ -93,13 +92,12 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("visited_section_attachment")
           .values({
-            ...data,
             id: attachmentId,
             attachment_id: attachmentId,
             visited_section_id: config.fkValue,
-            label: "",
+            label: data?.label ?? "",
             service_id: user.service_id,
-            created_at: new Date().toISOString(),
+            created_at: data?.created_at ?? new Date().toISOString(),
             is_deprecated: 0,
           })
           .execute();
@@ -108,14 +106,14 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
         await db
           .insertInto("state_report_alert_attachment")
           .values({
-            ...data,
             id: attachmentId,
             attachment_id: attachmentId,
             state_report_alert_id: config.fkValue,
-            label: "",
+            label: data?.label ?? "",
             service_id: user.service_id,
-            created_at: new Date().toISOString(),
+            created_at: data?.created_at ?? new Date().toISOString(),
             is_deprecated: 0,
+            ...data,
           })
           .execute();
         break;
@@ -167,7 +165,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   const deleteMutation = {
     mutate: async ({ id }: { id: string }) => {
       const row = await db.selectFrom(config.table).select("attachment_id").where("id", "=", id).executeTakeFirst();
-      if (row) await attachmentLocalStorage.deleteFile(row.attachment_id);
+      if (row) await attachmentLocalStorage.deleteFile(row.attachment_id!);
       await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", id).execute();
     },
   };
@@ -185,9 +183,16 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   const replaceAttachment = useCallback(
     async (oldId: string, data: ArrayBuffer, label?: string): Promise<string> => {
       const newId = `${parentId}/images/${v7()}.jpg`;
+      const oldRow = await db
+        .selectFrom(config.table)
+        .select(["label", "created_at"])
+        .where("id", "=", oldId)
+        .executeTakeFirst();
       await attachmentQueue.saveFile({ id: newId, fileExtension: "jpg", data, mediaType: "image/jpeg" });
-
-      await insertRecordImplRef.current(newId, { label: label ?? "" });
+      await insertRecordImplRef.current(newId, {
+        label: label ?? oldRow?.label ?? "",
+        created_at: oldRow?.created_at ?? new Date().toISOString(),
+      });
       await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", oldId).execute();
       return newId;
     },
