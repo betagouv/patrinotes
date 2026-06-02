@@ -17,6 +17,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 import { Accordion } from "#components/MUIDsfr.tsx";
+import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -31,6 +32,8 @@ export const MonumentHistorique = () => {
   const isCustom = referencePop === "CUSTOM";
 
   const isDisabled = useIsStateReportDisabled();
+  const adresse = useWatch({ control: form.control, name: "adresse" });
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
 
   const isEditing = mode === "edit" || isCustom;
   return (
@@ -116,6 +119,22 @@ export const MonumentHistorique = () => {
           />
           {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
         </Flex>
+
+        {referencePop ? (
+          <Button
+            priority="tertiary no outline"
+            iconId="fr-icon-road-map-line"
+            onClick={() => setIsPlanModalOpen(true)}
+            type="button"
+            sx={{ alignSelf: "flex-start", mt: isEditing ? "8px" : "4px" }}
+          >
+            Voir plan de situation
+          </Button>
+        ) : null}
+
+        {isPlanModalOpen ? (
+          <PlanDeSituationModal referencePop={referencePop} onClose={() => setIsPlanModalOpen(false)} />
+        ) : null}
 
         <Flex
           flexDirection={{ xs: "column", lg: "row" }}
