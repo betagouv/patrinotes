@@ -120,7 +120,7 @@ export const MonumentHistorique = () => {
           {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
         </Flex>
 
-        {referencePop ? (
+        {referencePop && !isCustom ? (
           <Button
             priority="tertiary no outline"
             iconId="fr-icon-road-map-line"
@@ -133,7 +133,7 @@ export const MonumentHistorique = () => {
         ) : null}
 
         {isPlanModalOpen ? (
-          <PlanDeSituationModal referencePop={referencePop} onClose={() => setIsPlanModalOpen(false)} />
+          <PlanDeSituationModal referencePop={referencePop!} onClose={() => setIsPlanModalOpen(false)} />
         ) : null}
 
         <Flex

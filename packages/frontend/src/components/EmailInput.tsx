@@ -92,7 +92,7 @@ export const EmailInput = ({
         <Input
           disabled={disabled}
           sx={{
-            mb: "1.5rem",
+            mb: "1rem",
             "& > input": {
               pr: single ? "0" : { xs: "0", lg: "100px" },
             },
