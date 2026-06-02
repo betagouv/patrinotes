@@ -641,6 +641,7 @@ export const stateReport = pgTable(
     commune: text(),
     codePostal: text("code_postal"),
     communeHistorique: text("commune_historique"),
+    coordonnees: text(),
     referenceCadastrale: text("reference_cadastrale"),
     periodeConstruction: text("periode_construction"),
     natureProtection: text("nature_protection"),

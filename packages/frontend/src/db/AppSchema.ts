@@ -218,6 +218,7 @@ const state_report = new Table({
   commune: column.text,
   code_postal: column.text,
   commune_historique: column.text,
+  coordonnees: column.text,
   reference_cadastrale: column.text,
   periode_construction: column.text,
   nature_protection: column.text,

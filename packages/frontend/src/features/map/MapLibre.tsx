@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Box, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
 import { PopImmeuble } from "../../db/AppSchema";
+import { CanvasButton } from "#components/ui/CanvasButton.tsx";
 
 type Background = "vector" | "satellite";
 
@@ -76,13 +77,19 @@ async function geocode(adresse: string): Promise<[number, number] | null> {
   return coords ?? null;
 }
 
-type Props = { popMH: PopImmeuble | null; onClose?: () => void };
+type Props = {
+  popMH: PopImmeuble | null;
+  onClose: () => void;
+  onSaveCoordinates?: (coordonnees: string) => void;
+  initialCoordinates: string | null;
+};
 
-export const MapLibre = ({ popMH, onClose }: Props) => {
+export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const [background, setBackground] = useState<Background>("vector");
+  const [pinMode, setPinMode] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -123,7 +130,7 @@ export const MapLibre = ({ popMH, onClose }: Props) => {
       markerRef.current = new maplibregl.Marker().setLngLat(coords).addTo(map);
     };
 
-    const raw = popMH.coordonnees_au_format_wgs84;
+    const raw = initialCoordinates ?? popMH.coordonnees_au_format_wgs84;
     if (raw) {
       const [lat, lng] = raw.split(",").map(Number);
       if (!isNaN(lat) && !isNaN(lng)) {
@@ -135,6 +142,41 @@ export const MapLibre = ({ popMH, onClose }: Props) => {
     const adresse = popMH.adresse_forme_editoriale;
     if (adresse) geocode(adresse).then((coords) => coords && flyTo(coords));
   }, [popMH]);
+
+  const handleActivatePin = () => {
+    if (pinMode) return handleCancelPin();
+
+    const map = mapRef.current;
+    if (!map) return;
+    const marker = markerRef.current;
+    if (marker) {
+      const { lng, lat } = marker.getLngLat();
+      map.flyTo({ center: [lng, lat], zoom: 17 });
+      marker.getElement().style.display = "none";
+    }
+    setPinMode(true);
+  };
+
+  const handleCancelPin = () => {
+    const marker = markerRef.current;
+    if (marker) marker.getElement().style.display = "";
+    setPinMode(false);
+  };
+
+  const handleValidatePin = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const { lng, lat } = map.getCenter();
+    const marker = markerRef.current;
+    if (marker) {
+      marker.setLngLat([lng, lat]);
+      marker.getElement().style.display = "";
+    } else {
+      markerRef.current = new maplibregl.Marker().setLngLat([lng, lat]).addTo(map);
+    }
+    onSaveCoordinates?.(`${lat},${lng}`);
+    setPinMode(false);
+  };
 
   return (
     <Box
@@ -148,6 +190,26 @@ export const MapLibre = ({ popMH, onClose }: Props) => {
       }}
     >
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+      {pinMode && (
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          sx={{
+            transform: "translate(-50%, -100%)",
+            pointerEvents: "none",
+            zIndex: 2,
+            fontSize: "36px",
+            lineHeight: 1,
+            color: fr.colors.decisions.background.active.blueFrance.default,
+            filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.45))",
+          }}
+        >
+          <span className={fr.cx("ri-map-pin-2-fill")} />
+        </Box>
+      )}
+
       <Box position="absolute" top={8} left={8} zIndex={1}>
         <ToggleButtonGroup
           value={background}
@@ -164,62 +226,35 @@ export const MapLibre = ({ popMH, onClose }: Props) => {
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
-      {onClose && (
-        <Box position="absolute" top={8} right={8} zIndex={1}>
-          <Box
-            component="button"
-            type="button"
-            onClick={onClose}
-            title="Fermer"
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 40,
-              height: 40,
-              padding: 0,
-              cursor: "pointer",
-              bgcolor: "white",
-              border: "1px solid",
-              borderColor: fr.colors.decisions.background.active.blueFrance.default,
-              color: fr.colors.decisions.background.active.blueFrance.default,
-              borderRadius: 0,
-              fontSize: "1.1rem",
-              boxShadow: 1,
-            }}
-          >
-            <Box component="span" className={fr.cx("ri-close-line")} />
-          </Box>
-        </Box>
-      )}
+
+      <Box position="absolute" top={8} right={8} zIndex={1} display="flex" flexDirection="row">
+        {pinMode ? (
+          <>
+            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-line" />
+            <CanvasButton onClick={handleCancelPin} title="Annuler le placement" iconId="ri-close-line" />
+          </>
+        ) : (
+          <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line" />
+        )}
+      </Box>
+
+      <Box position="absolute" bottom={8} left={8} zIndex={1}>
+        <CanvasButton
+          onClick={handleActivatePin}
+          title="Placer le point de localisation"
+          iconId="ri-map-pin-line"
+          isSelected={pinMode}
+        />
+      </Box>
+
       <Box position="absolute" bottom={8} right={8} zIndex={1} display="flex" flexDirection="column">
         {(["in", "out"] as const).map((dir) => (
-          <Box
+          <CanvasButton
             key={dir}
-            component="button"
-            type="button"
             onClick={() => handleZoom(dir)}
             title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 40,
-              height: 40,
-              padding: 0,
-              cursor: "pointer",
-              bgcolor: "white",
-              border: "1px solid",
-              borderColor: fr.colors.decisions.background.active.blueFrance.default,
-              color: fr.colors.decisions.background.active.blueFrance.default,
-              borderRadius: 0,
-              marginTop: "-1px",
-              fontSize: "1.1rem",
-              boxShadow: 1,
-            }}
-          >
-            <Box component="span" className={fr.cx(dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line")} />
-          </Box>
+            iconId={dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line"}
+          ></CanvasButton>
         ))}
       </Box>
     </Box>

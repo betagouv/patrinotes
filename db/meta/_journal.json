@@ -225,6 +225,13 @@
       "when": 1779085450935,
       "tag": "0031_melted_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1780404255380,
+      "tag": "0032_bright_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }
