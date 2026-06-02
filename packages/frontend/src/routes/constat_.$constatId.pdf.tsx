@@ -424,7 +424,7 @@ const SendBannerContent = () => {
         <EmailInput
           sx={{ width: "100%" }}
           label={
-            <Flex mt={{ xs: "8px", lg: "0" }}>
+            <Flex mt={{ xs: "8px", lg: "0" }} mb={{ xs: 0, lg: "16px" }}>
               <Box mr="8px" display={{ xs: "block", lg: "none" }}>
                 <GoBackButton />
               </Box>
