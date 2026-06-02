@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import maplibregl, { StyleSpecification } from "maplibre-gl";
+import maplibregl, { FilterSpecification, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Box, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
 import { PopImmeuble } from "../../db/AppSchema";
 import { CanvasButton } from "#components/ui/CanvasButton.tsx";
+
+type SelectedParcel = { section: string; numero: string };
 
 type Background = "vector" | "satellite";
 
@@ -27,6 +29,23 @@ const SATELLITE_STYLE: StyleSpecification = {
   layers: [{ id: "satellite-bg", type: "raster", source: "satellite" }],
 };
 
+function parseReferenceCadastrale(ref: string | null | undefined): SelectedParcel[] {
+  if (!ref) return [];
+  return ref
+    .split(";")
+    .flatMap((r) => {
+      const trimmed = r.trim();
+      const spaceIdx = trimmed.indexOf(" ");
+      if (spaceIdx === -1) return [];
+      return [{ section: trimmed.slice(0, spaceIdx), numero: trimmed.slice(spaceIdx + 1) }];
+    });
+}
+
+function buildParcelFilter(parcels: SelectedParcel[]): FilterSpecification {
+  if (!parcels.length) return ["==", ["literal", "1"], ["literal", "2"]];
+  return ["any", ...parcels.map((p) => ["all", ["==", ["get", "section"], p.section], ["==", ["get", "numero"], p.numero]])] as FilterSpecification;
+}
+
 function addCadastreLayers(map: maplibregl.Map) {
   if (map.getSource("cadastre")) return;
   map.addSource("cadastre", {
@@ -40,6 +59,15 @@ function addCadastreLayers(map: maplibregl.Map) {
     "source-layer": "parcelles",
     minzoom: 14,
     paint: { "fill-color": "#f97316", "fill-opacity": 0.25 },
+  });
+  map.addLayer({
+    id: "parcelles-highlight",
+    type: "fill",
+    source: "cadastre",
+    "source-layer": "parcelles",
+    minzoom: 14,
+    paint: { "fill-color": "#22c55e", "fill-opacity": 0.5 },
+    filter: ["==", ["literal", "1"], ["literal", "2"]],
   });
   map.addLayer({
     id: "parcelles-outline",
@@ -81,15 +109,32 @@ type Props = {
   popMH: PopImmeuble | null;
   onClose: () => void;
   onSaveCoordinates?: (coordonnees: string) => void;
+  onSaveReferenceCadastrale?: (ref: string) => void;
   initialCoordinates: string | null;
+  initialReferenceCadastrale: string | null;
 };
 
-export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates }: Props) => {
+export const MapLibre = ({
+  popMH,
+  onClose,
+  onSaveCoordinates,
+  onSaveReferenceCadastrale,
+  initialCoordinates,
+  initialReferenceCadastrale,
+}: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const [background, setBackground] = useState<Background>("vector");
-  const [pinMode, setPinMode] = useState(false);
+  const [mode, setMode] = useState<"none" | "pin" | "cadastre">("none");
+  const [selectedParcels, setSelectedParcels] = useState<SelectedParcel[]>(() =>
+    parseReferenceCadastrale(initialReferenceCadastrale),
+  );
+  const selectedParcelsRef = useRef<SelectedParcel[]>(selectedParcels);
+
+  useEffect(() => {
+    selectedParcelsRef.current = selectedParcels;
+  }, [selectedParcels]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -100,12 +145,47 @@ export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates
       zoom: 13,
     });
     mapRef.current = map;
-    map.on("style.load", () => addCadastreLayers(map));
+    map.on("style.load", () => {
+      addCadastreLayers(map);
+      map.setFilter("parcelles-highlight", buildParcelFilter(selectedParcelsRef.current));
+    });
     return () => {
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer("parcelles-highlight")) return;
+    map.setFilter("parcelles-highlight", buildParcelFilter(selectedParcels));
+  }, [selectedParcels]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mode !== "cadastre") return;
+
+    map.getCanvas().style.cursor = "pointer";
+
+    const handler = (e: maplibregl.MapMouseEvent) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: ["parcelles-fill"] });
+      if (!features.length) return;
+
+      const { section, numero } = features[0].properties as { section: string; numero: string };
+
+      setSelectedParcels((prev) => {
+        const exists = prev.findIndex((p) => p.section === section && p.numero === numero);
+        if (exists >= 0) return prev.filter((_, i) => i !== exists);
+        return [...prev, { section, numero }];
+      });
+    };
+
+    map.on("click", handler);
+    return () => {
+      map.off("click", handler);
+      map.getCanvas().style.cursor = "";
+    };
+  }, [mode]);
 
   const handleZoom = (direction: "in" | "out") => {
     const map = mapRef.current;
@@ -143,8 +223,25 @@ export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates
     if (adresse) geocode(adresse).then((coords) => coords && flyTo(coords));
   }, [popMH]);
 
+  const handleActivateCadastre = () => {
+    if (mode === "cadastre") return handleCancelCadastre();
+    setMode("cadastre");
+  };
+
+  const handleCancelCadastre = () => {
+    setSelectedParcels([]);
+    setMode("none");
+  };
+
+  const handleValidateCadastre = () => {
+    const refs = selectedParcels.map((p) => `${p.section} ${p.numero}`).join(";");
+    onSaveReferenceCadastrale?.(refs);
+    setMode("none");
+  };
+
   const handleActivatePin = () => {
-    if (pinMode) return handleCancelPin();
+    if (mode === "pin") return handleCancelPin();
+    if (mode === "cadastre") handleCancelCadastre();
 
     const map = mapRef.current;
     if (!map) return;
@@ -154,13 +251,13 @@ export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates
       map.flyTo({ center: [lng, lat], zoom: 17 });
       marker.getElement().style.display = "none";
     }
-    setPinMode(true);
+    setMode("pin");
   };
 
   const handleCancelPin = () => {
     const marker = markerRef.current;
     if (marker) marker.getElement().style.display = "";
-    setPinMode(false);
+    setMode("none");
   };
 
   const handleValidatePin = () => {
@@ -175,7 +272,7 @@ export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates
       markerRef.current = new maplibregl.Marker().setLngLat([lng, lat]).addTo(map);
     }
     onSaveCoordinates?.(`${lat},${lng}`);
-    setPinMode(false);
+    setMode("none");
   };
 
   return (
@@ -191,7 +288,7 @@ export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates
     >
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
-      {pinMode && (
+      {mode === "pin" && (
         <Box
           position="absolute"
           top="50%"
@@ -228,22 +325,33 @@ export const MapLibre = ({ popMH, onClose, onSaveCoordinates, initialCoordinates
       </Box>
 
       <Box position="absolute" top={8} right={8} zIndex={1} display="flex" flexDirection="row">
-        {pinMode ? (
+        {mode === "pin" ? (
           <>
             <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-line" />
             <CanvasButton onClick={handleCancelPin} title="Annuler le placement" iconId="ri-close-line" />
+          </>
+        ) : mode === "cadastre" ? (
+          <>
+            <CanvasButton onClick={handleValidateCadastre} title="Valider la sélection cadastrale" iconId="ri-check-line" />
+            <CanvasButton onClick={handleCancelCadastre} title="Annuler la sélection" iconId="ri-close-line" />
           </>
         ) : (
           <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line" />
         )}
       </Box>
 
-      <Box position="absolute" bottom={8} left={8} zIndex={1}>
+      <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0.5}>
         <CanvasButton
           onClick={handleActivatePin}
           title="Placer le point de localisation"
           iconId="ri-map-pin-line"
-          isSelected={pinMode}
+          isSelected={mode === "pin"}
+        />
+        <CanvasButton
+          onClick={handleActivateCadastre}
+          title="Sélectionner des cadastres"
+          iconId="ri-collage-line"
+          isSelected={mode === "cadastre"}
         />
       </Box>
 

@@ -10,6 +10,7 @@ import { Spinner } from "#components/Spinner.tsx";
 export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: string; onClose: () => void }) => {
   const form = useStateReportFormContext();
   const coordonnees = useWatch({ name: "coordonnees", control: form.control });
+  const referenceCadastrale = useWatch({ name: "reference_cadastrale", control: form.control });
   const popMHQuery = useDbQuery(db.selectFrom("pop_immeubles").selectAll().where("id", "=", referencePop));
   const popMH = popMHQuery.data?.[0];
 
@@ -42,7 +43,9 @@ export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: 
               popMH={popMH}
               onClose={onClose}
               onSaveCoordinates={(coords) => form.setValue("coordonnees", coords)}
+              onSaveReferenceCadastrale={(ref) => form.setValue("reference_cadastrale", ref)}
               initialCoordinates={coordonnees}
+              initialReferenceCadastrale={referenceCadastrale}
             />
           </Box>
         </Box>
