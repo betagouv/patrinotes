@@ -83,7 +83,7 @@ export default defineConfig({
   build: {
     target: "esnext",
     rollupOptions: {
-      external: ["@gouvfr/dsfr-chart"],
+      external: ["@gouvfr/dsfr-chart", "@gouvfr/dsfr-chart/css"],
     },
   },
   worker: {
