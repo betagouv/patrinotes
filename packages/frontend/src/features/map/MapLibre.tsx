@@ -11,6 +11,7 @@ type SelectedParcel = { section: string; numero: string };
 type Background = "vector" | "satellite";
 
 const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+// const VECTOR_STYLE_URL = "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json";
 
 const SATELLITE_STYLE: StyleSpecification = {
   version: 8,
@@ -31,19 +32,20 @@ const SATELLITE_STYLE: StyleSpecification = {
 
 function parseReferenceCadastrale(ref: string | null | undefined): SelectedParcel[] {
   if (!ref) return [];
-  return ref
-    .split(";")
-    .flatMap((r) => {
-      const trimmed = r.trim();
-      const spaceIdx = trimmed.indexOf(" ");
-      if (spaceIdx === -1) return [];
-      return [{ section: trimmed.slice(0, spaceIdx), numero: trimmed.slice(spaceIdx + 1) }];
-    });
+  return ref.split(";").flatMap((r) => {
+    const trimmed = r.trim();
+    const spaceIdx = trimmed.indexOf(" ");
+    if (spaceIdx === -1) return [];
+    return [{ section: trimmed.slice(0, spaceIdx), numero: trimmed.slice(spaceIdx + 1) }];
+  });
 }
 
 function buildParcelFilter(parcels: SelectedParcel[]): FilterSpecification {
   if (!parcels.length) return ["==", ["literal", "1"], ["literal", "2"]];
-  return ["any", ...parcels.map((p) => ["all", ["==", ["get", "section"], p.section], ["==", ["get", "numero"], p.numero]])] as FilterSpecification;
+  return [
+    "any",
+    ...parcels.map((p) => ["all", ["==", ["get", "section"], p.section], ["==", ["get", "numero"], p.numero]]),
+  ] as FilterSpecification;
 }
 
 function addCadastreLayers(map: maplibregl.Map) {
@@ -332,7 +334,11 @@ export const MapLibre = ({
           </>
         ) : mode === "cadastre" ? (
           <>
-            <CanvasButton onClick={handleValidateCadastre} title="Valider la sélection cadastrale" iconId="ri-check-line" />
+            <CanvasButton
+              onClick={handleValidateCadastre}
+              title="Valider la sélection cadastrale"
+              iconId="ri-check-line"
+            />
             <CanvasButton onClick={handleCancelCadastre} title="Annuler la sélection" iconId="ri-close-line" />
           </>
         ) : (
