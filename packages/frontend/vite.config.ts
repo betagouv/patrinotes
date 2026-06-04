@@ -66,14 +66,7 @@ export default defineConfig({
     host: "127.0.0.1",
   },
   optimizeDeps: {
-    exclude: [
-      "@journeyapps/wa-sqlite",
-      "@powersync/web",
-      "wa-sqlite",
-      "workbox-precaching",
-      "workbox-routing",
-      "@gouvfr/dsfr-chart",
-    ],
+    exclude: ["@journeyapps/wa-sqlite", "@powersync/web", "wa-sqlite", "workbox-precaching", "workbox-routing"],
     include: ["@powersync/web > js-logger"],
   },
   envDir: "../..",
@@ -89,6 +82,9 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
+    rollupOptions: {
+      external: ["@gouvfr/dsfr-chart"],
+    },
   },
   worker: {
     format: "es",
