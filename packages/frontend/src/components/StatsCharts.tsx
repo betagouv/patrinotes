@@ -1,5 +1,6 @@
-import "@gouvfr/dsfr-chart";
-import "@gouvfr/dsfr-chart/css";
+import "../../dsfr-chart/DSFRChart.css";
+import "../../dsfr-chart/DSFRChart.js";
+
 import { api } from "../api";
 import { useQuery } from "@tanstack/react-query";
 import { Center } from "./MUIDsfr";
@@ -60,7 +61,7 @@ export const AccountsCharts = ({ range }: { range: { from: string; to: string } 
             </tr>
           </thead>
           <tbody>
-            {mockData.map(({ month, year, count }) => (
+            {query.data.map(({ month, year, count }) => (
               <tr key={`${month}-${year}`}>
                 <td>
                   {month} {year}
@@ -153,24 +154,8 @@ export const UdapMapChart = () => {
     );
   if (!query.data) return null;
 
-  const mockData = Array.from({ length: 96 }, (_, i) => {
-    const totalStateReports = Math.floor(Math.random() * 100);
-    const totalReports = Math.floor(Math.random() * 100);
-
-    const sentStateReports = Math.floor(totalStateReports * Math.random());
-    const sentReports = Math.floor(totalReports * Math.random());
-
-    return {
-      department: (i + 1).toString().padStart(2, "0"),
-      totalStateReports,
-      sentStateReports,
-      totalReports,
-      sentReports,
-    };
-  });
-
   const data = {
-    ...departements.reduce((acc, dep) => ({ ...acc, [dep]: 0 }), {}),
+    ...departements.reduce((acc, dep) => ({ ...acc, [dep]: 0 }), {} as Record<string, number>),
     ...Object.fromEntries(query.data.map((row) => [row.department, row[activeMetric]])),
   };
   const metricMeta = UDAP_METRICS.find((m) => m.key === activeMetric)!;
