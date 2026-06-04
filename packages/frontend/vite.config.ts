@@ -66,7 +66,14 @@ export default defineConfig({
     host: "127.0.0.1",
   },
   optimizeDeps: {
-    exclude: ["@journeyapps/wa-sqlite", "@powersync/web", "wa-sqlite", "workbox-precaching", "workbox-routing"],
+    exclude: [
+      "@journeyapps/wa-sqlite",
+      "@powersync/web",
+      "wa-sqlite",
+      "workbox-precaching",
+      "workbox-routing",
+      "@gouvfr/dsfr-chart",
+    ],
     include: ["@powersync/web > js-logger"],
   },
   envDir: "../..",
