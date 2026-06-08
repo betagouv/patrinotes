@@ -493,13 +493,32 @@ const generateSection = (section: SectionWithAttachments, version: number) => {
   }
 
   if (version === 2) {
+    const preconisations = deserializePreconisations(section.preconisations);
+
     return `
       <ul>
         <li>
           <b>${section.section} : </b><br/> ${sectionNiveauDegradationMapV2[section.niveau_degradation as keyof typeof sectionNiveauDegradationMapV2] || "Non renseigné"}
+          <br/>
+          <br/>
+          <u>Commentaires</u> : ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
+          <br/>
+          <br/>
+          <u>Préconisations de travaux</u> : <br/>
+          ${
+            preconisations
+              ? preconisations
+                  .map(
+                    (p) => `
+            - ${p.preconisation} : ${p.commentaire ? p.commentaire.replaceAll("\n", "<br />") : "Aucun commentaire"} 
+          `,
+                  )
+                  .join("<br/>")
+              : null
+          }
         </li>
       </ul>
-        <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
+
 
       ${generateImagesTable(
         section.attachments.map((attachment) => ({
