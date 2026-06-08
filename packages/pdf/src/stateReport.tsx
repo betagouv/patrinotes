@@ -18,11 +18,9 @@ import {
   SITE_CLASSE_OU_INSCRIT_SECTION,
   SectionWithAttachments,
   StateReportWithUserAndAttachments,
-  addSIfPlural,
   deserializeMandatoryEmails,
   getIsAlertVisited,
   getIsSectionVisited,
-  initFonts,
   processHtml,
 } from "./utils";
 import { MarianneHeader } from "./components/MarianneHeader";
@@ -361,53 +359,13 @@ export const getStateReportHtmlString = ({
       )}
 
         ${planSituationAttachment || planEdificeAttachment || vuesGeneralesAttachments?.length ? "<hr />" : ""}
-        <p><span style="font-size: 16pt"><b>État général</b></span></p>
-        <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
-        <ul>
-          ${defaultSections
-            ?.map((section) => {
-              const sectionData = visitedSections.find((s) => s.section === section);
-
-              return `
-              <li style="margin-bottom: 0; padding: 0;">
-                <b>${section}</b> : ${
-                  !sectionData
-                    ? "partie non visitée"
-                    : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.`
-                }
-              </li>
-            `;
-            })
-            .join("")}
-        </ul>
-
-        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
-
+        
+        ${generateConstatGeneral({ stateReport, version: stateReportVersion, sections: visitedSections })}
       <hr />
 
         ${visitedSections?.length ? `<p><span style="font-size: 16pt"><b>Constat détaillé</b></span></p>` : ""}
-        ${visitedSections
-          ?.map(
-            (section) => `
-              <ul>
-                <li>
-                  <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
-                </li>
-              </ul>
-                <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
-
-              ${generateImagesTable(
-                section.attachments.map((attachment) => ({
-                  title: "",
-                  url: attachment.file!,
-                  label: attachment.label ?? undefined,
-                  attachmentId: attachment.id,
-                })),
-              )}
-          `,
-          )
-          .join("")}
-              <br/>
+        ${visitedSections?.map((section) => generateSection(section, stateReportVersion)).join("")}
+        <br/>
 
 
         ${visitedSections?.length ? "<hr />" : ""}
@@ -455,6 +413,64 @@ export const getStateReportHtmlString = ({
   `);
 };
 
+const generateConstatGeneral = ({
+  stateReport,
+  sections,
+  version,
+}: {
+  stateReport: StateReportWithUserAndAttachments;
+  sections: SectionWithAttachments[];
+  version: number;
+}) => {
+  const sectionsSummary = `
+    <ul>
+      ${defaultSections
+        ?.map((section) => {
+          const sectionData = sections.find((s) => s.section === section);
+
+          return `
+          <li style="margin-bottom: 0; padding: 0;">
+            <b>${section}</b> : ${
+              !sectionData
+                ? "partie non visitée"
+                : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.`
+            }
+          </li>
+        `;
+        })
+        .join("")}
+    </ul>
+  `;
+
+  if (version === 1) {
+    return `<p><span style="font-size: 16pt"><b>État général</b></span></p>
+        <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
+        ${sectionsSummary}
+
+        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
+  `;
+  }
+
+  if (version === 2) {
+    return `<p><span style="font-size: 16pt"><b>Constat général</b></span></p>
+        <span>Le monument est évalué ${etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"} avec un taux de dégradation estimé à ${stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"} du volume global.</span>
+        ${sectionsSummary}
+    
+        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
+    `;
+  }
+};
+
+const sectionNiveauDegradationMapV2 = {
+  Léger:
+    "Cet ensemble a des dégradations légères : quelques désordres mineurs sont observés, sans impact sur la structure ou l’intégrité de ces éléments.",
+  Moyen: "Cet ensemble a des dégradations moyennes : des désordres modérés sont constatés et à surveiller.",
+  Important:
+    "Cet ensemble a des dégradations importantes : les désordres observés risquent d’affecter la durabilité ou la sécurité des éléments concernés.",
+  Péril:
+    "Cet ensemble est en péril : les désordres constatés menacent directement la stabilité ou la sécurité des éléments concernés.",
+};
+
 const generateSection = (section: SectionWithAttachments, version: number) => {
   if (version === 1) {
     return `
@@ -480,7 +496,7 @@ const generateSection = (section: SectionWithAttachments, version: number) => {
     return `
       <ul>
         <li>
-          <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+          <b>${section.section} : </b><br/> ${sectionNiveauDegradationMapV2[section.niveau_degradation as keyof typeof sectionNiveauDegradationMapV2] || "Non renseigné"}
         </li>
       </ul>
         <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
@@ -523,6 +539,13 @@ const etatGeneralMap = {
   Bon: "en bon état",
   Moyen: "dans un état moyen",
   Mauvais: "dans un mauvais état",
+  Péril: "en péril",
+};
+
+const etatGeneralMapV2 = {
+  Bon: "en bon état",
+  Moyen: "en moyen état",
+  Mauvais: "en mauvais état",
   Péril: "en péril",
 };
 
