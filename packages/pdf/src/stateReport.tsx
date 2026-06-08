@@ -453,7 +453,7 @@ const generateConstatGeneral = ({
 
   if (version === 2) {
     return `<p><span style="font-size: 16pt"><b>Constat général</b></span></p>
-        <span>Le monument est évalué ${etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"} avec un taux de dégradation estimé à ${stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"} du volume global.</span>
+        <span>Le monument est ${etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"}, avec un taux de dégradation estimé à ${stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"} du volume global.</span>
         ${sectionsSummary}
     
         ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
