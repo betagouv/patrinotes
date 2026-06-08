@@ -1,6 +1,6 @@
 {
-  "id": "9e123cab-7600-411f-9c9c-1e2ffe07675f",
-  "prevId": "b32f82b4-a39b-4a21-b180-578391a6c67d",
+  "id": "de23afc5-fd12-452f-8316-b371e95fcbd1",
+  "prevId": "4340fd8f-76c2-4453-af96-e7bd6d435b77",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2857,6 +2857,12 @@
         },
         "commune_historique": {
           "name": "commune_historique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coordonnees": {
+          "name": "coordonnees",
           "type": "text",
           "primaryKey": false,
           "notNull": false

@@ -1,5 +1,5 @@
 {
-  "id": "b32f82b4-a39b-4a21-b180-578391a6c67d",
+  "id": "4340fd8f-76c2-4453-af96-e7bd6d435b77",
   "prevId": "1d4f1e7f-6f1c-43f5-95b2-5ba41299b0f6",
   "version": "7",
   "dialect": "postgresql",
@@ -2782,13 +2782,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
         "nature_edifice": {
           "name": "nature_edifice",
           "type": "text",
@@ -2833,6 +2826,12 @@
         },
         "commune_historique": {
           "name": "commune_historique",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coordonnees": {
+          "name": "coordonnees",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -3618,20 +3617,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "niveau_degradation": {
-          "name": "niveau_degradation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "commentaires": {
           "name": "commentaires",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "preconisations": {
-          "name": "preconisations",
           "type": "text",
           "primaryKey": false,
           "notNull": false
