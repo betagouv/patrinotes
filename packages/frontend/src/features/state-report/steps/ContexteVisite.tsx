@@ -66,6 +66,7 @@ export const ContexteVisite = () => {
       <DateInput
         isDisabled={isDisabled}
         form={form}
+        id="date-visite"
         name="date_visite"
         label={<Box className="mandatory-field">Date de la visite</Box>}
       />

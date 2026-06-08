@@ -243,6 +243,10 @@ const formErrorsNavigate: Partial<
   etat_general: ({ navigate }) => navigate({ search: { step: "constat-general", mode: "edit" }, hash: "etat-general" }),
   proportion_dans_cet_etat: ({ navigate }) =>
     navigate({ search: { step: "constat-general", mode: "edit" }, hash: "proportion-dans-cet-etat" }),
+  taux_degradation: ({ navigate }) =>
+    navigate({ search: { step: "constat-general", mode: "edit" }, hash: "taux-degradation" }),
+  vitesse_degradation: ({ navigate }) =>
+    navigate({ search: { step: "constat-general", mode: "edit" }, hash: "vitesse-degradation" }),
 };
 
 const CreateButton = () => {
@@ -324,7 +328,7 @@ const CreateButton = () => {
 };
 
 const contextFields = ["proprietaire", "proprietaire_email", "redacted_by", "date_visite", "nature_visite"];
-const generalFields = ["etat_general", "proportion_dans_cet_etat"];
+const generalFields = ["etat_general", "proportion_dans_cet_etat", "taux_degradation", "vitesse_degradation"];
 const labelsByField: Record<string, string> = {
   proprietaire: "Propriétaire",
   proprietaire_email: "Courriel du propriétaire",
@@ -333,6 +337,8 @@ const labelsByField: Record<string, string> = {
   nature_visite: "Nature de la visite",
   etat_general: "État général",
   proportion_dans_cet_etat: "Proportion dans cet état",
+  taux_degradation: "Taux de dégradation",
+  vitesse_degradation: "Vitesse de dégradation",
 };
 
 const FormErrorModal = ({

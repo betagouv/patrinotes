@@ -421,6 +421,7 @@ export const EtatGeneralRadioButtons = ({ isDisabled }: { isDisabled: boolean })
 
   return (
     <RadioButtons
+      id="etat-general"
       orientation={isDesktop ? "horizontal" : "vertical"}
       legend={<Box className="mandatory-field">État général de l'édifice</Box>}
       options={options}
@@ -445,6 +446,7 @@ const ProportionsRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
 
   return (
     <RadioButtons
+      id="proportion-dans-cet-etat"
       orientation={isDesktop ? "horizontal" : "vertical"}
       legend={<Box className="mandatory-field">Proportion dans cet état</Box>}
       options={options}
@@ -462,6 +464,7 @@ const TauxDegradationRange = ({ isDisabled }: { isDisabled: boolean }) => {
       style={{
         marginBottom: "16px",
       }}
+      id="taux-degradation"
       label={<Box className="mandatory-field">Taux de dégradation</Box>}
       min={0}
       max={100}
@@ -492,6 +495,7 @@ const VitesseDegradationRadioButtons = ({ isDisabled }: { isDisabled: boolean })
 
   return (
     <RadioButtons
+      id="vitesse-degradation"
       orientation={isDesktop ? "horizontal" : "vertical"}
       legend={<Box className="mandatory-field">Vitesse de dégradation</Box>}
       options={options}
