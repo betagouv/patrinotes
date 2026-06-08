@@ -37,6 +37,12 @@ export const useIsStateReportDisabled = () => {
   );
 };
 
+export const useStateReportVersion = () => {
+  const form = useStateReportFormContext();
+  const version = useWatch({ control: form.control, name: "version" });
+  return version || 1;
+};
+
 export const getIsStateReportDisabled = (stateReport: {
   attachment_id: string | null;
   validation_status: string | null;

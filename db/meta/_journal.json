@@ -232,6 +232,13 @@
       "when": 1780404255380,
       "tag": "0032_bright_lucky_pierre",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1780920552452,
+      "tag": "0033_normal_sumo",
+      "breakpoints": true
     }
   ]
 }

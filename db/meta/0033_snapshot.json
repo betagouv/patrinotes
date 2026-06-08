@@ -1,6 +1,6 @@
 {
-  "id": "4340fd8f-76c2-4453-af96-e7bd6d435b77",
-  "prevId": "1d4f1e7f-6f1c-43f5-95b2-5ba41299b0f6",
+  "id": "de23afc5-fd12-452f-8316-b371e95fcbd1",
+  "prevId": "4340fd8f-76c2-4453-af96-e7bd6d435b77",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -211,8 +211,12 @@
           "name": "delegation_createdBy_fkey",
           "tableFrom": "delegation",
           "tableTo": "user",
-          "columnsFrom": ["createdBy"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "createdBy"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -220,8 +224,12 @@
           "name": "delegation_delegatedTo_fkey",
           "tableFrom": "delegation",
           "tableTo": "user",
-          "columnsFrom": ["delegatedTo"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "delegatedTo"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -293,8 +301,12 @@
           "name": "internal_user_userId_fkey",
           "tableFrom": "internal_user",
           "tableTo": "user",
-          "columnsFrom": ["userId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1243,8 +1255,12 @@
           "name": "pictures_reportId_fkey",
           "tableFrom": "pictures",
           "tableTo": "report",
-          "columnsFrom": ["reportId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "reportId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2463,8 +2479,12 @@
           "name": "report_createdBy_fkey",
           "tableFrom": "report",
           "tableTo": "user",
-          "columnsFrom": ["createdBy"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "createdBy"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2578,8 +2598,12 @@
           "name": "sent_email_report_id_fkey",
           "tableFrom": "sent_email",
           "tableTo": "report",
-          "columnsFrom": ["report_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2782,6 +2806,13 @@
           "primaryKey": true,
           "notNull": true
         },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
         "nature_edifice": {
           "name": "nature_edifice",
           "type": "text",
@@ -2957,6 +2988,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "taux_degradation": {
+          "name": "taux_degradation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vitesse_degradation": {
+          "name": "vitesse_degradation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "etat_commentaires": {
           "name": "etat_commentaires",
           "type": "text",
@@ -3031,8 +3074,12 @@
           "name": "state_report_created_by_fkey",
           "tableFrom": "state_report",
           "tableTo": "user",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3300,8 +3347,12 @@
           "name": "state_report_sent_email_state_report_id_fkey",
           "tableFrom": "state_report_sent_email",
           "tableTo": "state_report",
-          "columnsFrom": ["state_report_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "state_report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3342,7 +3393,9 @@
         "suggested_email_email_key": {
           "name": "suggested_email_email_key",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -3463,8 +3516,12 @@
           "name": "user_service_id_fkey",
           "tableFrom": "user",
           "tableTo": "service",
-          "columnsFrom": ["service_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "service_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3474,7 +3531,9 @@
         "user_email_key": {
           "name": "user_email_key",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -3504,8 +3563,12 @@
           "name": "user_dept_user_id_fkey",
           "tableFrom": "user_dept",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3513,7 +3576,10 @@
       "compositePrimaryKeys": {
         "user_dept_pkey": {
           "name": "user_dept_pkey",
-          "columns": ["user_id", "dept_number"]
+          "columns": [
+            "user_id",
+            "dept_number"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -3617,8 +3683,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "niveau_degradation": {
+          "name": "niveau_degradation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "commentaires": {
           "name": "commentaires",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preconisations": {
+          "name": "preconisations",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -3636,8 +3714,12 @@
           "name": "visited_section_state_report_id_fkey",
           "tableFrom": "visited_section",
           "tableTo": "state_report",
-          "columnsFrom": ["state_report_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "state_report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

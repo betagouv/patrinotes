@@ -212,6 +212,7 @@ const pop_immeubles = new Table({
 
 const state_report = new Table({
   id: column.text,
+  version: column.integer,
   nature_edifice: column.text,
   reference_pop: column.text,
   adresse: column.text,
@@ -238,7 +239,9 @@ const state_report = new Table({
   proprietaire_representant: column.text,
   proprietaire_representant_email: column.text,
   etat_general: column.text,
-  proportion_dans_cet_etat: column.text,
+  proportion_dans_cet_etat: column.text, // V1
+  taux_degradation: column.integer, // V2
+  vitesse_degradation: column.text, // V2
   etat_commentaires: column.text,
   preconisations: column.text,
   preconisations_commentaires: column.text,
@@ -345,7 +348,9 @@ const visited_section = new Table({
   section: column.text,
   etat_general: column.text,
   proportion_dans_cet_etat: column.text,
+  niveau_degradation: column.text,
   commentaires: column.text,
+  preconisations: column.text,
   service_id: column.text,
 });
 

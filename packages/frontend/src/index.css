@@ -109,3 +109,8 @@ textarea {
   margin-right: 2px;
   color: red;
 }
+
+.fr-notice__desc {
+  display: block;
+  margin-top: 8px;
+}

@@ -3,6 +3,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import Checkbox from "@codegouvfr/react-dsfr/Checkbox";
+import Range from "@codegouvfr/react-dsfr/Range";
 import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
 import { deserializePreconisations, serializePreconisations } from "@patrinotes/pdf/constat";
 import { Box, BoxProps, Stack, Typography } from "@mui/material";
@@ -18,7 +19,12 @@ import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { attachmentUploadMachine } from "../../upload/machines/attachmentUploadMachine";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
-import { StateReportFormType, useIsStateReportDisabled, useStateReportFormContext } from "../utils";
+import {
+  StateReportFormType,
+  useIsStateReportDisabled,
+  useStateReportFormContext,
+  useStateReportVersion,
+} from "../utils";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { EditDisabled } from "./ContexteVisite";
 
@@ -26,6 +32,7 @@ const routeApi = getRouteApi("/constat/$constatId");
 
 export const ConstatGeneral = () => {
   const isDisabled = useIsStateReportDisabled();
+  const version = useStateReportVersion();
 
   return (
     <Stack px="16px" pl={{ xs: "16px", lg: "64px" }} pt={{ xs: "16px", lg: "14px" }} mb="60px">
@@ -46,7 +53,13 @@ export const ConstatGeneral = () => {
       <EditDisabled />
       <MandatoryFieldReminder />
       <EtatGeneralRadioButtons isDisabled={isDisabled} />
-      <ProportionsRadioButtons isDisabled={isDisabled} />
+      {version === 1 ? <ProportionsRadioButtons isDisabled={isDisabled} /> : null}
+      {version === 2 ? (
+        <>
+          <TauxDegradationRange isDisabled={isDisabled} />
+          <VitesseDegradationRadioButtons isDisabled={isDisabled} />
+        </>
+      ) : null}
       <StateReportTextAreaWithSpeechToText
         label="Commentaire"
         name="etat_commentaires"
@@ -440,16 +453,76 @@ const ProportionsRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
   );
 };
 
+const TauxDegradationRange = ({ isDisabled }: { isDisabled: boolean }) => {
+  const form = useStateReportFormContext();
+
+  const value = useWatch({ control: form.control, name: "taux_degradation" });
+  return (
+    <Range
+      style={{
+        marginBottom: "16px",
+      }}
+      label={<Box className="mandatory-field">Taux de dégradation</Box>}
+      min={0}
+      max={100}
+      step={10}
+      suffix="%"
+      nativeInputProps={{
+        value: value ?? 0,
+        onChange: (e) => form.setValue("taux_degradation", Number(e.target.value)),
+      }}
+      disabled={isDisabled}
+    />
+  );
+};
+
+const VitesseDegradationRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
+  const form = useStateReportFormContext();
+  const value = useWatch({ control: form.control, name: "vitesse_degradation" });
+
+  const isDesktop = useIsDesktop();
+
+  const options = ["Stable", "Lente", "Moyenne", "Rapide"].map((label) => ({
+    label,
+    nativeInputProps: {
+      checked: value === label,
+      onChange: () => form.setValue("vitesse_degradation", label),
+    },
+  }));
+
+  return (
+    <RadioButtons
+      orientation={isDesktop ? "horizontal" : "vertical"}
+      legend={<Box className="mandatory-field">Vitesse de dégradation</Box>}
+      options={options}
+      disabled={isDisabled}
+    />
+  );
+};
+
 const Preconisations = ({ isDisabled }: { isDisabled: boolean }) => {
   const form = useStateReportFormContext();
-  const rawValue = useWatch({ control: form.control, name: "preconisations" });
+  const value = useWatch({ control: form.control, name: "preconisations" });
 
-  const commentairesCache = useRef<Record<string, string>>({});
-
-  const value = deserializePreconisations(rawValue);
   const setValue = (formValue: { preconisation: string; commentaire?: string }[]) => {
     form.setValue("preconisations", serializePreconisations(formValue));
   };
+
+  return <PreconisationsCheckboxes isDisabled={isDisabled} value={value} setValue={setValue} />;
+};
+
+export const PreconisationsCheckboxes = ({
+  isDisabled,
+  value: rawValue,
+  setValue,
+}: {
+  isDisabled: boolean;
+  value: string | null;
+  setValue: (formValue: { preconisation: string; commentaire?: string }[]) => void;
+}) => {
+  const commentairesCache = useRef<Record<string, string>>({});
+
+  const value = deserializePreconisations(rawValue);
 
   const selectedNames: string[] = value.map((item) => item.preconisation);
 
@@ -537,6 +610,9 @@ const SectionCommentaire = ({
   return (
     <Box mb="24px" mt="16px">
       <Input
+        sx={{
+          marginBottom: "16px !important",
+        }}
         label="Commentaire"
         disabled={isDisabled}
         textArea
