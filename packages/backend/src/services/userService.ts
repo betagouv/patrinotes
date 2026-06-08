@@ -70,7 +70,14 @@ export class UserService {
 
     await assertLinkIsValid(user, encryptedLink);
 
-    await adminAuthApi("/users/" + user!.id + "/reset-password", {
+    const userKeycloakId = await adminAuthApi("/users?email=" + user!.email, { method: "GET" }).then(
+      (res) => res[0]?.id,
+    );
+    if (!userKeycloakId) {
+      throw new AppError(403, "Le lien est invalide");
+    }
+
+    await adminAuthApi("/users/" + userKeycloakId + "/reset-password", {
       method: "PUT",
       body: { value: newPassword, type: "password", temporary: false },
     });
