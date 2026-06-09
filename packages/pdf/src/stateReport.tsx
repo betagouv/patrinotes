@@ -18,6 +18,7 @@ import {
   SITE_CLASSE_OU_INSCRIT_SECTION,
   SectionWithAttachments,
   StateReportWithUserAndAttachments,
+  buildHtml,
   deserializeMandatoryEmails,
   getIsAlertVisited,
   getIsSectionVisited,
@@ -29,7 +30,10 @@ import { Html } from "react-pdf-html";
 import React from "react";
 import { groupBy } from "pastable";
 import { format } from "date-fns";
-
+import { PlanEdifice, PlanSituation, VuesGenerales } from "./state-report/state-report.images";
+import { ConstatGeneral } from "./state-report/state-report.general";
+import { ConstatDetaille } from "./state-report/state-report.details";
+import { PreconisationsGenerales } from "./state-report/state-report.preconisations";
 export const StateReportPDFDocument = ({ service, htmlString, images }: StateReportPDFDocumentProps) => {
   return (
     <Document onRender={console.log}>
@@ -53,6 +57,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               </View>
             ),
             unbreakable: (props) => <View {...props} wrap={false} />,
+            debug: (props) => <View {...props} debug />,
           }}
           style={{
             fontSize: "10px",
@@ -99,6 +104,12 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               em strong {
               font-style: italic;
                 font-weight: bold;
+              }
+
+              h2 {
+                font-size: 16pt;
+                margin-bottom: 24px;
+                margin-top: 0; 
               }
 
                 
@@ -263,6 +274,7 @@ const addBreaksAfterWords = (str: string, words: string[]) => {
 
   return newStr.replaceAll("<br/> ", "<br/>");
 };
+import { MainTitle, StateReportInfos, StateReportProtection } from "./state-report/state-report.info";
 
 export const getStateReportHtmlString = ({
   stateReport,
@@ -306,62 +318,70 @@ export const getStateReportHtmlString = ({
   // h2 pour les titres de sections
   // alt text sur les images
   // constat détaillé : le commentaire doit être juste après ce qu'il commente
-  return processHtml(`
-    <p>  
-      <span style="font-size: 20pt">Constat d'état du monument historique</span><br/><br/>
-      ${stateReport.titre_edifice ? `<span style="font-size: 20pt"><b>${stateReport.titre_edifice}</b></span><br/><br/>` : ""}
-    </p>
-    <p>
-      Constat dressé par <b>${user.name} (${user.job})</b> suite à la visite  ${isPartielle ? " partielle" : ""}
-      ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}${personnesPresentes ? `, en présence de ${personnesPresentes}` : ""}.
 
-      <br/>
-      <br/>
+  return buildHtml(
+    <div style={{ fontSize: "10px" }}>
+      <MainTitle stateReport={stateReport} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <StateReportInfos stateReport={stateReport} user={user} />
+        <hr />
+        <StateReportProtection stateReport={stateReport} />
+        <PlanSituation stateReport={stateReport} />
+        <PlanEdifice stateReport={stateReport} />
+        <VuesGenerales stateReport={stateReport} />
+        <ConstatGeneral stateReport={stateReport} sections={visitedSections} version={stateReportVersion} />
+        <ConstatDetaille stateReport={stateReport} sections={visitedSections} version={stateReportVersion} />
+        <PreconisationsGenerales stateReport={stateReport} />
+      </div>
+    </div>,
+  );
 
-      <b>Parties visitées</b> : ${isPartielle ? stateReport.visite_partielle_details || "" : "Visite complète de l'édifice"}<br/>
-      <b>Adresse</b> : ${address || "Non renseignée"}<br/>
-      <b>Référence cadastrale</b> : ${stateReport.reference_cadastrale || "Non renseignée"}<br/>
-      <b>Propriétaire</b> : ${stateReport.proprietaire ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})` : "Non renseigné"}<br/>
-      ${stateReport.proprietaire_representant ? `Représentant : ${stateReport.proprietaire_representant ? `${stateReport.proprietaire_representant} (${stateReport.proprietaire_representant_email})` : "Non renseigné"}` : ""}
-    </p>
+  return buildHtml(`
+    
+    <hr style="margin-top: 8px;" />
 
-    <p><span style="font-size: 16pt"><b>Protection de l'édifice</b></span></p>    
+    <p><span style="font-size: 16pt; margin-bottom: 16px"><b>Protection de l'édifice</b></span></p>    
       ${uppercaseFirstLetter(stateReport.nature_protection || "Non renseignée")}<br/><br/>Parties protégées : ${stateReport.parties_protegees || "Non renseignées"}
 
-      <hr style="margin-top: 16px;" />
 
-      ${generateImagesTable([
+      ${
         planSituationAttachment
-          ? {
-              title: "Plan de situation",
-              url: planSituationAttachment.file!,
-              attachmentId: planSituationAttachment.id,
-              label: planSituationAttachment.label ?? undefined,
-            }
-          : undefined,
+          ? `
+          <unbreakable>
+            <p><span style="font-size: 16pt; margin-bottom: 8px"><b>Plan de situation</b></span></p>
+          
+            ${generateImagesTable([
+              {
+                url: planSituationAttachment.file!,
+                attachmentId: planSituationAttachment.id,
+                label: planSituationAttachment.label ?? undefined,
+              },
+            ])}
+          </unbreakable>
+            `
+          : ""
+      }
+
+      ${
         planEdificeAttachment
-          ? {
-              title: "Plan de l'édifice",
-              url: planEdificeAttachment.file!,
-              attachmentId: planEdificeAttachment.id,
-              label: planEdificeAttachment.label ?? undefined,
-            }
-          : undefined,
-      ])}
+          ? `
+          <unbreakable>
+            <p><span style="font-size: 16pt; margin-bottom: 8px"><b>Plan de l'édifice</b></span></p>
+          
+            ${generateImagesTable([
+              {
+                url: planEdificeAttachment.file!,
+                attachmentId: planEdificeAttachment.id,
+                label: planEdificeAttachment.label ?? undefined,
+              },
+            ])}
+          </unbreakable>
+            `
+          : ""
+      }
 
-      ${generateImagesTable(
-        vuesGeneralesAttachments.map((attachment, index) => ({
-          title: index === 0 ? "Vue générale de l'édifice" : "",
-          url: attachment.file!,
-          label: attachment.label ?? undefined,
-          attachmentId: attachment.id,
-        })),
-      )}
-
-        ${planSituationAttachment || planEdificeAttachment || vuesGeneralesAttachments?.length ? "<hr />" : ""}
         
         ${generateConstatGeneral({ stateReport, version: stateReportVersion, sections: visitedSections })}
-      <hr />
 
         ${visitedSections?.length ? `<p><span style="font-size: 16pt"><b>Constat détaillé</b></span></p>` : ""}
         ${visitedSections?.map((section) => generateSection(section, stateReportVersion)).join("")}
@@ -515,9 +535,13 @@ const generateSection = (section: SectionWithAttachments, version: number) => {
           <br/>
           <br/>
           <u>Commentaires</u> : ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
-          <br/>
-          <br/>
-          <u>Préconisations de travaux</u> : <br/>
+          
+          ${
+            preconisations
+              ? `<br/>
+          <br/><u>Préconisations de travaux</u> : <br/>`
+              : ""
+          }
           ${
             preconisations
               ? preconisations
@@ -613,43 +637,21 @@ const uppercaseFirstLetter = (str: string) => {
 
 type Image = { url: string; label?: string; title?: string; attachmentId: string };
 
-const generateImagesTable = (images: (Image | undefined)[], options: { hideTitle?: boolean } = {}) => {
+const generateImagesTable = (images: (Image | undefined)[]) => {
   return `<div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 8px; margin-bottom: 8px; width: 100%; flex-direction: row;">
     ${images
       .map((image) => {
         if (!image) return "";
-        return `<div>${generateImageCell(image, options)}</div>`;
+        return `${generateImageCell(image)}`;
       })
       .join("")}
   </div>`;
-
-  const rows = [];
-  for (let i = 0; i < images.length; i += 2) {
-    const firstImage = images[i];
-    const secondImage = images[i + 1];
-
-    rows.push(`<div class="column-block">
-      ${generateImageCell(firstImage, options)}
-      ${generateImageCell(secondImage, options)}
-    </div><div></div>
-    `);
-  }
-  return `${rows.join("")}`;
 };
 
-const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?: boolean } = {}) => {
+const generateImageCell = (image: Image | undefined) => {
   if (!image) return "";
-  return `<unbreakable>
-      ${
-        image.title
-          ? `<p>
-          <span style="font-size: 16pt"><strong>${image.title}</strong></span>
-          </p>`
-          : hideTitle
-            ? ""
-            : `<p style="height: 16pt"></p>`
-      }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: auto; height:180px; margin-bottom: 8px;" />
+  return `<unbreakable style="border: 1px solid black; min-height:180px;">
+      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: auto;  height:180px; margin-bottom: 8px;" />
       <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
         ${image.label ? image.label : ""}
       </div>

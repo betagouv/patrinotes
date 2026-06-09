@@ -10,6 +10,8 @@ import {
 import linkifyHtml from "linkify-html";
 import { MinimalAlert } from "./stateReport";
 import { format } from "date-fns";
+import { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 export const initFonts = (folder: string = "") => {
   Font.register({
@@ -49,6 +51,11 @@ export const processHtml = (htmlString: string) => {
       format: (value) => breakUrl(value),
     }),
   );
+};
+
+export const buildHtml = (element: ReactNode): string => {
+  const str = renderToStaticMarkup(element);
+  return processHtml(str);
 };
 
 export const serializeMandatoryEmails = (emails: { service: string; email: string }[]): string => {
@@ -122,4 +129,8 @@ export type StateReportWithUserAndAttachments = StateReport & {
 
 export type SectionWithAttachments = VisitedSection & {
   attachments: (VisitedSectionAttachment & { file: string })[];
+};
+
+export const uppercaseFirstLetter = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };
