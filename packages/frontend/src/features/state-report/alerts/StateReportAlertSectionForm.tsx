@@ -86,9 +86,18 @@ export const StateReportAlertSectionForm = ({
       </Box>
 
       <Divider my="24px" />
-      <Stack gap="24px" mb="16px">
-        <ShowInReportToggle form={form} names={[name]} />
-        <ShouldSendToggle form={form} names={[name]} />
+      <Stack
+        gap="24px"
+        mb="16px"
+        flexDirection={{ xs: "column", lg: "row" }}
+        alignItems={{ xs: "stretch", lg: "center" }}
+      >
+        <Box flex="1">
+          <ShowInReportToggle form={form} names={[name]} />
+        </Box>
+        <Box flex="1">
+          <ShouldSendToggle form={form} names={[name]} />
+        </Box>
       </Stack>
       <StateReportAlertsEmailInput
         form={form}
