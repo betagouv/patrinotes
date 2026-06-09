@@ -88,7 +88,7 @@ export const getIsSectionVisited = (section: any) => {
   );
 };
 
-function cleanString(str: string): string {
+export function cleanString(str: string): string {
   return str
     .normalize("NFD") // Decompose accented characters
     .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
