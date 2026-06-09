@@ -17,7 +17,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 import { Accordion } from "#components/MUIDsfr.tsx";
-import { PlanDeSituationModal } from "./PlanDeSituationModal";
+// import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -120,7 +120,7 @@ export const MonumentHistorique = () => {
           {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
         </Flex>
 
-        {referencePop && !isCustom ? (
+        {/* {referencePop && !isCustom ? (
           <Button
             priority="tertiary no outline"
             iconId="fr-icon-road-map-line"
@@ -130,11 +130,11 @@ export const MonumentHistorique = () => {
           >
             Voir plan de situation
           </Button>
-        ) : null}
+        ) : null} */}
 
-        {isPlanModalOpen ? (
+        {/* {isPlanModalOpen ? (
           <PlanDeSituationModal referencePop={referencePop!} onClose={() => setIsPlanModalOpen(false)} />
-        ) : null}
+        ) : null} */}
 
         <Flex
           flexDirection={{ xs: "column", lg: "row" }}
@@ -159,8 +159,6 @@ export const MonumentHistorique = () => {
             isDisabled={isDisabled}
           />
         </Flex>
-
-        {referencePop ? <PreviousConstats referencePop={referencePop} /> : null}
 
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
@@ -215,6 +213,7 @@ export const MonumentHistorique = () => {
         </Flex>
         {!isCustom ? <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} /> : null}
         {!isCustom ? <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box> : null}
+        {referencePop ? <PreviousConstats referencePop={referencePop} /> : null}
         {isEditing && !isCustom ? (
           //@ts-ignore
           <Alert
