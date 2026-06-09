@@ -422,30 +422,26 @@ const generateConstatGeneral = ({
   sections: SectionWithAttachments[];
   version: number;
 }) => {
-  const sectionsSummary = `
-    <ul>
-      ${defaultSections
-        ?.map((section) => {
-          const sectionData = sections.find((s) => s.section === section);
-
-          return `
-          <li style="margin-bottom: 0; padding: 0;">
-            <b>${section}</b> : ${
-              !sectionData
-                ? "partie non visitée"
-                : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.`
-            }
-          </li>
-        `;
-        })
-        .join("")}
-    </ul>
-  `;
-
   if (version === 1) {
     return `<p><span style="font-size: 16pt"><b>État général</b></span></p>
         <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
-        ${sectionsSummary}
+        <ul>
+          ${defaultSections
+            ?.map((section) => {
+              const sectionData = sections.find((s) => s.section === section);
+
+              return `
+              <li style="margin-bottom: 0; padding: 0;">
+                <b>${section}</b> : ${
+                  !sectionData
+                    ? "partie non visitée"
+                    : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "non renseigné"}.`
+                }
+              </li>
+            `;
+            })
+            .join("")}
+        </ul>
 
         ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
   `;
@@ -454,7 +450,24 @@ const generateConstatGeneral = ({
   if (version === 2) {
     return `<p><span style="font-size: 16pt"><b>Constat général</b></span></p>
         <span>Le monument est ${etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"}, avec un taux de dégradation estimé à ${stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"} du volume global.</span>
-        ${sectionsSummary}
+        <ul>
+          ${defaultSections
+            ?.map((section) => {
+              const sectionData = sections.find((s) => s.section === section);
+
+              return `
+              <li style="margin-bottom: 0; padding: 0;">
+                <b>${section}</b> : ${
+                  !sectionData
+                    ? "partie non visitée"
+                    : constatDetailleMapV2[sectionData.niveau_degradation as keyof typeof constatDetailleMapV2] ||
+                      "non renseigné"
+                }
+              </li>
+            `;
+            })
+            .join("")}
+        </ul>
     
         ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
     `;
@@ -566,6 +579,13 @@ const etatGeneralMapV2 = {
   Moyen: "en moyen état",
   Mauvais: "en mauvais état",
   Péril: "en péril",
+};
+
+const constatDetailleMapV2 = {
+  Léger: "dégradations légères",
+  Moyen: "dégradations moyennes",
+  Important: "dégradations importantes",
+  Péril: "dégradations mettant cette partie en péril",
 };
 
 export const defaultSections = [
