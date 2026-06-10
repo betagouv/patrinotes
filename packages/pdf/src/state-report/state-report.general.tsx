@@ -1,5 +1,6 @@
 import type { StateReportWithUserAndAttachments, SectionWithAttachments } from "../utils";
 import React from "react";
+import { Multiline } from "./state-report.details";
 
 export const ConstatGeneral = ({
   stateReport,
@@ -28,12 +29,16 @@ export const ConstatGeneral = ({
                 <b>{section}</b> :{" "}
                 {!sectionData
                   ? "partie non visitée"
-                  : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "non renseigné"}.`}
+                  : `${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "non renseigné"}.`}
               </li>
             );
           })}
         </ul>
-        {stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
+        {stateReport.etat_commentaires ? (
+          <p>
+            <Multiline text={stateReport.etat_commentaires} />
+          </p>
+        ) : null}
       </unbreakable>
     );
   }
@@ -63,7 +68,11 @@ export const ConstatGeneral = ({
             );
           })}
         </ul>
-        {stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
+        {stateReport.etat_commentaires ? (
+          <p>
+            <Multiline text={stateReport.etat_commentaires} />
+          </p>
+        ) : null}
       </unbreakable>
     );
   }

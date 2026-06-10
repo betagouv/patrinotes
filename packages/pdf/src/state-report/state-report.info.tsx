@@ -46,8 +46,8 @@ export const StateReportInfos = ({
         <b>
           {user.name} ({user.job})
         </b>{" "}
-        suite à la visite {isPartielle ? " partielle " : " "}
-        {stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}
+        suite à la visite {isPartielle ? "partielle " : " "}
+        {stateReport.date_visite ? `du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}
         {personnesPresentes ? `, en présence de ${personnesPresentes}` : ""}.
       </div>
 
