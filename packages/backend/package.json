@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsup ./src/index.ts --publicDir --format esm",
+    "build": "tsup --publicDir",
     "start": "cross-env NODE_ENV=production node ./dist/index.js",
     "dev": "vite-node --watch ./src/index.ts",
     "dev-test": "cross-env NODE_ENV=test vite-node --watch ./src/index.ts",
@@ -75,6 +75,7 @@
     "pg": "^8.13.1",
     "postgres": "^3.4.4",
     "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-pdf-html": "^2.0.4",
     "reflect-metadata": "^0.2.1",
     "uuid": "^13.0.0",
