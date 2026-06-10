@@ -18,6 +18,7 @@ import {
   SITE_CLASSE_OU_INSCRIT_SECTION,
   SectionWithAttachments,
   StateReportWithUserAndAttachments,
+  buildHtml,
   deserializeMandatoryEmails,
   getIsAlertVisited,
   getIsSectionVisited,
@@ -29,6 +30,11 @@ import { Html } from "react-pdf-html";
 import React from "react";
 import { groupBy } from "pastable";
 import { format } from "date-fns";
+import { PlanEdifice, PlanSituation, VuesGenerales } from "./state-report/state-report.images";
+import { ConstatGeneral } from "./state-report/state-report.general";
+import { ConstatDetaille } from "./state-report/state-report.details";
+import { PreconisationsGenerales } from "./state-report/state-report.preconisations";
+import { Alerts } from "./state-report/state-report.alerts";
 
 export const StateReportPDFDocument = ({ service, htmlString, images }: StateReportPDFDocumentProps) => {
   return (
@@ -53,6 +59,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               </View>
             ),
             unbreakable: (props) => <View {...props} wrap={false} />,
+            debug: (props) => <View {...props} debug />,
           }}
           style={{
             fontSize: "10px",
@@ -99,6 +106,12 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
               em strong {
               font-style: italic;
                 font-weight: bold;
+              }
+
+              h2 {
+                font-size: 16pt;
+                margin-bottom: 24px;
+                margin-top: 0; 
               }
 
                 
@@ -263,6 +276,7 @@ const addBreaksAfterWords = (str: string, words: string[]) => {
 
   return newStr.replaceAll("<br/> ", "<br/>");
 };
+import { MainTitle, StateReportInfos, StateReportProtection } from "./state-report/state-report.info";
 
 export const getStateReportHtmlString = ({
   stateReport,
@@ -276,316 +290,45 @@ export const getStateReportHtmlString = ({
   user: { name: string; job: string };
 }) => {
   const stateReportVersion = stateReport.version || 1;
-  const isPartielle = stateReport.nature_visite?.toLocaleLowerCase().includes("partielle");
-
-  const planSituationAttachment = stateReport.attachments.find((att) => att.type === "plan_situation");
-  const planEdificeAttachment = stateReport.attachments.find((att) => att.type === "plan_edifice");
-  const vuesGeneralesAttachments = stateReport.attachments.filter((att) => att.type === "vue_generale");
-
-  const preconisationsHtml = generatePreconisations(stateReport.preconisations);
 
   const visitedSections = sections.filter(getIsSectionVisited);
-  const address = [
-    stateReport.adresse,
-    stateReport.commune,
-    stateReport.code_postal ? `(${stateReport.code_postal})` : undefined,
-  ]
-    .filter(Boolean)
-    .join(" ");
 
   const filteredAlerts = (alerts || []).filter((alert) => alert.show_in_report).filter(getIsAlertVisited);
-
-  const personnesPresentes = stateReport.personnes_presentes
-    ?.split("\n")
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .join(", ");
 
   // accessibilité
   // h1 pour les deux premières lignes
   // h2 pour les titres de sections
   // alt text sur les images
   // constat détaillé : le commentaire doit être juste après ce qu'il commente
-  return processHtml(`
-    <p>  
-      <span style="font-size: 20pt">Constat d'état du monument historique</span><br/><br/>
-      ${stateReport.titre_edifice ? `<span style="font-size: 20pt"><b>${stateReport.titre_edifice}</b></span><br/><br/>` : ""}
-    </p>
-    <p>
-      Constat dressé par <b>${user.name} (${user.job})</b> suite à la visite  ${isPartielle ? " partielle" : ""}
-      ${stateReport.date_visite ? ` du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}${personnesPresentes ? `, en présence de ${personnesPresentes}` : ""}.
 
-      <br/>
-      <br/>
-
-      <b>Parties visitées</b> : ${isPartielle ? stateReport.visite_partielle_details || "" : "Visite complète de l'édifice"}<br/>
-      <b>Adresse</b> : ${address || "Non renseignée"}<br/>
-      <b>Référence cadastrale</b> : ${stateReport.reference_cadastrale || "Non renseignée"}<br/>
-      <b>Propriétaire</b> : ${stateReport.proprietaire ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})` : "Non renseigné"}<br/>
-      ${stateReport.proprietaire_representant ? `Représentant : ${stateReport.proprietaire_representant ? `${stateReport.proprietaire_representant} (${stateReport.proprietaire_representant_email})` : "Non renseigné"}` : ""}
-    </p>
-
-    <p><span style="font-size: 16pt"><b>Protection de l'édifice</b></span></p>    
-      ${uppercaseFirstLetter(stateReport.nature_protection || "Non renseignée")}<br/><br/>Parties protégées : ${stateReport.parties_protegees || "Non renseignées"}
-
-      <hr style="margin-top: 16px;" />
-
-      ${generateImagesTable([
-        planSituationAttachment
-          ? {
-              title: "Plan de situation",
-              url: planSituationAttachment.file!,
-              attachmentId: planSituationAttachment.id,
-              label: planSituationAttachment.label ?? undefined,
-            }
-          : undefined,
-        planEdificeAttachment
-          ? {
-              title: "Plan de l'édifice",
-              url: planEdificeAttachment.file!,
-              attachmentId: planEdificeAttachment.id,
-              label: planEdificeAttachment.label ?? undefined,
-            }
-          : undefined,
-      ])}
-
-      ${generateImagesTable(
-        vuesGeneralesAttachments.map((attachment, index) => ({
-          title: index === 0 ? "Vue générale de l'édifice" : "",
-          url: attachment.file!,
-          label: attachment.label ?? undefined,
-          attachmentId: attachment.id,
-        })),
-      )}
-
-        ${planSituationAttachment || planEdificeAttachment || vuesGeneralesAttachments?.length ? "<hr />" : ""}
-        
-        ${generateConstatGeneral({ stateReport, version: stateReportVersion, sections: visitedSections })}
-      <hr />
-
-        ${visitedSections?.length ? `<p><span style="font-size: 16pt"><b>Constat détaillé</b></span></p>` : ""}
-        ${visitedSections?.map((section) => generateSection(section, stateReportVersion)).join("")}
-        <br/>
-
-
-        ${visitedSections?.length ? "<hr />" : ""}
-
-      ${
-        preconisationsHtml
-          ? `<div id="preconisations">
-        <h2>Préconisations générales</h2>
-        <b>
-          Suite à la visite, il est préconisé d'entreprendre les travaux suivants sur l'édifice :
-        </b>
-        <br/>
-        <div>
-          ${preconisationsHtml}
-        </div>
-        </div>`
-          : ""
-      }
-
-      ${
-        filteredAlerts.length
-          ? `<div id="alertes">
-              <h2>Alertes</h2>
-              <b>
-                Suite à la visite, ${filteredAlerts.length} alerte${filteredAlerts.length > 1 ? "s ont été" : " a été"} signalée${filteredAlerts.length > 1 ? "s" : ""} et transmise${filteredAlerts.length > 1 ? "s" : ""} aux services concernés :
-              </b>
-              <br/>
-              ${generateAlertsTable(filteredAlerts)}
-            </div>`
-          : ""
-      }
-
+  return buildHtml(
+    <div style={{ fontSize: "10px" }}>
+      <MainTitle stateReport={stateReport} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <StateReportInfos stateReport={stateReport} user={user} />
+        <hr />
+        <StateReportProtection stateReport={stateReport} />
+        <PlanSituation stateReport={stateReport} />
+        <PlanEdifice stateReport={stateReport} />
+        <VuesGenerales stateReport={stateReport} />
+        <ConstatGeneral stateReport={stateReport} sections={visitedSections} version={stateReportVersion} />
+        <ConstatDetaille stateReport={stateReport} sections={visitedSections} version={stateReportVersion} />
+        <PreconisationsGenerales stateReport={stateReport} />
+        <Alerts alerts={filteredAlerts} />
       </div>
-
-      <br/><br/><br/><br/><br/>
-
-      <b id="date">
-        Document créé le ${new Date().toLocaleDateString("fr-FR", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })}.
-      </b>
-
-  `);
-};
-
-const generateConstatGeneral = ({
-  stateReport,
-  sections,
-  version,
-}: {
-  stateReport: StateReportWithUserAndAttachments;
-  sections: SectionWithAttachments[];
-  version: number;
-}) => {
-  if (version === 1) {
-    return `<p><span style="font-size: 16pt"><b>État général</b></span></p>
-        <span>Le monument est évalué ${etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"} pour ${stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice</span>
-        <ul>
-          ${defaultSections
-            ?.map((section) => {
-              const sectionData = sections.find((s) => s.section === section);
-
-              return `
-              <li style="margin-bottom: 0; padding: 0;">
-                <b>${section}</b> : ${
-                  !sectionData
-                    ? "partie non visitée"
-                    : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "non renseigné"}.`
-                }
-              </li>
-            `;
-            })
-            .join("")}
-        </ul>
-
-        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
-  `;
-  }
-
-  if (version === 2) {
-    return `<p><span style="font-size: 16pt"><b>Constat général</b></span></p>
-        <span>Le monument est ${etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"}, avec un taux de dégradation estimé à ${stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"} du volume global.</span>
-        <ul>
-          ${defaultSections
-            ?.map((section) => {
-              const sectionData = sections.find((s) => s.section === section);
-
-              return `
-              <li style="margin-bottom: 0; padding: 0;">
-                <b>${section}</b> : ${
-                  !sectionData
-                    ? "partie non visitée"
-                    : constatDetailleMapV2[sectionData.niveau_degradation as keyof typeof constatDetailleMapV2] ||
-                      "non renseigné"
-                }
-              </li>
-            `;
-            })
-            .join("")}
-        </ul>
-    
-        ${stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
-    `;
-  }
-};
-
-const sectionNiveauDegradationMapV2 = {
-  Léger:
-    "Cet ensemble a des dégradations légères : quelques désordres mineurs sont observés, sans impact sur la structure ou l’intégrité de ces éléments.",
-  Moyen: "Cet ensemble a des dégradations moyennes : des désordres modérés sont constatés et à surveiller.",
-  Important:
-    "Cet ensemble a des dégradations importantes : les désordres observés risquent d’affecter la durabilité ou la sécurité des éléments concernés.",
-  Péril:
-    "Cet ensemble est en péril : les désordres constatés menacent directement la stabilité ou la sécurité des éléments concernés.",
-};
-
-const generateSection = (section: SectionWithAttachments, version: number) => {
-  if (version === 1) {
-    return `
-      <ul>
-        <li>
-          <b>${section.section} : </b><br/> ${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
-        </li>
-      </ul>
-        <b>Commentaires : </b> ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
-
-      ${generateImagesTable(
-        section.attachments.map((attachment) => ({
-          title: "",
-          url: attachment.file!,
-          label: attachment.label ?? undefined,
-          attachmentId: attachment.id,
-        })),
-      )}
-    `;
-  }
-
-  if (version === 2) {
-    const preconisations = deserializePreconisations(section.preconisations);
-
-    return `
-      <ul>
-        <li>
-          <b>${section.section} : </b><br/> ${sectionNiveauDegradationMapV2[section.niveau_degradation as keyof typeof sectionNiveauDegradationMapV2] || "Non renseigné"}
-          <br/>
-          <br/>
-          <u>Commentaires</u> : ${section.commentaires ? `${section.commentaires.replaceAll("\n", "<br />")}` : "Aucun"}
-          <br/>
-          <br/>
-          <u>Préconisations de travaux</u> : <br/>
-          ${
-            preconisations
-              ? preconisations
-                  .map(
-                    (p) => `
-            - ${p.preconisation} : ${p.commentaire ? p.commentaire.replaceAll("\n", "<br />") : "Aucun commentaire"} 
-          `,
-                  )
-                  .join("<br/>")
-              : null
-          }
-        </li>
-      </ul>
-
-
-      ${generateImagesTable(
-        section.attachments.map((attachment) => ({
-          title: "",
-          url: attachment.file!,
-          label: attachment.label ?? undefined,
-          attachmentId: attachment.id,
-        })),
-      )}
-    `;
-  }
-};
-
-const generatePreconisations = (rawValue: string | null) => {
-  if (!rawValue) return null;
-  const preconisations = deserializePreconisations(rawValue);
-  if (preconisations.length === 0) return null;
-
-  return `<ul>
-      ${preconisations
-        .map(
-          (item) =>
-            `<li>
-              <b>${item.preconisation}</b>${item.commentaire ? ` : ${item.commentaire.replaceAll("\n", "<br />")}` : ""}</li>`,
-        )
-        .join("<br/>")}
-    
-    </ul>`;
-};
-
-const footerText = `Ce constat d'état est effectué dans le cadre du contrôle scientifique et technique défini au livre VI, titre II, chapitre Ier du Code du patrimoine (partie législative et réglementaire et notamment l'article R621-63), et dans la circulaire du 1er décembre 2009 relative au contrôle scientifique et technique des services de l'État sur la conservation des monuments historiques classés ou inscrits. Les termes utilisés se fondent sur le glossaire des termes relatifs aux interventions sur les monuments historiques (déduit de la norme EN 15898).
-<br/><br/>
-Pour toute information complémentaire, vous pouvez vous référer à :
-<a href="https://www.culture.gouv.fr/Thematiques/monuments-sites/Interventions-demarches/Travaux-sur-un-objet-un-immeuble-un-espace/Intervenir-sur-un-immeuble-inscrit">https://www.culture.gouv.fr/Thematiques/monuments-sites/Interventions-demarches/Travaux-sur-un-objet-un-immeuble-un-espace/Intervenir-sur-un-immeuble-inscrit</a>`;
-
-const etatGeneralMap = {
-  Bon: "en bon état",
-  Moyen: "dans un état moyen",
-  Mauvais: "dans un mauvais état",
-  Péril: "en péril",
-};
-
-const etatGeneralMapV2 = {
-  Bon: "en bon état",
-  Moyen: "en moyen état",
-  Mauvais: "en mauvais état",
-  Péril: "en péril",
-};
-
-const constatDetailleMapV2 = {
-  Léger: "dégradations légères",
-  Moyen: "dégradations moyennes",
-  Important: "dégradations importantes",
-  Péril: "dégradations mettant cette partie en péril",
+      <div style={{ marginTop: "32px" }}>
+        <b id="date">
+          Document créé le{" "}
+          {new Date().toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+          .
+        </b>
+      </div>
+    </div>,
+  );
 };
 
 export const defaultSections = [
@@ -598,63 +341,6 @@ export const defaultSections = [
   "Équipements, sécurité, accessibilité",
   "Environnements, abords, voirie et réseaux",
 ];
-
-const preconisationsMap = {
-  "Étude diagnostique": "la réalisation d'une étude diagnostique approfondie",
-  "Mesures d'urgence": "des mesures d'urgence",
-  "Travaux d'entretien": "des travaux d'entretien",
-  "Travaux de restauration": "des travaux de restauration",
-  "Travaux de réparation": "des travaux de réparation",
-};
-
-const uppercaseFirstLetter = (str: string) => {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-};
-
-type Image = { url: string; label?: string; title?: string; attachmentId: string };
-
-const generateImagesTable = (images: (Image | undefined)[], options: { hideTitle?: boolean } = {}) => {
-  return `<div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 8px; margin-bottom: 8px; width: 100%; flex-direction: row;">
-    ${images
-      .map((image) => {
-        if (!image) return "";
-        return `<div>${generateImageCell(image, options)}</div>`;
-      })
-      .join("")}
-  </div>`;
-
-  const rows = [];
-  for (let i = 0; i < images.length; i += 2) {
-    const firstImage = images[i];
-    const secondImage = images[i + 1];
-
-    rows.push(`<div class="column-block">
-      ${generateImageCell(firstImage, options)}
-      ${generateImageCell(secondImage, options)}
-    </div><div></div>
-    `);
-  }
-  return `${rows.join("")}`;
-};
-
-const generateImageCell = (image: Image | undefined, { hideTitle }: { hideTitle?: boolean } = {}) => {
-  if (!image) return "";
-  return `<unbreakable>
-      ${
-        image.title
-          ? `<p>
-          <span style="font-size: 16pt"><strong>${image.title}</strong></span>
-          </p>`
-          : hideTitle
-            ? ""
-            : `<p style="height: 16pt"></p>`
-      }
-      <img src="${image.url}" data-attachment-id="${image.attachmentId}" style="width: auto; height:180px; margin-bottom: 8px;" />
-      <div style="width:100%; text-align:left; font-size:8pt; color:gray; line-height:1.4;">
-        ${image.label ? image.label : ""}
-      </div>
-  </unbreakable>`;
-};
 
 // format: option[:commentaire]/option[:commentaire]/...
 export const deserializePreconisations = (
@@ -681,98 +367,6 @@ export const serializePreconisations = (value: { preconisation: string; commenta
     )
     .join("/");
 };
-
-const generateAlertsTable = (alerts: MinimalAlert[]) => {
-  const groupedAlerts = groupBy(alerts, (alert) => alert.alert);
-  return `<ul>
-    ${Object.entries(groupedAlerts)
-      .map(([alertTitle, alertGroup]) => {
-        const firstAlert = alertGroup[0]!;
-
-        const mandatoryEmails = deserializeMandatoryEmails(firstAlert.mandatory_emails || "");
-
-        const servicesDestArray = mandatoryEmails.map((e) => {
-          const pronom = servicePronoms.find((sp) => sp.serviceCode === e.service)?.pronom || "à";
-          return `${pronom}${e.service}` + (e.email ? ` (${e.email})` : "");
-        });
-
-        return `<li>
-          <div><b>${alertTitle}</b></div>
-          <i style="color: #3A3A3A">Alerte transmise par courriel ${formatArrayWithCommasAnd(servicesDestArray)}</i><br/>
-          <br/>
-          ${alertGroup.map(generateAlertTableRow).join("<br/>")}
-        </li>`;
-      })
-      .join("<br/>")}  
-  </ul>`;
-};
-
-const formatArrayWithCommasAnd = (items: string[]) => {
-  if (items.length === 0) return "";
-  if (items.length === 1) return items[0];
-  if (items.length === 2) return `${items[0]} et ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")} et ${items[items.length - 1]}`;
-};
-
-/*  ${alerts
-      .filter((a) => !!a.alert && !!a.email)
-      .map((a) => {
-        const section = alertSections.find((section) => section.title === a.alert);
-        const withPronom = [section?.pronom ?? "à", a.nom_service_contacte];
-
-        return `
-            <li>
-              <b>${a.alert}</b><br/>
-              <i>Alerte transmise par courriel ${alertSections.find((section) => section.title === a.alert)?.pronom ?? "à"} ${a.email || "Non renseigné"}</i>
-            </li>
-          `;
-      })
-      .join("")}
- */
-
-const generateAlertTableRow = (alert: MinimalAlert) => {
-  if (alert.alert === OBJETS_MOBILIERS_SECTION) {
-    return `
-      <div>- ${alert.objet_ou_mobilier_name} (<a href="${`https://pop.culture.gouv.fr/notice/palissy/${alert.objet_ou_mobilier}`}">${alert.objet_ou_mobilier}</a>) : ${alert.probleme}</div>
-      <div><u>Commentaires :</u> ${alert.commentaires || "Aucun"}<br/>
-      ${generateImagesTable(
-        alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })),
-        { hideTitle: true },
-      )}</div>
-    `;
-  }
-
-  return `<div>
-  <div style="margin-bottom: 8px;">
-    <u>Commentaires :</u> ${alert.commentaires || "Aucun"}
-  </div>
-  ${generateImagesTable(
-    alert.attachments.map((a) => ({ attachmentId: a.id, url: a.file!, label: a.label ?? undefined })),
-    { hideTitle: true },
-  )}
-  
-  </div>`;
-};
-
-export const alertSectionStaticData = [
-  { title: EDIFICE_EN_PERIL_SECTION, services: ["CRMH"] },
-  { title: ABORDS_DE_L_EDIFICE_SECTION, services: ["UDAP"] },
-  { title: OBJETS_MOBILIERS_SECTION, services: ["CAOA", "CRMH"] },
-  { title: ARCHEOLOGIE_SECTION, services: ["SRA"] },
-  { title: SITE_CLASSE_OU_INSCRIT_SECTION, services: ["DREAL"] },
-  { title: BIODIVERSITE_SECTION, services: ["OFB"] },
-  { title: SECURITE_SECTION, services: ["Mairie"] },
-];
-
-export const servicePronoms = [
-  { serviceCode: "CRMH", pronom: "au " },
-  { serviceCode: "UDAP", pronom: "à l'" },
-  { serviceCode: "CAOA", pronom: "au " },
-  { serviceCode: "SRA", pronom: "à la " },
-  { serviceCode: "DREAL", pronom: "à la " },
-  { serviceCode: "OFB", pronom: "à l'" },
-  { serviceCode: "Mairie", pronom: "à la " },
-];
 
 export const stateReportExtraCss = {
   ".ProseMirror-focused .column": {
@@ -866,3 +460,13 @@ function cleanString(str: string): string {
     .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
     .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
 }
+
+export const alertSectionStaticData = [
+  { title: EDIFICE_EN_PERIL_SECTION, services: ["CRMH"] },
+  { title: ABORDS_DE_L_EDIFICE_SECTION, services: ["UDAP"] },
+  { title: OBJETS_MOBILIERS_SECTION, services: ["CAOA", "CRMH"] },
+  { title: ARCHEOLOGIE_SECTION, services: ["SRA"] },
+  { title: SITE_CLASSE_OU_INSCRIT_SECTION, services: ["DREAL"] },
+  { title: BIODIVERSITE_SECTION, services: ["OFB"] },
+  { title: SECURITE_SECTION, services: ["Mairie"] },
+];

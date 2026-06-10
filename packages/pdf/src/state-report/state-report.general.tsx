@@ -1,0 +1,111 @@
+import type { StateReportWithUserAndAttachments, SectionWithAttachments } from "../utils";
+
+export const ConstatGeneral = ({
+  stateReport,
+  sections,
+  version,
+}: {
+  stateReport: StateReportWithUserAndAttachments;
+  sections: SectionWithAttachments[];
+  version: number;
+}) => {
+  if (version === 1) {
+    return (
+      <unbreakable>
+        <h2>État général</h2>
+        <span>
+          Le monument est évalué{" "}
+          {etatGeneralMap[stateReport.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"} pour
+          {stateReport.proportion_dans_cet_etat} des parties protégées de l'édifice
+        </span>
+        <ul>
+          {defaultSections?.map((section) => {
+            const sectionData = sections.find((s) => s.section === section);
+
+            return (
+              <li style={{ marginBottom: 0, padding: 0 }}>
+                <b>{section}</b> :{" "}
+                {!sectionData
+                  ? "partie non visitée"
+                  : ` ${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "non renseigné"}.`}
+              </li>
+            );
+          })}
+        </ul>
+        {stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
+      </unbreakable>
+    );
+  }
+
+  if (version === 2) {
+    return (
+      <unbreakable>
+        <h2>Constat général</h2>
+        <span>
+          Le monument est{" "}
+          {etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"}, avec un taux
+          de dégradation estimé à {stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"}{" "}
+          du volume global.
+        </span>
+        <ul>
+          {defaultSections?.map((section) => {
+            const sectionData = sections.find((s) => s.section === section);
+
+            return (
+              <li style={{ marginBottom: 0, padding: 0 }}>
+                <b>{section}</b> :{" "}
+                {!sectionData
+                  ? "partie non visitée"
+                  : constatDetailleMapV2[sectionData.niveau_degradation as keyof typeof constatDetailleMapV2] ||
+                    "non renseigné"}
+              </li>
+            );
+          })}
+        </ul>
+        {stateReport.etat_commentaires ? `<p>${stateReport.etat_commentaires.replaceAll("\n", "<br />")}</p>` : ""}
+      </unbreakable>
+    );
+  }
+};
+
+export const etatGeneralMap = {
+  Bon: "en bon état",
+  Moyen: "dans un état moyen",
+  Mauvais: "dans un mauvais état",
+  Péril: "en péril",
+};
+
+export const etatGeneralMapV2 = {
+  Bon: "en bon état",
+  Moyen: "en moyen état",
+  Mauvais: "en mauvais état",
+  Péril: "en péril",
+};
+
+export const constatDetailleMapV2 = {
+  Léger: "dégradations légères",
+  Moyen: "dégradations moyennes",
+  Important: "dégradations importantes",
+  Péril: "dégradations mettant cette partie en péril",
+};
+
+export const defaultSections = [
+  "Fondations, sols, sous-sols",
+  "Maçonnerie, structure",
+  "Parements, enduits",
+  "Couverture, charpente",
+  "Menuiserie, métallerie, vitraux",
+  "Cloisonnement, revêtements, décors, objets, mobiliers",
+  "Équipements, sécurité, accessibilité",
+  "Environnements, abords, voirie et réseaux",
+];
+
+export const sectionNiveauDegradationMapV2 = {
+  Léger:
+    "Cet ensemble a des dégradations légères : quelques désordres mineurs sont observés, sans impact sur la structure ou l’intégrité de ces éléments.",
+  Moyen: "Cet ensemble a des dégradations moyennes : des désordres modérés sont constatés et à surveiller.",
+  Important:
+    "Cet ensemble a des dégradations importantes : les désordres observés risquent d’affecter la durabilité ou la sécurité des éléments concernés.",
+  Péril:
+    "Cet ensemble est en péril : les désordres constatés menacent directement la stabilité ou la sécurité des éléments concernés.",
+};
