@@ -1,4 +1,5 @@
 import type { StateReportWithUserAndAttachments, SectionWithAttachments } from "../utils";
+import React from "react";
 
 export const ConstatGeneral = ({
   stateReport,

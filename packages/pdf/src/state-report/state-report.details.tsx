@@ -1,8 +1,8 @@
-import React from "react";
 import { deserializePreconisations } from "../stateReport";
 import type { SectionWithAttachments, StateReportWithUserAndAttachments } from "../utils";
 import { etatGeneralMap, sectionNiveauDegradationMapV2 } from "./state-report.general";
 import { ImagesTable } from "../components/images";
+import React from "react";
 
 export const Multiline = ({ text }: { text: string }) => (
   <>

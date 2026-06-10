@@ -1,6 +1,7 @@
 import { deserializePreconisations } from "../stateReport";
 import type { StateReportWithUserAndAttachments } from "../utils";
 import { Multiline } from "./state-report.details";
+import React from "react";
 
 export const PreconisationsGenerales = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   const preconisations = deserializePreconisations(stateReport.preconisations);
@@ -20,40 +21,3 @@ export const PreconisationsGenerales = ({ stateReport }: { stateReport: StateRep
     </div>
   );
 };
-
-/**
- * 
- const generatePreconisations = (rawValue: string | null) => {
-   if (!rawValue) return null;
-   const preconisations = deserializePreconisations(rawValue);
-   if (preconisations.length === 0) return null;
- 
-   return `<ul>
-       ${preconisations
-         .map(
-           (item) =>
-             `<li>
-               <b>${item.preconisation}</b>${item.commentaire ? ` : ${item.commentaire.replaceAll("\n", "<br />")}` : ""}</li>`,
-         )
-         .join("<br/>")}
-     
-     </ul>`;
- };
- 
-
- 
-      ${
-        preconisationsHtml
-          ? `<div id="preconisations">
-        <h2>Préconisations générales</h2>
-        <b>
-          Suite à la visite, il est préconisé d'entreprendre les travaux suivants sur l'édifice :
-        </b>
-        <br/>
-        <div>
-          ${preconisationsHtml}
-        </div>
-        </div>`
-          : ""
-      }
- */

@@ -1,5 +1,6 @@
 import { ImagesTable } from "../components/images";
 import { type StateReportWithUserAndAttachments } from "../utils";
+import React from "react";
 
 export const PlanSituation = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   const attachment = stateReport.attachments.find((att) => att.type === "plan_situation");

@@ -3,6 +3,7 @@ import type { MinimalAlert } from "../stateReport";
 import { deserializeMandatoryEmails, OBJETS_MOBILIERS_SECTION } from "../utils";
 import { Multiline } from "./state-report.details";
 import { ImagesTable } from "../components/images";
+import React from "react";
 
 export const Alerts = ({ alerts }: { alerts: MinimalAlert[] }) => {
   if (!alerts || alerts.length === 0) return null;

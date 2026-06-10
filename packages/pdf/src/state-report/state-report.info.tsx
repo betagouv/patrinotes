@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { uppercaseFirstLetter, type StateReportWithUserAndAttachments } from "../utils";
+import React from "react";
 
 export const MainTitle = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   return (
