@@ -21,7 +21,7 @@ export const ImagesTable = ({ images }: { images: (Image | undefined)[] }) => {
 const ImageCell = ({ image }: { image: Image | undefined }) => {
   if (!image) return null;
   return (
-    <unbreakable style={{ minHeight: "180px" }}>
+    <unbreakable>
       <img
         src={image.url}
         data-attachment-id={image.attachmentId}

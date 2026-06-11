@@ -43,7 +43,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
         size="A4"
         style={{
           fontFamily: "Marianne",
-          paddingBottom: 56,
+          paddingBottom: 65,
           paddingTop: 72,
         }}
         wrap={true}
@@ -207,6 +207,7 @@ export const StateReportPDFDocument = ({ service, htmlString, images }: StateRep
             paddingRight: 40,
             fontSize: "8px",
           }}
+          wrap={false}
         >
           <Text style={{ fontSize: "8px" }}>
             Ce constat d'état est effectué dans le cadre du contrôle scientifique et technique défini au livre VI, titre
