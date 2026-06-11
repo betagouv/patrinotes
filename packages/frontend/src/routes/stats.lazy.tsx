@@ -252,7 +252,7 @@ const StatsPage = () => {
                 <KpiCard
                   label={
                     <Box>
-                      Utilisateurs ayant envoyé un document <br />
+                      Utilisateurs ayant envoyé au moins un document <br />
                       <Typography fontWeight="bold">
                         Soit {formatPercent(activeUsers, totalUsers)} d'utilisateurs actifs
                       </Typography>

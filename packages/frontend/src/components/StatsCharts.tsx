@@ -25,8 +25,6 @@ const generateMockData = () => {
   return data;
 };
 
-const mockData = generateMockData();
-
 export const AccountsCharts = ({ range }: { range: { from: string; to: string } }) => {
   const query = useQuery({
     queryKey: ["stats", range],
@@ -328,7 +326,7 @@ export const DocumentsCharts = ({ range }: { range: { from: string; to: string }
           stacked="true"
           selected-palette="divergentAscending"
           unit-tooltip={JSON.stringify(["CR créés", "CR envoyés", "CE créés", "CE envoyés"])}
-          colors={JSON.stringify(["#c39300", "#00611f", "#EFB900", "#298641"])}
+          colors={JSON.stringify(["#5C68E5", "#B478F1", "#EFB900", "#298641"])}
         ></bar-chart>
         <figcaption className="fr-sr-only">
           <table>
