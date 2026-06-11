@@ -27,6 +27,8 @@ import {
 } from "../utils";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { EditDisabled } from "./ContexteVisite";
+import { InfoText } from "#components/ui/InfoText.tsx";
+import { cx } from "@codegouvfr/react-dsfr/fr/cx";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -458,21 +460,34 @@ const TauxDegradationRange = ({ isDisabled }: { isDisabled: boolean }) => {
 
   const value = useWatch({ control: form.control, name: "taux_degradation" });
   return (
-    <Range
-      style={{
-        marginBottom: "16px",
-      }}
-      label={<Box className="mandatory-field">Taux de dégradation</Box>}
-      min={0}
-      max={100}
-      step={10}
-      suffix="%"
-      nativeInputProps={{
-        value: value ?? 0,
-        onChange: (e) => form.setValue("taux_degradation", Number(e.target.value)),
-      }}
-      disabled={isDisabled}
-    />
+    <Stack mb="40px">
+      <Range
+        label={<Box>Taux de dégradation général</Box>}
+        min={0}
+        max={100}
+        step={10}
+        suffix="%"
+        nativeInputProps={{
+          value: value ?? 0,
+          onChange: (e) => form.setValue("taux_degradation", Number(e.target.value)),
+        }}
+        disabled={isDisabled}
+      />
+      <InfoText>
+        <span>
+          Pour vous aider à définir un taux de dégradation,{" "}
+          <a
+            href="https://patrinotes.beta.gouv.fr/constat-d%C3%A9tat/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cx("fr-icon--md", "fr-link--icon-right")}
+            style={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
+          >
+            consultez la FAQ
+          </a>
+        </span>
+      </InfoText>
+    </Stack>
   );
 };
 
@@ -493,7 +508,7 @@ const VitesseDegradationRadioButtons = ({ isDisabled }: { isDisabled: boolean })
   return (
     <RadioButtons
       orientation={isDesktop ? "horizontal" : "vertical"}
-      legend={<Box className="mandatory-field">Vitesse de dégradation</Box>}
+      legend={<Box>Vitesse de dégradation</Box>}
       options={options}
       disabled={isDisabled}
     />

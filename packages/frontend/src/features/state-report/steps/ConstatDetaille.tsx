@@ -353,9 +353,7 @@ const SectionForm = ({
           />
         ) : null}
 
-        <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
-
-        <Flex flexDirection="column" mt="24px">
+        <Flex flexDirection="column" mb="24px">
           <Input
             sx={{ mb: "16px !important" }}
             textArea
@@ -378,6 +376,7 @@ const SectionForm = ({
             </Button>
           )}
         </Flex>
+        <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
 
         <Box mt="24px">
           <PreconisationsCheckboxes

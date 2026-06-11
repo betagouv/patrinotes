@@ -225,8 +225,6 @@ const formValuesCheckerV2: Partial<Record<keyof StateReportFormType, (val: any) 
   proprietaire: (val) => !!val,
   proprietaire_email: (val) => !!val,
   etat_general: (val) => !!val,
-  taux_degradation: (val) => val !== null && val !== undefined,
-  vitesse_degradation: (val) => val !== null && val !== undefined,
 };
 
 const formErrorsNavigate: Partial<

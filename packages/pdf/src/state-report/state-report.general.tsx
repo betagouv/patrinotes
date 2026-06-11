@@ -44,15 +44,23 @@ export const ConstatGeneral = ({
   }
 
   if (version === 2) {
+    if (!stateReport.etat_general) {
+      return null;
+    }
+
+    let intro = "Le monument est " + etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2];
+    if (stateReport.taux_degradation) {
+      intro += `, avec un taux de dégradation estimé à ${stateReport.taux_degradation}% du volume global.`;
+    }
+
+    if (stateReport.vitesse_degradation) {
+      intro += `\nLa vitesse de dégradation semble être ${stateReport.vitesse_degradation.toLocaleLowerCase()}.`;
+    }
+
     return (
       <unbreakable>
         <h2>Constat général</h2>
-        <span>
-          Le monument est{" "}
-          {etatGeneralMapV2[stateReport.etat_general as keyof typeof etatGeneralMapV2] || "Non renseigné"}, avec un taux
-          de dégradation estimé à {stateReport.taux_degradation ? stateReport.taux_degradation + "%" : "Non renseigné"}{" "}
-          du volume global.
-        </span>
+        <span>{intro}</span>
         <ul>
           {defaultSections?.map((section) => {
             const sectionData = sections.find((s) => s.section === section);
