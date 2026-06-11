@@ -56,12 +56,14 @@ export const StateReportInfos = ({
           <b>Parties visitées</b> :{" "}
           {isPartielle ? stateReport.visite_partielle_details || "" : "Visite complète de l'édifice"}
         </div>
-        <div>
-          <b>Détails de la visite</b> :{" "}
-          {stateReport.visite_details
-            ? stateReport.visite_details.split("\n").map((line, index) => <div key={index}>{line}</div>)
-            : "Non renseignés"}
-        </div>
+        {stateReport.visite_details ? (
+          <div>
+            <b>Détails de la visite</b> :{" "}
+            {stateReport.visite_details
+              ? stateReport.visite_details.split("\n").map((line, index) => <div key={index}>{line}</div>)
+              : "Non renseignés"}
+          </div>
+        ) : null}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
