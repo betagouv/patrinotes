@@ -6,13 +6,12 @@ import { useStyles } from "tss-react";
 import { uppercaseFirstLetterIf } from "../../utils";
 import { Link } from "@tanstack/react-router";
 import Button, { ButtonProps } from "@codegouvfr/react-dsfr/Button";
-import { useIsDesktop } from "../../hooks/useIsDesktop";
-import { useClickAway } from "react-use";
 import { ReportActions } from "../report/ReportActions";
 import Badge from "@codegouvfr/react-dsfr/Badge";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { StateReportActions } from "./StateReportActions";
+import { MobileModalActions } from "#components/MobileModalActions.tsx";
 
 export const getStateReportStatus = (report: StateReportWithUser) => {
   const isDraft = !report.attachment_id;
@@ -141,26 +140,10 @@ const MenuPopoverTrigger = ({ report, ...props }: { report: StateReportWithUser;
 };
 
 const MenuMobileModalContent = ({ onClose, report }: MenuProps) => {
-  const isDesktop = useIsDesktop();
-  const ref = useRef<HTMLDivElement>(null);
-
-  useClickAway(ref, (e) => !isDesktop && onClose(e));
-
   return (
-    <Box
-      bgcolor="rgba(0,0,0,.8)"
-      display={{ xs: "block", lg: "none" }}
-      zIndex="modal"
-      position="fixed"
-      top="0"
-      left="0"
-      right="0"
-      bottom="0"
-    >
-      <Box ref={ref} bgcolor="white" position="absolute" left="0" right="0" bottom="0">
-        <StateReportActions report={report} />
-      </Box>
-    </Box>
+    <MobileModalActions onClose={onClose}>
+      <StateReportActions report={report} />
+    </MobileModalActions>
   );
 };
 

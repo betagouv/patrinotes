@@ -1,4 +1,29 @@
+import { sql } from "kysely";
 import { db, useDbQuery } from "../db/db";
+
+const ACCENT_REPLACEMENTS: [string, string][] = [
+  ["é", "e"], ["è", "e"], ["ê", "e"], ["ë", "e"],
+  ["É", "e"], ["È", "e"], ["Ê", "e"], ["Ë", "e"],
+  ["à", "a"], ["â", "a"], ["ä", "a"],
+  ["À", "a"], ["Â", "a"], ["Ä", "a"],
+  ["î", "i"], ["ï", "i"], ["Î", "i"], ["Ï", "i"],
+  ["ô", "o"], ["ö", "o"], ["Ô", "o"], ["Ö", "o"],
+  ["ù", "u"], ["û", "u"], ["ü", "u"],
+  ["Ù", "u"], ["Û", "u"], ["Ü", "u"],
+  ["ç", "c"], ["Ç", "c"],
+  ["æ", "ae"], ["Æ", "ae"], ["œ", "oe"], ["Œ", "oe"],
+];
+
+const normalizeForSearch = (str: string) =>
+  str.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const normalizedLike = (column: string, normalizedSearch: string) => {
+  let expr = `"${column}"`;
+  for (const [from, to] of ACCENT_REPLACEMENTS) {
+    expr = `REPLACE(${expr}, '${from}', '${to}')`;
+  }
+  return sql<boolean>`LOWER(${sql.raw(expr)}) LIKE ${"%" + normalizedSearch + "%"}`;
+};
 
 const reportQueries = {
   base: db
@@ -41,26 +66,18 @@ export const getSearchReportQueries = (
   scope: "my" | "all",
   user: { id: string; service_id: string | null },
 ) => {
-  let baseQuery = reportQueries.base.where((eb) =>
+  const normalized = normalizeForSearch(search);
+  const searchConditions = (eb: any) =>
     eb.or([
-      eb("title", "like", `%${search}%`),
-      eb("redactedBy", "like", `%${search}%`),
-      eb("applicantName", "like", `%${search}%`),
-      eb("applicantAddress", "like", `%${search}%`),
-      eb("city", "like", `%${search}%`),
-      eb("zipCode", "like", `%${search}%`),
-    ]),
-  );
-  let countQuery = reportQueries.count.where((eb) =>
-    eb.or([
-      eb("title", "like", `%${search}%`),
-      eb("redactedBy", "like", `%${search}%`),
-      eb("applicantName", "like", `%${search}%`),
-      eb("applicantAddress", "like", `%${search}%`),
-      eb("city", "like", `%${search}%`),
-      eb("zipCode", "like", `%${search}%`),
-    ]),
-  );
+      normalizedLike("title", normalized),
+      normalizedLike("redactedBy", normalized),
+      normalizedLike("applicantName", normalized),
+      normalizedLike("applicantAddress", normalized),
+      normalizedLike("city", normalized),
+      normalizedLike("zipCode", normalized),
+    ]);
+  let baseQuery = reportQueries.base.where(searchConditions);
+  let countQuery = reportQueries.count.where(searchConditions);
   if (scope === "my") {
     baseQuery = baseQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
     countQuery = countQuery.where((eb) => eb.or([eb("createdBy", "=", user.id), eb("redactedById", "=", user.id)]));
@@ -109,26 +126,18 @@ export const getSearchStateReportQueries = (
   scope: "my" | "all",
   user: { id: string; service_id: string | null },
 ) => {
-  let baseQuery = stateReportQueries.base.where((eb) =>
+  const normalized = normalizeForSearch(search);
+  const searchConditions = (eb: any) =>
     eb.or([
-      eb("titre_edifice", "like", `%${search}%`),
-      eb("redacted_by", "like", `%${search}%`),
-      eb("commune", "like", `%${search}%`),
-      eb("commune_historique", "like", `%${search}%`),
-      eb("reference_pop", "like", `%${search}%`),
-      eb("code_postal", "like", `%${search}%`),
-    ]),
-  );
-  let countQuery = stateReportQueries.count.where((eb) =>
-    eb.or([
-      eb("titre_edifice", "like", `%${search}%`),
-      eb("redacted_by", "like", `%${search}%`),
-      eb("commune", "like", `%${search}%`),
-      eb("commune_historique", "like", `%${search}%`),
-      eb("reference_pop", "like", `%${search}%`),
-      eb("code_postal", "like", `%${search}%`),
-    ]),
-  );
+      normalizedLike("titre_edifice", normalized),
+      normalizedLike("redacted_by", normalized),
+      normalizedLike("commune", normalized),
+      normalizedLike("commune_historique", normalized),
+      normalizedLike("reference_pop", normalized),
+      normalizedLike("code_postal", normalized),
+    ]);
+  let baseQuery = stateReportQueries.base.where(searchConditions);
+  let countQuery = stateReportQueries.count.where(searchConditions);
   if (scope === "my") {
     baseQuery = baseQuery.where("created_by", "=", user.id);
     countQuery = countQuery.where("created_by", "=", user.id);

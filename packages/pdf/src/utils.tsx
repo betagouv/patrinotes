@@ -10,6 +10,8 @@ import {
 import linkifyHtml from "linkify-html";
 import { MinimalAlert } from "./stateReport";
 import { format } from "date-fns";
+import { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 export const initFonts = (folder: string = "") => {
   Font.register({
@@ -51,6 +53,11 @@ export const processHtml = (htmlString: string) => {
   );
 };
 
+export const buildHtml = (element: ReactNode): string => {
+  const str = renderToStaticMarkup(element);
+  return processHtml(str);
+};
+
 export const serializeMandatoryEmails = (emails: { service: string; email: string }[]): string => {
   return emails.map((e) => `${e.service}:${e.email}`).join(";");
 };
@@ -81,10 +88,14 @@ export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
 };
 
 export const getIsSectionVisited = (section: any) => {
-  return (section?.etat_general && section?.proportion_dans_cet_etat) || section?.attachments?.length;
+  return (
+    (section?.etat_general && section?.proportion_dans_cet_etat) ||
+    section?.niveau_degradation ||
+    section?.attachments?.length
+  );
 };
 
-function cleanString(str: string): string {
+export function cleanString(str: string): string {
   return str
     .normalize("NFD") // Decompose accented characters
     .replace(/[\u0300-\u036f]/g, "") // Remove accent marks
@@ -118,4 +129,8 @@ export type StateReportWithUserAndAttachments = StateReport & {
 
 export type SectionWithAttachments = VisitedSection & {
   attachments: (VisitedSectionAttachment & { file: string })[];
+};
+
+export const uppercaseFirstLetter = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };

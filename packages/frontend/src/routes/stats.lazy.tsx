@@ -8,6 +8,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { ofetch } from "ofetch";
 import { ENV } from "../envVars";
 import { getTokenOrRefresh } from "../db/Connector";
+import { AccountsCharts, CRMHMapChart, DocumentsCharts, JobsChart, UdapMapChart } from "#components/StatsCharts.tsx";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,6 +74,8 @@ const StatsPage = () => {
       ofetch<{
         totalConstats: number;
         totalReports: number;
+        sentConstats: number;
+        sentReports: number;
         totalUsers: number;
         usersWithNoDocuments: number;
         activeUsersInPeriod: number;
@@ -98,7 +101,9 @@ const StatsPage = () => {
           totalConstats: number;
         }>;
         abandonedConstats: number;
+        abandonedReports: number;
         totalConstats: number;
+        totalReports: number;
         totalUsers: number;
       }>(`${ENV.VITE_BACKEND_URL}/api/stats/admin`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -114,9 +119,17 @@ const StatsPage = () => {
   const totalDocuments = (data?.totalConstats ?? 0) + (data?.totalReports ?? 0);
   const deployedUdapCount = data?.deployedUdapCount ?? 0;
   const deployedCrmhCount = data?.deployedCrmhCount ?? 0;
-  const usersShare = adminQuery.isSuccess ? formatPercent(adminQuery.data.totalUsers, 1102) : null;
   const abandonmentRate = adminQuery.isSuccess
+    ? formatPercent(
+        adminQuery.data.abandonedConstats + adminQuery.data.abandonedReports,
+        adminQuery.data.totalConstats + adminQuery.data.totalReports,
+      )
+    : null;
+  const ceAbandonmentRate = adminQuery.isSuccess
     ? formatPercent(adminQuery.data.abandonedConstats, adminQuery.data.totalConstats)
+    : null;
+  const crAbandonmentRate = adminQuery.isSuccess
+    ? formatPercent(adminQuery.data.abandonedReports, adminQuery.data.totalReports)
     : null;
 
   return (
@@ -135,7 +148,7 @@ const StatsPage = () => {
 
         <Typography>
           Patrinotes permet d'établir <b>rapidement</b> des documents <b>en mobilité</b> qui facilitent la bonne{" "}
-          <b>compréhension de l'expertise</b> et permet la fiabilité et la ré-utilisation des informations, sans
+          <b>compréhension de l'expertise</b> et assure la fiabilité et la ré-utilisation des informations, sans
           ressaisie.
         </Typography>
 
@@ -153,11 +166,11 @@ const StatsPage = () => {
             difficile et chronophage. L’objectif est d’augmenter la réalisation de constats d’état par un outil
             numérique en mobilité.
             <li style={{ fontWeight: "bold", marginTop: "16px" }}>La réalisation de compte-rendus sur site</li>
-            L’outil permet de rendre compte des dires de l’état aux demandeurs rencontrés pour une demande
-            d’autorisation de travaux. Ce n’est pas une pratique obligatoire réglementaire mais cela permet d’éviter les
-            quiproquos et le rallongement du traitement des dossiers des demandeurs. Notre objectif est donc l’adoption
-            de cette pratique par les agents pour réduire les délais de traitement et le mécontentement potentiel des
-            demandeurs.
+            L’outil permet de rendre compte des recommandations et conseils faits aux demandeurs rencontrés pour une
+            demande d’autorisation de travaux par l’agent. Ce n’est pas une pratique obligatoire réglementaire mais cela
+            permet d’éviter les quiproquos et le rallongement du traitement des dossiers des demandeurs. Notre objectif
+            est donc l’adoption de cette pratique par les agents pour réduire les délais de traitement et le
+            mécontentement potentiel des demandeurs.
           </ul>
         </Typography>
 
@@ -173,7 +186,7 @@ const StatsPage = () => {
             <Box display="flex" flexWrap="wrap" gap="1rem">
               <KpiCard label="Nombre de constats créés en 2026" value={data.totalConstats} />
               <KpiCard label="Nombre de compte-rendus crées en 2026" value={data.totalReports} />
-              <KpiCard label="Nombre d’utilisateurs actifs" value={usersWithDocs} />
+              <KpiCard label="Nombre d’utilisateurs actifs (ayant créé au moins un document)" value={usersWithDocs} />
             </Box>
 
             {/* Adoption */}
@@ -181,11 +194,12 @@ const StatsPage = () => {
               <Typography variant="h6" component="h3">
                 Taux d'adoption
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Utilisateurs ayant créé au moins un document (brouillon ou envoyé)
-              </Typography>
+              <Typography variant="body2" color="text.secondary"></Typography>
               <Box display="flex" flexWrap="wrap" gap="1rem">
-                <KpiCard label="Taux d'adoption" value={formatPercent(usersWithDocs, totalUsers)} />
+                <KpiCard
+                  label="Taux d'adoption (utilisateurs actifs par rapport aux utilisateurs inscrits)"
+                  value={formatPercent(usersWithDocs, totalUsers)}
+                />
               </Box>
             </Stack>
 
@@ -231,11 +245,14 @@ const StatsPage = () => {
                   Valider
                 </Button>
               </Box>
+              <AccountsCharts range={range} />
+              <DocumentsCharts range={range} />
+
               <Box display="flex" flexWrap="wrap" gap="1rem">
                 <KpiCard
                   label={
                     <Box>
-                      Utilisateurs ayant envoyé un document <br />
+                      Utilisateurs ayant envoyé au moins un document <br />
                       <Typography fontWeight="bold">
                         Soit {formatPercent(activeUsers, totalUsers)} d'utilisateurs actifs
                       </Typography>
@@ -244,10 +261,37 @@ const StatsPage = () => {
                   value={`${activeUsers}`}
                 />
                 <KpiCard
-                  label="Nombre de documents réalisés par utilisateur"
+                  label={
+                    <Box>
+                      Documents réalisés par utilisateur
+                      <Typography variant="body2" color="text.secondary" mt="0.25rem">
+                        <b>{formatAverage(data.totalConstats, activeUsers)}</b> CE réalisés dont{" "}
+                        <b>{formatAverage(data.sentConstats, activeUsers)}</b> envoyés par utilisateur en moyenne
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <b>{formatAverage(data.totalReports, activeUsers)}</b> CR réalisés dont{" "}
+                        <b>{formatAverage(data.sentReports, activeUsers)}</b> envoyés par utilisateur en moyenne
+                      </Typography>
+                    </Box>
+                  }
                   value={formatAverage(totalDocuments, activeUsers)}
                 />
-                {abandonmentRate !== null && <KpiCard label="Taux d'abandon" value={abandonmentRate} />}
+                {abandonmentRate !== null && (
+                  <KpiCard
+                    label={
+                      <Box>
+                        Part de documents restés en brouillon sur le nombre total de documents créés
+                        <Typography variant="body2" color="text.secondary" mt="0.25rem">
+                          <b>{ceAbandonmentRate}</b> d'abandon en cours de CE
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          <b>{crAbandonmentRate}</b> d'abandon en cours de CR
+                        </Typography>
+                      </Box>
+                    }
+                    value={abandonmentRate}
+                  />
+                )}
               </Box>
             </Stack>
             <Typography variant="h2" component="h2">
@@ -259,12 +303,21 @@ const StatsPage = () => {
             </Typography>
 
             <Box display="flex" flexWrap="wrap" gap="1rem">
-              <KpiCard label="Nombre de départements déployés en UDAP" value={deployedUdapCount} />
-              <KpiCard label="Nombre de départements déployés en CRMH" value={deployedCrmhCount} />
-              {usersShare !== null && (
-                <KpiCard label="Part d'utilisateurs sur l'ensemble des agents (1102)" value={usersShare} />
-              )}
+              <KpiCard label="Départements déployés en UDAP" value={deployedUdapCount} />
+              <KpiCard label="Régions déployées en CRMH" value={deployedCrmhCount} />
+              <KpiCard
+                label="Part d'utilisateurs sur l'ensemble des agents (1102)"
+                value={formatPercent(totalUsers, 1102)}
+              />
             </Box>
+
+            {/* Jobs pie chart */}
+            <Stack gap="0.5rem">
+              <Typography variant="h6" component="h3">
+                Répartition des utilisateurs inscrits par métier
+              </Typography>
+              <JobsChart />
+            </Stack>
           </>
         ) : null}
       </Stack>
@@ -273,18 +326,19 @@ const StatsPage = () => {
       {/* Admin stats (only visible when admin request succeeds)              */}
       {/* ------------------------------------------------------------------ */}
       {adminQuery.isSuccess && adminQuery.data && (
-        <Stack gap="1.5rem">
-          <Typography variant="h5" component="h2">
-            Statistiques par service (admin)
-          </Typography>
-
-          {/* Abandoned constats */}
-          <Box display="flex" flexWrap="wrap" gap="1rem">
-            <KpiCard
-              label="Constats abandonnés (brouillon depuis + de 3 semaines)"
-              value={adminQuery.data.abandonedConstats}
-            />
-          </Box>
+        <Stack gap={{ xs: "40px", lg: "64px" }}>
+          <Stack>
+            <Typography variant="h4" component="h4" mb="24px">
+              Adoption par département en UDAP
+            </Typography>
+            <UdapMapChart />
+          </Stack>
+          <Stack>
+            <Typography variant="h4" component="h4" mb="24px">
+              Adoption par région en CRMH
+            </Typography>
+            <CRMHMapChart />
+          </Stack>
 
           {/* Constats sent per service */}
           {adminQuery.data.constatsByService.length === 0 ? (

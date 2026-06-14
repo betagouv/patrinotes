@@ -509,6 +509,8 @@ export namespace Endpoints {
     response: {
       totalConstats: number;
       totalReports: number;
+      sentConstats: number;
+      sentReports: number;
       totalUsers: number;
       usersWithNoDocuments: number;
       activeUsersInPeriod: number;
@@ -517,6 +519,29 @@ export namespace Endpoints {
       periodFrom: string;
       periodTo: string;
     };
+  };
+  export type get_Apistatsaccounts = {
+    method: "GET";
+    path: "/api/stats/accounts";
+    parameters: {
+      query: Partial<{ from: string; to: string }>;
+    };
+    response: Array<{ month: string; year: number; count: number }>;
+  };
+  export type get_Apistatsdocuments = {
+    method: "GET";
+    path: "/api/stats/documents";
+    parameters: {
+      query: Partial<{ from: string; to: string }>;
+    };
+    response: Array<{
+      month: string;
+      year: number;
+      totalReports: number;
+      totalStateReports: number;
+      sentReports: number;
+      sentStateReports: number;
+    }>;
   };
   export type get_Apistatsadmin = {
     method: "GET";
@@ -530,9 +555,43 @@ export namespace Endpoints {
         totalConstats: number;
       }>;
       abandonedConstats: number;
+      abandonedReports: number;
       totalConstats: number;
+      totalReports: number;
       totalUsers: number;
     };
+  };
+  export type get_Apistatsudap = {
+    method: "GET";
+    path: "/api/stats/udap";
+    parameters: never;
+    response: Array<{
+      department: string;
+      totalStateReports: number;
+      sentStateReports: number;
+      totalReports: number;
+      sentReports: number;
+      usersCount: number;
+    }>;
+  };
+  export type get_Apistatscrmh = {
+    method: "GET";
+    path: "/api/stats/crmh";
+    parameters: never;
+    response: Array<{
+      region: string;
+      totalStateReports: number;
+      sentStateReports: number;
+      totalReports: number;
+      sentReports: number;
+      usersCount: number;
+    }>;
+  };
+  export type get_Apistatsjobs = {
+    method: "GET";
+    path: "/api/stats/jobs";
+    parameters: never;
+    response: Array<{ job: string | Schemas.null | Array<string | Schemas.null>; count: number }>;
   };
   export type get_AttachmentIdFilename_ = {
     method: "GET";
@@ -564,7 +623,12 @@ export type EndpointByMethod = {
     "/api/admin/users/export": Endpoints.get_Apiadminusersexport;
     "/api/admin/users": Endpoints.get_Apiadminusers;
     "/api/stats/public": Endpoints.get_Apistatspublic;
+    "/api/stats/accounts": Endpoints.get_Apistatsaccounts;
+    "/api/stats/documents": Endpoints.get_Apistatsdocuments;
     "/api/stats/admin": Endpoints.get_Apistatsadmin;
+    "/api/stats/udap": Endpoints.get_Apistatsudap;
+    "/api/stats/crmh": Endpoints.get_Apistatscrmh;
+    "/api/stats/jobs": Endpoints.get_Apistatsjobs;
     "/attachment/{id}/{filename}?": Endpoints.get_AttachmentIdFilename_;
   };
   post: {

@@ -15,9 +15,9 @@ import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
-import { defaultSections } from "@patrinotes/pdf/constat";
+import { defaultSections, serializePreconisations } from "@patrinotes/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
-import { useIsStateReportDisabled } from "../utils";
+import { useIsStateReportDisabled, useStateReportVersion } from "../utils";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -26,6 +26,7 @@ import { chunk } from "pastable";
 import { getIsSectionVisited } from "@patrinotes/pdf/utils";
 import { useClickAway } from "react-use";
 import { EditDisabled } from "./ContexteVisite";
+import { PreconisationsCheckboxes } from "./ConstatGeneral";
 
 const routeApi = getRouteApi("/constat/$constatId");
 export const ConstatDetaille = () => {
@@ -246,6 +247,18 @@ const SectionForm = ({
   isDisabled: boolean;
   onClose: () => void;
 }) => {
+  const stateReportVersion = useStateReportVersion();
+
+  const isButtonDisabled =
+    stateReportVersion === 1
+      ? !visitedSection.commentaires && !visitedSection.etat_general && !visitedSection.proportion_dans_cet_etat
+      : stateReportVersion === 2
+        ? !visitedSection.commentaires &&
+          !visitedSection.etat_general &&
+          !visitedSection.niveau_degradation &&
+          !visitedSection.preconisations
+        : true;
+
   const isCustom = !defaultSections.includes(visitedSection?.section || "");
   const [values, setValues] = useState(
     isCustom
@@ -278,6 +291,8 @@ const SectionForm = ({
           etat_general: values.etat_general,
           proportion_dans_cet_etat: values.proportion_dans_cet_etat,
           commentaires: values.commentaires,
+          niveau_degradation: values.niveau_degradation,
+          preconisations: values.preconisations,
           ...(isCustom ? { section: values.section } : {}),
         })
         .where("id", "=", visitedSection.id)
@@ -315,20 +330,30 @@ const SectionForm = ({
             }}
           />
         ) : null}
-        <SectionEtatGeneralRadioButtons
-          section={values}
-          onChange={(label) => setValues({ ...values, etat_general: label })}
-          disabled={isDisabled}
-        />
-        <SectionProportionsRadioButtons
-          section={values}
-          onChange={(label) => setValues({ ...values, proportion_dans_cet_etat: label })}
-          disabled={isDisabled}
-        />
+        {stateReportVersion === 1 ? (
+          <>
+            <SectionEtatGeneralRadioButtons
+              section={values}
+              onChange={(label) => setValues({ ...values, etat_general: label })}
+              disabled={isDisabled}
+            />
+            <SectionProportionsRadioButtons
+              section={values}
+              onChange={(label) => setValues({ ...values, proportion_dans_cet_etat: label })}
+              disabled={isDisabled}
+            />
+          </>
+        ) : null}
 
-        <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
+        {stateReportVersion === 2 ? (
+          <DegradationLevelRadioButtons
+            section={values}
+            onChange={(label) => setValues({ ...values, niveau_degradation: label })}
+            disabled={isDisabled}
+          />
+        ) : null}
 
-        <Flex flexDirection="column" mt="24px">
+        <Flex flexDirection="column" mb="24px">
           <Input
             sx={{ mb: "16px !important" }}
             textArea
@@ -351,16 +376,26 @@ const SectionForm = ({
             </Button>
           )}
         </Flex>
+        <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
+
+        <Box mt="24px">
+          <PreconisationsCheckboxes
+            isDisabled={isDisabled}
+            value={values.preconisations}
+            setValue={(formValue) => setValues({ ...values, preconisations: serializePreconisations(formValue) })}
+          />
+        </Box>
       </Stack>
       <Flex justifyContent="flex-end" gap="8px" flexDirection={{ xs: "column", lg: "row" }}>
         <Button
-          disabled={isDisabled || (!values.commentaires && !values.etat_general && !values.proportion_dans_cet_etat)}
+          disabled={isDisabled || isButtonDisabled}
           onClick={() =>
             setValues((values) => ({
               ...values,
               commentaires: null,
               etat_general: null,
-              proportion_dans_cet_etat: null,
+              niveau_degradation: null,
+              preconisations: null,
             }))
           }
           priority="tertiary no outline"
@@ -382,6 +417,33 @@ const SectionForm = ({
         </Button>
       </Flex>
     </Stack>
+  );
+};
+
+const DegradationLevelRadioButtons = ({
+  section,
+  onChange,
+  disabled,
+}: {
+  section: VisitedSection;
+  onChange: (degradationLevel: string) => void;
+  disabled?: boolean;
+}) => {
+  const options = ["Léger", "Moyen", "Important", "Péril"].map((label) => ({
+    label,
+    nativeInputProps: {
+      checked: section.niveau_degradation === label,
+      onChange: () => onChange(label),
+    },
+  }));
+  const isDesktop = useIsDesktop();
+  return (
+    <RadioButtons
+      orientation={isDesktop ? "horizontal" : "vertical"}
+      legend="Niveau de dégradation"
+      options={options}
+      disabled={disabled}
+    />
   );
 };
 

@@ -1,10 +1,16 @@
 import { Button, Center } from "#components/MUIDsfr.tsx";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { ChangeEvent, useRef } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
+import { Flex } from "#components/ui/Flex.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
+import { MobileModalActions } from "#components/MobileModalActions.tsx";
+import { ReportAction } from "../state-report/StateReportActions";
+import { isDesktopDevice } from "../../hooks/useIsDesktop";
 
+// Quick test
 type UploadImageButtonProps = {
   addImage: (files: File[]) => Promise<void>;
   multiple?: boolean;
@@ -12,10 +18,12 @@ type UploadImageButtonProps = {
 };
 
 export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImageButtonProps) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const uploadImageMutation = useMutation({
     mutationFn: async ({ files }: { files: File[] }) => {
       await addImage(files);
-      ref.current!.value = "";
+      fileInputRef.current!.value = "";
     },
   });
 
@@ -26,26 +34,67 @@ export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImag
     await uploadImageMutation.mutateAsync({ files: Array.from(files) });
   };
 
-  const ref = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const captureInputRef = useRef<HTMLInputElement | null>(null);
   return (
     <>
-      <Button
-        type="button"
-        iconId="fr-icon-image-add-fill"
-        priority="secondary"
-        nativeButtonProps={{
-          type: "button",
-          onClick: () => ref.current?.click(),
-          disabled: isDisabled,
-        }}
+      {isModalOpen ? (
+        <MobileModalActions onClose={() => setIsModalOpen(false)}>
+          <ReportAction
+            iconId="fr-icon-camera-fill"
+            label="Prendre une photo"
+            onClick={() => captureInputRef.current?.click()}
+          />
+          <ReportAction
+            iconId="fr-icon-image-add-fill"
+            label="Ajouter depuis la galerie"
+            onClick={() => fileInputRef.current?.click()}
+          />
+        </MobileModalActions>
+      ) : null}
+
+      <Flex
+        alignItems={{ xs: "start", md: "center" }}
+        flexDirection={{ xs: "column", md: "row" }}
+        gap={{ xs: "8px", md: "12px" }}
       >
-        Ajouter photo
-      </Button>
+        <Button
+          type="button"
+          iconId="fr-icon-image-add-fill"
+          priority="secondary"
+          nativeButtonProps={{
+            type: "button",
+            onClick: () => {
+              if (isDesktopDevice) {
+                fileInputRef.current?.click();
+                return;
+              }
+              setIsModalOpen(true);
+            },
+            disabled: isDisabled,
+          }}
+        >
+          Ajouter photo
+        </Button>
+        <Typography color={fr.colors.decisions.text.mention.grey.default} fontSize="12px">
+          Taille maximale : 5 Mo. Formats supportés : jpg, png.{multiple ? " Plusieurs fichiers possibles" : ""}
+        </Typography>
+      </Flex>
       <input
         disabled={isDisabled}
-        ref={ref as any}
+        ref={fileInputRef}
         type="file"
         accept="image/*"
+        onChange={onChange}
+        multiple={multiple}
+        style={{ display: "none" }}
+      />
+      <input
+        disabled={isDisabled}
+        ref={captureInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={onChange}
         multiple={multiple}
         style={{ display: "none" }}

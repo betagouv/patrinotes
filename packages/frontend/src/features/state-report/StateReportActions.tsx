@@ -158,7 +158,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
   );
 });
 
-const ReportAction = ({
+export const ReportAction = ({
   iconId,
   label,
   onClick,

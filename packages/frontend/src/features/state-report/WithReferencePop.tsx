@@ -1,6 +1,12 @@
 import { useWatch } from "react-hook-form";
 import { attachmentLocalStorage, attachmentRemoteStorage, db, useDbQuery } from "../../db/db";
-import { StateReportFormType, StateReportStep, useIsStateReportDisabled, useStateReportFormContext } from "./utils";
+import {
+  StateReportFormType,
+  StateReportStep,
+  useIsStateReportDisabled,
+  useStateReportFormContext,
+  useStateReportVersion,
+} from "./utils";
 import { Box, Dialog, DialogTitle, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { scrollToTop, StateReportSummary } from "./StateReportSummary";
@@ -203,7 +209,7 @@ export const ButtonsSwitch = ({ isCustom }: { isCustom?: boolean }) => {
   );
 };
 
-const formValuesChecker: Partial<Record<keyof StateReportFormType, (val: any) => boolean>> = {
+const formValuesCheckerV1: Partial<Record<keyof StateReportFormType, (val: any) => boolean>> = {
   nature_visite: (val) => !!val,
   date_visite: (val) => !!val,
   redacted_by: (val) => !!val,
@@ -211,6 +217,14 @@ const formValuesChecker: Partial<Record<keyof StateReportFormType, (val: any) =>
   proprietaire_email: (val) => !!val,
   etat_general: (val) => !!val,
   proportion_dans_cet_etat: (val) => val !== null && val !== undefined,
+};
+const formValuesCheckerV2: Partial<Record<keyof StateReportFormType, (val: any) => boolean>> = {
+  nature_visite: (val) => !!val,
+  date_visite: (val) => !!val,
+  redacted_by: (val) => !!val,
+  proprietaire: (val) => !!val,
+  proprietaire_email: (val) => !!val,
+  etat_general: (val) => !!val,
 };
 
 const formErrorsNavigate: Partial<
@@ -242,6 +256,8 @@ const CreateButton = () => {
   const form = useStateReportFormContext();
   const isDisabled = useIsStateReportDisabled();
 
+  const version = useStateReportVersion();
+
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
   // const unsyncedAttachments = useUnsyncedAttachments(constatId);
   const proceedToFinalize = () => {
@@ -254,7 +270,7 @@ const CreateButton = () => {
 
   const onSubmit = () => {
     const values = form.getValues();
-    const missingFields = Object.entries(formValuesChecker)
+    const missingFields = Object.entries(version === 1 ? formValuesCheckerV1 : formValuesCheckerV2)
       .filter(([key, checker]) => {
         return !checker(values[key as keyof StateReportFormType]);
       })
