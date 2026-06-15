@@ -422,6 +422,7 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           .selectFrom("state_report")
           .where("disabled", "is not", true)
           .where("created_at", "<", sql<string>`NOW() - INTERVAL '21 days'`)
+          .where("attachment_id", "is", null)
           .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
 
@@ -429,6 +430,7 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           .selectFrom("report")
           .where("disabled", "is not", true)
           .where(sql`report."createdAt"`, "<", sql<string>`NOW() - INTERVAL '21 days'`)
+          .where("pdf", "is", null)
           .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
 
