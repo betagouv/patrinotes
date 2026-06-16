@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { uppercaseFirstLetter, type StateReportWithUserAndAttachments } from "../utils";
 import React from "react";
+import { Multiline } from "./state-report.details";
 
 export const MainTitle = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   return (
@@ -59,10 +60,7 @@ export const StateReportInfos = ({
         </div>
         {stateReport.visite_details ? (
           <div>
-            <b>Détails de la visite</b> :{" "}
-            {stateReport.visite_details
-              ? stateReport.visite_details.split("\n").map((line, index) => <div key={index}>{line}</div>)
-              : "Non renseignés"}
+            <b>Détails de la visite</b> : <Multiline text={stateReport.visite_details} />
           </div>
         ) : null}
       </div>
