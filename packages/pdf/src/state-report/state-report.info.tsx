@@ -78,11 +78,15 @@ export const StateReportInfos = ({
             ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})`
             : "Non renseigné"}
         </div>
-        <div>
-          {stateReport.proprietaire_representant
-            ? `Représentant : ${stateReport.proprietaire_representant ? `${stateReport.proprietaire_representant} (${stateReport.proprietaire_representant_email})` : "Non renseigné"}`
-            : ""}
-        </div>
+        {stateReport.proprietaire_representant ? (
+          <div>
+            <b>Représentant</b> :{" "}
+            {stateReport.proprietaire_representant
+              ? `${stateReport.proprietaire_representant} ${stateReport.proprietaire_representant_email ? `(${stateReport.proprietaire_representant_email})` : ""}`
+              : "Non renseigné"}
+            `
+          </div>
+        ) : null}
       </div>
     </section>
   );
