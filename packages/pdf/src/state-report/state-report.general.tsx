@@ -53,14 +53,16 @@ export const ConstatGeneral = ({
       intro += `, avec un taux de dégradation estimé à ${stateReport.taux_degradation}% du volume global.`;
     }
 
-    if (stateReport.vitesse_degradation) {
-      intro += `\nLa vitesse de dégradation semble être ${stateReport.vitesse_degradation.toLocaleLowerCase()}.`;
-    }
-
     return (
       <unbreakable>
         <h2>Constat général</h2>
         <span>{intro}</span>
+        {stateReport.vitesse_degradation ? (
+          <>
+            <br />
+            <span>La vitesse de dégradation semble être {stateReport.vitesse_degradation.toLocaleLowerCase()}.</span>
+          </>
+        ) : null}
         <ul>
           {defaultSections?.map((section) => {
             const sectionData = sections.find((s) => s.section === section);
