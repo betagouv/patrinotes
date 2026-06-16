@@ -4,7 +4,7 @@ export const ImagesTable = ({ images }: { images: (Image | undefined)[] }) => {
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: "24px",
+        gap: "16px",
         marginTop: "8px",
         marginBottom: "8px",
         width: "100%",
@@ -22,11 +22,7 @@ const ImageCell = ({ image }: { image: Image | undefined }) => {
   if (!image) return null;
   return (
     <unbreakable>
-      <img
-        src={image.url}
-        data-attachment-id={image.attachmentId}
-        style={{ width: "auto", height: "180px", marginBottom: "8px" }}
-      />
+      <img src={image.url} data-attachment-id={image.attachmentId} style={{ width: "auto", height: "180px" }} />
       <div style={{ width: "100%", textAlign: "left", fontSize: "8pt", color: "gray", lineHeight: 1.4 }}>
         {image.label ? image.label : ""}
       </div>
