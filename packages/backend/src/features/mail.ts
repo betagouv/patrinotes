@@ -68,7 +68,7 @@ export const sendReportMail = async ({
             day: "numeric",
           })
         : ""
-    } pour échanger sur votre projet ${report.title || ""}, veuillez trouver le rapport établi en cliquant sur le lien suivant : <a href="${pdfUrl}">Télécharger le constat d'état</a> (lien valable 1 mois).</p>
+    } pour échanger sur votre projet ${report.title || ""}, veuillez trouver le rapport établi en cliquant sur le lien suivant : <a href="${pdfUrl}">Télécharger le compte-rendu</a> (lien valable 1 mois).</p>
 
 <p>
 <b>Rappel important :</b> Ce compte-rendu ne remplace pas la demande d’autorisation de travaux.
