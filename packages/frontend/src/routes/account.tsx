@@ -296,7 +296,7 @@ const DefaultRecipient = () => {
         <Stack>
           <EmailInput
             label="Courriel en copie par défaut :"
-            hintText="Pour tous mes CRs envoyés"
+            hintText="Pour tous mes CRs et CEs envoyés"
             value={defaultEmails}
             onValueChange={(e) => setDefaultEmails(e)}
           />
