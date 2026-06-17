@@ -2,21 +2,14 @@ import { fr } from "@codegouvfr/react-dsfr";
 import { Box } from "@mui/material";
 import { Flex } from "./ui/Flex";
 import { getRouteApi } from "@tanstack/react-router";
-
-const routeApi = getRouteApi("/");
+import { useSelector } from "@xstate/store/react";
+import { searchStore } from "./SearchModal";
 
 export const DocumentTypeSelector = () => {
-  const { document } = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
+  const document = useSelector(searchStore, (state) => state.context.document) ?? "compte-rendus";
 
   const setSelected = (docType: "constats" | "compte-rendus") => {
-    navigate({
-      search: (old) => ({
-        ...old,
-        document: docType,
-      }),
-      resetScroll: false,
-    });
+    searchStore.send({ type: "setDocument", document: docType });
   };
 
   const selectedProps = {

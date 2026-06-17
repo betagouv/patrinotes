@@ -34,7 +34,7 @@ const routeApi = getRouteApi("/");
 
 export const MyReports = () => {
   const [page, setPage] = useState(0);
-  const document = routeApi.useSearch().document;
+  const document = useSelector(searchStore, (state) => state.context.document) ?? "compte-rendus";
 
   const search = useSelector(searchStore, (state) => state.context.search);
   const isDesktop = useIsDesktop();
@@ -87,7 +87,7 @@ export const MyReports = () => {
 
 export const AllReports = () => {
   const [page, setPage] = useState(0);
-  const document = routeApi.useSearch().document;
+  const document = useSelector(searchStore, (state) => state.context.document) ?? "compte-rendus";
 
   const search = useSelector(searchStore, (state) => state.context.search);
   const isDesktop = useIsDesktop();

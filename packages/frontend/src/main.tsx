@@ -71,6 +71,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <MuiDsfrThemeProvider>
       <ErrorBoundary fallback={<div>Une erreur s'est produite</div>}>
         <QueryClientProvider client={queryClient}>
+          {/* @ts-ignore */}
           <MatomoProvider value={matomoInstance}>
             <AuthProvider>
               <WithPowersync>

@@ -242,7 +242,7 @@ const LoggedInHeader = () => {
           {
             iconId: "fr-icon-account-circle-fill",
             text: "Mon compte",
-            linkProps: { to: "/account" },
+            linkProps: { to: "/compte" },
           },
           {
             iconId: "fr-icon-france-fill",

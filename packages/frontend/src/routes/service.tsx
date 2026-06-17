@@ -15,7 +15,7 @@ import { v4 } from "uuid";
 import { useLiveService, useRefreshUser, useService, useUser } from "../contexts/AuthContext";
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
 import { db, useDbQuery } from "../db/db";
-import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./account";
+import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./compte";
 import { useForm, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";

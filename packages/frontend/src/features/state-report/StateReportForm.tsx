@@ -124,4 +124,10 @@ export const emptyStateReport: StateReport = {
   visite_partielle_details: null,
   attachment_id: null,
   validation_status: null,
+  coordonnees: null,
+  pdf_size: null,
+  taux_degradation: null,
+  version: null,
+  visite_details: null,
+  vitesse_degradation: null,
 };

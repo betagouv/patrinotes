@@ -3,7 +3,7 @@ import { Flex } from "./ui/Flex";
 import Button from "@codegouvfr/react-dsfr/Button";
 import { createContext, useContext, useState } from "react";
 
-export const Tabs = ({ options, control, ...boxProps }: TabsProps & BoxProps) => {
+export const Tabs = ({ options, control, onSelect, ...boxProps }: TabsProps & BoxProps) => {
   const [value, setValue] = control ?? useState(options[0].id);
 
   const onClick = (option: TabOption) => {

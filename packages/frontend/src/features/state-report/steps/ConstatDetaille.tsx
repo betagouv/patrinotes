@@ -54,7 +54,7 @@ export const ConstatDetaille = () => {
 
       <EditDisabled mb="0" />
 
-      <Typography fontSize="14px" mb="32px" mt={{ xs: "0", lg: "40px" }}>
+      <Typography fontSize="12px" mb="32px" mt={{ xs: "0", lg: "0px" }}>
         Renseignez vos observations pour chaque partie visitée. À défaut, chacune sera notée comme non-visitée.
       </Typography>
 

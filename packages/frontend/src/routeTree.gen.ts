@@ -16,6 +16,7 @@ import { Route as PolitiqueConfidentialiteRouteImport } from './routes/politique
 import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ConnexionRouteImport } from './routes/connexion'
+import { Route as CompteRouteImport } from './routes/compte'
 import { Route as CguRouteImport } from './routes/cgu'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
@@ -70,6 +71,11 @@ const InscriptionRoute = InscriptionRouteImport.update({
 const ConnexionRoute = ConnexionRouteImport.update({
   id: '/connexion',
   path: '/connexion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompteRoute = CompteRouteImport.update({
+  id: '/compte',
+  path: '/compte',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CguRoute = CguRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/cgu': typeof CguRoute
+  '/compte': typeof CompteRoute
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/cgu': typeof CguRoute
+  '/compte': typeof CompteRoute
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/cgu': typeof CguRoute
+  '/compte': typeof CompteRoute
   '/connexion': typeof ConnexionRoute
   '/inscription': typeof InscriptionRoute
   '/mentions-legales': typeof MentionsLegalesRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/cgu'
+    | '/compte'
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/cgu'
+    | '/compte'
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/cgu'
+    | '/compte'
     | '/connexion'
     | '/inscription'
     | '/mentions-legales'
@@ -253,6 +265,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   CguRoute: typeof CguRoute
+  CompteRoute: typeof CompteRoute
   ConnexionRoute: typeof ConnexionRoute
   InscriptionRoute: typeof InscriptionRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       path: '/connexion'
       fullPath: '/connexion'
       preLoaderRoute: typeof ConnexionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compte': {
+      id: '/compte'
+      path: '/compte'
+      fullPath: '/compte'
+      preLoaderRoute: typeof CompteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cgu': {
@@ -405,6 +425,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   CguRoute: CguRoute,
+  CompteRoute: CompteRoute,
   ConnexionRoute: ConnexionRoute,
   InscriptionRoute: InscriptionRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,

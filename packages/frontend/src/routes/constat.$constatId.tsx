@@ -61,7 +61,7 @@ const WithStateReport = () => {
   const report = reportQuery.data?.[0];
 
   if (!report) {
-    return <Navigate to="/" search={{ document: "constats" }} />;
+    return <Navigate to="/" />;
   }
 
   return (

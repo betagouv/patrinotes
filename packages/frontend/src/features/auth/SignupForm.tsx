@@ -14,7 +14,7 @@ import { omit } from "pastable";
 import { scrollToTop } from "../state-report/StateReportSummary";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Notice } from "@codegouvfr/react-dsfr/Notice";
-import { JobSelect } from "../../routes/account";
+import { JobSelect } from "../../routes/compte";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
