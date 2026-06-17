@@ -60,7 +60,7 @@ export const PDF = () => {
 
       await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
 
-      await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients } });
+      await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients, pdfSize: blob.size } });
     },
     onSuccess: () => {
       navigate({ search: { mode: "sent" } as any });

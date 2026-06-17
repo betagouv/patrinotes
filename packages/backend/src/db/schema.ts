@@ -141,6 +141,7 @@ export const report = pgTable(
     serviceInstructeur: text(),
     pdf: text(),
     attachmentId: text("attachment_id"),
+    pdfSize: integer("pdf_size"),
     disabled: boolean(),
     serviceId: text("service_id"),
     redactedById: text(),
@@ -675,6 +676,7 @@ export const stateReport = pgTable(
 
     notes: text(),
 
+    pdfSize: integer("pdf_size"),
     attachmentId: text("attachment_id"),
 
     serviceId: text("service_id").notNull(),

@@ -42,6 +42,9 @@ import { useLiveService, useUser } from "../contexts/AuthContext";
 import { getIsAlertVisited } from "@patrinotes/pdf/utils";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 import { useSyncStream } from "@powersync/react";
+import { IconLink } from "#components/ui/IconLink.tsx";
+import { LinkButton } from "#components/ui/LinkButton.tsx";
+import { getDownloadLabel } from "../features/state-report/StateReportActions";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -267,38 +270,55 @@ const ViewButtons = () => {
 
   const isDisabled = useIsSendConstatFormDisabled();
   const form = useSendConstatFormContext();
-  const pdfBlob = form.watch("pdfBlob");
+
+  const titreEdifice = useWatch({ control: form.control, name: "stateReport.titre_edifice" });
+  const pdfName = getStateReportMailName({ titre_edifice: titreEdifice ?? undefined });
+
+  const pdfBlob = useWatch({ control: form.control, name: "pdfBlob" });
+  const pdfSize = useWatch({ control: form.control, name: "pdfSize" });
 
   const handleDownload = () => {
     if (!pdfBlob) return;
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
+
     a.href = url;
-    const name = getStateReportMailName({
-      titre_edifice: form.getValues("stateReport")?.titre_edifice ?? undefined,
-    });
-    a.download = name;
+    a.download = pdfName;
+
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const downloadLabel = getDownloadLabel(pdfSize);
+
   return (
-    <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }} width="100%">
-      <Button
-        type="button"
-        iconId="ri-download-line"
-        priority="secondary"
-        disabled={!pdfBlob}
-        onClick={handleDownload}
+    <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column-reverse", lg: "row" }} width="100%">
+      <Box
+        component="a"
+        // @ts-ignore
+        download="true"
+        href={pdfBlob ? pdfName : null}
+        className="fr-link fr-link--download"
+        onClick={(e) => {
+          e.preventDefault();
+          handleDownload();
+        }}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
-          justifyContent: "center",
+          borderBottom: "1px solid",
+          borderColor: pdfBlob
+            ? fr.colors.decisions.border.actionHigh.blueFrance.default
+            : fr.colors.decisions.text.disabled.grey.default,
+
+          whiteSpace: "nowrap",
+          alignSelf: "center",
+          "::after": {
+            verticalAlign: "middle !important",
+            marginBottom: "0 !important",
+          },
         }}
       >
-        Télécharger
-      </Button>
+        {downloadLabel}
+      </Box>
       {!isDisabled ? (
         <Button
           type="button"

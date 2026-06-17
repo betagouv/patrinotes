@@ -252,6 +252,12 @@ export namespace Endpoints {
     parameters: never;
     response: unknown;
   };
+  export type get_Apiuploadattachmentsize = {
+    method: "GET";
+    path: "/api/upload/attachment/size";
+    parameters: never;
+    response: unknown;
+  };
   export type post_ApipdfreportuploadUrl = {
     method: "POST";
     path: "/api/pdf/report/upload-url";
@@ -264,7 +270,7 @@ export namespace Endpoints {
     method: "POST";
     path: "/api/pdf/report";
     parameters: {
-      body: { pdfPath: string; reportId: string; recipients: string };
+      body: { pdfPath: string; pdfSize?: number | undefined; reportId: string; recipients: string };
     };
     response: string;
   };
@@ -291,6 +297,7 @@ export namespace Endpoints {
       body: {
         needValidation?: boolean | undefined;
         pdfPath: string;
+        pdfSize?: number | undefined;
         stateReportId: string;
         recipients: string;
         alerts?:
@@ -612,6 +619,7 @@ export type EndpointByMethod = {
     "/api/services": Endpoints.get_Apiservices;
     "/api/upload/attachment/presigned-url": Endpoints.get_ApiuploadattachmentpresignedUrl;
     "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
+    "/api/upload/attachment/size": Endpoints.get_Apiuploadattachmentsize;
     "/api/pdf/report": Endpoints.get_Apipdfreport;
     "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
     "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;

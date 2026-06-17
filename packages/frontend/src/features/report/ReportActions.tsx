@@ -16,6 +16,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { styled } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
 import { ConfirmationModal } from "#components/ui/ConfirmationModal.tsx";
+import { getDownloadLabel } from "../state-report/StateReportActions";
 
 export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser }>(({ report }, ref) => {
   const user = useUser()!;
@@ -59,7 +60,7 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
   });
 
   const canDownload = report.pdf !== null || report.attachment_id !== null;
-
+  const downloadLabel = getDownloadLabel(report.pdf_size ?? null);
   return (
     <Flex ref={ref} bgcolor="#ECECFE" gap="0" flexDirection="column">
       {canEdit ? (
@@ -74,7 +75,7 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
       ) : null}
       {canDownload ? (
         <>
-          <ReportAction iconId="ri-download-line" label="Télécharger" onClick={() => downloadPdfMutation.mutate()} />
+          <ReportAction iconId="ri-download-line" label={downloadLabel} onClick={() => downloadPdfMutation.mutate()} />
           <Divider height="1px" color="#DDD" />
         </>
       ) : null}

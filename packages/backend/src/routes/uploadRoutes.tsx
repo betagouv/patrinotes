@@ -51,4 +51,17 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       }
     }
   });
+
+  fastify.get("/attachment/size", async (request, reply) => {
+    const { filePath } = request.query as any;
+    if (!filePath) throw new AppError(400, "No filePath provided");
+    try {
+      const size = await request.services.upload.getAttachmentSize({ filePath: decodeURIComponent(filePath) });
+      reply.send({ size });
+    } catch (error) {
+      if (error instanceof NoSuchKey) {
+        throw new AppError(404, "Attachment not found");
+      }
+    }
+  });
 };
