@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.26.0",
+    "@datapunt/matomo-tracker-react": "^0.5.1",
     "@emotion/react": "^11.14.0",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.1",

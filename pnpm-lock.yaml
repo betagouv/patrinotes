@@ -240,6 +240,9 @@ importers:
       '@codegouvfr/react-dsfr':
         specifier: ^1.26.0
         version: 1.32.0
+      '@datapunt/matomo-tracker-react':
+        specifier: ^0.5.1
+        version: 0.5.1(react@18.3.1)
       '@emotion/react':
         specifier: ^11.14.0
         version: 11.14.0(@types/react@18.3.28)(react@18.3.1)
@@ -1547,6 +1550,14 @@ packages:
   '@databases/validate-unicode@1.0.0':
     resolution: {integrity: sha512-dLKqxGcymeVwEb/6c44KjOnzaAafFf0Wxa8xcfEjx/qOl3rdijsKYBAtIGhtVtOlpPf/PFKfgTuFurSPn/3B/g==}
 
+  '@datapunt/matomo-tracker-js@0.5.1':
+    resolution: {integrity: sha512-9/MW9vt/BA5Db7tO6LqCeQKtuvBNjyq51faF3AzUmPMlYsJCnASIxcut3VqJKiribhUoey7aYbPIYuj9x4DLPA==}
+
+  '@datapunt/matomo-tracker-react@0.5.1':
+    resolution: {integrity: sha512-lrNYM9hFL6XK0VAdtMb7MwZrLWhaAconx4c7gOGAMvoWuoVm+ZZIYFuKtfYdYMeBf0avxWtmKRwjZEg7T8jV2A==}
+    peerDependencies:
+      react: '>= 16.8.0'
+
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
@@ -2407,7 +2418,6 @@ packages:
       pdfjs-dist: 4.2.67
       react: ^18.2.0
       react-dom: ^18.2.0
-    bundledDependencies: []
 
   '@mui/core-downloads-tracker@5.18.0':
     resolution: {integrity: sha512-jbhwoQ1AY200PSSOrNXmrFCaSDSJWP7qk6urkTmIirvRXDROkqe+QwcLlUiw/PrREwsIF/vm3/dAXvjlMHF0RA==}
@@ -9266,6 +9276,13 @@ snapshots:
   '@databases/sql@3.3.0': {}
 
   '@databases/validate-unicode@1.0.0': {}
+
+  '@datapunt/matomo-tracker-js@0.5.1': {}
+
+  '@datapunt/matomo-tracker-react@0.5.1(react@18.3.1)':
+    dependencies:
+      '@datapunt/matomo-tracker-js': 0.5.1
+      react: 18.3.1
 
   '@drizzle-team/brocli@0.10.2': {}
 
