@@ -178,7 +178,7 @@ const NoReport = () => {
       <Box textAlign="center" lineHeight="36px">
         Pour commencer, créez votre premier document ci-dessus.
       </Box>
-      <Box component="img" src={welcomeImage} alt="Bienvenue" mt="46px" />
+      <Box component="img" src={welcomeImage} maxWidth="100vw" px="16px" alt="Bienvenue" mt="46px" />
     </Center>
   );
 };
