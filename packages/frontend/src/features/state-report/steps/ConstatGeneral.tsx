@@ -477,7 +477,7 @@ const TauxDegradationRange = ({ isDisabled }: { isDisabled: boolean }) => {
         <span>
           Pour vous aider à définir un taux de dégradation,{" "}
           <a
-            href="https://patrinotes.beta.gouv.fr/constat-d%C3%A9tat/"
+            href="https://patrinotes.beta.gouv.fr/faq/"
             target="_blank"
             rel="noopener noreferrer"
             className={cx("fr-icon--md", "fr-link--icon-right")}
