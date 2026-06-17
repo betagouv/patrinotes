@@ -211,9 +211,9 @@ export const MonumentHistorique = () => {
             />
           ) : null}
         </Flex>
+        {referencePop ? <PreviousConstats referencePop={referencePop} /> : null}
         {!isCustom ? <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} /> : null}
         {!isCustom ? <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box> : null}
-        {referencePop ? <PreviousConstats referencePop={referencePop} /> : null}
         {isEditing && !isCustom ? (
           //@ts-ignore
           <Alert
