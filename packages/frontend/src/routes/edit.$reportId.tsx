@@ -94,9 +94,14 @@ const WithReport = ({ report }: { report: Report }) => {
     <DisabledContext.Provider value={!canEdit}>
       <Flex flexDirection="column">
         <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault(); }}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault();
+            }}
+          >
             <SyncFormBanner newObject={newObject} />
-            <Tabs control={[tab ?? "info", setTab]} options={options} />
+            <Tabs control={[tab ?? "my", setTab]} options={options} />
           </form>
         </FormProvider>
       </Flex>

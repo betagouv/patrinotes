@@ -28,6 +28,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
 import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
 import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
+import { AttachmentState } from "@powersync/web";
 import { useUnsyncedAttachments } from "./hooks/useUnsyncedAttachments";
 import { ImageSyncModal } from "./ImageSyncModal";
 import { constatPdfQueries } from "./pdf/ConstatPdf.queries";
@@ -259,7 +260,11 @@ const CreateButton = () => {
   const version = useStateReportVersion();
 
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
-  // const unsyncedAttachments = useUnsyncedAttachments(constatId);
+  const unsyncedAttachments = useUnsyncedAttachments(constatId);
+  const pendingDownloads = unsyncedAttachments.filter(
+    (a) => a.state === AttachmentState.QUEUED_DOWNLOAD || a.state === AttachmentState.QUEUED_UPLOAD,
+  );
+
   const proceedToFinalize = () => {
     navigate({
       to: "/constat/$constatId/pdf",
@@ -294,6 +299,11 @@ const CreateButton = () => {
       return;
     }
 
+    if (pendingDownloads.length > 0) {
+      setIsImageSyncModalOpen(true);
+      return;
+    }
+
     proceedToFinalize();
   };
 
@@ -307,6 +317,7 @@ const CreateButton = () => {
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
       {isImageSyncModalOpen ? (
         <ImageSyncModal
+          unsyncedAttachments={pendingDownloads}
           onClose={() => setIsImageSyncModalOpen(false)}
           onIgnoreAll={() => {
             setIsImageSyncModalOpen(false);
@@ -314,6 +325,7 @@ const CreateButton = () => {
           }}
         />
       ) : null}
+
       <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
         {isDisabled ? "Voir le constat" : "Finaliser le constat"}
       </RightButton>

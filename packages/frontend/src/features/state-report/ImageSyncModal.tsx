@@ -8,13 +8,13 @@ import type { UnsyncedAttachment } from "./hooks/useUnsyncedAttachments";
 
 const statusData: Record<number, { label: string; bgColor: string; color: string; icon: string }> = {
   [AttachmentState.QUEUED_UPLOAD]: {
-    label: "En attente d'envoi",
+    label: "Envoi",
     bgColor: "#FEE7FC",
     color: "#855080",
     icon: "fr-icon-refresh-line",
   },
   [AttachmentState.QUEUED_DOWNLOAD]: {
-    label: "En cours de téléchargement",
+    label: "Téléchargement",
     bgColor: "#FEE7FC",
     color: "#855080",
     icon: "fr-icon-refresh-line",
@@ -26,7 +26,7 @@ const statusData: Record<number, { label: string; bgColor: string; color: string
     icon: "fr-icon-warning-line",
   },
   [AttachmentState.QUEUED_DELETE]: {
-    label: "En cours de suppression",
+    label: "suppression",
     bgColor: "#FEE7FC",
     color: "#855080",
     icon: "fr-icon-refresh-line",

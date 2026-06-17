@@ -23,7 +23,8 @@ type UploadEvent = { type: "UPLOAD_FILE"; file: File } | { type: "RETRY" } | { t
  *  idle        — waiting for a file
  *  compressing — browser-image-compression running in a web worker
  *  saving      — writing bytes to IndexedDB via attachmentQueue
- *  inserting   — creating the DB record
+ *  inserting   — creating the DB record (after file is local, so watchAttachments
+ *                sees an attachment that already exists in local storage)
  *  failed      — any step errored; retry or dismiss
  *
  * On success, the machine returns to idle and the reactive DB query
@@ -48,23 +49,19 @@ export const attachmentUploadMachine = setup({
         mediaType: "image/jpeg",
       }),
     ),
-    insertRecord: fromPromise<string, { parentId: string; insertFn: (id: string) => Promise<string> }>(
+    insertRecord: fromPromise<void, { attachmentId: string; insertFn: (id: string) => Promise<any> }>(
       async ({ input }) => {
-        const id = `${input.parentId}/images/${v7()}.jpg`;
-        await input.insertFn(id);
-        return id;
+        await input.insertFn(input.attachmentId);
       },
     ),
   },
   actions: {
     setFile: assign({
       file: ({ event }) => (event as Extract<UploadEvent, { type: "UPLOAD_FILE" }>).file,
+      attachmentId: ({ context }) => `${context.parentId}/images/${v7()}.jpg`,
     }),
     setCompressedData: assign({
       compressedData: ({ event }) => (event as unknown as { output: ArrayBuffer }).output,
-    }),
-    setAttachmentId: assign({
-      attachmentId: ({ event }) => (event as unknown as { output: string }).output,
     }),
     setError: assign({
       error: ({ event }) => {
@@ -93,15 +90,7 @@ export const attachmentUploadMachine = setup({
   states: {
     idle: {
       on: {
-        UPLOAD_FILE: { target: "inserting", actions: "setFile" },
-      },
-    },
-    inserting: {
-      invoke: {
-        src: "insertRecord",
-        input: ({ context }) => ({ parentId: context.parentId, insertFn: context.insertRecord }),
-        onDone: { target: "compressing", actions: "setAttachmentId" },
-        onError: { target: "failed", actions: "setError" },
+        UPLOAD_FILE: { target: "compressing", actions: "setFile" },
       },
     },
     compressing: {
@@ -116,6 +105,14 @@ export const attachmentUploadMachine = setup({
       invoke: {
         src: "saveToStorage",
         input: ({ context }) => ({ attachmentId: context.attachmentId!, data: context.compressedData! }),
+        onDone: { target: "inserting" },
+        onError: { target: "failed", actions: "setError" },
+      },
+    },
+    inserting: {
+      invoke: {
+        src: "insertRecord",
+        input: ({ context }) => ({ attachmentId: context.attachmentId!, insertFn: context.insertRecord }),
         onDone: { target: "idle", actions: "reset" },
         onError: { target: "failed", actions: "setError" },
       },
