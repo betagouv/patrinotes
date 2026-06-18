@@ -44,8 +44,22 @@ export const ConstatDetaille = ({
                     gap: "16px",
                   }}
                 >
-                  {section.proportion_dans_cet_etat} des parties protégées sont évaluées{" "}
-                  {etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+                  <div>
+                    {section.proportion_dans_cet_etat} des parties protégées sont évaluées{" "}
+                    {etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+                  </div>
+
+                  {section.attachments?.length ? (
+                    <div>
+                      <ImagesTable
+                        images={section.attachments.map((attachment) => ({
+                          url: attachment.file!,
+                          label: attachment.label ?? undefined,
+                          attachmentId: attachment.id,
+                        }))}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </li>
             );
