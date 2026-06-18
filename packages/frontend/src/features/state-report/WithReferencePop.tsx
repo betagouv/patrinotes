@@ -304,11 +304,6 @@ const CreateButton = () => {
       return;
     }
 
-    if (pendingDownloads.length > 0) {
-      setIsImageSyncModalOpen(true);
-      return;
-    }
-
     proceedToFinalize();
   };
 
@@ -317,10 +312,12 @@ const CreateButton = () => {
     alertErrors: alertErrors ?? [],
   };
 
+  const isMissingImages = pendingDownloads.length > 0;
+
   return (
     <>
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
-      {isImageSyncModalOpen ? (
+      {/* {isImageSyncModalOpen ? (
         <ImageSyncModal
           unsyncedAttachments={pendingDownloads}
           onClose={() => setIsImageSyncModalOpen(false)}
@@ -329,11 +326,26 @@ const CreateButton = () => {
             proceedToFinalize();
           }}
         />
-      ) : null}
+      ) : null} */}
+      <Box position="relative">
+        <RightButton customIcon="fr-icon-article-fill" disabled={isMissingImages} onClick={() => onSubmit()}>
+          {isDisabled ? "Voir le constat" : "Finaliser le constat"}
+        </RightButton>
 
-      <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
-        {isDisabled ? "Voir le constat" : "Finaliser le constat"}
-      </RightButton>
+        {isMissingImages ? (
+          <Typography
+            className="fr-icon fr-icon__sm fr-icon-info-fill"
+            sx={{ "::before": { mr: "4px" } }}
+            position="absolute"
+            fontSize="12px"
+            color={fr.colors.decisions.text.default.info.default}
+            left="0"
+            top="calc(100% + 8px) "
+          >
+            Image(s) en cours d'ajout...
+          </Typography>
+        ) : null}
+      </Box>
     </>
   );
 };
