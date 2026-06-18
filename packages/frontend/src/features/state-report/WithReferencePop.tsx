@@ -88,15 +88,22 @@ const routeApi = getRouteApi("/constat/$constatId");
 const ContentSwitch = () => {
   const { step } = routeApi.useSearch();
 
-  const content: Record<StateReportStep, ReactNode> = {
-    informations: <MonumentHistorique />,
-    "contexte-visite": <ContexteVisite />,
-    "constat-detaille": <ConstatDetaille />,
-    "constat-general": <ConstatGeneral />,
-    documents: null,
-  };
-
-  return <>{content[step]}</>;
+  return (
+    <>
+      <Box display={step === "informations" ? "block" : "none"}>
+        <MonumentHistorique />
+      </Box>
+      <Box display={step === "contexte-visite" ? "block" : "none"}>
+        <ContexteVisite />
+      </Box>
+      <Box display={step === "constat-detaille" ? "block" : "none"}>
+        <ConstatDetaille />
+      </Box>
+      <Box display={step === "constat-general" ? "block" : "none"}>
+        <ConstatGeneral />
+      </Box>
+    </>
+  );
 };
 
 const ButtonsContainer = ({ children }: { children: ReactNode }) => {
