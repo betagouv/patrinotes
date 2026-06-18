@@ -45,6 +45,8 @@ export const attachmentRemoteStorage = {
     console.log("deleteFile called for attachment", attachment.id, "is not configured");
   },
   downloadFile: async (attachment: { id: string }) => {
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // TEST ONLY
+
     const data = (await api.get("/api/upload/attachment", {
       query: { filePath: attachment.id },
     } as any)) as ArrayBuffer;
@@ -52,6 +54,8 @@ export const attachmentRemoteStorage = {
     return data;
   },
   uploadFile: async (data: ArrayBuffer, attachment: { id: string }) => {
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // TEST ONLY
+
     const { url } = await api.get("/api/upload/attachment/presigned-url", {
       query: { filePath: attachment.id },
     });

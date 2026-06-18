@@ -261,9 +261,7 @@ const CreateButton = () => {
 
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
   const unsyncedAttachments = useUnsyncedAttachments(constatId);
-  const pendingDownloads = unsyncedAttachments.filter(
-    (a) => a.state === AttachmentState.QUEUED_DOWNLOAD || a.state === AttachmentState.QUEUED_UPLOAD,
-  );
+  const pendingDownloads = unsyncedAttachments.filter((a) => a.state === AttachmentState.QUEUED_DOWNLOAD);
 
   const proceedToFinalize = () => {
     navigate({

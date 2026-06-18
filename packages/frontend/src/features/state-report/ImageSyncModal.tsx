@@ -26,7 +26,7 @@ const statusData: Record<number, { label: string; bgColor: string; color: string
     icon: "fr-icon-warning-line",
   },
   [AttachmentState.QUEUED_DELETE]: {
-    label: "suppression",
+    label: "Suppression",
     bgColor: "#FEE7FC",
     color: "#855080",
     icon: "fr-icon-refresh-line",
@@ -89,8 +89,8 @@ export const ImageSyncModal = ({
         <DialogTitle>Des images ne sont pas synchronisées</DialogTitle>
         <Box px="24px" pb="16px">
           <Typography mb="16px" color="text.secondary">
-            Les images suivantes n'ont pas encore été envoyées au serveur. Vous pouvez réessayer l'envoi ou les ignorer
-            (elles n'apparaîtront pas dans le PDF).
+            Les images suivantes n'ont pas encore été téléchargées. Si vous ignorez ces images, elles n'apparaîtront pas
+            dans le PDF.
           </Typography>
           <Stack gap="12px">
             {unsyncedAttachments.map((attachment) => (
