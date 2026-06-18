@@ -38,11 +38,11 @@ export const VuesGenerales = ({ stateReport }: { stateReport: StateReportWithUse
   if (attachments.length === 0) return null;
 
   return (
-    <unbreakable style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <h2 style={{ fontSize: "16pt", marginBottom: "0" }}>
         <b>Vues générales</b>
       </h2>
       <ImagesTable images={attachments.map((att) => ({ url: att.file, label: att.label, attachmentId: att.id }))} />
-    </unbreakable>
+    </div>
   );
 };

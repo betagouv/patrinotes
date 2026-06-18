@@ -1,5 +1,15 @@
 export const ImagesTable = ({ images }: { images: (Image | undefined)[] }) => {
   return (
+    <ImagesTableContainer>
+      {images.map((image) => (
+        <ImageCell image={image!} />
+      ))}
+    </ImagesTableContainer>
+  );
+};
+
+export const ImagesTableContainer = ({ children }: { children: React.ReactNode }) => {
+  return (
     <div
       style={{
         display: "flex",
@@ -11,9 +21,7 @@ export const ImagesTable = ({ images }: { images: (Image | undefined)[] }) => {
         flexDirection: "row",
       }}
     >
-      {images.map((image) => (
-        <ImageCell image={image!} />
-      ))}
+      {children}
     </div>
   );
 };

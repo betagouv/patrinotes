@@ -104,12 +104,17 @@ export const ImageSyncModal = ({
               >
                 <AttachmentStatusBadge state={attachment.state} />
                 <Typography flex="1" fontSize="14px" noWrap>
-                  {attachment.table || attachment.attachmentId.split("/").pop() || "Image"}
+                  {attachment.category}
+                  {attachment.label ? ` — ${attachment.label}` : ""}
                 </Typography>
                 <Button
                   type="button"
                   priority="secondary"
                   iconId="fr-icon-refresh-line"
+                  disabled={
+                    attachment.state === AttachmentState.QUEUED_DOWNLOAD ||
+                    attachment.state === AttachmentState.QUEUED_UPLOAD
+                  }
                   onClick={handleRetry}
                   size="small"
                 >

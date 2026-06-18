@@ -450,7 +450,7 @@ const DegradationLevelRadioButtons = ({
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
   const { constatId } = routeApi.useParams();
-  const { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
+  const { attachments, batchUpload, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
     { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
     constatId,
   );
@@ -466,9 +466,7 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
       />
 
       <UploadImage
-        onFiles={async (files) => {
-          for (const file of files) await addMutation.mutateAsync(file);
-        }}
+        onFiles={batchUpload.uploadFiles}
         multiple
         attachments={attachments}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}

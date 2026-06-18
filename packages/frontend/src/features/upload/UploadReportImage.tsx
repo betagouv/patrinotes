@@ -13,7 +13,7 @@ import { useAttachmentImages } from "./hooks/useAttachmentImages";
 
 export const UploadReportImage = ({ reportId }: { reportId: string }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
-  const { attachments, addMutation, deleteMutation, replaceAttachment, onLabelChange } = useAttachmentImages(
+  const { attachments, batchUpload, deleteMutation, replaceAttachment, onLabelChange } = useAttachmentImages(
     { table: "report_attachment", fkColumn: "report_id", fkValue: reportId },
     reportId,
   );
@@ -28,11 +28,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         onReplaceAttachment={replaceAttachment}
       />
       <UploadImage
-        onFiles={async (files) => {
-          for (const file of files) {
-            await addMutation.mutateAsync(file);
-          }
-        }}
+        onFiles={batchUpload.uploadFiles}
         multiple
         attachments={attachments}
         onDelete={({ id }) => deleteMutation.mutate({ id })}

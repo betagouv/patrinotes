@@ -19,6 +19,7 @@ import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { attachmentUploadMachine } from "../../upload/machines/attachmentUploadMachine";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
+import { useBatchUpload } from "../../upload/hooks/useBatchUpload";
 import {
   StateReportFormType,
   useIsStateReportDisabled,
@@ -223,19 +224,17 @@ const VuesGenerales = ({
   );
 
   const attachments = (attachmentsQuery.data ?? []) as MinimalAttachment[];
-
-  const { addMutation, deleteMutation } = useStateReportAttachmentUpload({ constatId, type: "vue_generale" });
+  const { deleteMutation, batchUpload } = useStateReportAttachmentUpload({ constatId, type: "vue_generale" });
+  const allAttachments = [...attachments, ...batchUpload.pendingUploads];
 
   return (
     <Box flex="1">
-      <Typography mb="8px">Vues générales de l'édifice</Typography>
+      <Flex alignItems="center" gap="8px" mb="8px">
+        <Typography>Vues générales de l'édifice</Typography>
+      </Flex>
       <UploadImage
-        onFiles={async (files) => {
-          for (const file of files) {
-            await addMutation.mutateAsync(file);
-          }
-        }}
-        attachments={attachments}
+        onFiles={batchUpload.uploadFiles}
+        attachments={allAttachments}
         multiple
         onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={({ id }) => deleteMutation.mutate(id)}
@@ -358,6 +357,8 @@ function useStateReportAttachmentUpload({
 
   const stableInsertRecord = useCallback((id: string) => insertRecordImplRef.current(id), []);
 
+  const batchUpload = useBatchUpload(constatId, stableInsertRecord);
+
   const uploadActorRef = useActorRef(attachmentUploadMachine, {
     input: { parentId: constatId, insertRecord: stableInsertRecord },
   });
@@ -385,6 +386,7 @@ function useStateReportAttachmentUpload({
   const isUploading = uploadState === "compressing" || uploadState === "saving" || uploadState === "inserting";
 
   return {
+    batchUpload,
     addMutation: {
       mutateAsync,
       isPending: isUploading,

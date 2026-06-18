@@ -5,6 +5,7 @@ import { useLiveUser } from "../../../contexts/AuthContext";
 import { attachmentUploadMachine } from "../machines/attachmentUploadMachine";
 import { MinimalAttachment } from "../UploadImage";
 import { v7 } from "uuid";
+import { useBatchUpload } from "./useBatchUpload";
 
 type AttachmentTableConfig =
   | { table: "report_attachment"; fkColumn: "report_id"; fkValue: string }
@@ -123,6 +124,8 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
   // Stable callback wrapping the ref — safe to pass as machine input.
   const stableInsertRecord = useCallback((id: string) => insertRecordImplRef.current(id), []);
 
+  const batchUpload = useBatchUpload(parentId, stableInsertRecord);
+
   const uploadActorRef = useActorRef(attachmentUploadMachine, {
     input: { parentId, insertRecord: stableInsertRecord },
   });
@@ -201,5 +204,7 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
     [parentId, config.table],
   );
 
-  return { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment };
+  const allAttachments = [...attachments, ...batchUpload.pendingUploads];
+
+  return { attachments: allAttachments, batchUpload, addMutation, deleteMutation, onLabelChange, replaceAttachment };
 }
