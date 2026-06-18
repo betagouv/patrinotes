@@ -13,7 +13,7 @@ export const ConstatGeneral = ({
 }) => {
   if (version === 1) {
     return (
-      <unbreakable>
+      <div>
         <h2>État général</h2>
         <span>
           Le monument est évalué{" "}
@@ -39,7 +39,7 @@ export const ConstatGeneral = ({
             <Multiline text={stateReport.etat_commentaires} />
           </p>
         ) : null}
-      </unbreakable>
+      </div>
     );
   }
 
@@ -54,7 +54,7 @@ export const ConstatGeneral = ({
     }
 
     return (
-      <unbreakable>
+      <div>
         <h2>Constat général</h2>
         <span>{intro}</span>
         {stateReport.vitesse_degradation ? (
@@ -83,7 +83,7 @@ export const ConstatGeneral = ({
             <Multiline text={stateReport.etat_commentaires} />
           </p>
         ) : null}
-      </unbreakable>
+      </div>
     );
   }
 };
