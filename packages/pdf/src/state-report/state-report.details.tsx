@@ -49,6 +49,23 @@ export const ConstatDetaille = ({
                     {etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
                   </div>
 
+                  <div>
+                    <u>Commentaires</u> :{" "}
+                    <div>{section.commentaires ? <Multiline text={section.commentaires} /> : "Aucun"}</div>
+                  </div>
+
+                  {section.preconisations ? (
+                    <div>
+                      <u>Préconisations de travaux</u> :{" "}
+                      {deserializePreconisations(section.preconisations)?.map((p) => (
+                        <div>
+                          - {p.preconisation} :{" "}
+                          {p.commentaire ? <Multiline text={p.commentaire} /> : "Aucun commentaire"}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
                   {section.attachments?.length ? (
                     <div>
                       <ImagesTable
