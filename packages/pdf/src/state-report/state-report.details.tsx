@@ -67,15 +67,13 @@ export const ConstatDetaille = ({
                   ) : null}
 
                   {section.attachments?.length ? (
-                    <div>
-                      <ImagesTable
-                        images={section.attachments.map((attachment) => ({
-                          url: attachment.file!,
-                          label: attachment.label ?? undefined,
-                          attachmentId: attachment.id,
-                        }))}
-                      />
-                    </div>
+                    <ImagesTable
+                      images={section.attachments.map((attachment) => ({
+                        url: attachment.file!,
+                        label: attachment.label ?? undefined,
+                        attachmentId: attachment.id,
+                      }))}
+                    />
                   ) : null}
                 </div>
               </li>
@@ -126,15 +124,13 @@ export const ConstatDetaille = ({
                   ) : null}
 
                   {section.attachments?.length ? (
-                    <div>
-                      <ImagesTable
-                        images={section.attachments.map((attachment) => ({
-                          url: attachment.file!,
-                          label: attachment.label ?? undefined,
-                          attachmentId: attachment.id,
-                        }))}
-                      />
-                    </div>
+                    <ImagesTable
+                      images={section.attachments.map((attachment) => ({
+                        url: attachment.file!,
+                        label: attachment.label ?? undefined,
+                        attachmentId: attachment.id,
+                      }))}
+                    />
                   ) : null}
                 </div>
               </li>
