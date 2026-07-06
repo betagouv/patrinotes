@@ -13,9 +13,11 @@ import { Report, StateReport } from "../db/AppSchema";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box } from "@mui/material";
 import { Tabs } from "#components/Tabs.tsx";
-import { Center } from "#components/MUIDsfr.tsx";
+import { Alert, Center } from "#components/MUIDsfr.tsx";
 import { useStatus, useSyncStream } from "@powersync/react";
 import { useFormWithFocus, useRefreshForm } from "../hooks/useFormWithFocus";
+import { Spinner } from "#components/Spinner.tsx";
+import { GoHomeButton } from "./account";
 
 const EditReport = () => {
   const { reportId } = Route.useParams();
@@ -24,7 +26,34 @@ const EditReport = () => {
   const reportQuery = useDbQuery(db.selectFrom("report").where("id", "=", reportId).selectAll());
   const report = reportQuery.data?.[0];
 
-  return <Flex flexDirection="column">{report ? <WithReport report={report} /> : null}</Flex>;
+  if (reportQuery.isLoading) {
+    return (
+      <Box mt="120px">
+        <Spinner />
+      </Box>
+    );
+  }
+
+  if (!report) {
+    return (
+      <Center mt="16px" px="16px" flexDirection="column" gap="16px">
+        <Box alignSelf="flex-start">
+          <GoHomeButton />
+        </Box>
+        <Alert
+          small={false}
+          severity="error"
+          description="Impossible de trouver le compte-rendu. Si le problème persiste veuillez vous déconnecter puis vous reconnecter."
+        />
+      </Center>
+    );
+  }
+
+  return (
+    <Flex flexDirection="column">
+      <WithReport report={report} />
+    </Flex>
+  );
 };
 
 const WithReport = ({ report }: { report: Report }) => {
@@ -94,7 +123,12 @@ const WithReport = ({ report }: { report: Report }) => {
     <DisabledContext.Provider value={!canEdit}>
       <Flex flexDirection="column">
         <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault(); }}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault();
+            }}
+          >
             <SyncFormBanner newObject={newObject} />
             <Tabs control={[tab ?? "info", setTab]} options={options} />
           </form>
