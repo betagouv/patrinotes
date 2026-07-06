@@ -43,12 +43,18 @@ export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImag
           <ReportAction
             iconId="fr-icon-camera-fill"
             label="Prendre une photo"
-            onClick={() => captureInputRef.current?.click()}
+            onClick={() => {
+              captureInputRef.current?.click();
+              setIsModalOpen(false);
+            }}
           />
           <ReportAction
             iconId="fr-icon-image-add-fill"
             label="Ajouter depuis la galerie"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              fileInputRef.current?.click();
+              setIsModalOpen(false);
+            }}
           />
         </MobileModalActions>
       ) : null}
