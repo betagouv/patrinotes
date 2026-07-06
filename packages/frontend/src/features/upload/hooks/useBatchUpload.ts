@@ -3,6 +3,7 @@ import { v7 } from "uuid";
 import { attachmentQueue } from "../../../db/db";
 import { processImage } from "../UploadReportImage";
 import type { MinimalAttachment } from "../UploadImage";
+import { registerPendingUpload, unregisterPendingUpload } from "../pendingUploadsStore";
 
 export type BatchUploadProgress = { current: number; total: number };
 
@@ -41,18 +42,26 @@ export function useBatchUpload(
       await Promise.allSettled(
         fileArray.map(async (file, i) => {
           const attachmentId = `${parentId}/images/${v7()}.jpg`;
-          const compressed = await processImage(file);
-          await attachmentQueue.saveFile({
-            id: attachmentId,
-            fileExtension: "jpg",
-            data: compressed,
-            mediaType: "image/jpeg",
-          });
-          await insertRecord(attachmentId);
+          registerPendingUpload(parentId, attachmentId);
+          try {
+            const compressed = await processImage(file);
+            await attachmentQueue.saveFile({
+              id: attachmentId,
+              fileExtension: "jpg",
+              data: compressed,
+              mediaType: "image/jpeg",
+            });
+            await insertRecord(attachmentId);
 
-          URL.revokeObjectURL(pending[i].blobUrl!);
-          setPendingUploads((prev) => prev.filter((p) => p.id !== pending[i].id));
-          setProgress((p) => ({ ...p, current: p.current + 1 }));
+            unregisterPendingUpload(parentId, attachmentId);
+            URL.revokeObjectURL(pending[i].blobUrl!);
+            setPendingUploads((prev) => prev.filter((p) => p.id !== pending[i].id));
+            setProgress((p) => ({ ...p, current: p.current + 1 }));
+          } catch (error) {
+            // Stay registered and keep the pending thumbnail visible: the file never made it
+            // to local storage, so "Finaliser" must stay blocked instead of silently dropping it.
+            console.error("Error uploading image:", error);
+          }
         }),
       );
 

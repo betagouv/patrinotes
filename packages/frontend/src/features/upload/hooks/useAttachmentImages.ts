@@ -7,10 +7,18 @@ import { MinimalAttachment } from "../UploadImage";
 import { v7 } from "uuid";
 import { useBatchUpload } from "./useBatchUpload";
 
+type StateReportAttachmentType = "plan_situation" | "plan_edifice" | "vue_generale";
+
 type AttachmentTableConfig =
   | { table: "report_attachment"; fkColumn: "report_id"; fkValue: string }
   | { table: "visited_section_attachment"; fkColumn: "visited_section_id"; fkValue: string }
-  | { table: "state_report_alert_attachment"; fkColumn: "state_report_alert_id"; fkValue: string };
+  | { table: "state_report_alert_attachment"; fkColumn: "state_report_alert_id"; fkValue: string }
+  | {
+      table: "state_report_attachment";
+      fkColumn: "state_report_id";
+      fkValue: string;
+      type: StateReportAttachmentType;
+    };
 
 function buildQuery(config: AttachmentTableConfig) {
   switch (config.table) {
@@ -59,6 +67,27 @@ function buildQuery(config: AttachmentTableConfig) {
           eb.ref("attachments.media_type").as("mediaType"),
         ])
         .orderBy("state_report_alert_attachment.created_at", "asc");
+
+    case "state_report_attachment":
+      return db
+        .selectFrom("state_report_attachment")
+        .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
+        .where("state_report_attachment.state_report_id", "=", config.fkValue)
+        .where("state_report_attachment.type", "=", config.type)
+        .where((eb) =>
+          eb.or([
+            eb("state_report_attachment.is_deprecated", "=", 0),
+            eb("state_report_attachment.is_deprecated", "is", null),
+          ]),
+        )
+        .select((eb) => [
+          "state_report_attachment.id",
+          "state_report_attachment.label",
+          "attachments.local_uri",
+          "attachments.state",
+          eb.ref("attachments.media_type").as("mediaType"),
+        ])
+        .orderBy("state_report_attachment.created_at", "asc");
   }
 }
 
@@ -115,6 +144,21 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
             created_at: data?.created_at ?? new Date().toISOString(),
             is_deprecated: 0,
             ...data,
+          })
+          .execute();
+        break;
+      case "state_report_attachment":
+        await db
+          .insertInto("state_report_attachment")
+          .values({
+            id: v7(),
+            attachment_id: attachmentId,
+            state_report_id: config.fkValue,
+            label: data?.label ?? "",
+            service_id: user.service_id,
+            created_at: data?.created_at ?? new Date().toISOString(),
+            is_deprecated: 0,
+            type: config.type,
           })
           .execute();
         break;

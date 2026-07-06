@@ -30,7 +30,7 @@ import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateRepor
 import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
 import { AttachmentState } from "@powersync/web";
 import { useUnsyncedAttachments } from "./hooks/useUnsyncedAttachments";
-import { ImageSyncModal } from "./ImageSyncModal";
+import { useIsUploadingImages } from "../upload/pendingUploadsStore";
 import { constatPdfQueries } from "./pdf/ConstatPdf.queries";
 
 export const WithReferencePop = () => {
@@ -256,7 +256,6 @@ const CreateButton = () => {
   const [alertErrors, setAlertErrors] = useAlertErrors();
 
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
-  const [isImageSyncModalOpen, setIsImageSyncModalOpen] = useState(false);
 
   const { constatId } = routeApi.useParams();
   const navigate = routeApi.useNavigate();
@@ -269,6 +268,7 @@ const CreateButton = () => {
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
   const unsyncedAttachments = useUnsyncedAttachments(constatId);
   const pendingDownloads = unsyncedAttachments.filter((a) => a.state === AttachmentState.QUEUED_DOWNLOAD);
+  const isUploadingImages = useIsUploadingImages(constatId);
 
   const proceedToFinalize = () => {
     navigate({
@@ -312,21 +312,11 @@ const CreateButton = () => {
     alertErrors: alertErrors ?? [],
   };
 
-  const isMissingImages = pendingDownloads.length > 0;
+  const isMissingImages = pendingDownloads.length > 0 || isUploadingImages;
 
   return (
     <>
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
-      {/* {isImageSyncModalOpen ? (
-        <ImageSyncModal
-          unsyncedAttachments={pendingDownloads}
-          onClose={() => setIsImageSyncModalOpen(false)}
-          onIgnoreAll={() => {
-            setIsImageSyncModalOpen(false);
-            proceedToFinalize();
-          }}
-        />
-      ) : null} */}
       <Box position="relative">
         <RightButton customIcon="fr-icon-article-fill" disabled={isMissingImages} onClick={() => onSubmit()}>
           {isDisabled ? "Voir le constat" : "Finaliser le constat"}

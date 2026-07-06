@@ -3,6 +3,7 @@ import { v7 } from "uuid";
 import { attachmentQueue } from "../../../db/db";
 import { processImage } from "../UploadReportImage";
 import { AttachmentRecord } from "@powersync/common";
+import { registerPendingUpload, unregisterPendingUpload } from "../pendingUploadsStore";
 
 type UploadContext = {
   parentId: string;
@@ -60,6 +61,12 @@ export const attachmentUploadMachine = setup({
       file: ({ event }) => (event as Extract<UploadEvent, { type: "UPLOAD_FILE" }>).file,
       attachmentId: ({ context }) => `${context.parentId}/images/${v7()}.jpg`,
     }),
+    registerPending: ({ context }) => {
+      registerPendingUpload(context.parentId, context.attachmentId!);
+    },
+    unregisterPending: ({ context }) => {
+      if (context.attachmentId) unregisterPendingUpload(context.parentId, context.attachmentId);
+    },
     setCompressedData: assign({
       compressedData: ({ event }) => (event as unknown as { output: ArrayBuffer }).output,
     }),
@@ -90,7 +97,7 @@ export const attachmentUploadMachine = setup({
   states: {
     idle: {
       on: {
-        UPLOAD_FILE: { target: "compressing", actions: "setFile" },
+        UPLOAD_FILE: { target: "compressing", actions: ["setFile", "registerPending"] },
       },
     },
     compressing: {
@@ -113,15 +120,19 @@ export const attachmentUploadMachine = setup({
       invoke: {
         src: "insertRecord",
         input: ({ context }) => ({ attachmentId: context.attachmentId!, insertFn: context.insertRecord }),
-        onDone: { target: "idle", actions: "reset" },
+        onDone: { target: "idle", actions: ["unregisterPending", "reset"] },
         onError: { target: "failed", actions: "setError" },
       },
     },
-    /** Any step failed; user can retry (re-runs from compressing) or dismiss. */
+    /**
+     * Any step failed; user can retry (re-runs from compressing) or dismiss.
+     * Stays registered as a pending upload while failed so "Finaliser" remains blocked —
+     * only an explicit DISMISS (user ignoring the file) unblocks it.
+     */
     failed: {
       on: {
         RETRY: { target: "compressing" },
-        DISMISS: { target: "idle", actions: "reset" },
+        DISMISS: { target: "idle", actions: ["unregisterPending", "reset"] },
       },
     },
   },
