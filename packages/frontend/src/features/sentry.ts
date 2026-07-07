@@ -7,6 +7,8 @@ isDev
     ? Sentry.init({
         dsn: ENV.VITE_SENTRY_DSN,
         tracesSampleRate: 1.0,
+        enableLogs: true,
+        integrations: [Sentry.consoleLoggingIntegration({ levels: ["log", "info", "warn", "error"] })],
       })
     : null;
 
