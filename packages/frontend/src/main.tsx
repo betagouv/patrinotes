@@ -1,4 +1,5 @@
 import "./polyfill";
+import { sentry } from "./features/sentry";
 import { startReactDsfr } from "@codegouvfr/react-dsfr/spa";
 import React, { PropsWithChildren, useEffect, useMemo, useRef } from "react";
 import ReactDOM from "react-dom/client";
@@ -62,7 +63,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <TanStackDevtools />
     <MuiDsfrThemeProvider>
-      <ErrorBoundary fallback={<div>Une erreur s'est produite</div>}>
+      <ErrorBoundary
+        fallback={<div>Une erreur s'est produite</div>}
+        onError={(error, info) => sentry?.captureException(error, { extra: { componentStack: info.componentStack } })}
+      >
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <WithPowersync>
