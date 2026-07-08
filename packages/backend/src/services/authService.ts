@@ -56,22 +56,31 @@ export class AuthService {
   }
 
   async refreshToken(refreshToken: string) {
-    const keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
-      "/protocol/openid-connect/token",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+    let keycloakTokens: Static<typeof keycloakTokenResponseTSchema>;
+    try {
+      keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
+        "/protocol/openid-connect/token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: ENV.VITE_AUTH_CLIENT_ID,
+            refresh_token: refreshToken,
+            client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            client_assertion: getClientAssertion(),
+          }).toString(),
         },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          client_id: ENV.VITE_AUTH_CLIENT_ID,
-          refresh_token: refreshToken,
-          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-          client_assertion: getClientAssertion(),
-        }).toString(),
-      },
-    );
+      );
+    } catch (error) {
+      if (error instanceof FetchError) {
+        debug("refresh token rejected", error.data?.error, error.data?.error_description);
+        throw new AppError(401, "Session expirée, veuillez vous reconnecter");
+      }
+      throw error;
+    }
 
     const user = await this.getUserFromToken(keycloakTokens.access_token);
 

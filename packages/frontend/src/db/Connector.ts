@@ -1,7 +1,9 @@
 import { AbstractPowerSyncDatabase, PowerSyncBackendConnector } from "@powersync/web";
+import { FetchError } from "ofetch";
 import { api, RouterOutputs, unauthenticatedApi } from "../api";
 import { apiStore, get80PercentOfTokenLifespan } from "../ApiStore";
 import { ENV } from "../envVars";
+import { emitSessionExpired } from "../features/auth/sessionExpired";
 
 const emitterChannel = new BroadcastChannel("sw-messages");
 
@@ -39,18 +41,39 @@ export class Connector implements PowerSyncBackendConnector {
   }
 }
 
+// Shared by PowerSync's connector and the regular api client, both of which may call this
+// concurrently. Without this, several callers racing while the token is expired would each
+// fire their own /api/refresh-token request against the same (soon-to-be-rotated) refresh
+// token, causing spurious "session expired" failures that aren't real expiries.
+let refreshPromise: Promise<string> | null = null;
+
 export const getTokenOrRefresh = async () => {
   if (!apiStore.loaded) throw new Error("Auth not loaded");
 
   if (!apiStore.accessToken || !apiStore.refreshToken || !apiStore.expiresAt) throw new Error("No token found");
   if (new Date(Number(apiStore.expiresAt)) < new Date()) {
-    console.log("token expired, refreshing...", { ...apiStore });
-    const resp: RouterOutputs<"/api/refresh-token"> = await unauthenticatedApi.post("/api/refresh-token", {
-      body: { refreshToken: apiStore.refreshToken },
-    });
+    if (!refreshPromise) refreshPromise = refreshAccessToken();
 
-    if (resp.accessToken === null) {
-      console.log("token expired but couldn't find a refresh token, logging out");
+    try {
+      return await refreshPromise;
+    } finally {
+      refreshPromise = null;
+    }
+  }
+
+  return apiStore.accessToken;
+};
+
+const refreshAccessToken = async () => {
+  console.log("token expired, refreshing...", { ...apiStore });
+  const refreshToken = apiStore.refreshToken!;
+
+  let resp: RouterOutputs<"/api/refresh-token">;
+  try {
+    resp = await unauthenticatedApi.post("/api/refresh-token", { body: { refreshToken } });
+  } catch (error) {
+    if (error instanceof FetchError && error.status === 401) {
+      console.log("refresh token rejected, logging out");
 
       apiStore.accessToken = null;
       apiStore.refreshToken = null;
@@ -58,16 +81,18 @@ export const getTokenOrRefresh = async () => {
       apiStore.user = null;
       await apiStore.save();
 
-      throw new Error("Session expirée, veuillez vous reconnecter");
-    } else {
-      console.log("token refreshed");
-
-      apiStore.accessToken = resp.accessToken;
-      apiStore.refreshToken = resp.refreshToken;
-      apiStore.expiresAt = resp.expiresAt;
-      await apiStore.save();
+      emitSessionExpired();
     }
+
+    throw error;
   }
+
+  console.log("token refreshed");
+
+  apiStore.accessToken = resp.accessToken;
+  apiStore.refreshToken = resp.refreshToken;
+  apiStore.expiresAt = resp.expiresAt;
+  await apiStore.save();
 
   return apiStore.accessToken;
 };
