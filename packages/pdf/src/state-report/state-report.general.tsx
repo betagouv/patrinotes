@@ -28,7 +28,7 @@ export const ConstatGeneral = ({
               <li style={{ marginBottom: 0, padding: 0 }}>
                 <b>{section}</b> :{" "}
                 {!sectionData
-                  ? "partie non visitée"
+                  ? "sans commentaire"
                   : `${sectionData.proportion_dans_cet_etat} des parties protégées sont évaluées ${etatGeneralMap[sectionData.etat_general as keyof typeof etatGeneralMap] || "non renseigné"}.`}
               </li>
             );
@@ -71,7 +71,7 @@ export const ConstatGeneral = ({
               <li style={{ marginBottom: 0, padding: 0 }}>
                 <b>{section}</b> :{" "}
                 {!sectionData
-                  ? "partie non visitée"
+                  ? "sans commentaire"
                   : constatDetailleMapV2[sectionData.niveau_degradation as keyof typeof constatDetailleMapV2] ||
                     "non renseigné"}
               </li>
