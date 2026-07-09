@@ -44,8 +44,37 @@ export const ConstatDetaille = ({
                     gap: "16px",
                   }}
                 >
-                  {section.proportion_dans_cet_etat} des parties protégées sont évaluées{" "}
-                  {etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+                  <div>
+                    {section.proportion_dans_cet_etat} des parties protégées sont évaluées{" "}
+                    {etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
+                  </div>
+
+                  <div>
+                    <u>Commentaires</u> :{" "}
+                    <div>{section.commentaires ? <Multiline text={section.commentaires} /> : "Aucun"}</div>
+                  </div>
+
+                  {section.preconisations ? (
+                    <div>
+                      <u>Préconisations de travaux</u> :{" "}
+                      {deserializePreconisations(section.preconisations)?.map((p) => (
+                        <div>
+                          - {p.preconisation} :{" "}
+                          {p.commentaire ? <Multiline text={p.commentaire} /> : "Aucun commentaire"}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {section.attachments?.length ? (
+                    <ImagesTable
+                      images={section.attachments.map((attachment) => ({
+                        url: attachment.file!,
+                        label: attachment.label ?? undefined,
+                        attachmentId: attachment.id,
+                      }))}
+                    />
+                  ) : null}
                 </div>
               </li>
             );
@@ -95,15 +124,13 @@ export const ConstatDetaille = ({
                   ) : null}
 
                   {section.attachments?.length ? (
-                    <div>
-                      <ImagesTable
-                        images={section.attachments.map((attachment) => ({
-                          url: attachment.file!,
-                          label: attachment.label ?? undefined,
-                          attachmentId: attachment.id,
-                        }))}
-                      />
-                    </div>
+                    <ImagesTable
+                      images={section.attachments.map((attachment) => ({
+                        url: attachment.file!,
+                        label: attachment.label ?? undefined,
+                        attachmentId: attachment.id,
+                      }))}
+                    />
                   ) : null}
                 </div>
               </li>

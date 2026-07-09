@@ -29,9 +29,22 @@ export const ImagesTableContainer = ({ children }: { children: React.ReactNode }
 const ImageCell = ({ image }: { image: Image | undefined }) => {
   if (!image) return null;
   return (
-    <unbreakable>
-      <img src={image.url} data-attachment-id={image.attachmentId} style={{ width: "auto", height: "180px" }} />
-      <div style={{ width: "100%", textAlign: "left", fontSize: "8pt", color: "gray", lineHeight: 1.4 }}>
+    <unbreakable style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start" }}>
+      <img
+        src={image.url}
+        data-attachment-id={image.attachmentId}
+        style={{ height: "180px", width: "auto", display: "block" }}
+      />
+      <div
+        style={{
+          textAlign: "left",
+          fontSize: "8pt",
+          color: "gray",
+          lineHeight: 1.4,
+          alignSelf: "stretch",
+          wordBreak: "break-word",
+        }}
+      >
         {image.label ? image.label : ""}
       </div>
     </unbreakable>

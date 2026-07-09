@@ -49,6 +49,7 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       if (error instanceof NoSuchKey) {
         throw new AppError(404, "Attachment not found");
       }
+      throw error;
     }
   });
 

@@ -66,7 +66,7 @@ function RouteComponent() {
   const stream = useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
   if (!stream?.subscription.hasSynced)
     return (
-      <Center>
+      <Center mt="100px" mb="160px">
         <Spinner />
       </Center>
     );
