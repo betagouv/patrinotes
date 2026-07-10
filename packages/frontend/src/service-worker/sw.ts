@@ -1,5 +1,6 @@
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from "workbox-precaching";
 import { NavigationRoute, registerRoute } from "workbox-routing";
+import { NetworkFirst } from "workbox-strategies";
 import { isDev } from "../envVars";
 
 declare let self: ServiceWorkerGlobalScope;
@@ -15,6 +16,8 @@ self.addEventListener("activate", (event) => {
 const manif = self.__WB_MANIFEST;
 cleanupOutdatedCaches();
 precacheAndRoute(manif);
+
+registerRoute(({ url }) => url.pathname === "/env.js", new NetworkFirst({ cacheName: "env-js" }));
 
 if (!isDev) {
   const handler = createHandlerBoundToURL("/index.html");
