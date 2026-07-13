@@ -462,7 +462,7 @@ const SendBannerContent = () => {
           iconId="ri-send-plane-fill"
           disabled={isPending || isDisabled}
           sx={{
-            mt: { xs: "0", lg: "32px" },
+            mt: { xs: "0", lg: "40px" },
 
             display: { xs: "flex" },
             alignItems: { xs: "center" },
