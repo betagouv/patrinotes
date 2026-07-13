@@ -118,6 +118,10 @@ export class AuthService {
     return populateService(user);
   }
 
+  async getUserCreatedAt(userId: string) {
+    return getUserCreatedAt(userId);
+  }
+
   async loginUser(userData: Static<typeof loginTSchema.body>) {
     debug("logging in user", userData.email);
     try {
@@ -257,6 +261,15 @@ export class AuthService {
 const populateService = async <T extends { service_id: string }>(user: T) => {
   const service = await db.selectFrom("service").where("id", "=", user.service_id).selectAll().executeTakeFirst();
   return { ...user, service: service! };
+};
+
+const getUserCreatedAt = async (userId: string) => {
+  const internalUser = await db
+    .selectFrom("internal_user")
+    .select("createdAt")
+    .where("userId", "=", userId)
+    .executeTakeFirst();
+  return internalUser?.createdAt ?? null;
 };
 
 const getClientAssertion = () => {

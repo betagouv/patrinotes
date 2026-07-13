@@ -23,6 +23,7 @@ export const HelpMenu = () => {
       const dbs = await indexedDB.databases();
       await Promise.all(dbs.map((db) => indexedDB.deleteDatabase(db.name!)));
 
+      localStorage.setItem("crvif/no-report-alert-closed", "true");
       window.location.reload();
     },
   });

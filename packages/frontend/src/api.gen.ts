@@ -195,6 +195,12 @@ export namespace Endpoints {
     };
     response: { message: string };
   };
+  export type get_ApicreatedAt = {
+    method: "GET";
+    path: "/api/created-at";
+    parameters: never;
+    response: { createdAt: string | Schemas.null | Array<string | Schemas.null> };
+  };
   export type post_ApisendResetPassword = {
     method: "POST";
     path: "/api/send-reset-password";
@@ -616,6 +622,7 @@ export namespace Endpoints {
 export type EndpointByMethod = {
   get: {
     "/health": Endpoints.get_Health;
+    "/api/created-at": Endpoints.get_ApicreatedAt;
     "/api/services": Endpoints.get_Apiservices;
     "/api/upload/attachment/presigned-url": Endpoints.get_ApiuploadattachmentpresignedUrl;
     "/api/upload/attachment": Endpoints.get_Apiuploadattachment;
