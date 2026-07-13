@@ -222,7 +222,6 @@ const formValuesCheckerV1: Partial<Record<keyof StateReportFormType, (val: any) 
   date_visite: (val) => !!val,
   redacted_by: (val) => !!val,
   proprietaire: (val) => !!val,
-  proprietaire_email: (val) => !!val,
   etat_general: (val) => !!val,
   proportion_dans_cet_etat: (val) => val !== null && val !== undefined,
 };
@@ -231,7 +230,6 @@ const formValuesCheckerV2: Partial<Record<keyof StateReportFormType, (val: any) 
   date_visite: (val) => !!val,
   redacted_by: (val) => !!val,
   proprietaire: (val) => !!val,
-  proprietaire_email: (val) => !!val,
   etat_general: (val) => !!val,
 };
 
