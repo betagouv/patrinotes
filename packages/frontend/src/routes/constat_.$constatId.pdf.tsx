@@ -427,6 +427,8 @@ const SendBannerContent = () => {
     form.setValue("recipients", emails);
   };
 
+  const hasNoRecipients = recipients.length === 0;
+
   return (
     <Flex
       flexDirection={{ xs: "column", lg: "row" }}
@@ -460,7 +462,7 @@ const SendBannerContent = () => {
         <Button
           type="submit"
           iconId="ri-send-plane-fill"
-          disabled={isPending || isDisabled}
+          disabled={isPending || isDisabled || hasNoRecipients}
           sx={{
             mt: { xs: "0", lg: "40px" },
 
