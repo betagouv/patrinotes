@@ -17,7 +17,7 @@ import { Alert, Center } from "#components/MUIDsfr.tsx";
 import { useStatus, useSyncStream } from "@powersync/react";
 import { useFormWithFocus, useRefreshForm } from "../hooks/useFormWithFocus";
 import { Spinner } from "#components/Spinner.tsx";
-import { GoHomeButton } from "./account";
+import { GoHomeButton } from "./compte.tsx";
 
 const EditReport = () => {
   const { reportId } = Route.useParams();

@@ -1,4 +1,4 @@
-import { Button, Center, Input } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Center, Input } from "#components/MUIDsfr.tsx";
 import { Pagination } from "@codegouvfr/react-dsfr/Pagination";
 import { Box, Stack } from "@mui/material";
 import { chunk } from "pastable";
@@ -26,6 +26,8 @@ import { createStore } from "@xstate/store";
 import { useSelector } from "@xstate/store/react";
 import { searchStore } from "#components/SearchModal.tsx";
 import { AppSearchBar } from "./AppSearchBar";
+import { Flex } from "#components/ui/Flex.tsx";
+import { menuActor } from "../menu/menuMachine";
 
 export type ReportWithUser = Report & { createdByName: string | null };
 export type StateReportWithUser = StateReport & { createdByName: string | null };
@@ -209,6 +211,30 @@ export const ReportList = ({
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
+      {/* <Flex mb="40px" flex="1" alignSelf="center" maxWidth={{ xs: "100%", lg: "calc(800px + 126px)" }} width="100%">
+        <Alert
+          closable
+          onClose={() => console.log()}
+          small
+          severity="info"
+          description={
+            <span>
+              Vous ne voyez pas vos documents ? Essayez de réinitialiser les données locales via le menu{" "}
+              <a
+                style={{ color: fr.colors.decisions.text.active.blueFrance.default }}
+                href="#"
+                onClick={() =>
+                  menuActor.send({
+                    type: "GO_TO_HELP",
+                  })
+                }
+              >
+                aide
+              </a>
+            </span>
+          }
+        />
+      </Flex> */}
       <Center
         mb="40px"
         width="100%"

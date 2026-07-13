@@ -12,7 +12,7 @@ import { db, useDbQuery } from "../db/db";
 import { AllReports, MyReports } from "../features/report/ReportList";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps, Typography } from "@mui/material";
-import { Center, Input, Tile } from "#components/MUIDsfr.tsx";
+import { Alert, Center, Input, Tile } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
 import { Tabs } from "#components/Tabs.tsx";
 import { Button } from "#components/MUIDsfr.tsx";
