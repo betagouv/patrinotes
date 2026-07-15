@@ -296,7 +296,7 @@ export const PDF = () => {
               buttons={buttons}
             />
             <Center sx={{ overflowY: "auto" }} width="100%" height="100%" maxHeight="100%">
-              <Stack width="800px" height="100%">
+              <Stack width="800px" height="100%" mt="24px" mb="64px">
                 {report && snapshotQuery.isSuccess && isServiceInstructeurLoaded ? (
                   <WithReport
                     report={report as any}
@@ -422,8 +422,8 @@ const DownloadButton = () => {
   const navigate = useNavigate();
 
   return (
-    <Button type="button" onClick={() => navigate({ search: { mode: "send" } as any })} iconId="ri-send-plane-fill">
-      Envoyer
+    <Button type="button" onClick={() => navigate({ search: { mode: "send" } as any })}>
+      Continuer
     </Button>
   );
 };

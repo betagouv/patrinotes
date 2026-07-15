@@ -116,7 +116,7 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
                 flex-direction: column;
                 justify-content: flex-start;
                 font-size: 12px;
-                max-width: 290px;
+                max-width: 400px;
               }
 
               .right-texts > div:first-child {
@@ -184,7 +184,6 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
                 </div>
               </div>
             </div>
-            <hr/>
             <div class="content">
               ${htmlString}
             </div>
@@ -316,7 +315,7 @@ export const getReportHtmlString = (
 
   const meetDate = report.meetDate ? new Date(report.meetDate) : null;
 
-  const address = [report.applicantAddress, report.city].filter(Boolean).join(" ");
+  const address = [report.applicantAddress, report.city, report.zipCode].filter(Boolean).join(" ");
 
   const personnesPresentes = report.personnes_presentes
     ? report.personnes_presentes
@@ -341,7 +340,7 @@ export const getReportHtmlString = (
       <strong>Votre interlocuteur : ${report.redactedBy ?? report.user?.name ?? ""}</strong><br/>
       Demandeur : ${report.applicantName ?? ""}<br/>
       Adresse du projet : ${address ?? ""}<br/>
-      Ref cadastrale : ${report.projectCadastralRef ?? ""}<br/>
+      Ref cadastrale : ${report.projectCadastralRef ?? "non renseignée"}<br/>
     </p>
 
     ${
