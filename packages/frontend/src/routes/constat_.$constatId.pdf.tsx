@@ -10,7 +10,7 @@ import {
   VisitedSection,
   VisitedSectionAttachment,
 } from "../db/AppSchema";
-import { attachmentLocalStorage, db, getAttachmentUrl, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, attachmentQueue, db, getAttachmentUrl, useDbQuery } from "../db/db";
 import { useMutation, useQuery, UseMutationResult, useMutationState } from "@tanstack/react-query";
 import {
   SendConstatForm,
@@ -64,6 +64,15 @@ function RouteComponent() {
   const { constatId } = Route.useParams();
 
   const stream = useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
+
+  // Once the attachment records for this constat have synced down, force an immediate
+  // download pass instead of waiting for the queue's periodic 30s retry poll.
+  useEffect(() => {
+    if (stream?.subscription.hasSynced) {
+      attachmentQueue.syncStorage().catch(console.error);
+    }
+  }, [stream?.subscription.hasSynced, constatId]);
+
   if (!stream?.subscription.hasSynced)
     return (
       <Center mt="100px" mb="160px">

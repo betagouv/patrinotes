@@ -147,8 +147,11 @@ export function SyncFormBanner({ newObject }: { newObject: Partial<Report> }) {
               mb: "1em",
             }}
             sx={{
-              "& input": {
-                bgcolor: "rgba(50, 50, 50, .15) !important",
+              "& input:not(disabled)": {
+                bgcolor: "white",
+              },
+              "& input:disabled": {
+                bgcolor: fr.colors.decisions.background.contrast.grey.default,
               },
             }}
             label=""

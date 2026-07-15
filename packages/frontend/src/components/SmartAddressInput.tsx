@@ -30,7 +30,7 @@ export const SmartAddressInput = () => {
   const inputProps = form.register("applicantAddress");
 
   return (
-    <Stack mb="28px">
+    <Stack>
       <Box ref={wrapperRef} position="relative" width="100%">
         <Input
           sx={{ mb: "8px" }}

@@ -6,7 +6,7 @@ import { useTabsContext } from "#components/Tabs.tsx";
 import { SpaceTypeChips } from "#components/chips/SpaceTypeChips";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Box } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { format, parse } from "date-fns";
 import { useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -93,7 +93,7 @@ export const InfoForm = () => {
   const applicantEmail = useWatch({ control: form.control, name: "applicantEmail" });
 
   return (
-    <Flex flexDirection="column" width="100%" maxWidth="800px" padding="16px">
+    <Flex flexDirection="column" width="100%" maxWidth="800px" padding="16px" mt={{ lg: "24px", xs: "16px" }}>
       <InputGroupWithTitle title="Le rendez-vous">
         <Flex gap={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }}>
           <Select
@@ -146,7 +146,7 @@ export const InfoForm = () => {
         </Box>
       </InputGroupWithTitle>
 
-      <Divider mt="20px" mb="52px" />
+      <Divider mt="12px" mb="40px" />
 
       <InputGroupWithTitle title="Le projet">
         <DescriptionInput />
@@ -228,26 +228,24 @@ const DescriptionInput = () => {
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
 
   return (
-    <Input
-      sx={{ mt: "24px", "& > textarea": { mt: "0 !important" } }}
-      disabled={(isFormDisabled || isRecording) ?? false}
-      label={
-        <Flex justifyContent="space-between" width="100%">
-          <span>Description</span>
-
-          <Button
-            disabled={isFormDisabled}
-            type="button"
-            priority={isRecording ? "primary" : "tertiary"}
-            iconId="ri-mic-fill"
-            onClick={() => toggle()}
-          >
-            {isRecording ? <>En cours</> : <>Dicter</>}
-          </Button>
-        </Flex>
-      }
-      textArea
-      nativeTextAreaProps={{ ...textAreaProps, rows: 5 }}
-    />
+    <Flex flexDirection="column">
+      <Input
+        sx={{ mt: "0", "& > textarea": { mt: "0 !important" } }}
+        disabled={(isFormDisabled || isRecording) ?? false}
+        label={"Description"}
+        textArea
+        nativeTextAreaProps={{ ...textAreaProps, rows: 5 }}
+      />
+      <Button
+        disabled={isFormDisabled}
+        type="button"
+        sx={{ mt: "-16px", mb: "24px", width: "fit-content" }}
+        priority={isRecording ? "primary" : "tertiary"}
+        iconId="ri-mic-fill"
+        onClick={() => toggle()}
+      >
+        {isRecording ? <>En cours</> : <>Dicter</>}
+      </Button>
+    </Flex>
   );
 };
