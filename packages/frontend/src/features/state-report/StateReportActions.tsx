@@ -185,6 +185,9 @@ const ReportActionButton = styled(Button)(({ theme }) => ({
   [theme.breakpoints.down("lg")]: {
     height: "56px",
   },
+  ":focus-visible": {
+    backgroundColor: fr.colors.decisions.background.contrast.grey.default,
+  },
 }));
 
 const useDeleteMutation = () =>
