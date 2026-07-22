@@ -12,6 +12,7 @@ import { useIsDesktop } from "../hooks/useIsDesktop";
 import { useStatus } from "@powersync/react";
 import { Header } from "#components/MUIDsfr.tsx";
 import { menuActor } from "./menu/menuMachine";
+import { useServiceType } from "./useServiceType";
 
 export const Layout = ({ children }: PropsWithChildren) => {
   const location = useLocation();
@@ -184,6 +185,8 @@ const LoggedInHeader = () => {
   const isDesktop = useIsDesktop();
   const logout = useLogout();
 
+  const serviceType = useServiceType();
+
   return (
     <>
       {!isDesktop ? (
@@ -246,7 +249,7 @@ const LoggedInHeader = () => {
           },
           {
             iconId: "fr-icon-france-fill",
-            text: "Service",
+            text: serviceType,
             linkProps: { to: "/service" },
           },
           {

@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { v4 } from "uuid";
-import { useService, useUser } from "../contexts/AuthContext";
+import { useLiveService, useService, useUser } from "../contexts/AuthContext";
 import { db, useDbQuery } from "../db/db";
 import { AllReports, MyReports } from "../features/report/ReportList";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -23,6 +23,7 @@ import z from "zod";
 import { appDocumentEnum } from "../utils";
 import { SearchModal, searchStore } from "#components/SearchModal.tsx";
 import { useSelector } from "@xstate/store/react";
+import { useServiceType } from "../features/useServiceType";
 
 const Index = () => {
   const user = useUser()!;
@@ -137,16 +138,7 @@ const Index = () => {
 };
 
 const MainContentTabs = () => {
-  const service = useService();
-  const lowerName = service?.name.toLowerCase() ?? "";
-
-  const serviceType = lowerName.includes("crmh")
-    ? "CRMH"
-    : lowerName.includes("drac")
-      ? "DRAC"
-      : lowerName.includes("udap")
-        ? "UDAP"
-        : null;
+  const serviceType = useServiceType();
 
   const options = [
     {

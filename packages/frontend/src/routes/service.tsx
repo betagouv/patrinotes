@@ -20,6 +20,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
 import { scrollToTop } from "../features/state-report/StateReportSummary";
 import { useActiveSection } from "../hooks/useActiveSection";
+import { useServiceType } from "../features/useServiceType";
 
 const serviceSections = [
   { linkProps: { href: "#service-informations" }, text: "Informations service" },
@@ -36,6 +37,8 @@ const ServicePage = () => {
 
   const activeSection = useActiveSection(sectionIds);
 
+  const serviceType = useServiceType();
+
   return (
     <Flex
       gap={{ xs: "0", lg: "40px" }}
@@ -50,7 +53,7 @@ const ServicePage = () => {
           <GoHomeButton />
         </Box>
         <Typography variant="h1" display={{ lg: "none" }} mt="16px" mb="32px" px={{ xs: "16px" }}>
-          Service
+          {serviceType}
         </Typography>
         <AccordionIfMobile>
           <Summary
@@ -82,7 +85,7 @@ const ServicePage = () => {
         textAlign="left"
       >
         <Typography alignSelf="start" variant="h1" display={{ xs: "none", lg: "block" }} mt="16px" mb="64px">
-          Service
+          {serviceType}
         </Typography>
         {isSuccess ? <SuccessAlert /> : null}
         <ServiceForm />
