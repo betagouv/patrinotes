@@ -114,20 +114,18 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
           />
           <Divider height="1px" color="#DDD" />
         </>
-      ) : null}
+      ) : (
+        <>
+          <ReportAction label={downloadLabel} onClick={() => downloadPdfMutation.mutate()} iconId="ri-download-line" />
+          <Divider height="1px" color="#DDD" />
+        </>
+      )}
 
       <ReportAction
         iconId="ri-file-add-line"
         label="Dupliquer"
         onClick={() => duplicateMutation.mutate(undefined, { onError: (e) => console.error(e) })}
       />
-
-      {!isDraft ? (
-        <>
-          <Divider height="1px" color="#DDD" />
-          <ReportAction label={downloadLabel} onClick={() => downloadPdfMutation.mutate()} iconId="ri-download-line" />
-        </>
-      ) : null}
 
       {hasAccess ? (
         <>
