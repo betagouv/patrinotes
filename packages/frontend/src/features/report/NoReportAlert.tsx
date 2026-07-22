@@ -22,14 +22,25 @@ export const NoReportAlert = ({ show }: { show: boolean }) => {
     <Flex mb="40px" flex="1" alignSelf="center" maxWidth={{ xs: "100%", lg: "calc(800px + 126px)" }} width="100%">
       <Alert
         closable
+        sx={{
+          "button.fr-link--close": {
+            ":hover": {
+              backgroundColor: "transparent !important",
+            },
+          },
+        }}
         onClose={() => setIsNoReportAlertClosed(true)}
         small
         severity="info"
         description={
           <span>
-            Vous ne voyez pas vos documents ? Essayez de réinitialiser les données locales via le menu{" "}
+            Vous ne voyez pas vos documents ? Essayez de réinitialiser les données locales via le{" "}
             <a
-              style={{ color: fr.colors.decisions.text.active.blueFrance.default }}
+              style={{
+                color: fr.colors.decisions.text.active.blueFrance.default,
+                textDecoration: "underline",
+                textUnderlineOffset: "4px",
+              }}
               href="#"
               onClick={() =>
                 menuActor.send({
@@ -37,7 +48,7 @@ export const NoReportAlert = ({ show }: { show: boolean }) => {
                 })
               }
             >
-              aide
+              menu aide
             </a>
           </span>
         }
