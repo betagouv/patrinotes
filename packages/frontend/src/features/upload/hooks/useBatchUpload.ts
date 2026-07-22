@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { v7 } from "uuid";
 import { attachmentQueue } from "../../../db/db";
 import { processImage } from "../UploadReportImage";
@@ -11,6 +11,7 @@ export type BatchUpload = {
   uploadFiles: (files: File[]) => Promise<void>;
   pendingUploads: MinimalAttachment[];
   progress: BatchUploadProgress;
+  cancel: (id: string) => void;
 };
 
 /**
@@ -25,6 +26,18 @@ export function useBatchUpload(
 ): BatchUpload {
   const [pendingUploads, setPendingUploads] = useState<MinimalAttachment[]>([]);
   const [progress, setProgress] = useState<BatchUploadProgress>({ current: 0, total: 0 });
+  // Files can't be aborted mid-flight (compression/IndexedDB write have no cancel hook),
+  // so cancelling just marks the id to be ignored once its step resolves, and hides it now.
+  const cancelledRef = useRef<Set<string>>(new Set());
+
+  const cancel = useCallback((id: string) => {
+    cancelledRef.current.add(id);
+    setPendingUploads((prev) => {
+      const item = prev.find((p) => p.id === id);
+      if (item?.blobUrl) URL.revokeObjectURL(item.blobUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  }, []);
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -41,23 +54,37 @@ export function useBatchUpload(
 
       await Promise.allSettled(
         fileArray.map(async (file, i) => {
+          const item = pending[i];
           const attachmentId = `${parentId}/images/${v7()}.jpg`;
           registerPendingUpload(parentId, attachmentId);
+
+          const bailIfCancelled = () => {
+            if (!cancelledRef.current.has(item.id)) return false;
+            cancelledRef.current.delete(item.id);
+            unregisterPendingUpload(parentId, attachmentId);
+            return true;
+          };
+
           try {
             const compressed = await processImage(file);
+            if (bailIfCancelled()) return;
+
             await attachmentQueue.saveFile({
               id: attachmentId,
               fileExtension: "jpg",
               data: compressed,
               mediaType: "image/jpeg",
             });
+            if (bailIfCancelled()) return;
+
             await insertRecord(attachmentId);
 
             unregisterPendingUpload(parentId, attachmentId);
-            URL.revokeObjectURL(pending[i].blobUrl!);
-            setPendingUploads((prev) => prev.filter((p) => p.id !== pending[i].id));
+            URL.revokeObjectURL(item.blobUrl!);
+            setPendingUploads((prev) => prev.filter((p) => p.id !== item.id));
             setProgress((p) => ({ ...p, current: p.current + 1 }));
           } catch (error) {
+            if (bailIfCancelled()) return;
             // Stay registered and keep the pending thumbnail visible: the file never made it
             // to local storage, so "Finaliser" must stay blocked instead of silently dropping it.
             console.error("Error uploading image:", error);
@@ -70,5 +97,5 @@ export function useBatchUpload(
     [parentId, insertRecord],
   );
 
-  return { uploadFiles, pendingUploads, progress };
+  return { uploadFiles, pendingUploads, progress, cancel };
 }

@@ -211,6 +211,12 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
 
   const deleteMutation = {
     mutate: async ({ id }: { id: string }) => {
+      // Pictures still being processed by useBatchUpload have no row in config.table yet,
+      // so "delete" on them just cancels the in-flight upload instead.
+      if (batchUpload.pendingUploads.some((p) => p.id === id)) {
+        batchUpload.cancel(id);
+        return;
+      }
       const row = await db.selectFrom(config.table).select("attachment_id").where("id", "=", id).executeTakeFirst();
       if (row) await attachmentLocalStorage.deleteFile(row.attachment_id!);
       await db.updateTable(config.table).set({ is_deprecated: 1 }).where("id", "=", id).execute();
