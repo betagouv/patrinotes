@@ -1,8 +1,27 @@
 import Badge from "@codegouvfr/react-dsfr/Badge";
-import { useStatus } from "@powersync/react";
+import { useEffect, useState } from "react";
+
+const useIsOnline = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const setOnline = () => setIsOnline(true);
+    const setOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", setOnline);
+    window.addEventListener("offline", setOffline);
+
+    return () => {
+      window.removeEventListener("online", setOnline);
+      window.removeEventListener("offline", setOffline);
+    };
+  }, []);
+
+  return isOnline;
+};
 
 export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
-  const status = noProvider ? null : useStatus();
+  const isOnline = useIsOnline();
 
   if (noProvider) {
     return (
@@ -12,11 +31,9 @@ export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
     );
   }
 
-  const isConnected = status?.connected;
-
   return (
-    <Badge small as="span" noIcon severity={status ? (isConnected ? "success" : "error") : "success"}>
-      {status ? (isConnected ? "En ligne" : "Hors ligne") : "Beta"}
+    <Badge small as="span" noIcon severity={isOnline ? "success" : "error"}>
+      {isOnline ? "En ligne" : "Hors ligne"}
     </Badge>
   );
 };
