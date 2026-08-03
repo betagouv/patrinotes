@@ -5,7 +5,8 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Box, Typography } from "@mui/material";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { db, useDbQuery } from "../db/db";
+import { useEffect } from "react";
+import { attachmentQueue, db, useDbQuery } from "../db/db";
 import { StateReportForm } from "../features/state-report/StateReportForm";
 import { stateReportStepSchema } from "../features/state-report/utils";
 import z from "zod";
@@ -44,7 +45,15 @@ function RouteComponent() {
 
 const WithStateReport = () => {
   const { constatId } = Route.useParams();
-  useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
+  const stream = useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
+
+  // Once the attachment records for this constat have synced down, force an immediate
+  // download pass instead of waiting for the queue's periodic 30s retry poll.
+  useEffect(() => {
+    if (stream?.subscription.hasSynced) {
+      attachmentQueue.syncStorage().catch(console.error);
+    }
+  }, [stream?.subscription.hasSynced, constatId]);
 
   const reportQuery = useDbQuery(db.selectFrom("state_report").where("id", "=", constatId).selectAll());
 
@@ -61,7 +70,7 @@ const WithStateReport = () => {
   const report = reportQuery.data?.[0];
 
   if (!report) {
-    return <Navigate to="/" search={{ document: "constats" }} />;
+    return <Navigate to="/" />;
   }
 
   return (

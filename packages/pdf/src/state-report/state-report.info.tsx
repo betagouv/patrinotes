@@ -75,7 +75,7 @@ export const StateReportInfos = ({
         <div>
           <b>Propriétaire</b> :{" "}
           {stateReport.proprietaire
-            ? `${stateReport.proprietaire} (${stateReport.proprietaire_email})`
+            ? `${stateReport.proprietaire} ${stateReport.proprietaire_email ? `(${stateReport.proprietaire_email})` : ""}`
             : "Non renseigné"}
         </div>
         {stateReport.proprietaire_representant ? (

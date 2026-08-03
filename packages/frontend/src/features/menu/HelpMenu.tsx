@@ -3,7 +3,7 @@ import { clearDb } from "../../db/db";
 import { menuActor } from "./menuMachine";
 
 import { useState } from "react";
-import { TitleH3 } from "../../routes/account";
+import { TitleH3 } from "../../routes/compte";
 import { Box, Stack, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Button, Alert } from "#components/MUIDsfr.tsx";
@@ -23,6 +23,7 @@ export const HelpMenu = () => {
       const dbs = await indexedDB.databases();
       await Promise.all(dbs.map((db) => indexedDB.deleteDatabase(db.name!)));
 
+      localStorage.setItem("crvif/no-report-alert-closed", "true");
       window.location.reload();
     },
   });

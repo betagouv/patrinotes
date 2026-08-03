@@ -8,7 +8,7 @@ import { NotesForm } from "../features/NotesForm";
 import { DisabledContext } from "../features/DisabledContext";
 import { useQuery } from "@tanstack/react-query";
 import { useCanEditReport } from "../hooks/useCanEditReport";
-import { db, useDbQuery } from "../db/db";
+import { attachmentQueue, db, useDbQuery } from "../db/db";
 import { Report, StateReport } from "../db/AppSchema";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box } from "@mui/material";
@@ -17,11 +17,20 @@ import { Alert, Center } from "#components/MUIDsfr.tsx";
 import { useStatus, useSyncStream } from "@powersync/react";
 import { useFormWithFocus, useRefreshForm } from "../hooks/useFormWithFocus";
 import { Spinner } from "#components/Spinner.tsx";
-import { GoHomeButton } from "./account";
+import { GoHomeButton } from "./compte.tsx";
+import { fr } from "@codegouvfr/react-dsfr";
 
 const EditReport = () => {
   const { reportId } = Route.useParams();
-  useSyncStream({ name: "report_attachments_stream", parameters: { report_id: reportId } });
+  const stream = useSyncStream({ name: "report_attachments_stream", parameters: { report_id: reportId } });
+
+  // Once the attachment records for this report have synced down, force an immediate
+  // download pass instead of waiting for the queue's periodic 30s retry poll.
+  useEffect(() => {
+    if (stream?.subscription.hasSynced) {
+      attachmentQueue.syncStorage().catch(console.error);
+    }
+  }, [stream?.subscription.hasSynced, reportId]);
 
   const reportQuery = useDbQuery(db.selectFrom("report").where("id", "=", reportId).selectAll());
   const report = reportQuery.data?.[0];
@@ -86,6 +95,7 @@ const WithReport = ({ report }: { report: Report }) => {
       id: "info",
       label: "RDV",
       props: {
+        color: fr.colors.decisions.text.actionHigh.blueFrance.default,
         position: "absolute" as const,
         // there is a difference in padding between chrome and other browsers due to scrollbar width (i guess)
         left: isChrome ? "max(calc((100vw - 800px) / 2 + 8px), 16px)" : "max(calc((100vw - 800px) / 2 + 16px), 16px)",
@@ -100,8 +110,9 @@ const WithReport = ({ report }: { report: Report }) => {
       id: "notes",
       label: "Bilan",
       props: {
+        color: fr.colors.decisions.text.actionHigh.blueFrance.default,
         position: "absolute" as const,
-        left: "16px",
+        left: { lg: "104px", xs: "16px" },
       },
       component: (
         <Center>
@@ -130,7 +141,7 @@ const WithReport = ({ report }: { report: Report }) => {
             }}
           >
             <SyncFormBanner newObject={newObject} />
-            <Tabs control={[tab ?? "info", setTab]} options={options} />
+            <Tabs control={[tab ?? "my", setTab]} options={options} />
           </form>
         </FormProvider>
       </Flex>

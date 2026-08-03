@@ -69,6 +69,7 @@ export const thumbnailMachine = setup({
     BLOB_RETRY_DELAY: ({ context }) => (context.retryCount === 0 ? 100 : 5000),
   },
   guards: {
+    hasBlobUrl: ({ context }) => !!context.attachment.blobUrl,
     hasLocalUri: ({ context }) => !!context.attachment.local_uri,
     newLocalUriAvailable: ({ event }) =>
       !!(event as Extract<ThumbnailEvent, { type: "ATTACHMENT_UPDATED" }>).attachment.local_uri,
@@ -88,9 +89,14 @@ export const thumbnailMachine = setup({
   }),
   initial: "init",
   states: {
-    /** Immediately routes to loadingBlob or waitingForUri based on whether local_uri is set. */
+    /** Immediately routes based on what's available: blob URL (pending upload), local_uri (stored), or waiting. */
     init: {
       always: [
+        {
+          guard: "hasBlobUrl",
+          target: "ready",
+          actions: assign({ blobUrl: ({ context }) => context.attachment.blobUrl! }),
+        },
         { target: "loadingBlob", guard: "hasLocalUri" },
         { target: "waitingForUri" },
       ],

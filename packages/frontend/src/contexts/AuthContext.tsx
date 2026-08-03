@@ -8,6 +8,8 @@ import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { Service } from "../db/AppSchema";
 import { useNavigate } from "@tanstack/react-router";
+import { onSessionExpired } from "../features/auth/sessionExpired";
+import { SessionExpiredModal } from "../features/auth/SessionExpiredModal";
 
 const emptyAuth = {
   accessToken: null,
@@ -23,6 +25,17 @@ export const AuthContext = createContext<AuthContextProps>({
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [auth, setAuth] = useState<AuthContextProps["auth"]>({ ...emptyAuth });
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onSessionExpired(() => {
+      setAuth({ ...emptyAuth });
+      setSessionExpired(true);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const loadAuthQuery = useQuery({
     queryKey: ["load-stored-auth"],
@@ -76,7 +89,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     );
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {sessionExpired ? (
+        <SessionExpiredModal
+          onReconnect={() => {
+            window.location.href = "/connexion";
+          }}
+        />
+      ) : null}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuthContext = () => useContext(AuthContext);

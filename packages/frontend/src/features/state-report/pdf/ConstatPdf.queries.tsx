@@ -224,6 +224,7 @@ export const constatPdfMutations = {
             stateReportId: constatId,
             pdfPath,
             recipients: recipients.join(","),
+            pdfSize: blob.size,
             alerts: alertsToSend,
             needValidation,
           },

@@ -239,6 +239,13 @@
       "when": 1780920552452,
       "tag": "0033_normal_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1781685319257,
+      "tag": "0034_ancient_songbird",
+      "breakpoints": true
     }
   ]
 }

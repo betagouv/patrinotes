@@ -28,8 +28,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertErrors, checkAlertErrors } from "./alerts/StateReportAlert.utils";
 import { stateReportSideMenuStore, useAlertErrors } from "./side-menu/StateReportSideMenu.store";
 import { ButtonProps } from "@codegouvfr/react-dsfr/Button";
+import { AttachmentState } from "@powersync/web";
 import { useUnsyncedAttachments } from "./hooks/useUnsyncedAttachments";
-import { ImageSyncModal } from "./ImageSyncModal";
+import { useIsUploadingImages } from "../upload/pendingUploadsStore";
 import { constatPdfQueries } from "./pdf/ConstatPdf.queries";
 
 export const WithReferencePop = () => {
@@ -87,15 +88,22 @@ const routeApi = getRouteApi("/constat/$constatId");
 const ContentSwitch = () => {
   const { step } = routeApi.useSearch();
 
-  const content: Record<StateReportStep, ReactNode> = {
-    informations: <MonumentHistorique />,
-    "contexte-visite": <ContexteVisite />,
-    "constat-detaille": <ConstatDetaille />,
-    "constat-general": <ConstatGeneral />,
-    documents: null,
-  };
-
-  return <>{content[step]}</>;
+  return (
+    <>
+      <Box display={step === "informations" ? "block" : "none"}>
+        <MonumentHistorique />
+      </Box>
+      <Box display={step === "contexte-visite" ? "block" : "none"}>
+        <ContexteVisite />
+      </Box>
+      <Box display={step === "constat-detaille" ? "block" : "none"}>
+        <ConstatDetaille />
+      </Box>
+      <Box display={step === "constat-general" ? "block" : "none"}>
+        <ConstatGeneral />
+      </Box>
+    </>
+  );
 };
 
 const ButtonsContainer = ({ children }: { children: ReactNode }) => {
@@ -214,7 +222,6 @@ const formValuesCheckerV1: Partial<Record<keyof StateReportFormType, (val: any) 
   date_visite: (val) => !!val,
   redacted_by: (val) => !!val,
   proprietaire: (val) => !!val,
-  proprietaire_email: (val) => !!val,
   etat_general: (val) => !!val,
   proportion_dans_cet_etat: (val) => val !== null && val !== undefined,
 };
@@ -223,7 +230,6 @@ const formValuesCheckerV2: Partial<Record<keyof StateReportFormType, (val: any) 
   date_visite: (val) => !!val,
   redacted_by: (val) => !!val,
   proprietaire: (val) => !!val,
-  proprietaire_email: (val) => !!val,
   etat_general: (val) => !!val,
 };
 
@@ -248,7 +254,6 @@ const CreateButton = () => {
   const [alertErrors, setAlertErrors] = useAlertErrors();
 
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
-  const [isImageSyncModalOpen, setIsImageSyncModalOpen] = useState(false);
 
   const { constatId } = routeApi.useParams();
   const navigate = routeApi.useNavigate();
@@ -259,7 +264,10 @@ const CreateButton = () => {
   const version = useStateReportVersion();
 
   const alertsQuery = useQuery(constatPdfQueries.alerts({ constatId }));
-  // const unsyncedAttachments = useUnsyncedAttachments(constatId);
+  const unsyncedAttachments = useUnsyncedAttachments(constatId);
+  const pendingDownloads = unsyncedAttachments.filter((a) => a.state === AttachmentState.QUEUED_DOWNLOAD);
+  const isUploadingImages = useIsUploadingImages(constatId);
+
   const proceedToFinalize = () => {
     navigate({
       to: "/constat/$constatId/pdf",
@@ -302,21 +310,30 @@ const CreateButton = () => {
     alertErrors: alertErrors ?? [],
   };
 
+  const isMissingImages = pendingDownloads.length > 0 || isUploadingImages;
+
   return (
     <>
       {isErrorModalOpen ? <FormErrorModal formErrors={formErrors} onClose={() => setIsErrorModalOpen(false)} /> : null}
-      {isImageSyncModalOpen ? (
-        <ImageSyncModal
-          onClose={() => setIsImageSyncModalOpen(false)}
-          onIgnoreAll={() => {
-            setIsImageSyncModalOpen(false);
-            proceedToFinalize();
-          }}
-        />
-      ) : null}
-      <RightButton customIcon="fr-icon-article-fill" onClick={() => onSubmit()}>
-        {isDisabled ? "Voir le constat" : "Finaliser le constat"}
-      </RightButton>
+      <Box position="relative">
+        <RightButton customIcon="fr-icon-article-fill" disabled={isMissingImages} onClick={() => onSubmit()}>
+          {isDisabled ? "Voir le constat" : "Finaliser le constat"}
+        </RightButton>
+
+        {isMissingImages ? (
+          <Typography
+            className="fr-icon fr-icon__sm fr-icon-info-fill"
+            sx={{ "::before": { mr: "4px" } }}
+            position="absolute"
+            fontSize="12px"
+            color={fr.colors.decisions.text.default.info.default}
+            left="0"
+            top="calc(100% + 8px) "
+          >
+            Image(s) en cours d'ajout...
+          </Typography>
+        ) : null}
+      </Box>
     </>
   );
 };

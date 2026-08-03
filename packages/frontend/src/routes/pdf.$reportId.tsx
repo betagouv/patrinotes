@@ -18,7 +18,7 @@ import { EmailInput } from "../components/EmailInput";
 import { getDiff } from "../components/SyncForm";
 import { useUser } from "../contexts/AuthContext";
 import { Clause_v2, Pictures, Report, Service } from "../db/AppSchema";
-import { attachmentLocalStorage, db, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../db/db";
 import { useChipOptions } from "../features/chips/useChipOptions";
 import { transformBold } from "../features/menu/ClauseMenu";
 import { TextEditor } from "../features/text-editor/TextEditor";
@@ -60,7 +60,7 @@ export const PDF = () => {
 
       await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
 
-      await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients } });
+      await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients, pdfSize: blob.size } });
     },
     onSuccess: () => {
       navigate({ search: { mode: "sent" } as any });
@@ -296,7 +296,7 @@ export const PDF = () => {
               buttons={buttons}
             />
             <Center sx={{ overflowY: "auto" }} width="100%" height="100%" maxHeight="100%">
-              <Stack width="800px" height="100%">
+              <Stack width="800px" height="100%" mt="24px" mb="64px">
                 {report && snapshotQuery.isSuccess && isServiceInstructeurLoaded ? (
                   <WithReport
                     report={report as any}
@@ -422,8 +422,8 @@ const DownloadButton = () => {
   const navigate = useNavigate();
 
   return (
-    <Button type="button" onClick={() => navigate({ search: { mode: "send" } as any })} iconId="ri-send-plane-fill">
-      Envoyer
+    <Button type="button" onClick={() => navigate({ search: { mode: "send" } as any })}>
+      Continuer
     </Button>
   );
 };
@@ -678,6 +678,14 @@ const SendReportPage = ({ children }: PropsWithChildren) => {
 const WithReportAttachments = ({ children }: PropsWithChildren) => {
   const { reportId } = Route.useParams();
   const stream = useSyncStream({ name: "report_attachments_stream", parameters: { report_id: reportId } });
+
+  // Once the attachment records for this report have synced down, force an immediate
+  // download pass instead of waiting for the queue's periodic 30s retry poll.
+  useEffect(() => {
+    if (stream?.subscription.hasSynced) {
+      attachmentQueue.syncStorage().catch(console.error);
+    }
+  }, [stream?.subscription.hasSynced, reportId]);
 
   if (!stream?.subscription.hasSynced) {
     return (

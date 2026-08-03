@@ -21,7 +21,7 @@ export const NotesForm = () => {
   const isFormDisabled = useIsFormDisabled();
 
   return (
-    <Flex flexDirection="column" width="100%" maxWidth="800px" padding="16px">
+    <Flex flexDirection="column" width="100%" maxWidth="800px" padding="16px" mt={{ lg: "24px", xs: "16px" }}>
       <InputGroupWithTitle title="Décision & suite à donner">
         <DecisionChips disabled={isFormDisabled} />
         <PrecisionsTextArea />
@@ -29,14 +29,23 @@ export const NotesForm = () => {
 
       <UploadReportImage reportId={form.getValues().id} />
 
-      <Divider mt="36px" mb="52px" />
+      <Divider mt="40px" mb="32px" />
 
-      <Stack gap={{ xs: "0", lg: "16px" }} direction={{ xs: "column", lg: "row" }}>
+      <Stack
+        gap={{ xs: "0", lg: "118px" }}
+        direction={{ xs: "column", lg: "row" }}
+        sx={{
+          "& label": {
+            fontWeight: "bold",
+            fontSize: "20px",
+          },
+        }}
+      >
         <ContactChips disabled={isFormDisabled} />
         <FurtherInfoChips disabled={isFormDisabled} />
       </Stack>
 
-      <Center justifyContent={{ xs: "center", lg: "flex-start" }} mt={{ xs: "80px", lg: "50px" }} mb="120px">
+      <Center justifyContent={{ xs: "center", lg: "flex-start" }} mt={{ xs: "80px", lg: "56px" }} mb="80px">
         <Button iconId="ri-article-fill" type="submit" disabled={isFormDisabled}>
           Créer le CR
         </Button>
@@ -67,30 +76,28 @@ const PrecisionsTextArea = () => {
 
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
   return (
-    <Input
-      sx={{ mt: "24px", "& > textarea": { mt: "0 !important" } }}
-      disabled={isFormDisabled || isRecording}
-      label={
-        <Flex justifyContent="space-between" width="100%">
-          <span>Commentaire</span>
-
-          <Button
-            disabled={isFormDisabled}
-            type="button"
-            priority={isRecording ? "primary" : "tertiary"}
-            iconId="ri-mic-fill"
-            onClick={() => toggle()}
-          >
-            {isRecording ? <>En cours</> : <>Dicter</>}
-          </Button>
-        </Flex>
-      }
-      textArea
-      nativeTextAreaProps={{
-        ...textAreaProps,
-        id: "precisions",
-        rows: 5,
-      }}
-    />
+    <Flex flexDirection="column">
+      <Input
+        sx={{ mt: "24px" }}
+        disabled={isFormDisabled || isRecording}
+        label={"Commentaire"}
+        textArea
+        nativeTextAreaProps={{
+          ...textAreaProps,
+          id: "precisions",
+          rows: 5,
+        }}
+      />
+      <Button
+        disabled={isFormDisabled}
+        type="button"
+        priority={isRecording ? "primary" : "tertiary"}
+        iconId="ri-mic-fill"
+        onClick={() => toggle()}
+        sx={{ mt: "-16px", mb: "8px", width: "fit-content" }}
+      >
+        {isRecording ? <>En cours</> : <>Dicter</>}
+      </Button>
+    </Flex>
   );
 };

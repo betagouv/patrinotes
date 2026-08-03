@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { ENV } from "../envVars";
 import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
@@ -40,6 +40,20 @@ export class UploadService {
       sentry?.captureException(error, { extra: { filePath } });
       throw error;
     }
+  }
+
+  async getAttachmentSize({ filePath }: { filePath: string }) {
+    const name = addAttachmentPrefix(filePath);
+
+    const { ContentLength } = await client.send(
+      new HeadObjectCommand({
+        Bucket: bucketUrl,
+        Key: name,
+      }),
+    );
+
+    if (ContentLength === undefined) throw new AppError(404, "Attachment not found");
+    return ContentLength;
   }
 
   async getAttachment({ filePath }: { filePath: string }) {

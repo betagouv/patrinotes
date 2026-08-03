@@ -17,6 +17,7 @@ import MuiDsfrThemeProvider from "@codegouvfr/react-dsfr/mui";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { Buffer } from "buffer";
 import { ServiceSelection } from "./features/UdapSelection";
+import { MatomoProvider, createInstance } from "@datapunt/matomo-tracker-react";
 
 globalThis.Buffer = Buffer;
 if ("serviceWorker" in navigator) {
@@ -59,6 +60,12 @@ const WithPowersync = ({ children }: PropsWithChildren) => {
   return <PowerSyncContext.Provider value={powerSyncDb}>{children}</PowerSyncContext.Provider>;
 };
 
+const matomoInstance = createInstance({
+  urlBase: "https://stats.beta.gouv.fr/",
+  siteId: 123,
+  linkTracking: false,
+});
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <TanStackDevtools />
@@ -68,13 +75,16 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         onError={(error, info) => sentry?.captureException(error, { extra: { componentStack: info.componentStack } })}
       >
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <WithPowersync>
-              <ServiceSelection>
-                <App />
-              </ServiceSelection>
-            </WithPowersync>
-          </AuthProvider>
+          {/* @ts-ignore */}
+          <MatomoProvider value={matomoInstance}>
+            <AuthProvider>
+              <WithPowersync>
+                <ServiceSelection>
+                  <App />
+                </ServiceSelection>
+              </WithPowersync>
+            </AuthProvider>
+          </MatomoProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </MuiDsfrThemeProvider>

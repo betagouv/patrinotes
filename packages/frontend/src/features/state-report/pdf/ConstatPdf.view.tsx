@@ -58,6 +58,13 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
 const BlobSync = ({ blob, children }: { blob: Blob; children: JSX.Element }) => {
   const form = useSendConstatFormContext();
   useEffect(() => {
+    if (!blob) {
+      form.setValue("pdfSize", 0);
+      form.setValue("pdfBlob", null);
+      return;
+    }
+    const size = blob.size;
+    form.setValue("pdfSize", size);
     form.setValue("pdfBlob", blob);
   }, [blob]);
   return <>{children}</>;

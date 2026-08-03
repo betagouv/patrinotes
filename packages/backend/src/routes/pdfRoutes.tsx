@@ -66,7 +66,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   );
 
   fastify.post("/report", { schema: reportPdfTSchema }, async (request) => {
-    const { reportId, pdfPath, recipients: rawRecipients } = request.body;
+    const { reportId, pdfPath, pdfSize, recipients: rawRecipients } = request.body;
     const { service_id } = request.user!;
 
     const pdf = await request.services.upload.getAttachment({ filePath: pdfPath });
@@ -83,7 +83,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
           service_id,
         })
         .execute();
-      await tx.updateTable("report").set({ attachment_id: pdfPath }).where("id", "=", reportId).execute();
+      await tx
+        .updateTable("report")
+        .set({ attachment_id: pdfPath, pdf_size: pdfSize ?? null })
+        .where("id", "=", reportId)
+        .execute();
     });
 
     const userMail = request.user!.email;
@@ -217,7 +221,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         })
         .execute();
 
-      await tx.updateTable("state_report").set({ attachment_id: pdfPath }).where("id", "=", stateReportId).execute();
+      await tx
+        .updateTable("state_report")
+        .set({ attachment_id: pdfPath, pdf_size: request.body.pdfSize ?? null })
+        .where("id", "=", stateReportId)
+        .execute();
     });
 
     const userMail = user.email;
@@ -384,6 +392,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 export const reportPdfTSchema = {
   body: Type.Object({
     pdfPath: Type.String(),
+    pdfSize: Type.Optional(Type.Number()),
     reportId: Type.String(),
     recipients: Type.String(),
   }),
@@ -407,6 +416,7 @@ export const stateReportPdfTSchema = {
   body: Type.Object({
     needValidation: Type.Optional(Type.Boolean()),
     pdfPath: Type.String(),
+    pdfSize: Type.Optional(Type.Number()),
     stateReportId: Type.String(),
     recipients: Type.String(),
     alerts: Type.Optional(Type.Array(AlertSchema)),

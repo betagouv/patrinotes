@@ -74,6 +74,7 @@ export type MinimalAttachment = {
   local_uri?: string | null;
   state?: number | null;
   mediaType?: string | null;
+  blobUrl?: string | null;
 };
 
 export const onStateReportFile = async ({

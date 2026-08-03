@@ -34,5 +34,6 @@ export type SendConstatForm = {
   checkErrors: () => void;
   isStateReportDisabled: boolean;
   pdfBlob: Blob | null;
+  pdfSize: number | null;
   needValidation?: boolean;
 };

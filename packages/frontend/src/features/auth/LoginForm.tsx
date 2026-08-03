@@ -12,6 +12,7 @@ import { Alert, Input } from "#components/MUIDsfr.tsx";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
 import { useStyles } from "tss-react";
+import { searchStore } from "#components/SearchModal.tsx";
 
 export const LoginForm = () => {
   const { auth, setAuth } = useAuthContext();
@@ -29,6 +30,9 @@ export const LoginForm = () => {
     localStorage.setItem("crvif/version", "1");
     localStorage.removeItem("crvif/update-popup");
     setAuth(response as any);
+
+    searchStore.send({ type: "setScope", scope: "my" });
+    searchStore.send({ type: "setDocument", document: "constats" });
 
     navigate({ to: "/", search: { document: "constats" } });
   };

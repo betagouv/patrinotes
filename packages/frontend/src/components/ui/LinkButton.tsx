@@ -1,5 +1,5 @@
 import { Button } from "#components/MUIDsfr.tsx";
-import { ButtonProps } from "@mui/material";
+import { Box, ButtonProps } from "@mui/material";
 import { ReactNode } from "react";
 
 export const LinkButton = ({ children, ...props }: ButtonProps & { children: ReactNode }) => {

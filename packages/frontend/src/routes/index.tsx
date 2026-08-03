@@ -7,12 +7,12 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { v4 } from "uuid";
-import { useUser } from "../contexts/AuthContext";
+import { useLiveService, useService, useUser } from "../contexts/AuthContext";
 import { db, useDbQuery } from "../db/db";
 import { AllReports, MyReports } from "../features/report/ReportList";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps, Typography } from "@mui/material";
-import { Center, Input, Tile } from "#components/MUIDsfr.tsx";
+import { Alert, Center, Input, Tile } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
 import { Tabs } from "#components/Tabs.tsx";
 import { Button } from "#components/MUIDsfr.tsx";
@@ -21,7 +21,9 @@ import { HomeImageSvg } from "#components/HomeImageSvg.tsx";
 import { DocumentTypeSelector } from "#components/DocumentTypeSelector.tsx";
 import z from "zod";
 import { appDocumentEnum } from "../utils";
-import { SearchModal } from "#components/SearchModal.tsx";
+import { SearchModal, searchStore } from "#components/SearchModal.tsx";
+import { useSelector } from "@xstate/store/react";
+import { useServiceType } from "../features/useServiceType";
 
 const Index = () => {
   const user = useUser()!;
@@ -136,6 +138,8 @@ const Index = () => {
 };
 
 const MainContentTabs = () => {
+  const serviceType = useServiceType();
+
   const options = [
     {
       id: "my",
@@ -152,7 +156,7 @@ const MainContentTabs = () => {
     },
     {
       id: "service",
-      label: "Service",
+      label: serviceType ?? "Service",
       props: {
         position: "absolute" as const,
         left: { xs: "16px", lg: "58px" },
@@ -165,9 +169,14 @@ const MainContentTabs = () => {
     },
   ];
 
+  const scope = useSelector(searchStore, (state) => state.context.scope) ?? "my";
+
   return (
     <Flex flex="1" flexDirection="column" pb={{ xs: "16px", lg: "0" }} width="100%">
-      <Tabs options={options} />
+      <Tabs
+        control={[scope, (value) => searchStore.send({ type: "setScope", scope: value as "my" | "service" })]}
+        options={options}
+      />
     </Flex>
   );
 };
@@ -178,11 +187,4 @@ export const Route = createFileRoute("/")({
       <Index />
     </EnsureUser>
   ),
-  validateSearch: (search) => {
-    const parsed = appDocumentEnum.safeParse(search?.document);
-    return {
-      document: parsed.success ? parsed.data : "constats",
-      from: search?.from,
-    };
-  },
 });

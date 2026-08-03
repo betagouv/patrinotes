@@ -34,6 +34,8 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
   const [isDeleteWarningOpen, setIsDeleteWarningOpen] = useState(false);
   const deleteMutation = useDeleteMutation();
 
+  if (report.pdf_size) console.log(report.pdf_size, "pdfSize in report");
+
   const downloadPdfMutation = useMutation({
     mutationFn: async () => {
       const buffer = (await api.get("/api/upload/attachment", {
@@ -93,6 +95,8 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
     },
   });
 
+  const downloadLabel = getDownloadLabel(report.pdf_size ?? null);
+
   return (
     <Flex ref={ref} bgcolor="#ECECFE" gap="0" flexDirection="column">
       {isDraft ? (
@@ -110,20 +114,18 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
           />
           <Divider height="1px" color="#DDD" />
         </>
-      ) : null}
+      ) : (
+        <>
+          <ReportAction label={downloadLabel} onClick={() => downloadPdfMutation.mutate()} iconId="ri-download-line" />
+          <Divider height="1px" color="#DDD" />
+        </>
+      )}
 
       <ReportAction
         iconId="ri-file-add-line"
         label="Dupliquer"
         onClick={() => duplicateMutation.mutate(undefined, { onError: (e) => console.error(e) })}
       />
-
-      {!isDraft ? (
-        <>
-          <Divider height="1px" color="#DDD" />
-          <ReportAction label="Télécharger" onClick={() => downloadPdfMutation.mutate()} iconId="ri-download-line" />
-        </>
-      ) : null}
 
       {hasAccess ? (
         <>
@@ -181,6 +183,9 @@ const ReportActionButton = styled(Button)(({ theme }) => ({
   [theme.breakpoints.down("lg")]: {
     height: "56px",
   },
+  ":focus-visible": {
+    backgroundColor: fr.colors.decisions.background.contrast.grey.default,
+  },
 }));
 
 const useDeleteMutation = () =>
@@ -189,3 +194,13 @@ const useDeleteMutation = () =>
       await db.updateTable("state_report").set({ disabled: 1 }).where("id", "=", id).execute();
     },
   });
+
+export const formatSize = (size: number) => {
+  if (size < 1024) return `${size} o`;
+  if (size < 1024 * 1024)
+    return `${(size / 1024).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ko`;
+  return `${(size / (1024 * 1024)).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Mo`;
+};
+export const getDownloadLabel = (pdfSize: number | null) => {
+  return pdfSize ? `Télécharger le constat (PDF - ${formatSize(pdfSize)})` : "Télécharger";
+};

@@ -3,7 +3,7 @@ import { Flex } from "./ui/Flex";
 import Button from "@codegouvfr/react-dsfr/Button";
 import { createContext, useContext, useState } from "react";
 
-export const Tabs = ({ options, control, ...boxProps }: TabsProps & BoxProps) => {
+export const Tabs = ({ options, control, onSelect, ...boxProps }: TabsProps & BoxProps) => {
   const [value, setValue] = control ?? useState(options[0].id);
 
   const onClick = (option: TabOption) => {
@@ -91,11 +91,15 @@ const TabButton = styled(Button)<{ selected?: boolean }>(({ selected, theme }) =
   textAlign: "left",
   zIndex: selected ? "2" : "1",
   height: "56px",
-  overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
   boxShadow: selected ? "6px 0px 10px 3px rgba(0, 0, 0, .05), -6px 0px 10px 3px rgba(0, 0, 0, .05)" : "none",
   ":hover": {
     backgroundColor: selected ? "white !important" : "#dadafd !important",
+  },
+  ":focus-visible": {
+    outline: "none !important",
+    boxShadow: "inset 0 0 0 4px #0a76f6 !important",
+    zIndex: 3,
   },
 }));

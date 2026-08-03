@@ -25,6 +25,7 @@ const report = new Table({
   city: column.text,
   zipCode: column.text,
   personnes_presentes: column.text,
+  pdf_size: column.integer,
 });
 
 const service = new Table({
@@ -248,6 +249,7 @@ const state_report = new Table({
 
   notes: column.text,
 
+  pdf_size: column.integer,
   attachment_id: column.text,
 
   bilan_quinquennal: column.text,

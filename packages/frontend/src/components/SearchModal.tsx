@@ -68,7 +68,7 @@ export const SearchModal = () => {
 };
 const routeApi = getRouteApi("/");
 const SearchResults = ({ search }: { search: string }) => {
-  const document = routeApi.useSearch().document;
+  const document = storedDocument ?? "compte-rendus";
   const isCR = document === "compte-rendus";
 
   const user = useUser();
@@ -132,10 +132,14 @@ const SearchResults = ({ search }: { search: string }) => {
   );
 };
 
+const storedDocument = localStorage.getItem("patrinotes/home-document") as "compte-rendus" | "constats" | null;
+const storedScope = localStorage.getItem("patrinotes/home-scope") as "service" | "my" | null;
 export const searchStore = createStore(
   {
     search: "",
     modalOpen: false,
+    document: (storedDocument ?? "compte-rendus") as "compte-rendus" | "constats",
+    scope: (storedScope ?? "all") as "service" | "my",
   },
   {
     setSearch: (ctx, event: { search: string }) => ({
@@ -145,5 +149,13 @@ export const searchStore = createStore(
     }),
     openModal: (ctx) => ({ ...ctx, modalOpen: true }),
     closeModal: (ctx) => ({ ...ctx, modalOpen: false, search: "" }),
+    setDocument: (ctx, event: { document: "compte-rendus" | "constats" }) => {
+      localStorage.setItem("patrinotes/home-document", event.document);
+      return { ...ctx, document: event.document };
+    },
+    setScope: (ctx, event: { scope: "service" | "my" }) => {
+      localStorage.setItem("patrinotes/home-scope", event.scope);
+      return { ...ctx, scope: event.scope };
+    },
   },
 );

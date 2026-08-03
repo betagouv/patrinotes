@@ -93,7 +93,7 @@ export const ContexteVisite = () => {
           sx={{ width: "100%" }}
           disabled={isDisabled}
           id="proprietaire-email"
-          label={<Box className="mandatory-field">Courriel du propriétaire</Box>}
+          label={<Box>Courriel du propriétaire</Box>}
           nativeInputProps={{
             ...form.register("proprietaire_email"),
           }}

@@ -65,7 +65,7 @@ export const SectionPhotos = ({
   isDisabled: boolean;
 }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
-  const { attachments, addMutation, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
+  const { attachments, batchUpload, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
     { table: "state_report_alert_attachment", fkColumn: "state_report_alert_id", fkValue: alertId ?? "" },
     constatId,
   );
@@ -81,7 +81,7 @@ export const SectionPhotos = ({
       />
 
       <UploadImage
-        onFiles={async (files) => { for (const file of files) await addMutation.mutateAsync(file); }}
+        onFiles={batchUpload.uploadFiles}
         multiple
         attachments={attachments}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}

@@ -12,18 +12,7 @@ export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
     );
   }
 
-  const getTimeSinceLastSync = () => {
-    const now = Date.now();
-    const lastSync = status?.lastSyncedAt ? new Date(status.lastSyncedAt).getTime() : null;
-
-    if (!lastSync) return -1;
-
-    return Math.floor((now - lastSync) / 1000);
-  };
-
-  const timeSinceLastSync = getTimeSinceLastSync();
-
-  const isConnected = status?.connected || timeSinceLastSync < 180;
+  const isConnected = status?.connected;
 
   return (
     <Badge small as="span" noIcon severity={status ? (isConnected ? "success" : "error") : "success"}>

@@ -14,7 +14,9 @@ import { omit } from "pastable";
 import { scrollToTop } from "../state-report/StateReportSummary";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Notice } from "@codegouvfr/react-dsfr/Notice";
-import { JobSelect } from "../../routes/account";
+import { JobSelect } from "../../routes/compte";
+import { searchStore } from "#components/SearchModal.tsx";
+import { InfoText } from "#components/ui/InfoText.tsx";
 
 export const SignupForm = () => {
   const form = useForm<SignupFormProps>({
@@ -51,7 +53,11 @@ export const SignupForm = () => {
     const valuesWithName = { ...omit(values, ["nom", "prenom"]), name };
     const response = await mutation.mutateAsync(valuesWithName, { onError: () => scrollToTop() });
     setAuth(response as any);
-    navigate({ to: "/", search: { document: "constats" } as any });
+
+    searchStore.send({ type: "setScope", scope: "my" });
+    searchStore.send({ type: "setDocument", document: "constats" });
+
+    navigate({ to: "/" });
   };
 
   const { errors: formErrors } = form.formState;
@@ -212,6 +218,10 @@ const SignupJobSelect = ({ form }: { form: UseFormReturn<SignupFormProps> }) => 
   return (
     <Box sx={{ mb: "16px" }}>
       <JobSelect job={job} onChange={(job) => form.setValue("job", job, { shouldDirty: true })} />
+      <InfoText sx={{ fontSize: "12px !important" }}>
+        Votre fonction sera reportée dans les constats et comptes-rendus partagés. Vous pourrez la modifier à tout
+        moment dans votre compte utilisateur.
+      </InfoText>
     </Box>
   );
 };

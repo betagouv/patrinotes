@@ -8,6 +8,7 @@ import { useLiveUser, useUser } from "../../contexts/AuthContext";
 import { Report, StateReport } from "../../db/AppSchema";
 import { useDbQuery } from "../../db/db";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
+import { NoReportAlert } from "./NoReportAlert";
 import { ReportListItem } from "./ReportListItem";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -34,7 +35,7 @@ const routeApi = getRouteApi("/");
 
 export const MyReports = () => {
   const [page, setPage] = useState(0);
-  const document = routeApi.useSearch().document;
+  const document = useSelector(searchStore, (state) => state.context.document) ?? "compte-rendus";
 
   const search = useSelector(searchStore, (state) => state.context.search);
   const isDesktop = useIsDesktop();
@@ -87,7 +88,7 @@ export const MyReports = () => {
 
 export const AllReports = () => {
   const [page, setPage] = useState(0);
-  const document = routeApi.useSearch().document;
+  const document = useSelector(searchStore, (state) => state.context.document) ?? "compte-rendus";
 
   const search = useSelector(searchStore, (state) => state.context.search);
   const isDesktop = useIsDesktop();
@@ -178,7 +179,7 @@ const NoReport = () => {
       <Box textAlign="center" lineHeight="36px">
         Pour commencer, créez votre premier document ci-dessus.
       </Box>
-      <Box component="img" src={welcomeImage} alt="Bienvenue" mt="46px" />
+      <Box component="img" src={welcomeImage} maxWidth="100vw" px="16px" alt="Bienvenue" mt="46px" />
     </Center>
   );
 };
@@ -209,6 +210,7 @@ export const ReportList = ({
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
+      <NoReportAlert show={!hideEmpty && !!error} />
       <Center
         mb="40px"
         width="100%"
@@ -316,6 +318,7 @@ export const StateReportList = ({
 
   return (
     <Stack component="div" width="100%" mt={{ xs: "20px", lg: "30px" }} px="16px">
+      <NoReportAlert show={!hideEmpty && !!error} />
       <Center
         mb="40px"
         width="100%"

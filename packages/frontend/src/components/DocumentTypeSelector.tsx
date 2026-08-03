@@ -2,21 +2,15 @@ import { fr } from "@codegouvfr/react-dsfr";
 import { Box } from "@mui/material";
 import { Flex } from "./ui/Flex";
 import { getRouteApi } from "@tanstack/react-router";
-
-const routeApi = getRouteApi("/");
+import { useSelector } from "@xstate/store/react";
+import { searchStore } from "./SearchModal";
+import { Button } from "./MUIDsfr";
 
 export const DocumentTypeSelector = () => {
-  const { document } = routeApi.useSearch();
-  const navigate = routeApi.useNavigate();
+  const document = useSelector(searchStore, (state) => state.context.document) ?? "compte-rendus";
 
   const setSelected = (docType: "constats" | "compte-rendus") => {
-    navigate({
-      search: (old) => ({
-        ...old,
-        document: docType,
-      }),
-      resetScroll: false,
-    });
+    searchStore.send({ type: "setDocument", document: docType });
   };
 
   const selectedProps = {
@@ -35,28 +29,44 @@ export const DocumentTypeSelector = () => {
         borderColor={fr.colors.decisions.border.default.grey.default}
         width={{ xs: "100%", lg: "auto" }}
       >
-        <Box
-          py="8px"
-          width={{ xs: "100%", lg: "240px" }}
-          textAlign="center"
-          borderRadius="4px"
-          {...(document === "constats" ? { ...selectedProps } : {})}
-          sx={{ cursor: "pointer" }}
+        <Button
+          type="button"
+          priority="tertiary no outline"
+          sx={{
+            py: "8px",
+            width: { xs: "100%", lg: "240px" },
+            textAlign: "center",
+            alignItems: "center",
+            justifyContent: "center",
+            display: "flex",
+            borderRadius: "4px",
+            color: "black",
+            fontWeight: "400",
+            ...(document === "constats" ? { ...selectedProps } : {}),
+          }}
           onClick={() => setSelected("constats")}
         >
           constats
-        </Box>
-        <Box
-          py="8px"
-          width={{ xs: "100%", lg: "240px" }}
-          textAlign="center"
-          borderRadius="4px"
-          {...(document === "compte-rendus" ? selectedProps : {})}
-          sx={{ cursor: "pointer" }}
+        </Button>
+        <Button
+          type="button"
+          priority="tertiary no outline"
+          sx={{
+            py: "8px",
+            width: { xs: "100%", lg: "240px" },
+            textAlign: "center",
+            alignItems: "center",
+            justifyContent: "center",
+            display: "flex",
+            borderRadius: "4px",
+            color: "black",
+            fontWeight: "400",
+            ...(document === "compte-rendus" ? selectedProps : {}),
+          }}
           onClick={() => setSelected("compte-rendus")}
         >
           compte-rendus
-        </Box>
+        </Button>
       </Flex>
     </Flex>
   );
