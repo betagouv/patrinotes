@@ -19,6 +19,7 @@ import { getDiff } from "../components/SyncForm";
 import { useUser } from "../contexts/AuthContext";
 import { Clause_v2, Pictures, Report, Service } from "../db/AppSchema";
 import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../db/db";
+import { getImageDimensions } from "../utils";
 import { useChipOptions } from "../features/chips/useChipOptions";
 import { transformBold } from "../features/menu/ClauseMenu";
 import { TextEditor } from "../features/text-editor/TextEditor";
@@ -46,7 +47,12 @@ export const PDF = () => {
     mutationFn: async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
       const { uploadUrl, pdfPath } = await api.post("/api/pdf/report/upload-url", { body: { reportId } });
 
-      const pictures = (reportQuery.data?.pictures ?? []).map((p: any) => ({ url: p.url }));
+      const pictures = (reportQuery.data?.pictures ?? []).map((p: any) => ({
+        url: p.url,
+        label: p.label,
+        width: p.width,
+        height: p.height,
+      }));
       const blob = await pdf(
         (
           <ReportPDFDocument
@@ -93,12 +99,12 @@ export const PDF = () => {
       const pictures = await Promise.all(
         picturesQuery
           .filter((pic) => pic.local_uri)
-          .map((pic) =>
-            attachmentLocalStorage.readFile(pic.local_uri!).then((buffer) => ({
-              ...pic,
-              url: URL.createObjectURL(new Blob([buffer], { type: pic.media_type ?? "image/jpeg" })),
-            })),
-          ),
+          .map(async (pic) => {
+            const buffer = await attachmentLocalStorage.readFile(pic.local_uri!);
+            const url = URL.createObjectURL(new Blob([buffer], { type: pic.media_type ?? "image/jpeg" }));
+            const dimensions = await getImageDimensions(url);
+            return { ...pic, url, width: dimensions?.width, height: dimensions?.height };
+          }),
       );
 
       const report = reportQuery?.[0];

@@ -1,10 +1,11 @@
-import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
+import { Document, Page, View } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { Html } from "react-pdf-html";
 import { Clause_v2, Report, Service, ServiceInstructeurs } from "../../frontend/src/db/AppSchema";
-import { processHtml } from "./utils";
+import { buildHtml, processHtml } from "./utils";
 import { MarianneHeader } from "./components/MarianneHeader";
 import { Pagination } from "./components/Pagination";
+import { ImagesTable } from "./components/images";
 import React from "react";
 import { transformHeaderText } from "./stateReport";
 
@@ -198,92 +199,52 @@ export const ReportPDFDocument = ({ service, htmlString, images, pictures }: Rep
   );
 };
 
-const picturesPerPage = 1;
-
 const PicturesGrid = ({ pictures, marianneUrl }: { pictures: PdfImage[]; marianneUrl: string }) => {
-  const pages = Math.ceil(pictures.length / picturesPerPage);
+  if (!pictures.length) return null;
+
   return (
-    <>
-      {Array.from({ length: pages }).map((_, pageIndex) => (
-        <Page
-          key={pageIndex}
-          size="A4"
-          style={{
-            paddingBottom: 56,
-            paddingTop: 72,
-            backgroundColor: "#ffffff",
-            fontFamily: "Marianne",
-          }}
-        >
-          <MarianneHeader
-            marianneUrl={marianneUrl}
-            styles={({}) => ({
-              top: -37,
-            })}
-          />
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              justifyContent: "flex-start",
-              gap: 20,
-              paddingLeft: "40px",
-              paddingRight: "40px",
-            }}
-          >
-            {pictures.slice(pageIndex * picturesPerPage, (pageIndex + 1) * picturesPerPage).map((image, index) => (
-              <View
-                key={index}
-                style={{
-                  width: "90%",
-                  maxHeight: "90vh",
-                  marginBottom: 20,
-                  display: "flex",
-                  justifyContent: "center",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-              >
-                <View style={{ width: "100%", marginBottom: 5 }} wrap={false}>
-                  <Image
-                    src={image.url!}
-                    style={{ width: "100%", objectFit: "scale-down", objectPosition: "left", maxHeight: "80vh" }}
-                  />
-                  {image.label ? (
-                    <Text
-                      style={{
-                        fontSize: "10pt",
-                        color: "gray",
-                      }}
-                    >
-                      {image.label}
-                    </Text>
-                  ) : null}
-                </View>
-                {image.label ? null : (
-                  <Text
-                    style={{
-                      fontSize: "10px",
-                      textAlign: "left",
-                      width: "100%",
-                    }}
-                  >
-                    N°{pageIndex * picturesPerPage + index + 1}
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
-          <Pagination />
-        </Page>
-      ))}
-    </>
+    <Page
+      size="A4"
+      style={{
+        paddingBottom: 56,
+        paddingTop: 72,
+        backgroundColor: "#ffffff",
+        fontFamily: "Marianne",
+      }}
+      wrap
+    >
+      <MarianneHeader
+        marianneUrl={marianneUrl}
+        styles={({}) => ({
+          top: -37,
+        })}
+      />
+      <Html
+        renderers={{ unbreakable: (props) => <View {...props} wrap={false} /> }}
+        style={{ paddingLeft: "40px", paddingRight: "40px" }}
+      >
+        {buildHtml(
+          <ImagesTable
+            images={pictures.map((image, index) => ({
+              url: image.url,
+              label: image.label ?? `N°${index + 1}`,
+              attachmentId: image.url ?? String(index),
+              width: image.width,
+              height: image.height,
+            }))}
+          />,
+        )}
+      </Html>
+      <Pagination />
+    </Page>
   );
 };
 
 export type PdfImage = {
   url: string;
   label?: string;
+  width?: number | null;
+  height?: number | null;
 };
 
 export type ReportPDFDocumentProps = {

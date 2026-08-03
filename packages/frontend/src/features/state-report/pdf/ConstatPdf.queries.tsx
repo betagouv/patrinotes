@@ -6,19 +6,7 @@ import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { pdf } from "@react-pdf/renderer";
 import React from "react";
 import { Service } from "../../../db/AppSchema";
-
-/**
- * Reads natural dimensions off a blob URL that's already been created from
- * locally-stored bytes — decoding is local and cheap, no network refetch.
- */
-const getImageDimensions = (url: string): Promise<{ width: number; height: number } | null> => {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
-};
+import { getImageDimensions } from "../../../utils";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>

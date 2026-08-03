@@ -92,3 +92,16 @@ export const decodeBase64 = (base64: string): ArrayBuffer => {
 };
 
 export type Awaitable<T> = T | Promise<T>;
+
+/**
+ * Reads natural dimensions off an already-created object/blob URL — decoding
+ * is local, no network refetch.
+ */
+export const getImageDimensions = (url: string): Promise<{ width: number; height: number } | null> => {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+};
