@@ -7,6 +7,19 @@ import { pdf } from "@react-pdf/renderer";
 import React from "react";
 import { Service } from "../../../db/AppSchema";
 
+/**
+ * Reads natural dimensions off a blob URL that's already been created from
+ * locally-stored bytes — decoding is local and cheap, no network refetch.
+ */
+const getImageDimensions = (url: string): Promise<{ width: number; height: number } | null> => {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+};
+
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
     queryOptions({
@@ -57,10 +70,13 @@ export const constatPdfQueries = {
           attachmentQuery.map(async (attachment) => {
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+            const dimensions = await getImageDimensions(url);
 
             return {
               ...attachment,
               file: url,
+              width: dimensions?.width,
+              height: dimensions?.height,
             };
           }),
         );
@@ -122,9 +138,12 @@ export const constatPdfQueries = {
             }
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+            const dimensions = await getImageDimensions(url);
             return {
               ...attachment,
               file: url,
+              width: dimensions?.width,
+              height: dimensions?.height,
             };
           }),
         );
@@ -182,9 +201,12 @@ export const constatPdfQueries = {
           alertAttachments.map(async (attachment) => {
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+            const dimensions = await getImageDimensions(url);
             return {
               ...attachment,
               file: url,
+              width: dimensions?.width,
+              height: dimensions?.height,
             };
           }),
         );

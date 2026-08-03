@@ -26,14 +26,31 @@ export const ImagesTableContainer = ({ children }: { children: React.ReactNode }
   );
 };
 
+const CELL_HEIGHT = 180;
+
 const ImageCell = ({ image }: { image: Image | undefined }) => {
   if (!image) return null;
+
+  // With known natural dimensions we pin the cell (and its label) to the exact
+  // width the image will render at, instead of "auto" — react-pdf-html's layout
+  // engine can't correctly derive an auto column's width from an unconstrained
+  // text child, which otherwise makes long labels push the next cell sideways
+  // instead of the row wrapping.
+  const width = image.width && image.height ? Math.round((image.width / image.height) * CELL_HEIGHT) : undefined;
+
   return (
-    <unbreakable style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start" }}>
+    <unbreakable
+      style={{
+        display: "inline-flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        width: width ? `${width}px` : undefined,
+      }}
+    >
       <img
         src={image.url}
         data-attachment-id={image.attachmentId}
-        style={{ height: "180px", width: "auto", display: "block" }}
+        style={{ height: `${CELL_HEIGHT}px`, width: width ? `${width}px` : "auto", display: "block" }}
       />
       <div
         style={{
@@ -41,7 +58,8 @@ const ImageCell = ({ image }: { image: Image | undefined }) => {
           fontSize: "8pt",
           color: "gray",
           lineHeight: 1.4,
-          alignSelf: "stretch",
+          width: width ? `${width}px` : undefined,
+          alignSelf: width ? undefined : "stretch",
           wordBreak: "break-word",
         }}
       >
@@ -50,7 +68,7 @@ const ImageCell = ({ image }: { image: Image | undefined }) => {
     </unbreakable>
   );
 };
-type Image = { url: string; label?: string | null; attachmentId: string };
+type Image = { url: string; label?: string | null; attachmentId: string; width?: number | null; height?: number | null };
 
 declare global {
   namespace JSX {

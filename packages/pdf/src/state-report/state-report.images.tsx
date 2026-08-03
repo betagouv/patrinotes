@@ -12,7 +12,17 @@ export const PlanSituation = ({ stateReport }: { stateReport: StateReportWithUse
       <h2 style={{ fontSize: "16pt", marginBottom: "0" }}>
         <b>Plan de situation</b>
       </h2>
-      <ImagesTable images={[{ url: attachment.file, label: attachment.label, attachmentId: attachment.id }]} />
+      <ImagesTable
+        images={[
+          {
+            url: attachment.file,
+            label: attachment.label,
+            attachmentId: attachment.id,
+            width: attachment.width,
+            height: attachment.height,
+          },
+        ]}
+      />
     </div>
   );
 };
@@ -27,7 +37,17 @@ export const PlanEdifice = ({ stateReport }: { stateReport: StateReportWithUserA
       <h2 style={{ fontSize: "16pt", marginBottom: "0" }}>
         <b>Plan de l'édifice</b>
       </h2>
-      <ImagesTable images={[{ url: attachment.file, label: attachment.label, attachmentId: attachment.id }]} />
+      <ImagesTable
+        images={[
+          {
+            url: attachment.file,
+            label: attachment.label,
+            attachmentId: attachment.id,
+            width: attachment.width,
+            height: attachment.height,
+          },
+        ]}
+      />
     </div>
   );
 };
@@ -42,7 +62,15 @@ export const VuesGenerales = ({ stateReport }: { stateReport: StateReportWithUse
       <h2 style={{ fontSize: "16pt", marginBottom: "0" }}>
         <b>Vues générales</b>
       </h2>
-      <ImagesTable images={attachments.map((att) => ({ url: att.file, label: att.label, attachmentId: att.id }))} />
+      <ImagesTable
+        images={attachments.map((att) => ({
+          url: att.file,
+          label: att.label,
+          attachmentId: att.id,
+          width: att.width,
+          height: att.height,
+        }))}
+      />
     </div>
   );
 };
