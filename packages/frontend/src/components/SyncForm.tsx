@@ -110,7 +110,8 @@ export function SyncFormBanner({ newObject }: { newObject: Partial<Report> }) {
             flexDirection: "column",
             justifyContent: "space-between",
             width: { xs: "100%", lg: "800px" },
-            py: { xs: 0, lg: "56px" },
+            pt: { xs: 0, lg: "56px" },
+            pb: { xs: "20px", lg: "76px" },
             px: "15px",
           }}
         >
@@ -164,7 +165,6 @@ export function SyncFormBanner({ newObject }: { newObject: Partial<Report> }) {
             label=""
             nativeInputProps={{ ...form.register("title") }}
           />
-          <Status isCollapsed={isCollapsed} display={{ xs: "flex", lg: "none" }} />
         </Flex>
         {/* <div></div> */}
         <Box width="calc((100% - 800px) / 2)"></Box>
@@ -208,7 +208,6 @@ export function SyncFormBanner({ newObject }: { newObject: Partial<Report> }) {
               <Box textOverflow="ellipsis" overflow="hidden" whiteSpace="nowrap">
                 {newObject.title}
               </Box>
-              <Status isCollapsed={isCollapsed} />
             </>
           ) : null}
         </Flex>
