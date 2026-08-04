@@ -14,6 +14,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ModalCloseButton } from "./menu/MenuTitle";
 import { Alert, Button, Center } from "#components/MUIDsfr.tsx";
+import { MonumentMapModal } from "./map/MonumentMapModal";
 
 type FilterablePopImmeubles = Pick<
   PopImmeuble,
@@ -46,6 +47,8 @@ export const ImmeubleAutocomplete = () => {
   const [areSuggestionsShown, setAreSuggestionsShown] = useState(false);
 
   const [isWarningOpen, setIsWarningOpen] = useState(false);
+
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   const form = useStateReportFormContext();
   const [referencePop, titreEdifice] = useWatch({ control: form.control, name: ["reference_pop", "titre_edifice"] });
@@ -300,9 +303,21 @@ export const ImmeubleAutocomplete = () => {
         }
         renderInput={(params) => (
           <div className="fr-input-group" id="mh-autocomplete">
-            <label className="fr-label" htmlFor={params.id}>
-              Nom ou référence du monument
-            </label>
+            <Flex alignItems="center" justifyContent="space-between">
+              <label className="fr-label" htmlFor={params.id}>
+                Nom ou référence du monument
+              </label>
+              <Button
+                type="button"
+                priority="tertiary no outline"
+                iconId="fr-icon-map-pin-2-line"
+                title="Choisir sur la carte"
+                disabled={isDisabled}
+                onClick={() => setIsMapModalOpen(true)}
+              >
+                Choisir sur la carte
+              </Button>
+            </Flex>
             <Box ref={params.InputProps.ref} mt="8px">
               <input
                 {...params.inputProps}
@@ -345,6 +360,15 @@ export const ImmeubleAutocomplete = () => {
           />
         </Flex>
       ) : null}
+
+      <MonumentMapModal
+        open={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        onSelect={(item) => {
+          setValue(item);
+          setIsMapModalOpen(false);
+        }}
+      />
     </Box>
   );
 };

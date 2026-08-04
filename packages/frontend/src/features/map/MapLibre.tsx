@@ -11,7 +11,7 @@ export type SelectedParcel = { section: string; numero: string };
 
 type Background = "vector" | "satellite";
 
-const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+export const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 // const VECTOR_STYLE_URL = "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json";
 
 export const CADASTRE_SOURCE_URL = "https://openmaptiles.geo.data.gouv.fr/data/cadastre.json";
