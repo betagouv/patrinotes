@@ -1,4 +1,4 @@
-import { Button, Input } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Input } from "#components/MUIDsfr.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -28,6 +28,9 @@ import { ButtonsSwitch } from "../WithReferencePop";
 import { EditDisabled } from "./ContexteVisite";
 import { InfoText } from "#components/ui/InfoText.tsx";
 import { cx } from "@codegouvfr/react-dsfr/fr/cx";
+import { Spinner } from "#components/Spinner.tsx";
+import { generatePlanSituationSnapshot, PlanSituationOfflineError } from "../../map/planSituationSnapshot";
+import { invalidatePlanSituationAttachment, resolveCoordonnees } from "../planSituationAttachment";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -145,24 +148,48 @@ const PlanSituation = ({
   isDisabled: boolean;
 }) => {
   const { constatId } = routeApi.useParams();
+  const form = useStateReportFormContext();
+  const coordonnees = useWatch({ control: form.control, name: "coordonnees" });
+  const referenceCadastrale = useWatch({ control: form.control, name: "reference_cadastrale" });
+  const referencePop = useWatch({ control: form.control, name: "reference_pop" });
+  const adresse = useWatch({ control: form.control, name: "adresse" });
 
-  const { attachments, addMutation, deleteMutation } = useAttachmentImages(
+  const { attachments, addMutation } = useAttachmentImages(
     { table: "state_report_attachment", fkColumn: "state_report_id", fkValue: constatId, type: "plan_situation" },
     constatId,
   );
   const attachment = attachments[0] ?? null;
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<"offline" | "no-data" | "error" | null>(null);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const resolvedCoordonnees = await resolveCoordonnees({ coordonnees, referencePop, adresse });
+      if (!resolvedCoordonnees) {
+        setError("no-data");
+        return;
+      }
+      if (attachment) await invalidatePlanSituationAttachment(constatId);
+      const blob = await generatePlanSituationSnapshot({ coordonnees: resolvedCoordonnees, referenceCadastrale });
+      const file = new File([blob], "plan-de-situation.jpg", { type: "image/jpeg" });
+      await addMutation.mutateAsync(file);
+    } catch (e) {
+      setError(e instanceof PlanSituationOfflineError ? "offline" : "error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <Box flex="1">
-      <Typography mb="8px">Plan de situation</Typography>
-      <UploadImage
-        onFiles={async (files) => addMutation.mutateAsync(files[0])}
-        attachments={attachment ? [attachment] : []}
-        multiple={false}
-        onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
-        onDelete={() => deleteMutation.mutate({ id: attachment!.id })}
-        isDisabled={isDisabled}
-      />
+      {!isDisabled && !isGenerating ? (
+        <Button priority="tertiary" type="button" onClick={handleGenerate} sx={{ mt: "8px" }}>
+          {attachment ? "Régénérer le plan" : "Générer le plan maintenant"}
+        </Button>
+      ) : null}
     </Box>
   );
 };
@@ -273,10 +300,10 @@ const EtatGeneralImages = ({ isDisabled }: { isDisabled: boolean }) => {
         onSave={({ id, label }) => onLabelChange(id, label || "")}
         onReplaceAttachment={replaceAttachment}
       />
-      <PlanSituation
+      {/* <PlanSituation
         setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
         isDisabled={isDisabled}
-      />
+      /> */}
       <PlanEdifice
         setSelectedAttachment={(a, url) => setSelected({ attachment: a, blobUrl: url })}
         isDisabled={isDisabled}

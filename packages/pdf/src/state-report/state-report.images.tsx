@@ -5,7 +5,21 @@ import React from "react";
 export const PlanSituation = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   const attachment = stateReport.attachments.find((att) => att.type === "plan_situation");
 
-  if (!attachment) return null;
+  if (!attachment) {
+    if (!stateReport.planSituationOffline) return null;
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <h2 style={{ fontSize: "16pt", marginBottom: "0" }}>
+          <b>Plan de situation</b>
+        </h2>
+        <p style={{ fontSize: "10pt", color: "gray" }}>
+          Le plan de situation n'a pas pu être généré car l'appareil était hors ligne. Reconnectez-vous à internet
+          puis rouvrez ce constat pour l'inclure au PDF.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -16,7 +30,7 @@ export const PlanSituation = ({ stateReport }: { stateReport: StateReportWithUse
         images={[
           {
             url: attachment.file,
-            label: attachment.label,
+            label: "Échelle 1/5000",
             attachmentId: attachment.id,
             width: attachment.width,
             height: attachment.height,

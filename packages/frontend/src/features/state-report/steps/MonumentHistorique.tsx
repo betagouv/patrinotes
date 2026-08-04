@@ -17,6 +17,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 import { Accordion } from "#components/MUIDsfr.tsx";
+import { PlanDeSituationModal } from "./PlanDeSituationModal";
 // import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
@@ -120,24 +121,8 @@ export const MonumentHistorique = () => {
           {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
         </Flex>
 
-        {/* {referencePop && !isCustom ? (
-          <Button
-            priority="tertiary no outline"
-            iconId="fr-icon-road-map-line"
-            onClick={() => setIsPlanModalOpen(true)}
-            type="button"
-            sx={{ alignSelf: "flex-start", mt: isEditing ? "8px" : "4px" }}
-          >
-            Voir plan de situation
-          </Button>
-        ) : null} */}
-
-        {/* {isPlanModalOpen ? (
-          <PlanDeSituationModal referencePop={referencePop!} onClose={() => setIsPlanModalOpen(false)} />
-        ) : null} */}
-
         <Flex
-          flexDirection={{ xs: "column", lg: "row" }}
+          flexDirection={{ xs: "column", lg: "row-reverse" }}
           width="100%"
           gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
           mt={isEditing ? "16px" : 0}
@@ -159,6 +144,21 @@ export const MonumentHistorique = () => {
             isDisabled={isDisabled}
           />
         </Flex>
+
+        {referencePop && !isCustom ? (
+          <Button
+            priority="tertiary no outline"
+            iconId="fr-icon-road-map-line"
+            onClick={() => setIsPlanModalOpen(true)}
+            type="button"
+            sx={{ alignSelf: "flex-start", mt: isEditing ? "8px" : "4px" }}
+          >
+            Voir plan de situation
+          </Button>
+        ) : null}
+        {isPlanModalOpen ? (
+          <PlanDeSituationModal referencePop={referencePop!} onClose={() => setIsPlanModalOpen(false)} />
+        ) : null}
 
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 

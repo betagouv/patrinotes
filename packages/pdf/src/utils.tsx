@@ -125,6 +125,7 @@ export type Booleanish = boolean | number | null | undefined;
 export type StateReportWithUserAndAttachments = StateReport & {
   attachments: (StateReportAttachment & { file: string; width?: number | null; height?: number | null })[];
   createdByName: string | null;
+  planSituationOffline?: boolean;
 };
 
 export type SectionWithAttachments = VisitedSection & {

@@ -6,9 +6,14 @@ import { useWatch } from "react-hook-form";
 import { db, useDbQuery } from "../../../db/db";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
+import { getRouteApi } from "@tanstack/react-router";
+import { invalidatePlanSituationAttachment } from "../planSituationAttachment";
+
+const routeApi = getRouteApi("/constat/$constatId");
 
 export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: string; onClose: () => void }) => {
   const form = useStateReportFormContext();
+  const { constatId } = routeApi.useParams();
   const coordonnees = useWatch({ name: "coordonnees", control: form.control });
   const referenceCadastrale = useWatch({ name: "reference_cadastrale", control: form.control });
   const popMHQuery = useDbQuery(db.selectFrom("pop_immeubles").selectAll().where("id", "=", referencePop));
@@ -26,9 +31,10 @@ export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: 
     <Dialog
       open
       onClose={onClose}
+      maxWidth={false}
       sx={{
         ".MuiPaper-root": {
-          width: { xs: "100%", lg: "634px" },
+          width: { xs: "100%", lg: "1200px" },
           height: { xs: "100dvh", lg: 792 },
           maxHeight: { xs: "100dvh", lg: "100dvh" },
           margin: "0!important",
@@ -42,8 +48,14 @@ export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: 
             <MapLibre
               popMH={popMH}
               onClose={onClose}
-              onSaveCoordinates={(coords) => form.setValue("coordonnees", coords)}
-              onSaveReferenceCadastrale={(ref) => form.setValue("reference_cadastrale", ref)}
+              onSaveCoordinates={(coords) => {
+                form.setValue("coordonnees", coords);
+                invalidatePlanSituationAttachment(constatId);
+              }}
+              onSaveReferenceCadastrale={(ref) => {
+                form.setValue("reference_cadastrale", ref);
+                invalidatePlanSituationAttachment(constatId);
+              }}
               initialCoordinates={coordonnees}
               initialReferenceCadastrale={referenceCadastrale}
             />
