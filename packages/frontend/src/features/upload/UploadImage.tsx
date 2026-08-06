@@ -75,6 +75,7 @@ export type MinimalAttachment = {
   state?: number | null;
   mediaType?: string | null;
   blobUrl?: string | null;
+  attachment_id?: string | null;
 };
 
 export const onStateReportFile = async ({

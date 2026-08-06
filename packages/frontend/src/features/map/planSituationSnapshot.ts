@@ -5,6 +5,7 @@ import {
   buildParcelFilter,
   parseReferenceCadastrale,
 } from "./MapLibre";
+import { waitForIdle } from "./waitForIdle";
 
 const SNAPSHOT_WIDTH = 640;
 const SNAPSHOT_HEIGHT = 480;
@@ -12,7 +13,6 @@ const SCALE_DENOMINATOR = 5000;
 // Standard CSS px-to-inch convention: keeps the printed scale correct since the
 // PDF embeds this image at a fixed display height (see ImageCell in packages/pdf).
 const DPI = 96;
-const TILE_LOAD_TIMEOUT_MS = 15000;
 
 export class PlanSituationOfflineError extends Error {
   constructor() {
@@ -24,41 +24,6 @@ export class PlanSituationOfflineError extends Error {
 function zoomForScale(scaleDenominator: number, latitude: number): number {
   const metersPerPixel = (scaleDenominator * 0.0254) / DPI;
   return Math.log2((156543.03392804097 * Math.cos((latitude * Math.PI) / 180)) / metersPerPixel);
-}
-
-function waitForIdle(map: maplibregl.Map): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const timeout = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new PlanSituationOfflineError());
-    }, TILE_LOAD_TIMEOUT_MS);
-
-    const onError = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new PlanSituationOfflineError());
-    };
-
-    const onIdle = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve();
-    };
-
-    const cleanup = () => {
-      clearTimeout(timeout);
-      map.off("error", onError);
-      map.off("idle", onIdle);
-    };
-
-    map.on("error", onError);
-    map.on("idle", onIdle);
-  });
 }
 
 /**
@@ -97,7 +62,7 @@ export async function generatePlanSituationSnapshot({
   });
 
   try {
-    await waitForIdle(map);
+    await waitForIdle(map, () => new PlanSituationOfflineError());
 
     const parcels = parseReferenceCadastrale(referenceCadastrale);
     if (parcels.length) {
@@ -120,7 +85,7 @@ export async function generatePlanSituationSnapshot({
         paint: { "line-color": "#000091", "line-width": 3 },
       });
 
-      await waitForIdle(map);
+      await waitForIdle(map, () => new PlanSituationOfflineError());
     }
 
     new maplibregl.Marker().setLngLat([lng, lat]).addTo(map);
