@@ -227,7 +227,9 @@ export const MapLibre = ({
       if (!map) return;
       map.flyTo({ center: coords, zoom: 17 });
       markerRef.current?.remove();
-      markerRef.current = new maplibregl.Marker().setLngLat(coords).addTo(map);
+      markerRef.current = new maplibregl.Marker({ color: fr.colors.decisions.background.active.blueFrance.default })
+        .setLngLat(coords)
+        .addTo(map);
     };
 
     const raw = initialCoordinates ?? popMH.coordonnees_au_format_wgs84;
@@ -295,7 +297,9 @@ export const MapLibre = ({
       marker.setLngLat([lng, lat]);
       marker.getElement().style.display = "";
     } else {
-      markerRef.current = new maplibregl.Marker().setLngLat([lng, lat]).addTo(map);
+      markerRef.current = new maplibregl.Marker({ color: fr.colors.decisions.background.active.blueFrance.default })
+        .setLngLat([lng, lat])
+        .addTo(map);
     }
     onSaveCoordinates?.(`${lat},${lng}`);
     setMode("move");
