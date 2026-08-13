@@ -1,7 +1,7 @@
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { Box, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -124,6 +124,23 @@ export const UploadImageModal = ({
   onReplaceAttachment?: (oldId: string, data: ArrayBuffer, label?: string) => Promise<string>;
   hideLabelInput?: boolean;
 }) => {
+  useEffect(() => {
+    if (!selectedAttachment) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedAttachment, onClose]);
+
   if (!selectedAttachment) return null;
 
   return (

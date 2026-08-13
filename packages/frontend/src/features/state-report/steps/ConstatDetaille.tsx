@@ -215,6 +215,7 @@ const SectionModal = ({
   return (
     <Dialog
       open={selectedSection !== null}
+      onClose={onClose}
       sx={{
         ".MuiPaper-root": {
           overflowY: "auto",
