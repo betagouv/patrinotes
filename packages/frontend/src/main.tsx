@@ -32,6 +32,11 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// Force reload on Vite preload error (e.g. when the service worker is updated and the new version of the app is not yet loaded)
+window.addEventListener("vite:preloadError", () => {
+  window.location.reload();
+});
+
 // force light mode
 localStorage.setItem("scheme", "light");
 
