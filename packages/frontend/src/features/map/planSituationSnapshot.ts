@@ -26,6 +26,29 @@ function zoomForScale(scaleDenominator: number, latitude: number): number {
   return Math.log2((156543.03392804097 * Math.cos((latitude * Math.PI) / 180)) / metersPerPixel);
 }
 
+const MARKER_WIDTH = 27;
+const MARKER_HEIGHT = 41;
+const MARKER_COLOR = "#000091";
+
+// maplibregl.Marker renders as a DOM element layered over the map, not onto the WebGL
+// canvas, so canvas.toBlob() never captures it. Draw an equivalent pin manually instead.
+async function drawMarkerPin(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number): Promise<void> {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${MARKER_WIDTH}" height="${MARKER_HEIGHT}" viewBox="0 0 27 41">
+    <path fill="${MARKER_COLOR}" stroke="#fff" stroke-width="1" d="M13.5 0C6.04 0 0 6.04 0 13.5c0 10.5 13.5 27.5 13.5 27.5S27 24 27 13.5C27 6.04 20.96 0 13.5 0z"/>
+    <circle cx="13.5" cy="13.5" r="5.5" fill="#fff"/>
+  </svg>`;
+  const img = new Image();
+  const url = `data:image/svg+xml;base64,${btoa(svg)}`;
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Le chargement du repère a échoué"));
+    img.src = url;
+  });
+  const width = MARKER_WIDTH * scale;
+  const height = MARKER_HEIGHT * scale;
+  ctx.drawImage(img, x - width / 2, y - height, width, height);
+}
+
 /**
  * Renders an offscreen satellite snapshot centered on `coordonnees`, at a true 1:5000
  * scale, showing only the parcels selected in `referenceCadastrale` (not the full cadastre
@@ -88,12 +111,26 @@ export async function generatePlanSituationSnapshot({
       await waitForIdle(map, () => new PlanSituationOfflineError());
     }
 
-    new maplibregl.Marker().setLngLat([lng, lat]).addTo(map);
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    const canvas = map.getCanvas();
+    const mapCanvas = map.getCanvas();
+    const outputCanvas = document.createElement("canvas");
+    outputCanvas.width = mapCanvas.width;
+    outputCanvas.height = mapCanvas.height;
+    const ctx = outputCanvas.getContext("2d");
+    if (!ctx) throw new Error("La capture du plan a échoué");
+    ctx.drawImage(mapCanvas, 0, 0);
+
+    const scale = mapCanvas.width / SNAPSHOT_WIDTH;
+    const { x, y } = map.project([lng, lat]);
+    await drawMarkerPin(ctx, x * scale, y * scale, scale);
+
     const blob = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("La capture du plan a échoué"))), "image/jpeg", 0.92),
+      outputCanvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("La capture du plan a échoué"))),
+        "image/jpeg",
+        0.92,
+      ),
     );
     return blob;
   } finally {
