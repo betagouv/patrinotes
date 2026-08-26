@@ -74,6 +74,46 @@ const SOURCE_ID = "monuments";
 const CLUSTER_LAYER_ID = "monument-clusters";
 const CLUSTER_COUNT_LAYER_ID = "monument-cluster-count";
 const UNCLUSTERED_LAYER_ID = "monument-unclustered-point";
+const PIN_IMAGE_ID = "monument-pin";
+
+function createPinImage(pixelRatio: number) {
+  const width = 24;
+  const height = 32;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * pixelRatio;
+  canvas.height = height * pixelRatio;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(pixelRatio, pixelRatio);
+
+  const radius = 9;
+  const cx = width / 2;
+  const cy = radius + 2;
+
+  ctx.beginPath();
+  ctx.moveTo(cx - 6, cy + radius - 4);
+  ctx.lineTo(cx + 6, cy + radius - 4);
+  ctx.lineTo(cx, height - 1);
+  ctx.closePath();
+  ctx.fillStyle = BLUE_FRANCE;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fillStyle = BLUE_FRANCE;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
+
+  return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), width, height };
+}
+
+function ensurePinImage(map: maplibregl.Map) {
+  if (map.hasImage(PIN_IMAGE_ID)) return;
+  const pixelRatio = Math.ceil(window.devicePixelRatio || 1);
+  const { data } = createPinImage(pixelRatio);
+  map.addImage(PIN_IMAGE_ID, data, { pixelRatio });
+}
 
 function toGeoJSON(markers: MonumentMarker[]): GeoJSON.FeatureCollection {
   return {
@@ -126,14 +166,13 @@ function addClusterLayers(map: maplibregl.Map, data: GeoJSON.FeatureCollection) 
 
   map.addLayer({
     id: UNCLUSTERED_LAYER_ID,
-    type: "circle",
+    type: "symbol",
     source: SOURCE_ID,
     filter: ["!", ["has", "point_count"]],
-    paint: {
-      "circle-color": BLUE_FRANCE,
-      "circle-radius": 8,
-      "circle-stroke-width": 2,
-      "circle-stroke-color": "#ffffff",
+    layout: {
+      "icon-image": PIN_IMAGE_ID,
+      "icon-anchor": "bottom",
+      "icon-allow-overlap": true,
     },
   });
 }
@@ -160,7 +199,10 @@ export const MonumentPickerMap = ({ center, markers, userLocation, onSelect, onC
     });
     mapRef.current = map;
 
-    map.on("style.load", () => addClusterLayers(map, dataRef.current));
+    map.on("style.load", () => {
+      ensurePinImage(map);
+      addClusterLayers(map, dataRef.current);
+    });
 
     map.on("mouseenter", CLUSTER_LAYER_ID, () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", CLUSTER_LAYER_ID, () => (map.getCanvas().style.cursor = ""));
