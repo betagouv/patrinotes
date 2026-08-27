@@ -147,13 +147,13 @@ export const MonumentHistorique = () => {
 
         {referencePop && !isCustom ? (
           <Button
-            priority="tertiary no outline"
-            iconId="fr-icon-road-map-line"
+            priority="tertiary"
+            iconId="fr-icon-road-map-fill"
             onClick={() => setIsPlanModalOpen(true)}
             type="button"
             sx={{ alignSelf: "flex-start", mt: isEditing ? "8px" : "4px" }}
           >
-            Voir plan de situation
+            Voir le plan de situation
           </Button>
         ) : null}
         {isPlanModalOpen ? (

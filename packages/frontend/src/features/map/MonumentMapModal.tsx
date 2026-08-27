@@ -143,6 +143,7 @@ export const MonumentMapModal = ({
       sx={{
         ".MuiPaper-root": {
           width: { xs: "100%", lg: "1200px" },
+          maxWidth: { xs: "100%", lg: "1200px" },
           height: { xs: "100dvh", lg: 792 },
           maxHeight: { xs: "100dvh", lg: "100dvh" },
           margin: "0!important",
