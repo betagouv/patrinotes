@@ -17,14 +17,22 @@ export const parseLocalisationDrawings = (raw: string | null | undefined): Local
 
 export const parseLocalisationZone = (raw: string | null | undefined): LocalisationZone | null => safeParse(raw, null);
 
+/** Id of the raster image registered on the map for a given pin number/selection state. */
+export function pinIconId(id: number, selected: boolean): string {
+  return `localisation-pin-${id}-${selected ? "selected" : "default"}`;
+}
+
 export function pinsToGeoJSON(pins: LocalisationPin[], selectedId?: number | null): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: pins.map((pin) => ({
-      type: "Feature",
-      properties: { number: pin.id, selected: pin.id === selectedId },
-      geometry: { type: "Point", coordinates: [pin.lng, pin.lat] },
-    })),
+    features: pins.map((pin) => {
+      const selected = pin.id === selectedId;
+      return {
+        type: "Feature",
+        properties: { number: pin.id, selected, iconId: pinIconId(pin.id, selected) },
+        geometry: { type: "Point", coordinates: [pin.lng, pin.lat] },
+      };
+    }),
   };
 }
 

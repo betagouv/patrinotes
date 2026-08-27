@@ -308,7 +308,7 @@ export const MonumentPickerMap = ({ center, markers, userLocation, onSelect, onC
         <CanvasButton
           onClick={() => setIsLayerPopoverOpen(true)}
           title="Choisir le fond de carte"
-          iconId="ri-stack-line"
+          iconId="ri-stack-fill"
           isSelected={isLayerPopoverOpen}
         />
       </Box>
@@ -360,6 +360,7 @@ export const MonumentPickerMap = ({ center, markers, userLocation, onSelect, onC
             onClick={() => handleZoom(dir)}
             title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
             iconId={dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line"}
+            sx={dir === "out" ? { marginTop: "-1px" } : undefined}
           />
         ))}
       </Box>

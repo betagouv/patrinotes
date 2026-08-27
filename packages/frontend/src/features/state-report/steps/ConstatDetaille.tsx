@@ -19,7 +19,7 @@ import { defaultSections, serializePreconisations } from "@patrinotes/pdf/consta
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled, useStateReportVersion } from "../utils";
 import { SectionLocalisationModal } from "./SectionLocalisationModal";
-import { isLocalisationAttachment } from "../localisationAttachment";
+import { clearLocalisationData, isLocalisationAttachment } from "../localisationAttachment";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -494,7 +494,13 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
             ? setIsMapOpen(true)
             : setSelected({ attachment, blobUrl })
         }
-        onDelete={(section) => deleteMutation.mutate(section)}
+        onDelete={({ id }) => {
+          const deletedAttachment = attachments.find((a) => a.id === id);
+          deleteMutation.mutate({ id });
+          if (deletedAttachment && isLocalisationAttachment(deletedAttachment.attachment_id)) {
+            clearLocalisationData(section.id);
+          }
+        }}
         onRetry={({ id }) => batchUpload.retry(id)}
         isDisabled={isDisabled}
       />

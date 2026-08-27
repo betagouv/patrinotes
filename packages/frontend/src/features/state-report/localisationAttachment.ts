@@ -53,3 +53,12 @@ export async function upsertLocalisationAttachment({
     await db.updateTable("visited_section_attachment").set({ is_deprecated: 1 }).where("id", "=", existing.id).execute();
   }
 }
+
+/** Clears the pins/drawings/zone saved on the section so a fresh map opens empty next time. */
+export async function clearLocalisationData(visitedSectionId: string): Promise<void> {
+  await db
+    .updateTable("visited_section")
+    .set({ localisation_pins: null, localisation_drawings: null, localisation_zone: null })
+    .where("id", "=", visitedSectionId)
+    .execute();
+}

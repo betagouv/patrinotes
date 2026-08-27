@@ -11,6 +11,7 @@ import {
   LocalisationPin,
   LocalisationZone,
   drawingsToGeoJSON,
+  pinIconId,
   pinsToGeoJSON,
 } from "./localisationTypes";
 
@@ -18,16 +19,63 @@ type Background = "vector" | "satellite";
 type Mode = "move" | "pin" | "draw";
 
 const PINS_SOURCE_ID = "localisation-pins";
-const PIN_CIRCLE_LAYER_ID = "localisation-pins-circle";
-const PIN_LABEL_LAYER_ID = "localisation-pins-label";
+const PIN_SYMBOL_LAYER_ID = "localisation-pins-symbol";
 const DRAWINGS_SOURCE_ID = "localisation-drawings";
 const DRAWINGS_LINE_LAYER_ID = "localisation-drawings-line";
 
 const BLUE_FRANCE = "#000091";
-const WIDTH_OPTIONS = [3, 6];
-const PIN_RADIUS = 13;
-const PIN_RADIUS_SELECTED = 18;
+const LINE_WIDTH = 3;
+const PIN_DEFAULT_SIZE = 40;
+const PIN_SELECTED_SIZE = 52;
 const DELETE_POPOVER_GAP = 12;
+
+// Traced from the "map-pin-2" DSFR/RemixIcon glyph (24x24 viewBox) so the in-map markers match it.
+const PIN_SHAPE_PATH = "M18.364 3.636a9 9 0 0 1 0 12.728L12 22.728l-6.364-6.364A9 9 0 0 1 18.364 3.636Z";
+const PIN_LABEL_CENTER = { x: 12, y: 10 };
+const PIN_LABEL_RADIUS = 6;
+
+/** Rasterizes a numbered "map-pin-2"-shaped marker for the given pin/selection state. */
+function createPinImage(number: number, selected: boolean, pixelRatio: number) {
+  const size = selected ? PIN_SELECTED_SIZE : PIN_DEFAULT_SIZE;
+  const canvas = document.createElement("canvas");
+  canvas.width = size * pixelRatio;
+  canvas.height = size * pixelRatio;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale((size / 24) * pixelRatio, (size / 24) * pixelRatio);
+
+  const pinShape = new Path2D(PIN_SHAPE_PATH);
+  ctx.fillStyle = BLUE_FRANCE;
+  ctx.fill(pinShape);
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke(pinShape);
+
+  ctx.beginPath();
+  ctx.arc(PIN_LABEL_CENTER.x, PIN_LABEL_CENTER.y, PIN_LABEL_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+
+  ctx.fillStyle = BLUE_FRANCE;
+  ctx.font = `bold ${PIN_LABEL_RADIUS * 1.3}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(number), PIN_LABEL_CENTER.x, PIN_LABEL_CENTER.y + 0.3);
+
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+/** Registers (once) the default/selected marker images for every current pin. */
+function ensurePinImages(map: maplibregl.Map, pins: LocalisationPin[]) {
+  const pixelRatio = Math.ceil(window.devicePixelRatio || 1);
+  for (const pin of pins) {
+    for (const selected of [false, true]) {
+      const id = pinIconId(pin.id, selected);
+      if (!map.hasImage(id)) {
+        map.addImage(id, createPinImage(pin.id, selected, pixelRatio), { pixelRatio });
+      }
+    }
+  }
+}
 
 function addLocalisationLayers(
   map: maplibregl.Map,
@@ -47,34 +95,28 @@ function addLocalisationLayers(
   }
 
   if (!map.getSource(PINS_SOURCE_ID)) {
+    ensurePinImages(map, pins);
     map.addSource(PINS_SOURCE_ID, { type: "geojson", data: pinsToGeoJSON(pins, selectedPinId) });
     map.addLayer({
-      id: PIN_CIRCLE_LAYER_ID,
-      type: "circle",
-      source: PINS_SOURCE_ID,
-      paint: {
-        "circle-radius": ["case", ["get", "selected"], PIN_RADIUS_SELECTED, PIN_RADIUS],
-        "circle-color": BLUE_FRANCE,
-        "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 2,
-      },
-    });
-    map.addLayer({
-      id: PIN_LABEL_LAYER_ID,
+      id: PIN_SYMBOL_LAYER_ID,
       type: "symbol",
       source: PINS_SOURCE_ID,
       layout: {
-        "text-field": ["get", "number"],
-        "text-font": ["Noto Sans Bold"],
-        "text-size": ["case", ["get", "selected"], 16, 13],
+        "icon-image": ["get", "iconId"],
+        "icon-anchor": "bottom",
+        "icon-allow-overlap": true,
       },
-      paint: { "text-color": "#ffffff" },
     });
   }
 }
 
 /** Fits the map so the fixed on-screen zone rectangle frames the given geographic bounds. */
-function fitZoneBounds(map: maplibregl.Map, containerEl: HTMLElement, zoneEl: HTMLElement, zone: LocalisationZone) {
+export function fitZoneBounds(
+  map: maplibregl.Map,
+  containerEl: HTMLElement,
+  zoneEl: HTMLElement,
+  zone: LocalisationZone,
+) {
   const containerRect = containerEl.getBoundingClientRect();
   const zoneRect = zoneEl.getBoundingClientRect();
   map.fitBounds([zone.sw, zone.ne], {
@@ -149,7 +191,6 @@ export const LocalisationMap = ({
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const paletteButtonRef = useRef<HTMLButtonElement>(null);
   const [activeColor, setActiveColor] = useState(drawingColors[0]);
-  const [activeWidthIdx, setActiveWidthIdx] = useState(0);
   const [pinToDelete, setPinToDelete] = useState<{ id: number; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -173,7 +214,9 @@ export const LocalisationMap = ({
     });
     mapRef.current = map;
 
-    map.on("style.load", () => addLocalisationLayers(map, pinsRef.current, drawingsRef.current, pinToDeleteRef.current?.id));
+    map.on("style.load", () =>
+      addLocalisationLayers(map, pinsRef.current, drawingsRef.current, pinToDeleteRef.current?.id),
+    );
 
     map.once("idle", () => {
       if (initialZone && containerRef.current && zoneRef.current) {
@@ -210,6 +253,7 @@ export const LocalisationMap = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    ensurePinImages(map, pins);
     const source = map.getSource(PINS_SOURCE_ID) as GeoJSONSource | undefined;
     if (source) source.setData(pinsToGeoJSON(pins, pinToDelete?.id));
   }, [pins, pinToDelete?.id]);
@@ -228,7 +272,7 @@ export const LocalisationMap = ({
     map.getCanvas().style.cursor = "crosshair";
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
-      const hit = map.queryRenderedFeatures(e.point, { layers: [PIN_CIRCLE_LAYER_ID] });
+      const hit = map.queryRenderedFeatures(e.point, { layers: [PIN_SYMBOL_LAYER_ID] });
       if (hit.length) {
         const clickedNumber = hit[0].properties?.number as number;
         const coords = (hit[0].geometry as GeoJSON.Point).coordinates as [number, number];
@@ -237,7 +281,7 @@ export const LocalisationMap = ({
         setPinToDelete({
           id: clickedNumber,
           x: containerRect.left + projected.x,
-          y: containerRect.top + projected.y - PIN_RADIUS_SELECTED - DELETE_POPOVER_GAP,
+          y: containerRect.top + projected.y - PIN_SELECTED_SIZE - DELETE_POPOVER_GAP,
         });
         return;
       }
@@ -276,11 +320,10 @@ export const LocalisationMap = ({
 
     let isDrawing = false;
     let current: LocalisationLine | null = null;
-    const width = WIDTH_OPTIONS[activeWidthIdx];
 
     const start = (e: maplibregl.MapMouseEvent | maplibregl.MapTouchEvent) => {
       isDrawing = true;
-      current = { points: [{ lng: e.lngLat.lng, lat: e.lngLat.lat }], color: activeColor, width };
+      current = { points: [{ lng: e.lngLat.lng, lat: e.lngLat.lat }], color: activeColor, width: LINE_WIDTH };
       setDrawings((prev) => [...prev, current!]);
       markDirty();
     };
@@ -317,7 +360,7 @@ export const LocalisationMap = ({
       map.doubleClickZoom.enable();
       map.getCanvas().style.cursor = "";
     };
-  }, [mode, activeColor, activeWidthIdx, markDirty, setDrawings]);
+  }, [mode, activeColor, markDirty, setDrawings]);
 
   const handleZoom = (direction: "in" | "out") => {
     const map = mapRef.current;
@@ -326,12 +369,7 @@ export const LocalisationMap = ({
   };
 
   return (
-    <Box
-      position="relative"
-      width="100%"
-      height="100%"
-      sx={{ ".maplibregl-ctrl-attrib": { display: "none" } }}
-    >
+    <Box position="relative" width="100%" height="100%" sx={{ ".maplibregl-ctrl-attrib": { display: "none" } }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
       {/* Fixed export zone rectangle: the user pans/zooms the map underneath it */}
@@ -339,7 +377,7 @@ export const LocalisationMap = ({
         position="absolute"
         top="50%"
         left="50%"
-        width="min(70%, 93vh)"
+        width={{ xs: "calc(100% - 32px) !important", sm: "min(70%, 93vh) !important" }}
         sx={{ transform: "translate(-50%, -50%)", pointerEvents: "none", zIndex: 1 }}
       >
         <Box
@@ -386,7 +424,7 @@ export const LocalisationMap = ({
 
       <Box position="absolute" top={8} right={8} zIndex={2} display="flex" flexDirection="row">
         {isDirty ? (
-          <CanvasButton onClick={onValidate} title="Valider les modifications" iconId="ri-check-line">
+          <CanvasButton onClick={onValidate} title="Valider les modifications" iconId="ri-check-fill">
             {isSaving ? "Enregistrement…" : "Valider"}
           </CanvasButton>
         ) : (
@@ -398,7 +436,7 @@ export const LocalisationMap = ({
 
       {isDirty ? (
         <Box position="absolute" top={8} left={8} zIndex={2}>
-          <CanvasButton onClick={onCancel} title="Annuler les modifications" iconId="ri-arrow-go-back-line">
+          <CanvasButton onClick={onCancel} title="Annuler les modifications" iconId="ri-arrow-go-back-fill">
             Annuler
           </CanvasButton>
         </Box>
@@ -408,7 +446,7 @@ export const LocalisationMap = ({
         <CanvasButton
           onClick={() => setIsLayerPopoverOpen(true)}
           title="Choisir le fond de carte"
-          iconId="ri-stack-line"
+          iconId="ri-stack-fill"
           isSelected={isLayerPopoverOpen}
         />
       </Box>
@@ -443,38 +481,48 @@ export const LocalisationMap = ({
       </Popover>
 
       <Box position="absolute" bottom={8} left={8} zIndex={2} display="flex" flexDirection="column" gap="8px">
-        {mode === "draw" ? (
-          <Box display="flex" flexDirection="row" gap={0}>
-            {WIDTH_OPTIONS.map((w, idx) => {
-              const isActive = activeWidthIdx === idx;
-              return (
-                <Box
-                  key={w}
-                  component="button"
-                  type="button"
-                  onClick={() => setActiveWidthIdx(idx)}
-                  title={idx === 0 ? "Trait fin" : "Trait épais"}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 40,
-                    height: 40,
-                    padding: 0,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    bgcolor: isActive ? "#EAEAEA" : "white",
-                    border: "1px solid",
-                    borderColor: BLUE_FRANCE,
-                    borderRadius: 0,
-                    marginLeft: "-1px",
-                  }}
-                >
-                  <Box sx={{ width: w * 2, height: w * 2, borderRadius: "50%", bgcolor: BLUE_FRANCE }} />
-                </Box>
-              );
-            })}
-            <Box ref={paletteButtonRef} position="relative">
+        <Popover
+          open={isColorPopoverOpen}
+          anchorEl={paletteButtonRef.current}
+          onClose={() => setIsColorPopoverOpen(false)}
+          anchorOrigin={{ vertical: "top", horizontal: "left" }}
+          transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+          sx={{ zIndex: 1500 }}
+        >
+          <Box p={1}>
+            <ColorSelection
+              activeColor={activeColor}
+              setActiveColor={(c) => {
+                setActiveColor(c);
+                setIsColorPopoverOpen(false);
+              }}
+            />
+          </Box>
+        </Popover>
+
+        <Box display="flex" flexDirection="row" alignItems="center" gap={0}>
+          <CanvasButton
+            onClick={() => setMode("move")}
+            title="Déplacer la carte"
+            iconId="ri-drag-move-2-fill"
+            isSelected={mode === "move"}
+          />
+          <CanvasButton
+            onClick={() => setMode("pin")}
+            title="Placer un point"
+            iconId="ri-map-pin-add-line"
+            isSelected={mode === "pin"}
+            sx={{ marginLeft: "-1px" }}
+          />
+          <CanvasButton
+            onClick={() => setMode("draw")}
+            title="Dessiner"
+            iconId="ri-pencil-fill"
+            isSelected={mode === "draw"}
+            sx={{ marginLeft: "-1px" }}
+          />
+          {mode === "draw" ? (
+            <Box ref={paletteButtonRef} position="relative" sx={{ marginLeft: "12px" }}>
               <Box
                 sx={{
                   bgcolor: activeColor,
@@ -495,42 +543,7 @@ export const LocalisationMap = ({
                 isSelected={isColorPopoverOpen}
               />
             </Box>
-          </Box>
-        ) : null}
-
-        <Popover
-          open={isColorPopoverOpen}
-          anchorEl={paletteButtonRef.current}
-          onClose={() => setIsColorPopoverOpen(false)}
-          anchorOrigin={{ vertical: "top", horizontal: "left" }}
-          transformOrigin={{ vertical: "bottom", horizontal: "left" }}
-          sx={{ zIndex: 1500 }}
-        >
-          <Box p={1}>
-            <ColorSelection
-              activeColor={activeColor}
-              setActiveColor={(c) => {
-                setActiveColor(c);
-                setIsColorPopoverOpen(false);
-              }}
-            />
-          </Box>
-        </Popover>
-
-        <Box display="flex" flexDirection="row" gap={0}>
-          <CanvasButton
-            onClick={() => setMode("pin")}
-            title="Placer un point"
-            iconId="ri-map-pin-add-line"
-            isSelected={mode === "pin"}
-          />
-          <CanvasButton onClick={() => setMode("draw")} title="Dessiner" iconId="ri-pencil-line" isSelected={mode === "draw"} />
-          <CanvasButton
-            onClick={() => setMode("move")}
-            title="Déplacer la carte"
-            iconId="ri-drag-move-2-line"
-            isSelected={mode === "move"}
-          />
+          ) : null}
         </Box>
       </Box>
 
@@ -541,6 +554,7 @@ export const LocalisationMap = ({
             onClick={() => handleZoom(dir)}
             title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
             iconId={dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line"}
+            sx={dir === "out" ? { marginTop: "-1px" } : undefined}
           />
         ))}
       </Box>

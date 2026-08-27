@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Dialog, Box, Typography } from "@mui/material";
 import { useWatch } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { LocalisationMap, LocalisationMapHandle, getZoneBounds } from "../../map/LocalisationMap";
+import { LocalisationMap, LocalisationMapHandle, fitZoneBounds, getZoneBounds } from "../../map/LocalisationMap";
 import {
   LocalisationLine,
   LocalisationPin,
@@ -75,6 +75,16 @@ export const SectionLocalisationModal = ({
     },
   });
 
+  const handleCancel = () => {
+    setPins(initialPins);
+    setDrawings(initialDrawings);
+    setIsDirty(false);
+    const handle = handleRef.current;
+    if (handle && initialZone) {
+      fitZoneBounds(handle.map, handle.containerEl, handle.zoneEl, initialZone);
+    }
+  };
+
   const dialogSx = {
     ".MuiPaper-root": {
       width: { xs: "100%", lg: "1200px" },
@@ -121,7 +131,7 @@ export const SectionLocalisationModal = ({
             handleRef.current = handle;
           }}
           onClose={onClose}
-          onCancel={onClose}
+          onCancel={handleCancel}
           onValidate={() => validateMutation.mutate()}
           isDirty={isDirty}
           isSaving={validateMutation.isPending}

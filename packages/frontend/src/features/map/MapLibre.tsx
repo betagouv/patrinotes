@@ -340,17 +340,27 @@ export const MapLibre = ({
       <Box position="absolute" top={8} right={8} zIndex={1} display="flex" flexDirection="row">
         {mode === "pin" ? (
           <>
-            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-line" />
-            <CanvasButton onClick={handleCancelPin} title="Annuler le placement" iconId="ri-close-line" />
+            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-fill" />
+            <CanvasButton
+              onClick={handleCancelPin}
+              title="Annuler le placement"
+              iconId="ri-close-line"
+              sx={{ marginLeft: "-1px" }}
+            />
           </>
         ) : mode === "cadastre" ? (
           <>
             <CanvasButton
               onClick={handleValidateCadastre}
               title="Valider la sélection cadastrale"
-              iconId="ri-check-line"
+              iconId="ri-check-fill"
             />
-            <CanvasButton onClick={handleCancelCadastre} title="Annuler la sélection" iconId="ri-close-line" />
+            <CanvasButton
+              onClick={handleCancelCadastre}
+              title="Annuler la sélection"
+              iconId="ri-close-line"
+              sx={{ marginLeft: "-1px" }}
+            />
           </>
         ) : (
           <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line">
@@ -363,7 +373,7 @@ export const MapLibre = ({
         <CanvasButton
           onClick={() => setIsLayerPopoverOpen(true)}
           title="Choisir le fond de carte"
-          iconId="ri-stack-line"
+          iconId="ri-stack-fill"
           isSelected={isLayerPopoverOpen}
         />
       </Box>
@@ -410,22 +420,24 @@ export const MapLibre = ({
 
       <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0}>
         <CanvasButton
+          onClick={handleActivateMove}
+          title="Déplacer la carte"
+          iconId="ri-drag-move-2-fill"
+          isSelected={mode === "move"}
+        />
+        <CanvasButton
           onClick={handleActivatePin}
           title="Placer le point de localisation"
           iconId="ri-map-pin-line"
           isSelected={mode === "pin"}
+          sx={{ marginLeft: "-1px" }}
         />
         <CanvasButton
           onClick={handleActivateCadastre}
           title="Sélectionner des cadastres"
-          iconId="ri-collage-line"
+          iconId="ri-collage-fill"
           isSelected={mode === "cadastre"}
-        />
-        <CanvasButton
-          onClick={handleActivateMove}
-          title="Déplacer la carte"
-          iconId="ri-drag-move-2-line"
-          isSelected={mode === "move"}
+          sx={{ marginLeft: "-1px" }}
         />
       </Box>
 
@@ -436,6 +448,7 @@ export const MapLibre = ({
             onClick={() => handleZoom(dir)}
             title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
             iconId={dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line"}
+            sx={dir === "out" ? { marginTop: "-1px" } : undefined}
           ></CanvasButton>
         ))}
       </Box>
