@@ -495,6 +495,7 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
             : setSelected({ attachment, blobUrl })
         }
         onDelete={(section) => deleteMutation.mutate(section)}
+        onRetry={({ id }) => batchUpload.retry(id)}
         isDisabled={isDisabled}
       />
       <Flex

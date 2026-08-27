@@ -249,6 +249,7 @@ const VuesGenerales = ({
         multiple
         onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
         onDelete={({ id }) => deleteMutation.mutate({ id })}
+        onRetry={({ id }) => batchUpload.retry(id)}
         isDisabled={isDisabled}
       />
     </Box>
