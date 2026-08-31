@@ -229,6 +229,8 @@ export const MonumentPickerMap = ({ center, markers, userLocation, onSelect, onC
       };
       const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
 
+      map.easeTo({ center: coords });
+
       const content = document.createElement("div");
       content.style.cursor = "pointer";
       content.style.fontWeight = "bold";
