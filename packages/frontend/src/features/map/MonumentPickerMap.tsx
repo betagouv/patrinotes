@@ -234,6 +234,8 @@ export const MonumentPickerMap = ({ center, markers, userLocation, onSelect, onC
       const content = document.createElement("div");
       content.style.cursor = "pointer";
       content.style.fontWeight = "bold";
+      content.style.fontFamily = '"Marianne", arial, sans-serif';
+      content.style.color = BLUE_FRANCE;
       content.textContent = `${title} (${finalizedCount})`;
       content.addEventListener("click", () => onSelectRef.current(id));
 

@@ -1,4 +1,4 @@
-import { Autocomplete, Box, Dialog, DialogTitle, Typography } from "@mui/material";
+import { Autocomplete, Box, Dialog, DialogTitle, IconButton, Typography } from "@mui/material";
 import { db, useDbQuery } from "../db/db";
 import { useMemo, useState } from "react";
 import { useStyles } from "tss-react";
@@ -303,29 +303,39 @@ export const ImmeubleAutocomplete = () => {
         }
         renderInput={(params) => (
           <div className="fr-input-group" id="mh-autocomplete">
-            <Flex alignItems="center" justifyContent="space-between">
-              <label className="fr-label" htmlFor={params.id}>
-                Nom ou référence du monument
-              </label>
-              <Button
+            <label className="fr-label" htmlFor={params.id}>
+              Nom ou référence du monument
+            </label>
+            <Flex alignItems="center" gap="8px" mt="8px">
+              <Box ref={params.InputProps.ref} flex="1">
+                <input
+                  {...params.inputProps}
+                  className={cx(params.inputProps.className, "fr-input")}
+                  style={{ backgroundColor: "white" }}
+                  type={"text"}
+                />
+              </Box>
+              <IconButton
                 type="button"
-                priority="tertiary no outline"
-                iconId="fr-icon-map-pin-2-line"
                 title="Choisir sur la carte"
+                aria-label="Choisir sur la carte"
                 disabled={isDisabled}
                 onClick={() => setIsMapModalOpen(true)}
+                sx={{
+                  flexShrink: 0,
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: 0,
+                  color: "white",
+                  backgroundColor: fr.colors.decisions.background.actionHigh.blueFrance.default,
+                  "&:hover": {
+                    backgroundColor: fr.colors.decisions.background.actionHigh.blueFrance.hover,
+                  },
+                }}
               >
-                Choisir sur la carte
-              </Button>
+                <span className={fr.cx("fr-icon-road-map-line")} aria-hidden="true" />
+              </IconButton>
             </Flex>
-            <Box ref={params.InputProps.ref} mt="8px">
-              <input
-                {...params.inputProps}
-                className={cx(params.inputProps.className, "fr-input")}
-                style={{ backgroundColor: "white" }}
-                type={"text"}
-              />
-            </Box>
           </div>
         )}
         noOptionsText={
