@@ -32,9 +32,73 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-// Force reload on Vite preload error (e.g. when the service worker is updated and the new version of the app is not yet loaded)
-window.addEventListener("vite:preloadError", () => {
-  window.location.reload();
+// Recover when a dynamically imported chunk can't be loaded. This happens after a
+// deploy when the running app (or a stale precached index.html) still references an
+// old hashed chunk that no longer exists on the server.
+// A plain reload usually fixes it, but if it doesn't (stale service worker cache),
+// we escalate to unregistering the SW + clearing caches before reloading.
+const CHUNK_RELOAD_KEY = "chunk-reload-attempt";
+
+const recoverFromStaleChunk = async () => {
+  let attempt = 0;
+  try {
+    attempt = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || "0");
+  } catch {}
+
+  if (attempt === 0) {
+    try {
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+    } catch {}
+    window.location.reload();
+    return;
+  }
+
+  if (attempt === 1) {
+    try {
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, "2");
+    } catch {}
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (e) {
+      console.error("Failed to clear caches during stale chunk recovery", e);
+    }
+    window.location.reload();
+    return;
+  }
+
+  // Already tried a hard reset and still failing: give up to avoid a reload loop.
+  console.error("Stale chunk recovery exhausted, not reloading again");
+};
+
+// Clear the guard once the app has managed to boot.
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    try {
+      sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    } catch {}
+  }, 5000);
+});
+
+// Vite dispatches this for failed `__vitePreload` dynamic imports.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  recoverFromStaleChunk();
+});
+
+// react-dsfr and other libs load chunks via their own `import()`, whose failures
+// surface as unhandled promise rejections rather than `vite:preloadError`.
+window.addEventListener("unhandledrejection", (event) => {
+  const message = String(event?.reason?.message || event?.reason || "");
+  if (/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(message)) {
+    recoverFromStaleChunk();
+  }
 });
 
 // force light mode
