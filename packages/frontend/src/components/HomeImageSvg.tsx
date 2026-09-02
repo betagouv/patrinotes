@@ -1,5 +1,13 @@
 export const HomeImageSvg = () => (
-  <svg width="282" height="247" viewBox="0 0 282 247" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="282"
+    height="247"
+    viewBox="0 0 282 247"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    focusable="false"
+  >
     <path
       d="M58.3436 119.889C58.479 119.318 52.7965 119.461 51.9267 118.897C51.0568 118.334 58.8284 117.985 58.8284 117.985L58.3436 119.889Z"
       fill="#231F20"
