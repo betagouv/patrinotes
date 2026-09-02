@@ -392,6 +392,7 @@ const FormErrorModal = ({
   return (
     <Dialog
       open={!!formErrors?.missingFields.length || !!formErrors?.alertErrors.length}
+      onClose={() => onClose()}
       sx={{
         ".MuiPaper-root": {
           maxWidth: { xs: "100%", sm: "800px" },

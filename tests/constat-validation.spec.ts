@@ -341,4 +341,60 @@ test.describe("Constat validation flow", () => {
     );
     expect(creatorDeclineMail, "Creator should have received a decline notification").toBeDefined();
   });
+
+  test("reusing an already-declined validation token is rejected", async ({ request }) => {
+    const token = "reuse-test-" + v4();
+    await db
+      .insertInto("constat_validation")
+      .values({
+        id: v4(),
+        state_report_id: null,
+        token,
+        token_expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+        validator_email: validatorEmail,
+        status: "declined",
+        comment: "already handled",
+        recipients: "someone@example.com",
+        pdf_path: "attachment/dummy/does-not-matter.pdf",
+        created_at: new Date().toISOString(),
+      })
+      .execute();
+
+    try {
+      // The GET info endpoint still resolves (it doesn't filter by status)...
+      const getResp = await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${token}`);
+      expect(getResp.ok()).toBeTruthy();
+      const info = await getResp.json();
+      expect(info.status).toBe("declined");
+
+      // ...but acting on it again (accept or decline) is rejected: the WHERE status='pending'
+      // clause finds nothing, so it's treated the same as an unknown token.
+      const acceptResp = await request.post(
+        `http://127.0.0.1:${backendPort}/api/constat-validation/${token}/accept`,
+        { data: {} },
+      );
+      expect(acceptResp.status()).toBe(404);
+
+      const declineResp = await request.post(
+        `http://127.0.0.1:${backendPort}/api/constat-validation/${token}/decline`,
+        { data: { comment: "trying again" } },
+      );
+      expect(declineResp.status()).toBe(404);
+    } finally {
+      await db.deleteFrom("constat_validation").where("token", "=", token).execute();
+    }
+  });
+
+  test("an unknown validation token returns 404", async ({ request }) => {
+    const garbageToken = "does-not-exist-" + v4();
+
+    const getResp = await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${garbageToken}`);
+    expect(getResp.status()).toBe(404);
+
+    const acceptResp = await request.post(
+      `http://127.0.0.1:${backendPort}/api/constat-validation/${garbageToken}/accept`,
+      { data: {} },
+    );
+    expect(acceptResp.status()).toBe(404);
+  });
 });

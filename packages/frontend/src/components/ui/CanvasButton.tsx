@@ -29,9 +29,10 @@ export const CanvasButton = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        width: 40,
+        width: children ? "auto" : 40,
         height: 40,
-        padding: 0,
+        padding: children ? "0 12px" : 0,
+        whiteSpace: "nowrap",
         cursor: "pointer",
         bgcolor: isSelected ? "#EAEAEA" : "white",
         border: "1px solid",
@@ -40,10 +41,12 @@ export const CanvasButton = ({
         borderRadius: 0,
         fontSize: "1.1rem",
         boxShadow: 1,
-        "::before": {
-          "--icon-size": "20px !important",
-          margin: "0 !important",
-        },
+        ...(!children && {
+          "::before": {
+            "--icon-size": "20px !important",
+            margin: "0 !important",
+          },
+        }),
         ...sx,
       }}
     >

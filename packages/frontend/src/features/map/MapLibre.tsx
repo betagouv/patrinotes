@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { FilterSpecification, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Box, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { Box, IconButton, Popover } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
+import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
 import { PopImmeuble } from "../../db/AppSchema";
 import { CanvasButton } from "#components/ui/CanvasButton.tsx";
 
-type SelectedParcel = { section: string; numero: string };
+export type SelectedParcel = { section: string; numero: string };
 
 type Background = "vector" | "satellite";
 
-const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+export const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 // const VECTOR_STYLE_URL = "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json";
 
-const SATELLITE_STYLE: StyleSpecification = {
+export const CADASTRE_SOURCE_URL = "https://openmaptiles.geo.data.gouv.fr/data/cadastre.json";
+
+export const SATELLITE_STYLE: StyleSpecification = {
   version: 8,
   glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
   sources: {
@@ -30,7 +33,7 @@ const SATELLITE_STYLE: StyleSpecification = {
   layers: [{ id: "satellite-bg", type: "raster", source: "satellite" }],
 };
 
-function parseReferenceCadastrale(ref: string | null | undefined): SelectedParcel[] {
+export function parseReferenceCadastrale(ref: string | null | undefined): SelectedParcel[] {
   if (!ref) return [];
   return ref.split(";").flatMap((r) => {
     const trimmed = r.trim();
@@ -40,7 +43,7 @@ function parseReferenceCadastrale(ref: string | null | undefined): SelectedParce
   });
 }
 
-function buildParcelFilter(parcels: SelectedParcel[]): FilterSpecification {
+export function buildParcelFilter(parcels: SelectedParcel[]): FilterSpecification {
   if (!parcels.length) return ["==", ["literal", "1"], ["literal", "2"]];
   return [
     "any",
@@ -52,7 +55,7 @@ function addCadastreLayers(map: maplibregl.Map) {
   if (map.getSource("cadastre")) return;
   map.addSource("cadastre", {
     type: "vector",
-    url: "https://openmaptiles.geo.data.gouv.fr/data/cadastre.json",
+    url: CADASTRE_SOURCE_URL,
   });
   map.addLayer({
     id: "parcelles-fill",
@@ -60,7 +63,7 @@ function addCadastreLayers(map: maplibregl.Map) {
     source: "cadastre",
     "source-layer": "parcelles",
     minzoom: 14,
-    paint: { "fill-color": "#f97316", "fill-opacity": 0.25 },
+    paint: { "fill-color": "rgba(255, 255, 255, 0.60)" },
   });
   map.addLayer({
     id: "parcelles-highlight",
@@ -68,7 +71,7 @@ function addCadastreLayers(map: maplibregl.Map) {
     source: "cadastre",
     "source-layer": "parcelles",
     minzoom: 14,
-    paint: { "fill-color": "#22c55e", "fill-opacity": 0.5 },
+    paint: { "fill-color": "rgba(184, 254, 201, 0.90)" },
     filter: ["==", ["literal", "1"], ["literal", "2"]],
   });
   map.addLayer({
@@ -77,7 +80,16 @@ function addCadastreLayers(map: maplibregl.Map) {
     source: "cadastre",
     "source-layer": "parcelles",
     minzoom: 14,
-    paint: { "line-color": "#c2410c", "line-width": 2, "line-opacity": 0.9 },
+    paint: { "line-color": "#000091", "line-width": 1 },
+  });
+  map.addLayer({
+    id: "parcelles-highlight-outline",
+    type: "line",
+    source: "cadastre",
+    "source-layer": "parcelles",
+    minzoom: 14,
+    paint: { "line-color": "#000091", "line-width": 3 },
+    filter: ["==", ["literal", "1"], ["literal", "2"]],
   });
   map.addLayer({
     id: "parcelles-label",
@@ -99,7 +111,7 @@ function addCadastreLayers(map: maplibregl.Map) {
   });
 }
 
-async function geocode(adresse: string): Promise<[number, number] | null> {
+export async function geocode(adresse: string): Promise<[number, number] | null> {
   const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(adresse)}&limit=1`);
   if (!res.ok) return null;
   const data = await res.json();
@@ -127,8 +139,10 @@ export const MapLibre = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const [mode, setMode] = useState<"move" | "pin" | "cadastre">("move");
   const [background, setBackground] = useState<Background>("vector");
-  const [mode, setMode] = useState<"none" | "pin" | "cadastre">("none");
+  const [isLayerPopoverOpen, setIsLayerPopoverOpen] = useState(false);
+  const layerButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedParcels, setSelectedParcels] = useState<SelectedParcel[]>(() =>
     parseReferenceCadastrale(initialReferenceCadastrale),
   );
@@ -149,7 +163,9 @@ export const MapLibre = ({
     mapRef.current = map;
     map.on("style.load", () => {
       addCadastreLayers(map);
-      map.setFilter("parcelles-highlight", buildParcelFilter(selectedParcelsRef.current));
+      const filter = buildParcelFilter(selectedParcelsRef.current);
+      map.setFilter("parcelles-highlight", filter);
+      map.setFilter("parcelles-highlight-outline", filter);
     });
     return () => {
       map.remove();
@@ -160,7 +176,9 @@ export const MapLibre = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getLayer("parcelles-highlight")) return;
-    map.setFilter("parcelles-highlight", buildParcelFilter(selectedParcels));
+    const filter = buildParcelFilter(selectedParcels);
+    map.setFilter("parcelles-highlight", filter);
+    map.setFilter("parcelles-highlight-outline", filter);
   }, [selectedParcels]);
 
   useEffect(() => {
@@ -209,7 +227,9 @@ export const MapLibre = ({
       if (!map) return;
       map.flyTo({ center: coords, zoom: 17 });
       markerRef.current?.remove();
-      markerRef.current = new maplibregl.Marker().setLngLat(coords).addTo(map);
+      markerRef.current = new maplibregl.Marker({ color: fr.colors.decisions.background.active.blueFrance.default })
+        .setLngLat(coords)
+        .addTo(map);
     };
 
     const raw = initialCoordinates ?? popMH.coordonnees_au_format_wgs84;
@@ -232,13 +252,19 @@ export const MapLibre = ({
 
   const handleCancelCadastre = () => {
     setSelectedParcels([]);
-    setMode("none");
+    setMode("move");
   };
 
   const handleValidateCadastre = () => {
     const refs = selectedParcels.map((p) => `${p.section} ${p.numero}`).join(";");
     onSaveReferenceCadastrale?.(refs);
-    setMode("none");
+    setMode("move");
+  };
+
+  const handleActivateMove = () => {
+    if (mode === "pin") handleCancelPin();
+    if (mode === "cadastre") handleCancelCadastre();
+    setMode("move");
   };
 
   const handleActivatePin = () => {
@@ -259,7 +285,7 @@ export const MapLibre = ({
   const handleCancelPin = () => {
     const marker = markerRef.current;
     if (marker) marker.getElement().style.display = "";
-    setMode("none");
+    setMode("move");
   };
 
   const handleValidatePin = () => {
@@ -271,10 +297,12 @@ export const MapLibre = ({
       marker.setLngLat([lng, lat]);
       marker.getElement().style.display = "";
     } else {
-      markerRef.current = new maplibregl.Marker().setLngLat([lng, lat]).addTo(map);
+      markerRef.current = new maplibregl.Marker({ color: fr.colors.decisions.background.active.blueFrance.default })
+        .setLngLat([lng, lat])
+        .addTo(map);
     }
     onSaveCoordinates?.(`${lat},${lng}`);
-    setMode("none");
+    setMode("move");
   };
 
   return (
@@ -309,55 +337,107 @@ export const MapLibre = ({
         </Box>
       )}
 
-      <Box position="absolute" top={8} left={8} zIndex={1}>
-        <ToggleButtonGroup
-          value={background}
-          exclusive
-          onChange={(_, v) => v && setBackground(v)}
-          size="small"
-          sx={{ backgroundColor: "white", borderRadius: "4px", boxShadow: 1 }}
-        >
-          <ToggleButton value="vector" sx={{ px: 1.5, py: 0.5, fontSize: "12px" }}>
-            Plan
-          </ToggleButton>
-          <ToggleButton value="satellite" sx={{ px: 1.5, py: 0.5, fontSize: "12px" }}>
-            Satellite
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
       <Box position="absolute" top={8} right={8} zIndex={1} display="flex" flexDirection="row">
         {mode === "pin" ? (
           <>
-            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-line" />
-            <CanvasButton onClick={handleCancelPin} title="Annuler le placement" iconId="ri-close-line" />
+            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-fill" />
+            <CanvasButton
+              onClick={handleCancelPin}
+              title="Annuler le placement"
+              iconId="ri-close-line"
+              sx={{ marginLeft: "-1px" }}
+            />
           </>
         ) : mode === "cadastre" ? (
           <>
             <CanvasButton
               onClick={handleValidateCadastre}
               title="Valider la sélection cadastrale"
-              iconId="ri-check-line"
+              iconId="ri-check-fill"
             />
-            <CanvasButton onClick={handleCancelCadastre} title="Annuler la sélection" iconId="ri-close-line" />
+            <CanvasButton
+              onClick={handleCancelCadastre}
+              title="Annuler la sélection"
+              iconId="ri-close-line"
+              sx={{ marginLeft: "-1px" }}
+            />
           </>
         ) : (
-          <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line" />
+          <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line">
+            Fermer
+          </CanvasButton>
         )}
       </Box>
 
-      <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0.5}>
+      <Box ref={layerButtonRef} position="absolute" top={56} right={8} zIndex={1}>
+        <CanvasButton
+          onClick={() => setIsLayerPopoverOpen(true)}
+          title="Choisir le fond de carte"
+          iconId="ri-stack-fill"
+          isSelected={isLayerPopoverOpen}
+        />
+      </Box>
+
+      <Popover
+        open={isLayerPopoverOpen}
+        anchorEl={layerButtonRef.current}
+        onClose={() => setIsLayerPopoverOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{ zIndex: 1500 }}
+      >
+        <Box p={2} minWidth={220}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+            <Box component="span" fontWeight="bold">
+              Fond de carte
+            </Box>
+            <IconButton size="small" onClick={() => setIsLayerPopoverOpen(false)} aria-label="Fermer">
+              <span className={fr.cx("ri-close-line")} />
+            </IconButton>
+          </Box>
+          <RadioButtons
+            name="background"
+            options={[
+              {
+                label: "Satellite",
+                nativeInputProps: {
+                  checked: background === "satellite",
+                  onChange: () => setBackground("satellite"),
+                },
+              },
+              {
+                label: "Vectoriel",
+                nativeInputProps: {
+                  checked: background === "vector",
+                  onChange: () => setBackground("vector"),
+                },
+              },
+            ]}
+            style={{ marginBottom: 0 }}
+          />
+        </Box>
+      </Popover>
+
+      <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0}>
+        <CanvasButton
+          onClick={handleActivateMove}
+          title="Déplacer la carte"
+          iconId="ri-drag-move-2-fill"
+          isSelected={mode === "move"}
+        />
         <CanvasButton
           onClick={handleActivatePin}
           title="Placer le point de localisation"
           iconId="ri-map-pin-line"
           isSelected={mode === "pin"}
+          sx={{ marginLeft: "-1px" }}
         />
         <CanvasButton
           onClick={handleActivateCadastre}
           title="Sélectionner des cadastres"
-          iconId="ri-collage-line"
+          iconId="ri-collage-fill"
           isSelected={mode === "cadastre"}
+          sx={{ marginLeft: "-1px" }}
         />
       </Box>
 
@@ -368,6 +448,7 @@ export const MapLibre = ({
             onClick={() => handleZoom(dir)}
             title={dir === "in" ? "Zoom avant" : "Zoom arrière"}
             iconId={dir === "in" ? "ri-zoom-in-line" : "ri-zoom-out-line"}
+            sx={dir === "out" ? { marginTop: "-1px" } : undefined}
           ></CanvasButton>
         ))}
       </Box>

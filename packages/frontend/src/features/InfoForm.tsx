@@ -126,15 +126,15 @@ export const InfoForm = () => {
           />
         </Box>
 
-        <Flex gap="16px" flexDirection="row" mt="8px">
+        <Flex gap="16px" flexDirection="row" mt="8px" width="100%">
           <Input
-            sx={{ flex: { xs: "none", lg: 1 }, mb: { xs: "16px", lg: undefined } }}
+            sx={{ flex: 1, mb: { xs: "16px", lg: undefined } }}
             disabled={isFormDisabled}
             label="Date"
             nativeInputProps={{ type: "date", onChange: setDay, value: meetDateRef.current.day }}
           />
           <Input
-            sx={{ flex: { xs: "none", lg: 1 }, mb: { xs: "16px", lg: undefined } }}
+            sx={{ flex: 1, mb: { xs: "16px", lg: undefined } }}
             disabled={isFormDisabled}
             label="Horaire"
             nativeInputProps={{ type: "time", onChange: setTime, value: meetDateRef.current.time }}

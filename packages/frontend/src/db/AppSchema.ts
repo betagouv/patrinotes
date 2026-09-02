@@ -354,6 +354,9 @@ const visited_section = new Table({
   commentaires: column.text,
   preconisations: column.text,
   service_id: column.text,
+  localisation_pins: column.text,
+  localisation_drawings: column.text,
+  localisation_zone: column.text,
 });
 
 const visited_section_attachment = new Table({

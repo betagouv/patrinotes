@@ -207,6 +207,28 @@ test.describe("Stats", () => {
     expect(data.activeUsersInPeriod).toBe(0);
   });
 
+  test("GET /api/stats/public does not count disabled reports (compte-rendu)", async ({ request }) => {
+    const disabledId = "stats-report-disabled";
+    await db
+      .insertInto("report")
+      .values({
+        id: disabledId,
+        createdBy: userId0,
+        createdAt: new Date().toISOString(),
+        service_id: mockServices[0].id,
+        disabled: true,
+      } as any)
+      .execute();
+
+    try {
+      const resp = await request.get(`${BACKEND_URL}/api/stats/public`);
+      const data = await resp.json();
+      expect(data.totalReports).toBe(2); // still 2, disabled one not counted
+    } finally {
+      await db.deleteFrom("report").where("id", "=", disabledId).execute();
+    }
+  });
+
   test("GET /api/stats/public does not count disabled constats", async ({ request }) => {
     const disabledId = "stats-constat-disabled";
     await db
@@ -306,12 +328,7 @@ test.describe("Stats", () => {
   test("stats page shows admin section when logged in as admin", async ({ page }) => {
     test.setTimeout(60000);
 
-    await page.goto("./connexion");
-    await page.fill("input[name=email]", mockUsers[0].email);
-    await page.fill("input[name=password]", mockUsers[0].password);
-    await page.click("button[type=submit]");
-    await page.waitForURL((url) => url.pathname === "/");
-    await page.waitForTimeout(1000);
+    await login({ page, user: mockUsers[0] });
 
     await page.goto("./stats");
     await expect(page.locator("h1")).toContainText("Statistiques", { timeout: 10000 });
@@ -333,9 +350,18 @@ test.describe("Stats", () => {
 
     await fromInput.fill("2000-01-01");
     await toInput.fill("2000-01-31");
-    await page.getByRole("button", { name: "Valider" }).click();
 
-    // Wait for the refetch — active users KPI should update to show 0 %
+    // Assert a real refetch fires against the new range, and the KPI reflects
+    // the response body (not just a coincidental static string on the page).
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/api/stats/public") && r.url().includes("from=2000-01-01") && r.status() === 200,
+      ),
+      page.getByRole("button", { name: "Valider" }).click(),
+    ]);
+    const body = await response.json();
+    expect(body.activeUsersInPeriod).toBe(0);
+
     await expect(page.getByText(/Soit 0 %/)).toBeVisible({ timeout: 5000 });
   });
 });

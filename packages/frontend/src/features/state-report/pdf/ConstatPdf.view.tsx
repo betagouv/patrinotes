@@ -43,7 +43,7 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
               }
               return (
                 <BlobSync blob={blob!}>
-                  <PDFViewerPaginated blob={blob!} />
+                  <PDFViewerPaginated blob={blob!} ariaLabel="Prévisualisation du constat" />
                 </BlobSync>
               );
             }}
