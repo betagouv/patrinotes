@@ -98,6 +98,7 @@ export const MonumentHistorique = () => {
                       component="a"
                       href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
                       target="_blank"
+                      title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
                       rel="noopener external"
                     >
                       {value ?? "Non renseigné"}
@@ -241,7 +242,7 @@ export const MonumentHistorique = () => {
           <Box
             component="a"
             href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
-            title="En savoir plus sur l'édifice - Nouvelle fenêtre"
+            title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
             target="_blank"
             rel="noopener external"
             sx={{
@@ -309,6 +310,7 @@ const PreviousConstatsList = ({ constats }: { constats: StateReport[] }) => {
             target="_blank"
             rel="noopener external"
             className="fr-link"
+            title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
             sx={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
           >
             {new Date(constat.created_at!).toLocaleDateString("fr-FR")} - visite{" "}
@@ -454,6 +456,7 @@ const MonumentObjetItem = ({ popObjet, images }: { popObjet: PopObjet; images: P
       // @ts-ignore mui error
       href={`https://pop.culture.gouv.fr/notice/palissy/${popObjet.reference}`}
       target="_blank"
+      title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
       rel="noopener external"
       flexDirection="column"
       flex="1"

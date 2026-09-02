@@ -177,6 +177,7 @@ const PolitiqueConfidentialite = () => {
           className="fr-link"
           target="_blank"
           rel="noreferrer"
+          title="www.cnil.fr - ouvre une nouvelle fenêtre"
           href="https://www.cnil.fr/fr/modele/courrier/exercer-son-droit-dacces"
         >
           https://www.cnil.fr/fr/modele/courrier/exercer-son-droit-dacces
@@ -232,6 +233,7 @@ const PolitiqueConfidentialite = () => {
                   className="fr-link"
                   target="_blank"
                   rel="noreferrer"
+                  title="us.ovhcloud.com - ouvre une nouvelle fenêtre"
                   href="https://us.ovhcloud.com/legal/data-processing-agreement/"
                 >
                   https://us.ovhcloud.com/legal/data-processing-agreement/
@@ -247,6 +249,7 @@ const PolitiqueConfidentialite = () => {
                   className="fr-link"
                   target="_blank"
                   rel="noreferrer"
+                  title="www.brevo.com - ouvre une nouvelle fenêtre"
                   href="https://www.brevo.com/fr/legal/termsofuse/#accord-sur-le-traitement-des-données-a-caractere-personnel-dpa"
                 >
                   https://www.brevo.com/fr/legal/termsofuse/#accord-sur-le-traitement-des-données-a-caractere-personnel-dpa
@@ -263,7 +266,13 @@ const PolitiqueConfidentialite = () => {
         outil de mesure d'audience configuré en mode "exempté" et qui ne nécessite pas le recueil du consentement
         conformément aux recommandations de la CNIL. Vous souhaitez tout de même vous désengager de Matomo ? Suivez
         cette procédure :{" "}
-        <a className="fr-link" target="_blank" rel="noreferrer" href="https://fr.matomo.org/faq/general/faq_20000/">
+        <a
+          className="fr-link"
+          target="_blank"
+          title="fr.matomo.org - ouvre une nouvelle fenêtre"
+          rel="noreferrer"
+          href="https://fr.matomo.org/faq/general/faq_20000/"
+        >
           https://fr.matomo.org/faq/general/faq_20000/
         </a>
       </Typography>

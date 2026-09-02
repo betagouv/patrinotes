@@ -390,6 +390,7 @@ const TauxDegradationRange = ({ isDisabled }: { isDisabled: boolean }) => {
           <a
             href="https://patrinotes.beta.gouv.fr/faq/"
             target="_blank"
+            title="patrinotes.beta.gouv.fr - ouvre une nouvelle fenêtre"
             rel="noopener noreferrer"
             className={cx("fr-icon--md", "fr-link--icon-right")}
             style={{ textDecoration: "underline", textUnderlineOffset: "5px" }}

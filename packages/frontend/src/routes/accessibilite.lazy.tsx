@@ -88,7 +88,13 @@ const Accessibilite = () => {
         <li>
           <Typography variant="body1">
             Écrire un message au{" "}
-            <a className="fr-link" target="_blank" href="https://formulaire.defenseurdesdroits.fr/" rel="noreferrer">
+            <a
+              className="fr-link"
+              target="_blank"
+              title="formulaire.defenseurdesdroits.fr - ouvre une nouvelle fenêtre"
+              href="https://formulaire.defenseurdesdroits.fr/"
+              rel="noreferrer"
+            >
               Défenseur des droits
             </a>
           </Typography>
@@ -99,6 +105,7 @@ const Accessibilite = () => {
             <a
               className="fr-link"
               target="_blank"
+              title="www.defenseurdesdroits.fr - ouvre une nouvelle fenêtre"
               href="https://www.defenseurdesdroits.fr/saisir/delegues"
               rel="noreferrer"
             >
