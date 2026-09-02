@@ -28,7 +28,7 @@ function RouteComponent() {
         <Flex width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" flexDirection="column" px="16px">
           <BackHomeButton />
 
-          <Typography fontSize="28px" variant="h2" mt="24px">
+          <Typography fontSize="20px !important" fontWeight="normal" component="h1" mt="24px" mb="0 !important">
             Constat d'état
           </Typography>
         </Flex>

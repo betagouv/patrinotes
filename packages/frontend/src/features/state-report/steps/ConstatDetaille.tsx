@@ -44,6 +44,7 @@ export const ConstatDetaille = () => {
           xs: "none",
           lg: "block",
         }}
+        component="h3"
         fontSize="16px !important"
         variant="h3"
         fontWeight="500"

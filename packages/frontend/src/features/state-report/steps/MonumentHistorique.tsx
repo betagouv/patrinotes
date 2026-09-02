@@ -67,6 +67,7 @@ export const MonumentHistorique = () => {
           variant="h3"
           fontWeight="500"
           pt="0 !important"
+          component="h3"
           mb="24px"
           color={fr.colors.decisions.text.actionHigh.blueFrance.default}
         >

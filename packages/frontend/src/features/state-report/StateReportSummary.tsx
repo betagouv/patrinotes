@@ -2,9 +2,8 @@ import { Accordion } from "#components/MUIDsfr.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
 import { Box } from "@mui/material";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import { StateReportStep } from "./utils";
-import { SideMenu } from "@codegouvfr/react-dsfr/SideMenu";
 import { Flex } from "#components/ui/Flex.tsx";
 import { useState } from "react";
 
@@ -56,12 +55,10 @@ export const scrollToTop = () => {
 
 const routeApi = getRouteApi("/constat/$constatId");
 const SummaryContent = ({ onClick }: { onClick?: () => void }) => {
-  const navigate = useNavigate();
   const { constatId } = routeApi.useParams();
   const { step } = routeApi.useSearch();
 
-  const navigateToStep = (step: StateReportStep) => {
-    navigate({ to: "/constat/$constatId", params: { constatId }, search: { step, mode: "view" } });
+  const onNavigate = () => {
     onClick?.();
     scrollToTop();
   };
@@ -106,19 +103,29 @@ const SummaryContent = ({ onClick }: { onClick?: () => void }) => {
         "> ul:last-child > li:last-child": {
           borderBottom: "none",
         },
+        // Invisible stretched links so each row is keyboard-focusable and
+        // activatable without altering the visual layout.
+        "li > a": {
+          position: "absolute",
+          inset: 0,
+          borderRadius: 0,
+        },
       }}
       pl="0"
       mr={{ xs: "0", lg: "16px" }}
     >
       <Box component="li">Le monument historique</Box>
       <Box component="ul" pl="0">
-        <Box
-          position="relative"
-          component="li"
-          className={isActive("informations") ? "active" : ""}
-          onClick={() => navigateToStep("informations")}
-        >
+        <Box position="relative" component="li" className={isActive("informations") ? "active" : ""}>
           Informations
+          <Link
+            to="/constat/$constatId"
+            params={{ constatId }}
+            search={{ step: "informations", mode: "view" }}
+            onClick={onNavigate}
+            aria-label="Informations"
+            aria-current={isActive("informations") ? "page" : undefined}
+          />
         </Box>
       </Box>
 
@@ -126,29 +133,38 @@ const SummaryContent = ({ onClick }: { onClick?: () => void }) => {
         Saisie du constat d'état
       </Box>
       <Box component="ul" pl="0">
-        <Box
-          position="relative"
-          component="li"
-          className={isActive("contexte-visite") ? "active" : ""}
-          onClick={() => navigateToStep("contexte-visite")}
-        >
+        <Box position="relative" component="li" className={isActive("contexte-visite") ? "active" : ""}>
           Contexte de la visite
+          <Link
+            to="/constat/$constatId"
+            params={{ constatId }}
+            search={{ step: "contexte-visite", mode: "view" }}
+            onClick={onNavigate}
+            aria-label="Contexte de la visite"
+            aria-current={isActive("contexte-visite") ? "page" : undefined}
+          />
         </Box>
-        <Box
-          position="relative"
-          component="li"
-          className={isActive("constat-detaille") ? "active" : ""}
-          onClick={() => navigateToStep("constat-detaille")}
-        >
+        <Box position="relative" component="li" className={isActive("constat-detaille") ? "active" : ""}>
           Constat détaillé
+          <Link
+            to="/constat/$constatId"
+            params={{ constatId }}
+            search={{ step: "constat-detaille", mode: "view" }}
+            onClick={onNavigate}
+            aria-label="Constat détaillé"
+            aria-current={isActive("constat-detaille") ? "page" : undefined}
+          />
         </Box>
-        <Box
-          position="relative"
-          component="li"
-          className={isActive("constat-general") ? "active" : ""}
-          onClick={() => navigateToStep("constat-general")}
-        >
+        <Box position="relative" component="li" className={isActive("constat-general") ? "active" : ""}>
           Constat général
+          <Link
+            to="/constat/$constatId"
+            params={{ constatId }}
+            search={{ step: "constat-general", mode: "view" }}
+            onClick={onNavigate}
+            aria-label="Constat général"
+            aria-current={isActive("constat-general") ? "page" : undefined}
+          />
         </Box>
       </Box>
     </Box>

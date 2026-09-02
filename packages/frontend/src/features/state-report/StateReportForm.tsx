@@ -35,7 +35,7 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
             component="form"
             alignItems="center"
             flexDirection="column"
-            pt="32px"
+            pt="8px"
             pb="32px"
             width="100%"
             onSubmit={form.handleSubmit(onSubmit)}

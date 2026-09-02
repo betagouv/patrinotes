@@ -157,7 +157,9 @@ export const ImmeubleAutocomplete = () => {
             </Box>
           </Dialog>
         ) : null}
-        <Typography fontSize="20px">{form.watch("titre_edifice")}</Typography>
+        <Typography fontSize="20px" component="h2" fontWeight="bold">
+          {form.watch("titre_edifice")}
+        </Typography>
         <Box mt="8px">
           <IconLink
             icon="fr-icon-edit-fill"

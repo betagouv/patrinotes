@@ -1,5 +1,6 @@
 import "@ungap/with-resolvers";
 import { Box } from "@mui/material";
+import { fr } from "@codegouvfr/react-dsfr";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -9,11 +10,20 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 const TARGET_WIDTH = 944;
 const RENDER_MARGIN = 1; // pages to render beyond visible
 
-export const PDFViewerPaginated = ({ blob, url }: { blob?: Blob; url?: string }) => {
+export const PDFViewerPaginated = ({
+  blob,
+  url,
+  ariaLabel,
+}: {
+  blob?: Blob;
+  url?: string;
+  /** Accessible name for the focusable document region (keyboard "tab anchor"). */
+  ariaLabel?: string;
+}) => {
   const blobUrl = useMemo(() => (blob ? URL.createObjectURL(blob) : undefined), [blob]);
   const resolvedUrl = blobUrl ?? url;
   if (!resolvedUrl) return null;
-  return <PDFCanvasViewer url={resolvedUrl} />;
+  return <PDFCanvasViewer url={resolvedUrl} ariaLabel={ariaLabel} />;
 };
 
 type PdfDocument =
@@ -21,7 +31,7 @@ type PdfDocument =
     ? never
     : Awaited<ReturnType<typeof pdfjsLib.getDocument>["promise"]>;
 
-const PDFCanvasViewer = ({ url }: { url: string }) => {
+const PDFCanvasViewer = ({ url, ariaLabel }: { url: string; ariaLabel?: string }) => {
   const [pdfDoc, setPdfDoc] = useState<PdfDocument | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageHeight, setPageHeight] = useState(0);
@@ -68,10 +78,24 @@ const PDFCanvasViewer = ({ url }: { url: string }) => {
 
   if (!pdfDoc || !pageHeight) return null;
 
-  console.log(pageWidth);
-
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" width="100%" gap="16px">
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      width="100%"
+      gap="16px"
+      tabIndex={0}
+      role="document"
+      aria-label={ariaLabel ?? "Document PDF"}
+      sx={{
+        scrollMarginTop: "96px",
+        "&:focus-visible": {
+          outline: `2px solid ${fr.colors.decisions.border.actionHigh.blueFrance.default}`,
+          outlineOffset: "4px",
+        },
+      }}
+    >
       {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => (
         <PDFPage
           key={pageNumber}
