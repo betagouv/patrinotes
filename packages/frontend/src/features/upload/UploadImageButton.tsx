@@ -1,7 +1,7 @@
-import { Button, Center } from "#components/MUIDsfr.tsx";
-import { Box, Typography } from "@mui/material";
+import { Button } from "#components/MUIDsfr.tsx";
+import { Dialog, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import { ImageCanvas } from "./KonvaDrawingCanvas";
 import { MinimalAttachment } from "./UploadImage";
 import { Flex } from "#components/ui/Flex.tsx";
@@ -109,6 +109,20 @@ export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImag
   );
 };
 
+// MUI <Dialog> (same pattern as SectionLocalisationModal) covers the RGAA
+// requirements: focus trap + focus restore, Escape to close, backdrop click to
+// close, role="dialog" / aria-modal and body scroll lock.
+const dialogSx = {
+  ".MuiPaper-root": {
+    width: { xs: "100%", lg: "634px" },
+    maxWidth: { xs: "100%", lg: "634px" },
+    height: { xs: "100dvh", lg: 792 },
+    maxHeight: { xs: "100dvh", lg: "calc(100dvh - 32px)" },
+    margin: "0!important",
+  },
+  zIndex: 1400,
+};
+
 export const UploadImageModal = ({
   selectedAttachment,
   blobUrl,
@@ -124,61 +138,28 @@ export const UploadImageModal = ({
   onReplaceAttachment?: (oldId: string, data: ArrayBuffer, label?: string) => Promise<string>;
   hideLabelInput?: boolean;
 }) => {
-  useEffect(() => {
-    if (!selectedAttachment) return;
+  const closeRequestRef = useRef<(() => void) | null>(null);
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [selectedAttachment, onClose]);
-
-  if (!selectedAttachment) return null;
+  if (!selectedAttachment || !blobUrl) return null;
 
   return (
-    <Box
-      zIndex="1000"
-      position="fixed"
-      top="0"
-      left="0"
-      right="0"
-      width="100vw"
-      height="100dvh"
-      sx={{
-        overflowY: "auto",
-        overscrollBehavior: "contain",
-      }}
+    <Dialog
+      open
+      onClose={() => (closeRequestRef.current ?? onClose)()}
+      maxWidth={false}
+      sx={dialogSx}
+      aria-label="Éditeur d'image"
     >
-      <Box bgcolor="rgba(0, 0, 0, 0.5)" position="fixed" top="0" left="0" right="0" bottom="0" />
-      <Center width="100%" height="100%" sx={{ alignItems: { xs: "flex-start", lg: "center" } }}>
-        <Box
-          bgcolor="white"
-          position="relative"
-          width={{ xs: "100%", lg: "634px" }}
-          height={{ xs: "100dvh", lg: 792 }}
-          maxHeight={{ xs: "100dvh", lg: "calc(100dvh - 32px)" }}
-        >
-          {blobUrl ? (
-            <ImageCanvas
-              attachment={selectedAttachment}
-              closeModal={() => onClose()}
-              onSave={onSave}
-              onReplaceAttachment={onReplaceAttachment}
-              url={blobUrl}
-              lines={[]}
-              hideLabelInput={hideLabelInput}
-            />
-          ) : null}
-        </Box>
-      </Center>
-    </Box>
+      <ImageCanvas
+        attachment={selectedAttachment}
+        closeModal={onClose}
+        closeRequestRef={closeRequestRef}
+        onSave={onSave}
+        onReplaceAttachment={onReplaceAttachment}
+        url={blobUrl}
+        lines={[]}
+        hideLabelInput={hideLabelInput}
+      />
+    </Dialog>
   );
 };

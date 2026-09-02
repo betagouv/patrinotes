@@ -1,5 +1,5 @@
 import { fr } from "@codegouvfr/react-dsfr";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, type MutableRefObject } from "react";
 import { Box, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Button, Input } from "#components/MUIDsfr.tsx";
@@ -23,6 +23,7 @@ export const ImageCanvas = ({
   onSave,
   onReplaceAttachment,
   closeModal,
+  closeRequestRef,
   hideLabelInput,
 }: {
   attachment: MinimalAttachment;
@@ -33,6 +34,9 @@ export const ImageCanvas = ({
    *  new attachment locally (with local_uri set immediately), and deprecate the old one. */
   onReplaceAttachment?: (oldId: string, data: ArrayBuffer, label?: string) => Promise<string>;
   closeModal: () => void;
+  /** Assigned a handler that saves pending edits (if any) before closing. Wire the
+   *  modal's dismiss actions (Escape, backdrop click) to it. */
+  closeRequestRef?: MutableRefObject<(() => void) | null>;
   hideLabelInput?: boolean;
 }) => {
   const { id: pictureId } = attachment;
@@ -379,6 +383,22 @@ export const ImageCanvas = ({
 
       closeModal();
     },
+  });
+
+  const isDirty = lines.length > 0 || internalLabel !== (attachment.label ?? "");
+
+  // When the modal is dismissed (Escape / backdrop click), persist pending edits
+  // instead of discarding them.
+  useEffect(() => {
+    if (!closeRequestRef) return;
+    closeRequestRef.current = () => {
+      if (saveMutation.isPending) return;
+      if (isDirty) saveMutation.mutate();
+      else closeModal();
+    };
+    return () => {
+      closeRequestRef.current = null;
+    };
   });
 
   return (
