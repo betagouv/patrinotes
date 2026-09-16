@@ -251,9 +251,9 @@ const LoggedInHeader = () => {
             </Flex>
           ) : isHome ? (
             "Patrinotes"
-          ) : null
+          ) : undefined
         }
-        serviceTagline={isDesktop || isHome ? "Les outils du patrimoine en mobilité" : null}
+        serviceTagline={isDesktop || isHome ? "Les outils du patrimoine en mobilité" : undefined}
         quickAccessItems={[
           {
             iconId: "fr-icon-account-circle-fill",
