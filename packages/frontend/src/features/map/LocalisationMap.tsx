@@ -183,6 +183,7 @@ export const LocalisationMap = ({
   const drawingsRef = useRef(drawings);
   const initializedRef = useRef(false);
   const pinToDeleteRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  const historyRef = useRef<{ pins: LocalisationPin[]; drawings: LocalisationLine[] }[]>([]);
 
   const [mode, setMode] = useState<Mode>("move");
   const [background, setBackground] = useState<Background>("satellite");
@@ -202,6 +203,20 @@ export const LocalisationMap = ({
   useEffect(() => {
     pinToDeleteRef.current = pinToDelete;
   }, [pinToDelete]);
+
+  const pushHistory = () => {
+    historyRef.current.push({ pins: pinsRef.current, drawings: drawingsRef.current });
+  };
+
+  const handleUndo = () => {
+    const previous = historyRef.current.pop();
+    if (!previous) {
+      onCancel();
+      return;
+    }
+    setPins(() => previous.pins);
+    setDrawings(() => previous.drawings);
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -287,6 +302,7 @@ export const LocalisationMap = ({
       }
       setPinToDelete(null);
       markDirty();
+      pushHistory();
       setPins((prev) => [...prev, { id: prev.length + 1, lng: e.lngLat.lng, lat: e.lngLat.lat }]);
     };
 
@@ -304,6 +320,7 @@ export const LocalisationMap = ({
 
   const handleConfirmDeletePin = () => {
     if (!pinToDelete) return;
+    pushHistory();
     setPins((prev) => prev.filter((p) => p.id !== pinToDelete.id).map((p, i) => ({ ...p, id: i + 1 })));
     setPinToDelete(null);
     markDirty();
@@ -324,6 +341,7 @@ export const LocalisationMap = ({
     const start = (e: maplibregl.MapMouseEvent | maplibregl.MapTouchEvent) => {
       isDrawing = true;
       current = { points: [{ lng: e.lngLat.lng, lat: e.lngLat.lat }], color: activeColor, width: LINE_WIDTH };
+      pushHistory();
       setDrawings((prev) => [...prev, current!]);
       markDirty();
     };
@@ -436,7 +454,7 @@ export const LocalisationMap = ({
 
       {isDirty ? (
         <Box position="absolute" top={8} left={8} zIndex={2}>
-          <CanvasButton onClick={onCancel} title="Annuler les modifications" iconId="ri-arrow-go-back-fill">
+          <CanvasButton onClick={handleUndo} title="Annuler la dernière action" iconId="ri-arrow-go-back-fill">
             Annuler
           </CanvasButton>
         </Box>
