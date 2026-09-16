@@ -25,6 +25,7 @@ export const Layout = ({ children }: PropsWithChildren) => {
       <SkipLinks
         links={[
           { label: "Contenu", anchor: "#content" },
+          { label: "Menu", anchor: "#header-menu" },
           { label: "Pied de page", anchor: "#fr-footer" },
         ]}
       />

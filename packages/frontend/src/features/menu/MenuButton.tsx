@@ -24,7 +24,7 @@ export const MenuButton = ({ noProvider }: { noProvider?: boolean }) => {
 
   return (
     <>
-      <Flex alignItems={{ xs: "unset", lg: "center" }} height="100%">
+      <Flex id="header-menu" alignItems={{ xs: "unset", lg: "center" }} height="100%">
         {isDesktop ? (
           <Flex alignItems="center">
             <Button
