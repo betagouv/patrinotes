@@ -17,7 +17,7 @@ import { getRouteApi, useNavigate, UseNavigateResult } from "@tanstack/react-rou
 import { Button, Center } from "#components/MUIDsfr.tsx";
 import { ContexteVisite } from "./steps/ContexteVisite";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { ConstatGeneral } from "./steps/ConstatGeneral";
 import { ConstatDetaille } from "./steps/ConstatDetaille";
 import { pick } from "pastable";
@@ -87,9 +87,19 @@ const routeApi = getRouteApi("/constat/$constatId");
 
 const ContentSwitch = () => {
   const { step } = routeApi.useSearch();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    containerRef.current?.focus();
+  }, [step]);
 
   return (
-    <>
+    <Box ref={containerRef} tabIndex={-1}>
       <Box display={step === "informations" ? "block" : "none"}>
         <MonumentHistorique />
       </Box>
@@ -102,7 +112,7 @@ const ContentSwitch = () => {
       <Box display={step === "constat-general" ? "block" : "none"}>
         <ConstatGeneral />
       </Box>
-    </>
+    </Box>
   );
 };
 
