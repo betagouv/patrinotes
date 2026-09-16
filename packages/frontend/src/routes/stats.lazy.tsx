@@ -310,14 +310,6 @@ const StatsPage = () => {
                 value={formatPercent(totalUsers, 1102)}
               />
             </Box>
-
-            {/* Jobs pie chart */}
-            <Stack gap="0.5rem">
-              <Typography variant="h6" component="h3">
-                Répartition des utilisateurs inscrits par métier
-              </Typography>
-              <JobsChart />
-            </Stack>
           </>
         ) : null}
       </Stack>
@@ -327,6 +319,14 @@ const StatsPage = () => {
       {/* ------------------------------------------------------------------ */}
       {adminQuery.isSuccess && adminQuery.data && (
         <Stack gap={{ xs: "40px", lg: "64px" }}>
+          {/* Jobs pie chart */}
+          <Stack gap="0.5rem">
+            <Typography variant="h6" component="h3">
+              Répartition des utilisateurs inscrits par métier
+            </Typography>
+            <JobsChart />
+          </Stack>
+
           <Stack>
             <Typography variant="h4" component="h4" mb="24px">
               Adoption par département en UDAP

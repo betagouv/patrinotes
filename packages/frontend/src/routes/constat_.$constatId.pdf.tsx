@@ -449,7 +449,7 @@ const SendBannerContent = () => {
       px={{ xs: "16px", lg: "0" }}
     >
       <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
-        <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
+        <GoBackButton sx={{ mt: "0", mx: "16px" }} />
       </Flex>
       <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "column" }}>
         <EmailInput
@@ -500,7 +500,7 @@ const ViewBannerContent = () => {
       px={{ xs: "16px", lg: "0" }}
     >
       <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
-        <GoBackButton sx={{ mt: "-3px", mx: "16px" }} />
+        <GoBackButton sx={{ mt: "0", mx: "16px" }} />
       </Flex>
       <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "row" }} justifyContent={"space-between"}>
         <Flex mt={{ xs: "8px", lg: "0" }}>

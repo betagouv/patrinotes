@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, NotFound } from "@aws-sdk/client-s3";
 import { ENV } from "../envVars";
 import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
@@ -45,15 +45,24 @@ export class UploadService {
   async getAttachmentSize({ filePath }: { filePath: string }) {
     const name = addAttachmentPrefix(filePath);
 
-    const { ContentLength } = await client.send(
-      new HeadObjectCommand({
-        Bucket: bucketUrl,
-        Key: name,
-      }),
-    );
+    let contentLength: number | undefined;
+    try {
+      const { ContentLength } = await client.send(
+        new HeadObjectCommand({
+          Bucket: bucketUrl,
+          Key: name,
+        }),
+      );
+      contentLength = ContentLength;
+    } catch (error) {
+      // HeadObjectCommand throws NotFound (not NoSuchKey, which is GetObject-specific)
+      // when the key doesn't exist.
+      if (error instanceof NotFound) throw new AppError(404, "Attachment not found");
+      throw error;
+    }
 
-    if (ContentLength === undefined) throw new AppError(404, "Attachment not found");
-    return ContentLength;
+    if (contentLength === undefined) throw new AppError(404, "Attachment not found");
+    return contentLength;
   }
 
   async getAttachment({ filePath }: { filePath: string }) {

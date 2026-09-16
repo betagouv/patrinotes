@@ -1,17 +1,21 @@
 import { InputProps } from "@codegouvfr/react-dsfr/Input";
 import Tag from "@codegouvfr/react-dsfr/Tag";
 import { useMutation } from "@tanstack/react-query";
-import { useMachine } from "@xstate/react";
-import { useEffect, useRef } from "react";
-import { useClickAway } from "react-use";
+import { HTMLAttributes, useCallback, useMemo, useRef, useState } from "react";
+import { useStyles } from "tss-react";
+import {
+  Autocomplete,
+  AutocompleteRenderInputParams,
+  Box,
+  Paper,
+  PaperProps,
+  Stack,
+  StackProps,
+} from "@mui/material";
 import { useUser } from "../contexts/AuthContext";
-import { db } from "../db/db";
-import { createSuggestionMachine } from "../features/suggestionsMachine";
-import { Box, Stack, StackProps } from "@mui/material";
-import { Button, Input } from "./MUIDsfr";
+import { db, useDbQuery } from "../db/db";
+import { Button } from "./MUIDsfr";
 import { Flex } from "./ui/Flex";
-import { useIsDesktop } from "../hooks/useIsDesktop";
-import { fromPromise } from "xstate";
 
 export const EmailInput = ({
   label,
@@ -29,42 +33,27 @@ export const EmailInput = ({
   onValueChange: (value: string[]) => void;
   sx?: StackProps["sx"];
 }) => {
-  const [state, send] = useMachine(emailMachine, {
-    input: {
-      query: single ? value[0] : "",
-    },
-  });
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!single || !state.context.selected) return;
-    onValueChange([state.context.selected]);
-  }, [state.context.selected]);
-
-  // when clicking on the add button
-  const onClick = () => {
-    const emailToAdd = state.context.query;
-    if (!emailToAdd) return;
-    if (!value.includes(emailToAdd)) {
-      onValueChange([...value, emailToAdd]);
-    }
-    send({ type: "CLEAR" });
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.stopPropagation();
-
-      onClick();
-    }
-  };
-
-  useClickAway(wrapperRef, () => {
-    send({ type: "BLUR" });
-  });
-
+  const { cx } = useStyles();
   const user = useUser()!;
+
+  const [inputValue, setInputValue] = useState(single ? value[0] ?? "" : "");
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const suggestionsQuery = useDbQuery(
+    db
+      .selectFrom("suggested_email")
+      .where("service_id", "=", user.service_id)
+      .select(["email"])
+      .orderBy("email"),
+  );
+
+  const suggestions = useMemo(
+    () =>
+      Array.from(
+        new Set((suggestionsQuery.data ?? []).map((row) => row.email as string).filter(Boolean)),
+      ),
+    [suggestionsQuery.data],
+  );
 
   const deleteSuggestionMutation = useMutation({
     mutationFn: async (email: string) => {
@@ -73,131 +62,197 @@ export const EmailInput = ({
         .where("email", "=", email)
         .where("service_id", "=", user.service_id)
         .execute();
-
-      send({
-        type: "REMOVE",
-        item: email,
-      });
     },
   });
 
-  const isOpen = state.matches("suggesting") || state.matches("error");
-  const suggestions = state.context.suggestions;
+  const commitEmails = (next: readonly string[]) => {
+    const cleaned = next.map((email) => email.trim()).filter(Boolean);
+    onValueChange(Array.from(new Set(cleaned)));
+  };
 
-  const isDesktop = useIsDesktop();
+  const addFromInput = () => {
+    const email = inputValue.trim();
+    if (!email) return;
+    if (value.includes(email)) {
+      setStatusMessage(`${email} est déjà dans la liste`);
+    } else {
+      commitEmails([...value, email]);
+      setStatusMessage(`${email} ajoutée`);
+    }
+    setInputValue("");
+  };
+
+  // tracks how many suggestions the list is currently showing, so the
+  // "removal applies to the whole service" notice only renders alongside them
+  const shownCountRef = useRef(0);
+
+  const filterOptions = useCallback((options: string[], state: { inputValue: string }) => {
+    const query = state.inputValue.trim().toLowerCase();
+    const result = query ? options.filter((option) => option.toLowerCase().includes(query)) : [];
+    shownCountRef.current = result.length;
+    return result;
+  }, []);
+
+  const renderInput = (params: AutocompleteRenderInputParams) => (
+    <div className="fr-input-group">
+      {label ? (
+        <label className="fr-label" htmlFor={params.id}>
+          {label}
+          {hintText ? <span className="fr-hint-text">{hintText}</span> : null}
+        </label>
+      ) : null}
+      <Box ref={params.InputProps.ref} mt={label ? "8px" : 0}>
+        <input
+          {...nativeInputProps}
+          {...params.inputProps}
+          disabled={disabled}
+          type="text"
+          inputMode="email"
+          autoComplete="off"
+          data-lpignore="true"
+          data-form-type="other"
+          className={cx(nativeInputProps?.className, params.inputProps.className, "fr-input")}
+        />
+      </Box>
+    </div>
+  );
+
+  // renders each suggestion with a "remove from the whole service" button
+  const renderOption = (props: HTMLAttributes<HTMLLIElement>, option: string) => (
+    <Box component="li" {...props} key={option} sx={{ position: "relative", pr: "40px !important" }}>
+      <Box flex={1}>{option}</Box>
+      {/* @ts-ignore priority typing */}
+      <Button
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: 0,
+          transform: "translateY(-50%)",
+          backgroundColor: "transparent",
+        }}
+        type="button"
+        priority="tertiary no outline"
+        iconId="ri-close-line"
+        title={`Supprimer ${option} des suggestions du service`}
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          e.preventDefault();
+          deleteSuggestionMutation.mutate(option);
+        }}
+      />
+    </Box>
+  );
+
+  const PaperComponent = useMemo(
+    () =>
+      function PaperWithNotice(props: PaperProps) {
+        return (
+          <Paper {...props}>
+            {props.children}
+            {shownCountRef.current > 0 ? (
+              <Box
+                bgcolor="#ECECFE"
+                width="100%"
+                minHeight="46px"
+                p="8px"
+                color="#000091"
+                textAlign="center"
+              >
+                La suppression de contact s'appliquera à tout le service
+              </Box>
+            ) : null}
+          </Paper>
+        );
+      },
+    [],
+  );
 
   return (
     <Stack sx={sx}>
-      <Box ref={wrapperRef} position="relative" width="100%">
-        <Input
-          disabled={disabled}
-          sx={{
-            mb: "1rem",
-            "& > input": {
-              pr: single ? "0" : { xs: "0", lg: "100px" },
-            },
-          }}
-          label={label}
-          hintText={hintText}
-          nativeInputProps={{
-            ...nativeInputProps,
-            type: "text",
-            value: state.context.query,
-            onChange: (e) => {
-              if (single) onValueChange([e.target.value]);
-              send({ type: "TYPE", value: e.target.value });
-            },
-            onKeyDown: handleKeyPress,
-          }}
-        />
-
-        {isOpen ? (
-          <Box
-            bgcolor="white"
-            sx={{
-              transform: "translateY(-1.25rem)",
+      <Box mb="1rem">
+        {single ? (
+          <Autocomplete
+            freeSolo
+            disabled={disabled}
+            disablePortal
+            options={suggestions}
+            noOptionsText="Aucun résultat"
+            filterOptions={filterOptions}
+            renderInput={renderInput}
+            renderOption={renderOption}
+            PaperComponent={PaperComponent}
+            value={value[0] ?? ""}
+            inputValue={inputValue}
+            onInputChange={(_e, next) => {
+              setInputValue(next);
+              onValueChange([next.trim()]);
             }}
-            zIndex="10"
-            position="absolute"
-            borderRadius="5px"
-            width="100%"
-            maxHeight="300px"
-            overflow="auto"
-          >
-            {suggestions.length === 0 ? null : (
-              <Box>
-                {suggestions.map((item) => (
-                  <Box
-                    key={item}
-                    onClick={() => {
-                      send({ type: "SELECT", item });
-                    }}
-                    sx={{
-                      ":hover > div": {
-                        bg: "#ECECFE",
-                        display: "block",
-                        cursor: "pointer",
-                      },
-                    }}
-                    position="relative"
-                    p="8px"
-                  >
-                    {item}
-                    <Box display="none">
-                      {/* @ts-ignore */}
-                      <Button
-                        sx={{
-                          position: "absolute",
-                          top: 0,
-                          right: 0,
-                          backgroundColor: "transparent !important",
-                        }}
-                        type="button"
-                        priority="tertiary no outline"
-                        iconId="ri-close-line"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          deleteSuggestionMutation.mutate(item);
-                        }}
-                      ></Button>
-                    </Box>
-                  </Box>
-                ))}
-                <Box bgcolor="#ECECFE" width="100%" minHeight="46px" p="8px" color="#000091" textAlign="center">
-                  La suppression de contact s'appliquera à tout le service
-                </Box>
-              </Box>
-            )}
-          </Box>
-        ) : null}
+            onChange={(_e, next) => {
+              const email = (typeof next === "string" ? next : "").trim();
+              setInputValue(email);
+              onValueChange([email]);
+            }}
+          />
+        ) : (
+          <Autocomplete
+            multiple
+            freeSolo
+            disableClearable
+            disabled={disabled}
+            disablePortal
+            options={suggestions}
+            noOptionsText="Aucun résultat"
+            filterOptions={filterOptions}
+            renderInput={renderInput}
+            renderOption={renderOption}
+            PaperComponent={PaperComponent}
+            // tags are rendered below the field, so keep MUI's in-field adornment empty
+            renderTags={() => null}
+            value={value.filter(Boolean)}
+            inputValue={inputValue}
+            onInputChange={(_e, next, reason) => {
+              if (reason !== "reset") setInputValue(next);
+            }}
+            onChange={(_e, next) => {
+              commitEmails(next as string[]);
+              setInputValue("");
+            }}
+          />
+        )}
       </Box>
+
       {!single ? (
         <Flex gap="12px" flexDirection={{ xs: "column", lg: "row" }}>
           <Box>
+            {/* @ts-ignore priority typing */}
             <Button
-              sx={{
-                zIndex: 1,
-              }}
+              style={{ zIndex: 1 }}
               type="button"
               priority="secondary"
               iconId="ri-add-line"
-              onClick={onClick}
+              disabled={disabled}
+              onClick={addFromInput}
             >
               Ajouter
             </Button>
           </Box>
 
-          <Flex gap="8px" justifyContent="flex-start" alignItems="center" width="100%" flexWrap="wrap" mt="4px">
+          <Flex
+            gap="8px"
+            justifyContent="flex-start"
+            alignItems="center"
+            width="100%"
+            flexWrap="wrap"
+            mt="4px"
+          >
             {value.filter(Boolean).map((email) => (
               <Tag
                 key={email}
                 dismissible
                 nativeButtonProps={{
                   type: "button",
-                  onClick: () => {
-                    onValueChange(value.filter((v) => v !== email));
-                  },
+                  "aria-label": `Retirer ${email}`,
+                  onClick: () => onValueChange(value.filter((v) => v !== email)),
                 }}
               >
                 {email}
@@ -206,23 +261,10 @@ export const EmailInput = ({
           </Flex>
         </Flex>
       ) : null}
+
+      <Box className="fr-sr-only" aria-live="polite" role="status">
+        {statusMessage}
+      </Box>
     </Stack>
   );
 };
-
-export const emailMachine = createSuggestionMachine<EmailSuggestion>({
-  minLength: 1,
-}).provide({
-  actors: {
-    fetchSuggestions: fromPromise(async ({ input }: { input: { query: string } }) =>
-      db
-        .selectFrom("suggested_email")
-        .where("email", "like", `%${input.query}%`)
-        .select(["email"])
-        .execute()
-        .then((res) => res.map((r) => r.email as string)),
-    ),
-  },
-});
-
-type EmailSuggestion = string;

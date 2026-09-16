@@ -18,6 +18,8 @@ import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
 import { defaultSections, serializePreconisations } from "@patrinotes/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { useIsStateReportDisabled, useStateReportVersion } from "../utils";
+import { SectionLocalisationModal } from "./SectionLocalisationModal";
+import { clearLocalisationData, isLocalisationAttachment } from "../localisationAttachment";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -42,6 +44,7 @@ export const ConstatDetaille = () => {
           xs: "none",
           lg: "block",
         }}
+        component="h3"
         fontSize="16px !important"
         variant="h3"
         fontWeight="500"
@@ -199,13 +202,21 @@ const SectionModal = ({
   const isCustom = selectedSection && !defaultSections.includes(selectedSection.section!);
 
   const ref = useRef<HTMLDivElement>(null);
-  useClickAway(ref, () => {
+  useClickAway(ref, (event) => {
+    // MUI portals nested dialogs/popovers (e.g. the localisation map) to their own root,
+    // outside `ref`'s DOM subtree, so a click inside one looks like a click-away here.
+    // Only treat it as a real click-away if it lands in this dialog's own portal root.
+    const target = event.target as HTMLElement | null;
+    const ownModalRoot = ref.current?.closest(".MuiModal-root");
+    const targetModalRoot = target?.closest(".MuiModal-root, .MuiPopover-root");
+    if (targetModalRoot && targetModalRoot !== ownModalRoot) return;
     onClose();
   });
 
   return (
     <Dialog
       open={selectedSection !== null}
+      onClose={onClose}
       sx={{
         ".MuiPaper-root": {
           overflowY: "auto",
@@ -449,10 +460,19 @@ const DegradationLevelRadioButtons = ({
 
 const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; isDisabled: boolean }) => {
   const [selected, setSelected] = useState<{ attachment: MinimalAttachment; blobUrl: string } | null>(null);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const { constatId } = routeApi.useParams();
   const { attachments, batchUpload, deleteMutation, onLabelChange, replaceAttachment } = useAttachmentImages(
     { table: "visited_section_attachment", fkColumn: "visited_section_id", fkValue: section.id },
     constatId,
+  );
+
+  // The localisation export's DB label is an internal marker (never shown to the user);
+  // swap in a readable one for the app's photo grid, distinct from the raw attachment.
+  const displayAttachments = attachments.map((attachment) =>
+    isLocalisationAttachment(attachment.attachment_id)
+      ? { ...attachment, label: "Localiser sur la carte", isLocalisation: true as const }
+      : attachment,
   );
 
   return (
@@ -465,14 +485,43 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         onReplaceAttachment={replaceAttachment}
       />
 
-      <UploadImage
-        onFiles={batchUpload.uploadFiles}
+      {isMapOpen ? <SectionLocalisationModal visitedSection={section} onClose={() => setIsMapOpen(false)} /> : null}
+
+      <UploadImage.Images
+        attachments={displayAttachments}
         multiple
-        attachments={attachments}
-        onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
-        onDelete={(section) => deleteMutation.mutate(section)}
+        onClick={(attachment, blobUrl) =>
+          (attachment as { isLocalisation?: boolean }).isLocalisation
+            ? setIsMapOpen(true)
+            : setSelected({ attachment, blobUrl })
+        }
+        onDelete={({ id }) => {
+          const deletedAttachment = attachments.find((a) => a.id === id);
+          deleteMutation.mutate({ id });
+          if (deletedAttachment && isLocalisationAttachment(deletedAttachment.attachment_id)) {
+            clearLocalisationData(section.id);
+          }
+        }}
+        onRetry={({ id }) => batchUpload.retry(id)}
         isDisabled={isDisabled}
       />
+      <Flex
+        gap="12px"
+        alignItems={{ xs: "start", md: "center" }}
+        flexDirection={{ xs: "column", md: "row" }}
+        mt={attachments.length ? "16px" : "0"}
+      >
+        <Button
+          type="button"
+          priority="secondary"
+          iconId="ri-map-pin-line"
+          onClick={() => setIsMapOpen(true)}
+          disabled={isDisabled}
+        >
+          Localiser sur la carte
+        </Button>
+        <UploadImage.Button onFiles={batchUpload.uploadFiles} multiple isDisabled={isDisabled} />
+      </Flex>
     </Box>
   );
 };

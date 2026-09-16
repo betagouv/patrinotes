@@ -15,6 +15,7 @@ type UploadImageImagesSubProps = {
   multiple?: boolean;
   onClick?: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete?: (props: { id: string }) => void;
+  onRetry?: (props: { id: string }) => void;
   isDisabled?: boolean;
 };
 
@@ -24,7 +25,7 @@ const Button = ({ onFiles, multiple, isDisabled }: UploadImageButtonSubProps) =>
   <UploadImageButton multiple={multiple} isDisabled={isDisabled} addImage={onFiles} />
 );
 
-const Images = ({ attachments, onClick, onDelete, isDisabled }: UploadImageImagesSubProps) => {
+const Images = ({ attachments, onClick, onDelete, onRetry, isDisabled }: UploadImageImagesSubProps) => {
   const attachment = attachments.length > 0 ? attachments[0] : null;
   if (!attachment) return null;
 
@@ -36,6 +37,7 @@ const Images = ({ attachments, onClick, onDelete, isDisabled }: UploadImageImage
           picture={attachment}
           onEdit={(a, blobUrl) => onClick?.(a, blobUrl)}
           onDelete={onDelete ? () => onDelete({ id: attachment.id }) : () => {}}
+          onRetry={onRetry ? () => onRetry({ id: attachment.id }) : undefined}
           key={attachment.id}
           isDisabled={isDisabled}
         />
@@ -44,7 +46,7 @@ const Images = ({ attachments, onClick, onDelete, isDisabled }: UploadImageImage
   );
 };
 
-const Basic = ({ onFiles, attachments, multiple, onClick, onDelete, isDisabled }: UploadImageProps) => {
+const Basic = ({ onFiles, attachments, multiple, onClick, onDelete, onRetry, isDisabled }: UploadImageProps) => {
   const attachment = attachments.length > 0 ? attachments[0] : null;
   const hideButton = !multiple && !!attachment;
 
@@ -55,6 +57,7 @@ const Basic = ({ onFiles, attachments, multiple, onClick, onDelete, isDisabled }
         multiple={multiple}
         onClick={onClick}
         onDelete={onDelete}
+        onRetry={onRetry}
         isDisabled={isDisabled}
       />
       {hideButton ? null : (
@@ -75,6 +78,9 @@ export type MinimalAttachment = {
   state?: number | null;
   mediaType?: string | null;
   blobUrl?: string | null;
+  attachment_id?: string | null;
+  /** Set when this attachment failed to upload (see useBatchUpload). Not persisted to the DB. */
+  error?: string | null;
 };
 
 export const onStateReportFile = async ({

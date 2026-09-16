@@ -707,6 +707,9 @@ export const visitedSection = pgTable(
     commentaires: text(),
     preconisations: text(),
     service_id: text("service_id").notNull(),
+    localisationPins: text("localisation_pins"),
+    localisationDrawings: text("localisation_drawings"),
+    localisationZone: text("localisation_zone"),
   },
   (table) => [
     foreignKey({

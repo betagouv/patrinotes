@@ -72,6 +72,8 @@ export const ConstatDetaille = ({
                         url: attachment.file!,
                         label: attachment.label ?? undefined,
                         attachmentId: attachment.id,
+                        width: attachment.width,
+                        height: attachment.height,
                       }))}
                     />
                   ) : null}
@@ -129,6 +131,8 @@ export const ConstatDetaille = ({
                         url: attachment.file!,
                         label: attachment.label ?? undefined,
                         attachmentId: attachment.id,
+                        width: attachment.width,
+                        height: attachment.height,
                       }))}
                     />
                   ) : null}

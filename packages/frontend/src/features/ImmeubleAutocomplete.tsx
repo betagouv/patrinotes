@@ -1,4 +1,4 @@
-import { Autocomplete, Box, Dialog, DialogTitle, Typography } from "@mui/material";
+import { Autocomplete, Box, Dialog, DialogTitle, IconButton, Typography } from "@mui/material";
 import { db, useDbQuery } from "../db/db";
 import { useMemo, useState } from "react";
 import { useStyles } from "tss-react";
@@ -14,6 +14,7 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ModalCloseButton } from "./menu/MenuTitle";
 import { Alert, Button, Center } from "#components/MUIDsfr.tsx";
+import { MonumentMapModal } from "./map/MonumentMapModal";
 
 type FilterablePopImmeubles = Pick<
   PopImmeuble,
@@ -46,6 +47,8 @@ export const ImmeubleAutocomplete = () => {
   const [areSuggestionsShown, setAreSuggestionsShown] = useState(false);
 
   const [isWarningOpen, setIsWarningOpen] = useState(false);
+
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   const form = useStateReportFormContext();
   const [referencePop, titreEdifice] = useWatch({ control: form.control, name: ["reference_pop", "titre_edifice"] });
@@ -154,7 +157,9 @@ export const ImmeubleAutocomplete = () => {
             </Box>
           </Dialog>
         ) : null}
-        <Typography fontSize="20px">{form.watch("titre_edifice")}</Typography>
+        <Typography fontSize="20px" component="h2" fontWeight="bold">
+          {form.watch("titre_edifice")}
+        </Typography>
         <Box mt="8px">
           <IconLink
             icon="fr-icon-edit-fill"
@@ -303,14 +308,36 @@ export const ImmeubleAutocomplete = () => {
             <label className="fr-label" htmlFor={params.id}>
               Nom ou référence du monument
             </label>
-            <Box ref={params.InputProps.ref} mt="8px">
-              <input
-                {...params.inputProps}
-                className={cx(params.inputProps.className, "fr-input")}
-                style={{ backgroundColor: "white" }}
-                type={"text"}
-              />
-            </Box>
+            <Flex alignItems="center" gap="8px" mt="8px">
+              <Box ref={params.InputProps.ref} flex="1">
+                <input
+                  {...params.inputProps}
+                  className={cx(params.inputProps.className, "fr-input")}
+                  style={{ backgroundColor: "white" }}
+                  type={"text"}
+                />
+              </Box>
+              <IconButton
+                type="button"
+                title="Choisir sur la carte"
+                aria-label="Choisir sur la carte"
+                disabled={isDisabled}
+                onClick={() => setIsMapModalOpen(true)}
+                sx={{
+                  flexShrink: 0,
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: 0,
+                  color: "white",
+                  backgroundColor: fr.colors.decisions.background.actionHigh.blueFrance.default,
+                  "&:hover": {
+                    backgroundColor: fr.colors.decisions.background.actionHigh.blueFrance.hover,
+                  },
+                }}
+              >
+                <span className={fr.cx("fr-icon-road-map-line")} aria-hidden="true" />
+              </IconButton>
+            </Flex>
           </div>
         )}
         noOptionsText={
@@ -345,6 +372,15 @@ export const ImmeubleAutocomplete = () => {
           />
         </Flex>
       ) : null}
+
+      <MonumentMapModal
+        open={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        onSelect={(item) => {
+          setValue(item);
+          setIsMapModalOpen(false);
+        }}
+      />
     </Box>
   );
 };

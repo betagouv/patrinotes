@@ -84,30 +84,16 @@ const Index = () => {
 
   return (
     <Flex flexDirection="column" color="text-label-grey">
-      <SimpleBanner pt={{ xs: "15px", lg: "82px" }} pb={{ xs: "49px", lg: "82px" }} alignItems="flex-start">
-        <Flex width={{ xs: "100%", lg: "926px" }} flexDirection="column">
-          <Typography
-            variant="h2"
-            fontSize="32px"
-            color={fr.colors.decisions.text.actionHigh.blueFrance.default}
-            px={{ lg: 0, xs: "16px" }}
-          >
-            Les outils du patrimoine en mobilité
+      <SimpleBanner pb={{ xs: "40px", lg: "72px" }} alignItems="flex-start">
+        <Flex width={{ xs: "100%", lg: "926px" }} flexDirection="column" mt={{ xs: "32px", lg: "56px" }}>
+          <Typography fontSize="20px" color={fr.colors.decisions.text.label.grey.default} px={{ lg: 0, xs: "16px" }}>
+            Que souhaitez-vous faire ?
           </Typography>
 
-          <Flex alignItems="center" width="100%" flexDirection={{ xs: "column-reverse", lg: "row" }}>
-            <Flex
-              width={{ xs: "100%", lg: "588px" }}
-              mt="48px"
-              flexDirection="column"
-              py="16px"
-              px={{ lg: 0, xs: "16px" }}
-            >
-              <Typography variant="body1" px="16px" fontSize="20px">
-                Que souhaitez-vous faire ?
-              </Typography>
+          <Flex alignItems="center" width="100%" flexDirection={{ xs: "column", lg: "row" }} mt="32px">
+            <Flex width={{ xs: "100%", lg: "588px" }} flexDirection="column" px={{ lg: 0, xs: "16px" }}>
               <Tile
-                sx={{ h3: { margin: "0 !important", fontSize: "18px !important" }, mt: "32px" }}
+                sx={{ h3: { margin: "0 !important", fontSize: "18px !important" } }}
                 small
                 title="Créer un constat d'état"
                 buttonProps={{
@@ -125,7 +111,7 @@ const Index = () => {
                 noIcon
               />
             </Flex>
-            <Box alignSelf={{ xs: "center", lg: "flex-end" }} ml={{ xs: "0", lg: "126px" }}>
+            <Box ml={{ xs: "0", lg: "80px" }} mt={{ xs: "32px", lg: "-32px" }} maxHeight="200px">
               <HomeImageSvg />
             </Box>
           </Flex>

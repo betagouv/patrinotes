@@ -6,6 +6,9 @@ import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
 import { pdf } from "@react-pdf/renderer";
 import React from "react";
 import { Service } from "../../../db/AppSchema";
+import { getImageDimensions } from "../../../utils";
+import { ensurePlanSituationAttachment } from "../planSituationAttachment";
+import { PlanSituationOfflineError } from "../../map/planSituationSnapshot";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
@@ -26,6 +29,22 @@ export const constatPdfQueries = {
         }
 
         const stateReport = stateReportQuery[0];
+
+        let planSituationOffline = false;
+        try {
+          await ensurePlanSituationAttachment({
+            stateReportId: constatId,
+            serviceId: stateReport.service_id!,
+            coordonnees: stateReport.coordonnees,
+            referenceCadastrale: stateReport.reference_cadastrale,
+            referencePop: stateReport.reference_pop,
+            adresse: stateReport.adresse,
+          });
+        } catch (e) {
+          if (e instanceof PlanSituationOfflineError) planSituationOffline = true;
+          else console.error(e);
+        }
+
         const attachmentQuery = await db
           .selectFrom("state_report_attachment")
           .leftJoin("attachments", "attachments.id", "state_report_attachment.attachment_id")
@@ -57,10 +76,13 @@ export const constatPdfQueries = {
           attachmentQuery.map(async (attachment) => {
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+            const dimensions = await getImageDimensions(url);
 
             return {
               ...attachment,
               file: url,
+              width: dimensions?.width,
+              height: dimensions?.height,
             };
           }),
         );
@@ -68,6 +90,7 @@ export const constatPdfQueries = {
         return {
           ...stateReport,
           attachments: attachmentsWithFiles,
+          planSituationOffline,
         };
       },
       refetchOnWindowFocus: false,
@@ -122,9 +145,12 @@ export const constatPdfQueries = {
             }
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+            const dimensions = await getImageDimensions(url);
             return {
               ...attachment,
               file: url,
+              width: dimensions?.width,
+              height: dimensions?.height,
             };
           }),
         );
@@ -182,9 +208,12 @@ export const constatPdfQueries = {
           alertAttachments.map(async (attachment) => {
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
+            const dimensions = await getImageDimensions(url);
             return {
               ...attachment,
               file: url,
+              width: dimensions?.width,
+              height: dimensions?.height,
             };
           }),
         );
