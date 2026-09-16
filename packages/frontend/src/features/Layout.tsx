@@ -197,6 +197,9 @@ const LoggedInHeader = () => {
 
   const serviceType = useServiceType();
 
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+
   return (
     <>
       {!isDesktop ? (
@@ -246,11 +249,11 @@ const LoggedInHeader = () => {
                 <StatusBadge />
               </Box>
             </Flex>
-          ) : (
+          ) : isHome ? (
             "Patrinotes"
-          )
+          ) : null
         }
-        serviceTagline={"Les outils du patrimoine en mobilité"}
+        serviceTagline={isDesktop || isHome ? "Les outils du patrimoine en mobilité" : null}
         quickAccessItems={[
           {
             iconId: "fr-icon-account-circle-fill",
