@@ -194,9 +194,8 @@ export const MapLibre = ({
       const { section, numero } = features[0].properties as { section: string; numero: string };
 
       setSelectedParcels((prev) => {
-        const exists = prev.findIndex((p) => p.section === section && p.numero === numero);
-        if (exists >= 0) return prev.filter((_, i) => i !== exists);
-        return [...prev, { section, numero }];
+        const alreadySelected = prev.some((p) => p.section === section && p.numero === numero);
+        return alreadySelected ? [] : [{ section, numero }];
       });
     };
 
@@ -258,12 +257,6 @@ export const MapLibre = ({
   const handleValidateCadastre = () => {
     const refs = selectedParcels.map((p) => `${p.section} ${p.numero}`).join(";");
     onSaveReferenceCadastrale?.(refs);
-    setMode("move");
-  };
-
-  const handleActivateMove = () => {
-    if (mode === "pin") handleCancelPin();
-    if (mode === "cadastre") handleCancelCadastre();
     setMode("move");
   };
 
@@ -420,23 +413,16 @@ export const MapLibre = ({
 
       <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0}>
         <CanvasButton
-          onClick={handleActivateMove}
-          title="Déplacer la carte"
-          iconId="ri-drag-move-2-fill"
-          isSelected={mode === "move"}
+          onClick={handleActivateCadastre}
+          title="Sélectionner un cadastre"
+          iconId="ri-collage-fill"
+          isSelected={mode === "cadastre"}
         />
         <CanvasButton
           onClick={handleActivatePin}
           title="Placer le point de localisation"
           iconId="ri-map-pin-line"
           isSelected={mode === "pin"}
-          sx={{ marginLeft: "-1px" }}
-        />
-        <CanvasButton
-          onClick={handleActivateCadastre}
-          title="Sélectionner des cadastres"
-          iconId="ri-collage-fill"
-          isSelected={mode === "cadastre"}
           sx={{ marginLeft: "-1px" }}
         />
       </Box>
