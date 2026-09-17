@@ -18,29 +18,36 @@ const Accessibilite = () => {
   return (
     <Stack width={{ xs: "100%", lg: "800px" }} gap="16px" px="16px">
       <Typography variant="h1" mb="16px">
-        Accessibilité : Non conforme
+        Déclaration d'accessibilité
       </Typography>
       <Typography variant="body1">
-        <strong>Patrinotes</strong> s'engage à rendre ses services numériques accessibles, conformément à l'article 47
-        de la loi n° 2005-102 du 11 février 2005.
+        Le ministère de la Culture s'engage à rendre ses sites internet, intranet, extranet et ses progiciels
+        accessibles (et ses applications mobiles et mobilier urbain numérique) conformément à l'article 47 de la loi
+        n°2005-102 du 11 février 2005.
       </Typography>
-
-      <Typography variant="h2">Déclaration d'accessibilité</Typography>
       <Typography variant="body1">
-        Cette déclaration d'accessibilité s'applique au site{" "}
-        <a className="fr-link" href="https://app.patrinotes.beta.gouv.fr/">
-          app.patrinotes.beta.gouv.fr
-        </a>
+        À cette fin, le ministère met en œuvre la stratégie et les actions suivantes :
+      </Typography>
+      <ul>
+        <li>
+          <Typography variant="body1">Schéma pluriannuel d'accessibilité du gouvernement</Typography>
+        </li>
+        <li>
+          <Typography variant="body1">Schéma pluriannuel d'accessibilité numérique du ministère de la Culture</Typography>
+        </li>
+      </ul>
+      <Typography variant="body1">
+        Cette déclaration d'accessibilité s'applique à l'application <strong>Patrinotes</strong>.
       </Typography>
 
       <Typography variant="h2">État de conformité</Typography>
       <Typography variant="body1">
-        Le site{" "}
-        <a className="fr-link" href="https://app.patrinotes.beta.gouv.fr/">
-          app.patrinotes.beta.gouv.fr
-        </a>{" "}
-        est non conforme avec le RGAA 4.1. Le site n'a <strong>pas encore été audité</strong>. Il a cependant été conçu
-        pour être accessible au plus grand nombre. Vous devriez donc pouvoir :
+        L'application Patrinotes app.patrinotes.beta.gouv.fr est non conforme avec le référentiel général
+        d'amélioration de l'accessibilité (RGAA), version 4, en raison d'absence d'audit achevé, ce qui ne permet pas
+        aujourd'hui de lister les non-conformités du site. Cependant, Patrinotes est conçu en utilisant le Système de
+        design de l'État (DSFR) prenant en compte les exigences en termes d'accessibilité. Le site n'a{" "}
+        <strong>pas encore été audité</strong>. Il a cependant été conçu pour être accessible au plus grand nombre.
+        Vous devriez donc pouvoir :
       </Typography>
       <ul>
         <li>
@@ -51,39 +58,34 @@ const Accessibilite = () => {
         </li>
         <li>
           <Typography variant="body1">
-            adapter le site à votre préférences (taille de la police, zoom écran, changement de typographie…) sans perte
-            de contenu
+            adapter le site à votre préférences (taille de la police, zoom écran, changement de typographie…) sans
+            perte de contenu
           </Typography>
         </li>
       </ul>
 
-      <Typography variant="h2">Amélioration et contact</Typography>
+      <Typography variant="h2">Établissement de cette déclaration d'accessibilité</Typography>
+      <Typography variant="body1">
+        Cette déclaration a été établie 17/02/2026. Elle a été mise à jour le 16/09/2026.
+      </Typography>
+
+      <Typography variant="h2">Retour d'information et contact</Typography>
       <Typography variant="body1">
         Si vous n'arrivez pas à accéder à un contenu ou à un service, vous pouvez contacter le responsable de
-        beta.gouv.fr pour être orienté·e vers une alternative accessible ou obtenir le contenu sous une autre forme.
+        Patrinotes pour être orienté vers une alternative accessible ou obtenir le contenu sous une autre forme, à
+        l'adresse électronique suivante :{" "}
+        <a className="fr-link" href="mailto:contact@patrinotes.beta.gouv.fr">
+          contact@patrinotes.beta.gouv.fr
+        </a>
       </Typography>
-      <ul>
-        <li>
-          <Typography variant="body1">
-            Courriel :{" "}
-            <a className="fr-link" href="mailto:contact@beta.gouv.fr">
-              contact@beta.gouv.fr
-            </a>
-          </Typography>
-        </li>
-        <li>
-          <Typography variant="body1">Adresse : DINUM, 20 avenue de Ségur 75007 Paris</Typography>
-        </li>
-      </ul>
-      <Typography variant="body1">Nous essayons de répondre dans les 2 jours ouvrés.</Typography>
 
-      <Typography variant="h2">Voie de recours</Typography>
+      <Typography variant="h2">Voies de recours</Typography>
       <Typography variant="body1">
-        Cette procédure est à utiliser dans le cas suivant : vous avez signalé au responsable du site internet un défaut
-        d'accessibilité qui vous empêche d'accéder à un contenu ou à un des services du portail et vous n'avez pas
-        obtenu de réponse satisfaisante.
+        Si vous constatez un défaut d'accessibilité vous empêchant d'accéder à un contenu ou une fonctionnalité du
+        site, que vous nous le signalez et que vous ne parvenez pas à obtenir une réponse de notre part, vous êtes en
+        droit de faire parvenir vos doléances ou une demande de saisine au Défenseur des droits.
       </Typography>
-      <Typography variant="body1">Vous pouvez :</Typography>
+      <Typography variant="body1">Plusieurs moyens sont à votre disposition :</Typography>
       <ul>
         <li>
           <Typography variant="body1">
