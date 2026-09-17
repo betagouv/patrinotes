@@ -30,10 +30,23 @@ const Accessibilite = () => {
       </Typography>
       <ul>
         <li>
-          <Typography variant="body1">Schéma pluriannuel d'accessibilité du gouvernement</Typography>
+          <Typography variant="body1">
+            <a className="fr-link" target="_blank" href="https://www.info.gouv.fr/accessibilite" rel="noreferrer">
+              Schéma pluriannuel d'accessibilité du gouvernement
+            </a>
+          </Typography>
         </li>
         <li>
-          <Typography variant="body1">Schéma pluriannuel d'accessibilité numérique du ministère de la Culture</Typography>
+          <Typography variant="body1">
+            <a
+              className="fr-link"
+              target="_blank"
+              href="https://www.culture.gouv.fr/accessibilite-partiellement-conforme/schema-pluriannuel-d-accessibilite-numerique"
+              rel="noreferrer"
+            >
+              Schéma pluriannuel d'accessibilité numérique du ministère de la Culture
+            </a>
+          </Typography>
         </li>
       </ul>
       <Typography variant="body1">
@@ -42,8 +55,12 @@ const Accessibilite = () => {
 
       <Typography variant="h2">État de conformité</Typography>
       <Typography variant="body1">
-        L'application Patrinotes app.patrinotes.beta.gouv.fr est non conforme avec le référentiel général
-        d'amélioration de l'accessibilité (RGAA), version 4, en raison d'absence d'audit achevé, ce qui ne permet pas
+        L'application Patrinotes{" "}
+        <a className="fr-link" target="_blank" href="https://app.patrinotes.beta.gouv.fr/" rel="noreferrer">
+          app.patrinotes.beta.gouv.fr
+        </a>{" "}
+        est non conforme avec le référentiel général d'amélioration de l'accessibilité (RGAA), version 4, en raison
+        d'absence d'audit achevé, ce qui ne permet pas
         aujourd'hui de lister les non-conformités du site. Cependant, Patrinotes est conçu en utilisant le Système de
         design de l'État (DSFR) prenant en compte les exigences en termes d'accessibilité. Le site n'a{" "}
         <strong>pas encore été audité</strong>. Il a cependant été conçu pour être accessible au plus grand nombre.
