@@ -126,6 +126,7 @@ type Props = {
   onSaveReferenceCadastrale?: (ref: string) => void;
   initialCoordinates: string | null;
   initialReferenceCadastrale: string | null;
+  singleCadastreSelection?: boolean;
 };
 
 export const MapLibre = ({
@@ -135,6 +136,7 @@ export const MapLibre = ({
   onSaveReferenceCadastrale,
   initialCoordinates,
   initialReferenceCadastrale,
+  singleCadastreSelection = false,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -195,7 +197,10 @@ export const MapLibre = ({
 
       setSelectedParcels((prev) => {
         const alreadySelected = prev.some((p) => p.section === section && p.numero === numero);
-        return alreadySelected ? [] : [{ section, numero }];
+        if (singleCadastreSelection) return alreadySelected ? [] : [{ section, numero }];
+        return alreadySelected
+          ? prev.filter((p) => !(p.section === section && p.numero === numero))
+          : [...prev, { section, numero }];
       });
     };
 
@@ -204,7 +209,7 @@ export const MapLibre = ({
       map.off("click", handler);
       map.getCanvas().style.cursor = "";
     };
-  }, [mode]);
+  }, [mode, singleCadastreSelection]);
 
   const handleZoom = (direction: "in" | "out") => {
     const map = mapRef.current;

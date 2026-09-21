@@ -52,6 +52,7 @@ export const CadastreMapModal = ({ onClose }: { onClose: () => void }) => {
           }}
           initialCoordinates={null}
           initialReferenceCadastrale={cadastralRef ?? null}
+          singleCadastreSelection
         />
       </Box>
     </Dialog>
