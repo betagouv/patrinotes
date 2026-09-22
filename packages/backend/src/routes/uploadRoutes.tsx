@@ -10,6 +10,7 @@ import { authenticate } from "./authMiddleware";
 import fs from "fs/promises";
 import path from "node:path";
 import { NoSuchKey } from "@aws-sdk/client-s3";
+import { v4 } from "uuid";
 
 const debug = makeDebug("upload");
 const pump = util.promisify(pipeline);
@@ -39,10 +40,22 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   );
 
   fastify.get("/attachment", async (request, reply) => {
-    const { filePath } = request.query as any;
+    const { filePath, stateReportId } = request.query as any;
     if (!filePath) throw new AppError(400, "No filePath provided");
     try {
       const fileBuffer = await request.services.upload.getAttachment({ filePath: decodeURIComponent(filePath) });
+
+      if (stateReportId) {
+        await db
+          .insertInto("constat_pdf_download")
+          .values({
+            id: v4(),
+            user_id: request.user.id,
+            state_report_id: stateReportId,
+            created_at: new Date().toISOString(),
+          })
+          .execute();
+      }
 
       reply.send(fileBuffer);
     } catch (error) {

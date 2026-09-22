@@ -272,6 +272,14 @@ export namespace Endpoints {
     };
     response: { uploadUrl: string; pdfPath: string };
   };
+  export type post_ApipdfstateReportlogDownload = {
+    method: "POST";
+    path: "/api/pdf/state-report/log-download";
+    parameters: {
+      body: { stateReportId: string };
+    };
+    response: { ok: boolean };
+  };
   export type post_Apipdfreport = {
     method: "POST";
     path: "/api/pdf/report";
@@ -396,7 +404,7 @@ export namespace Endpoints {
         data?: unknown | undefined;
       };
     };
-    response: Partial<{}>;
+    response: unknown;
   };
   export type get_Apiadminme = {
     method: "GET";
@@ -655,6 +663,7 @@ export type EndpointByMethod = {
     "/api/send-reset-password": Endpoints.post_ApisendResetPassword;
     "/api/reset-password": Endpoints.post_ApiresetPassword;
     "/api/pdf/report/upload-url": Endpoints.post_ApipdfreportuploadUrl;
+    "/api/pdf/state-report/log-download": Endpoints.post_ApipdfstateReportlogDownload;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
     "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;
