@@ -8,17 +8,25 @@ import { Report } from "../db/AppSchema";
 import { SpeechRecorder } from "./audio-record/SpeechRecorder";
 import { useIsFormDisabled } from "./DisabledContext";
 import { UploadReportImage } from "./upload/UploadReportImage";
+import { useIsUploadingImages } from "./upload/pendingUploadsStore";
+import { useUnsyncedReportAttachments } from "./upload/hooks/useUnsyncedReportAttachments";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
-import { Stack } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { Button, Center, Input } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
 import { useSpeechToTextV2 } from "./audio-record/SpeechRecorder.hook";
+import { fr } from "@codegouvfr/react-dsfr";
 
 export const NotesForm = () => {
   const form = useFormContext<Report>();
+  const reportId = form.getValues().id;
 
   const isFormDisabled = useIsFormDisabled();
+
+  const pendingDownloads = useUnsyncedReportAttachments(reportId);
+  const isUploadingImages = useIsUploadingImages(reportId);
+  const isMissingImages = pendingDownloads.length > 0 || isUploadingImages;
 
   return (
     <Flex flexDirection="column" width="100%" maxWidth="800px" padding="16px" mt={{ lg: "24px", xs: "16px" }}>
@@ -27,7 +35,7 @@ export const NotesForm = () => {
         <PrecisionsTextArea />
       </InputGroupWithTitle>
 
-      <UploadReportImage reportId={form.getValues().id} />
+      <UploadReportImage reportId={reportId} />
 
       <Divider mt="40px" mb="32px" />
 
@@ -46,9 +54,26 @@ export const NotesForm = () => {
       </Stack>
 
       <Center justifyContent={{ xs: "center", lg: "flex-start" }} mt={{ xs: "80px", lg: "56px" }} mb="80px">
-        <Button iconId="ri-article-fill" type="submit" disabled={isFormDisabled}>
-          Créer le CR
-        </Button>
+        <Box position="relative">
+          <Button iconId="ri-article-fill" type="submit" disabled={isFormDisabled || isMissingImages}>
+            Créer le CR
+          </Button>
+
+          {isMissingImages ? (
+            <Typography
+              className="fr-icon fr-icon__sm fr-icon-info-fill"
+              sx={{ "::before": { mr: "4px" } }}
+              position="absolute"
+              fontSize="12px"
+              color={fr.colors.decisions.text.default.info.default}
+              left="0"
+              top="calc(100% + 8px)"
+              whiteSpace="nowrap"
+            >
+              Image(s) en cours d'ajout...
+            </Typography>
+          ) : null}
+        </Box>
       </Center>
     </Flex>
   );
