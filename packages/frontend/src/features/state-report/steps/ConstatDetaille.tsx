@@ -221,7 +221,7 @@ const SectionModal = ({
         ".MuiPaper-root": {
           overflowY: "auto",
           maxHeight: { xs: "unset", lg: "calc(100% - 64px)" },
-          maxWidth: { xs: "unset", lg: "750px" },
+          maxWidth: { xs: "unset", lg: "unset" },
           width: { xs: "100%", lg: "926px" },
           height: { xs: "100%", lg: "unset" },
           margin: { xs: "0", lg: undefined },
