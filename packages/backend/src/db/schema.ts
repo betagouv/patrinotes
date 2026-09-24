@@ -707,6 +707,9 @@ export const visitedSection = pgTable(
     commentaires: text(),
     preconisations: text(),
     service_id: text("service_id").notNull(),
+    localisationPins: text("localisation_pins"),
+    localisationDrawings: text("localisation_drawings"),
+    localisationZone: text("localisation_zone"),
   },
   (table) => [
     foreignKey({
@@ -761,3 +764,25 @@ export const attachment_redirection = pgTable("attachment_redirection", {
   createdBy: text("created_by").notNull(),
   sentTo: text("sent_to").notNull(),
 });
+
+export const constatPdfDownload = pgTable(
+  "constat_pdf_download",
+  {
+    id: text().primaryKey().notNull(),
+    userId: text("user_id").notNull(),
+    stateReportId: text("state_report_id").notNull(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "constat_pdf_download_user_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.stateReportId],
+      foreignColumns: [stateReport.id],
+      name: "constat_pdf_download_state_report_id_fkey",
+    }),
+  ],
+);

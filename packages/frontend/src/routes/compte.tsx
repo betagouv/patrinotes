@@ -226,7 +226,16 @@ export const JobSelect = ({ job, onChange }: { job: string; onChange: (job: stri
           </option>
         ))}
       </Select>
-      {isCustom && <Input label={null} nativeInputProps={{ value: job, onChange: (e) => onChange(e.target.value) }} />}
+      {isCustom && (
+        <Input
+          label={null}
+          nativeInputProps={{
+            value: job,
+            onChange: (e) => onChange(e.target.value),
+            "aria-label": "Précisez votre fonction",
+          }}
+        />
+      )}
     </Stack>
   );
 };

@@ -87,11 +87,22 @@ export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
   return Boolean(hasAttachments || hasDescription);
 };
 
+const hasLocalisationPins = (raw: unknown): boolean => {
+  if (!raw || typeof raw !== "string") return false;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 export const getIsSectionVisited = (section: any) => {
   return (
     (section?.etat_general && section?.proportion_dans_cet_etat) ||
     section?.niveau_degradation ||
-    section?.attachments?.length
+    section?.attachments?.length ||
+    hasLocalisationPins(section?.localisation_pins)
   );
 };
 
@@ -116,19 +127,20 @@ export const BIODIVERSITE_SECTION = "Biodiversité";
 export const SECURITE_SECTION = "Sécurité";
 
 export type AlertWithAttachments = Omit<StateReportAlert, "should_send"> & {
-  attachments: (StateReportAlertAttachment & { file: string })[];
+  attachments: (StateReportAlertAttachment & { file: string; width?: number | null; height?: number | null })[];
   should_send: Booleanish;
 };
 
 export type Booleanish = boolean | number | null | undefined;
 
 export type StateReportWithUserAndAttachments = StateReport & {
-  attachments: (StateReportAttachment & { file: string })[];
+  attachments: (StateReportAttachment & { file: string; width?: number | null; height?: number | null })[];
   createdByName: string | null;
+  planSituationOffline?: boolean;
 };
 
 export type SectionWithAttachments = VisitedSection & {
-  attachments: (VisitedSectionAttachment & { file: string })[];
+  attachments: (VisitedSectionAttachment & { file: string; width?: number | null; height?: number | null })[];
 };
 
 export const uppercaseFirstLetter = (str: string) => {

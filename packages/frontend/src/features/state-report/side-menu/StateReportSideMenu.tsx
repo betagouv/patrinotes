@@ -31,16 +31,16 @@ export const StateReportSideMenu = () => {
           sx={{ width: { xs: "100%", lg: "254px" }, justifyContent: "center" }}
           iconId="ri-alarm-warning-fill"
         >
-          Alertes MH
+          Signaler une alerte...
         </Button>
-        <Button
+        {/* <Button
           priority="secondary"
           onClick={() => setSideMenu("notes")}
           sx={{ width: { xs: "100%", lg: "254px" }, justifyContent: "center" }}
           iconId="ri-draft-fill"
         >
           Notes
-        </Button>
+        </Button> */}
       </Stack>
     </>
   );

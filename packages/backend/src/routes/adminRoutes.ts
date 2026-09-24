@@ -9,6 +9,27 @@ import { makeDebug } from "../features/debug";
 
 const debug = makeDebug("admin");
 
+const sortDirTSchema = Type.Optional(Type.Union([Type.Literal("asc"), Type.Literal("desc")]));
+const orderModifier = (dir: "asc" | "desc") => (dir === "asc" ? sql`asc nulls last` : sql`desc nulls last`);
+
+const whitelistSortColumns = {
+  email: "whitelist.email",
+  createdAt: "whitelist.createdAt",
+  hasUser: "hasUser",
+  lastCreatedStateReport: "lastCreatedStateReport",
+  lastFinishedStateReport: "lastFinishedStateReport",
+} as const;
+
+const usersSortColumns = {
+  name: "user.name",
+  email: "user.email",
+  job: "user.job",
+  service: "service.name",
+  department: "service.department",
+  role: "internal_user.role",
+  createdAt: "internal_user.createdAt",
+} as const;
+
 export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/me",
@@ -25,6 +46,17 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         querystring: Type.Object({
           page: Type.Optional(Type.Number({ default: 1 })),
           limit: Type.Optional(Type.Number({ default: 20 })),
+          search: Type.Optional(Type.String()),
+          sortBy: Type.Optional(
+            Type.Union([
+              Type.Literal("email"),
+              Type.Literal("createdAt"),
+              Type.Literal("hasUser"),
+              Type.Literal("lastCreatedStateReport"),
+              Type.Literal("lastFinishedStateReport"),
+            ]),
+          ),
+          sortDir: sortDirTSchema,
         }),
         response: {
           200: Type.Object({
@@ -49,10 +81,15 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       const page = request.query.page ?? 1;
       const limit = request.query.limit ?? 20;
       const offset = (page - 1) * limit;
+      const { search, sortBy = "createdAt", sortDir = "desc" } = request.query;
       debug("Fetching whitelist page", page, "with limit", limit);
+
+      const baseQuery = db
+        .selectFrom("whitelist")
+        .$if(!!search, (qb) => qb.where("whitelist.email", "ilike", `%${search}%`));
+
       const [rows, countResult] = await Promise.all([
-        db
-          .selectFrom("whitelist")
+        baseQuery
           .select((eb) => [
             "whitelist.email",
             "whitelist.createdAt",
@@ -81,11 +118,12 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
               .select(eb.fn.max("state_report_attachment.created_at"))
               .as("lastFinishedStateReport"),
           ])
-          .orderBy("whitelist.createdAt", "desc")
+          .orderBy(sql.ref(whitelistSortColumns[sortBy]), orderModifier(sortDir))
+          .orderBy("whitelist.email")
           .limit(limit)
           .offset(offset)
           .execute(),
-        db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst(),
+        baseQuery.select(db.fn.countAll<number>().as("count")).executeTakeFirst(),
       ]);
 
       return {
@@ -252,6 +290,18 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           page: Type.Optional(Type.Number({ default: 1 })),
           limit: Type.Optional(Type.Number({ default: 20 })),
           search: Type.Optional(Type.String()),
+          sortBy: Type.Optional(
+            Type.Union([
+              Type.Literal("name"),
+              Type.Literal("email"),
+              Type.Literal("job"),
+              Type.Literal("service"),
+              Type.Literal("department"),
+              Type.Literal("role"),
+              Type.Literal("createdAt"),
+            ]),
+          ),
+          sortDir: sortDirTSchema,
         }),
         response: {
           200: Type.Object({
@@ -280,7 +330,7 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       const page = request.query.page ?? 1;
       const limit = request.query.limit ?? 20;
       const offset = (page - 1) * limit;
-      const { search } = request.query;
+      const { search, sortBy = "createdAt", sortDir = "desc" } = request.query;
 
       const baseQuery = db
         .selectFrom("user")
@@ -310,7 +360,8 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
             "internal_user.role",
             "internal_user.createdAt",
           ])
-          .orderBy("internal_user.createdAt", "desc")
+          .orderBy(sql.ref(usersSortColumns[sortBy]), orderModifier(sortDir))
+          .orderBy("user.id")
           .limit(limit)
           .offset(offset)
           .execute(),

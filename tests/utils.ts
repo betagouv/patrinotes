@@ -129,7 +129,11 @@ export const signup = async ({ page, user, udap = mockServices[0].id }: { page: 
   await page.fill("input[name=prenom]", user.prenom);
   await page.fill("input[name=email]", user.email);
   await page.fill("input[name=password]", user.password);
-  await page.fill("input[name=job]", user.job);
+
+  // "Fonction" is a preset dropdown (JobSelect) with a free-text fallback behind
+  // the "Autre..." option — mockUsers' job values aren't in the preset list.
+  await page.getByLabel("Fonction").selectOption("Autre...");
+  await page.getByLabel("Précisez votre fonction").fill(user.job);
 
   await page.selectOption("select[name=service_id]", udap);
 
@@ -139,7 +143,77 @@ export const signup = async ({ page, user, udap = mockServices[0].id }: { page: 
 
   await page.waitForURL((url) => url.pathname === "/");
 
-  await page.waitForTimeout(1000);
+  await waitForLoggedIn(page);
+};
+
+export const login = async ({ page, user }: { page: Page; user: User }) => {
+  await page.goto("./connexion");
+  await page.fill("input[name=email]", user.email);
+  await page.fill("input[name=password]", user.password);
+  await page.click("button[type=submit]");
+  await page.waitForURL((url) => url.pathname === "/");
+  await waitForLoggedIn(page);
+};
+
+export const waitForLoggedIn = async (page: Page) => {
+  await page.waitForSelector("text=Déconnexion", { state: "attached" });
+};
+
+/**
+ * Creates a new constat, selects the mock monument, fills the mandatory
+ * "Contexte de la visite" fields and fills one detailed section
+ * ("Couverture"). Leaves the user on the "constat-detaille" step so callers
+ * can add alerts/photos before moving on to "Constat général".
+ */
+export const fillMinimalConstat = async (
+  page: Page,
+  opts?: { proprietaireEmail?: string; visitDate?: string; sectionComment?: string },
+) => {
+  await page.getByText("Créer un constat d'état").click();
+  await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
+
+  const autocomplete = page.getByLabel("Nom ou référence du monument");
+  await autocomplete.waitFor();
+  await autocomplete.fill("Château de Test");
+  await page.getByRole("option", { name: /Château de Test/ }).click();
+  await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
+
+  await page.getByRole("button", { name: "Contexte de la visite" }).click();
+  await page.waitForURL((url) => url.search.includes("contexte-visite"));
+
+  await page.locator("input[id=nature-visite-0]").check({ force: true });
+  await page.getByLabel("Date de la visite").fill(opts?.visitDate ?? "2024-01-15");
+  await page.fill("input[name=redacted_by]", "Agent Test");
+  await page.fill("input[name=proprietaire]", "Jean Dupont");
+  await page.fill("input[name=proprietaire_email]", opts?.proprietaireEmail ?? "jean.dupont@example.com");
+
+  await page.getByRole("button", { name: /Constat d'état/ }).click();
+  await page.waitForURL((url) => url.search.includes("constat-detaille"));
+
+  await page.getByRole("button", { name: "Couverture" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.waitFor();
+  await dialog.getByRole("radio", { name: "Bon" }).check({ force: true });
+  await dialog.getByRole("radio", { name: "50%" }).check({ force: true });
+  await dialog.locator("textarea").fill(opts?.sectionComment ?? "Bon état général, pas de dégradation visible.");
+  await dialog.getByRole("button", { name: "Valider" }).click();
+  await dialog.waitFor({ state: "hidden" });
+};
+
+/**
+ * From the "constat-detaille" step, navigates to "Constat général", fills
+ * the mandatory état/proportion radios and finalizes, landing on the PDF
+ * preview (mode=view).
+ */
+export const finalizeConstat = async (page: Page) => {
+  await page.getByRole("button", { name: "Constat général" }).click();
+  await page.waitForURL((url) => url.search.includes("constat-general"));
+
+  await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
+  await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
+
+  await page.getByRole("button", { name: "Finaliser le constat" }).click();
+  await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
 };
 
 export const cleanupDb = async () => {

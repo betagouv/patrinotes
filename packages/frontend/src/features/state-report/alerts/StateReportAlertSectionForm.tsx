@@ -63,8 +63,8 @@ export const StateReportAlertSectionForm = ({
 
   return (
     <Stack>
-      <MenuTitle onClose={onClose} hideDivider>
-        <ModalBackButton onClick={onBack} />
+      <MenuTitle onClose={onClose} hideDivider leftButton={<ModalBackButton onClick={onBack} />}>
+        {null}
       </MenuTitle>
 
       <Typography fontSize="16px" fontWeight="bold" mb="16px">

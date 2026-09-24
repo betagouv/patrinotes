@@ -11,6 +11,7 @@ import { StateReportForm } from "../features/state-report/StateReportForm";
 import { stateReportStepSchema } from "../features/state-report/utils";
 import z from "zod";
 import { useSyncStream } from "@powersync/react/lib/hooks/streams";
+import { BackHomeButton } from "#components/BackHomeButton.tsx";
 
 export const Route = createFileRoute("/constat/$constatId")({
   component: RouteComponent,
@@ -25,13 +26,9 @@ function RouteComponent() {
     <Flex width="100%" height="100%" flexDirection="column" alignItems="center">
       <SimpleBanner width="100%" alignItems="flex-start" pt="20px">
         <Flex width={{ xs: "100%", lg: "1200px" }} maxWidth="100%" flexDirection="column" px="16px">
-          <Link to="/" style={{ textDecoration: "underline" }} search={{ document: "constats" }}>
-            <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
-              Retour à l'accueil
-            </Typography>
-          </Link>
+          <BackHomeButton />
 
-          <Typography fontSize="28px" variant="h2" mt="24px">
+          <Typography fontSize="20px !important" fontWeight="normal" component="h1" mt="24px" mb="0 !important">
             Constat d'état
           </Typography>
         </Flex>
