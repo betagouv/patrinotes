@@ -8,6 +8,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { ofetch } from "ofetch";
 import { ENV } from "../envVars";
 import { getTokenOrRefresh } from "../db/Connector";
+import { useClientTable } from "#components/SortableTable.tsx";
 import { AccountsCharts, CRMHMapChart, DocumentsCharts, JobsChart, UdapMapChart } from "#components/StatsCharts.tsx";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,65 @@ const KpiCard = ({ label, value }: { label: ReactNode; value: string | number })
     </Typography>
   </Box>
 );
+
+// ---------------------------------------------------------------------------
+// Constats by service table
+// ---------------------------------------------------------------------------
+
+type ServiceRow = {
+  serviceId: string;
+  serviceName: string | null;
+  sentConstats: number;
+  totalConstats: number;
+};
+
+const getServiceSearchText = (s: ServiceRow) => `${s.serviceName ?? ""} ${s.serviceId}`;
+
+const serviceSortValues = {
+  service: (s: ServiceRow) => s.serviceName ?? s.serviceId,
+  totalConstats: (s: ServiceRow) => s.totalConstats,
+  sentConstats: (s: ServiceRow) => s.sentConstats,
+  adoptionRate: (s: ServiceRow) => (s.totalConstats === 0 ? null : s.sentConstats / s.totalConstats),
+};
+
+const ConstatsByServiceTable = ({ rows }: { rows: ServiceRow[] }) => {
+  const table = useClientTable({ rows, getSearchText: getServiceSearchText, sortValues: serviceSortValues });
+
+  return (
+    <Stack>
+      <Input
+        label="Filtrer par service"
+        style={{ maxWidth: "400px" }}
+        nativeInputProps={{
+          type: "search",
+          value: table.filter,
+          onChange: (e) => table.setFilter(e.target.value),
+        }}
+      />
+      {table.rows.length === 0 ? (
+        <Alert severity="info" title="Aucun service ne correspond au filtre." />
+      ) : (
+        <Table
+          id="constats-by-service-table"
+          caption="Taux d'adoption par service"
+          noCaption={false}
+          headers={[
+            table.header("service", "Service"),
+            table.header("totalConstats", "Constats créés"),
+            table.header("sentConstats", "Constats envoyés"),
+            table.header("adoptionRate", "Taux d'adoption"),
+          ]}
+          data={table.rows.map((s) => [
+            s.serviceName ?? s.serviceId,
+            s.totalConstats,
+            s.sentConstats,
+            formatPercent(s.sentConstats, s.totalConstats),
+          ])}
+        />
+      )}
+    </Stack>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Stats page
@@ -344,18 +404,7 @@ const StatsPage = () => {
           {adminQuery.data.constatsByService.length === 0 ? (
             <Alert severity="info" title="Aucune donnée par service." />
           ) : (
-            <Table
-              id="constats-by-service-table"
-              caption="Taux d'adoption par service"
-              noCaption={false}
-              headers={["Service", "Constats créés", "Constats envoyés", "Taux d'adoption"]}
-              data={adminQuery.data.constatsByService.map((s) => [
-                s.serviceName ?? s.serviceId,
-                s.totalConstats,
-                s.sentConstats,
-                formatPercent(s.sentConstats, s.totalConstats),
-              ])}
-            />
+            <ConstatsByServiceTable rows={adminQuery.data.constatsByService} />
           )}
         </Stack>
       )}

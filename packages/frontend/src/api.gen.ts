@@ -443,7 +443,19 @@ export namespace Endpoints {
     method: "GET";
     path: "/api/admin/whitelist";
     parameters: {
-      query: Partial<{ page: number; limit: number }>;
+      query: Partial<{
+        page: number;
+        limit: number;
+        search: string;
+        sortBy:
+          | "email"
+          | "createdAt"
+          | "hasUser"
+          | "lastCreatedStateReport"
+          | "lastFinishedStateReport"
+          | Array<"email" | "createdAt" | "hasUser" | "lastCreatedStateReport" | "lastFinishedStateReport">;
+        sortDir: "asc" | "desc" | Array<"asc" | "desc">;
+      }>;
     };
     response: {
       data: Array<{
@@ -502,7 +514,21 @@ export namespace Endpoints {
     method: "GET";
     path: "/api/admin/users";
     parameters: {
-      query: Partial<{ page: number; limit: number; search: string }>;
+      query: Partial<{
+        page: number;
+        limit: number;
+        search: string;
+        sortBy:
+          | "name"
+          | "email"
+          | "job"
+          | "service"
+          | "department"
+          | "role"
+          | "createdAt"
+          | Array<"name" | "email" | "job" | "service" | "department" | "role" | "createdAt">;
+        sortDir: "asc" | "desc" | Array<"asc" | "desc">;
+      }>;
     };
     response: {
       users: Array<{
