@@ -18,6 +18,7 @@ import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 import { Accordion } from "#components/MUIDsfr.tsx";
 import { PlanDeSituationModal } from "./PlanDeSituationModal";
+import { MonumentIIIFViewer } from "./MonumentIIIFViewer";
 // import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
@@ -214,6 +215,11 @@ export const MonumentHistorique = () => {
           ) : null}
         </Flex>
         {referencePop ? <PreviousConstats referencePop={referencePop} /> : null}
+        {referencePop && !isCustom ? (
+          <Box mt={isEditing ? "24px" : { xs: "16px", lg: "8px" }}>
+            <MonumentIIIFViewer referencePop={referencePop} />
+          </Box>
+        ) : null}
         {!isCustom ? <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} /> : null}
         {!isCustom ? <Box>{isEditing ? <MonumentObjetsEdition /> : <MonumentObjets />}</Box> : null}
         {isEditing && !isCustom ? (

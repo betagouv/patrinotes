@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 declare module "@gouvfr/dsfr-chart/css";
+// UMD bundle, sets window.Mirador
+declare module "mirador-umd";
 
 declare namespace JSX {
   interface IntrinsicElements {

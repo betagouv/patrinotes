@@ -2,6 +2,8 @@ import { FastifyPluginAsyncTypebox, Type } from "@fastify/type-provider-typebox"
 import { makeDebug } from "../features/debug";
 import { authenticate } from "./authMiddleware";
 import { Nullable } from "../services/syncService";
+import { ofetch } from "ofetch";
+import { AppError } from "../features/errors";
 
 const debug = makeDebug("state-report-plugin");
 
@@ -13,6 +15,26 @@ export const stateReportPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =
     const images = await request.services.stateReport.getImagesForObjets(references.split(","));
     return images;
   });
+
+  // proxy for POP's IIIF manifest, which doesn't send CORS headers
+  fastify.get("/iiif-manifest", { schema: iiifManifestSchema }, async (request) => {
+    const { reference } = request.query;
+    try {
+      const url = `https://api.pop.culture.gouv.fr/notices/merimee/${encodeURIComponent(reference)}/iiif/manifest`;
+      return await ofetch(url, { responseType: "json" });
+    } catch (e) {
+      debug("failed to fetch iiif manifest", reference, e);
+      throw new AppError(404, "Manifest IIIF introuvable");
+    }
+  });
+};
+
+// no response schema: an empty schema gets turned into `{ type: "object" }`,
+// which makes the serializer strip every property of the manifest
+export const iiifManifestSchema = {
+  querystring: Type.Object({
+    reference: Type.String(),
+  }),
 };
 
 const imageTSchema = Type.Object({

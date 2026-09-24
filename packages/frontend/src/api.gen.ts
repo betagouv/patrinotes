@@ -355,6 +355,14 @@ export namespace Endpoints {
       copyright?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
+  export type get_ApistateReportiiifManifest = {
+    method: "GET";
+    path: "/api/state-report/iiif-manifest";
+    parameters: {
+      query: { reference: string };
+    };
+    response: unknown;
+  };
   export type get_ApiconstatValidationToken = {
     method: "GET";
     path: "/api/constat-validation/{token}";
@@ -664,6 +672,7 @@ export type EndpointByMethod = {
     "/api/pdf/report": Endpoints.get_Apipdfreport;
     "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
     "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
+    "/api/state-report/iiif-manifest": Endpoints.get_ApistateReportiiifManifest;
     "/api/constat-validation/{token}": Endpoints.get_ApiconstatValidationToken;
     "/api/constat-validation/{token}/pdf": Endpoints.get_ApiconstatValidationTokenpdf;
     "/api/admin/me": Endpoints.get_Apiadminme;

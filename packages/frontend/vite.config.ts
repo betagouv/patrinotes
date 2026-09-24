@@ -5,6 +5,7 @@ import wasm from "vite-plugin-wasm";
 import { VitePWA } from "vite-plugin-pwa";
 import topLevelAwait from "vite-plugin-top-level-await";
 import { devtools } from "@tanstack/devtools-vite";
+import { fileURLToPath } from "node:url";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -62,6 +63,12 @@ export default defineConfig({
       filename: "sw.ts",
     }),
   ],
+  resolve: {
+    alias: {
+      // Mirador's ES build requires MUI v7 as a peer (we use v5), so we load its self-contained UMD bundle instead
+      "mirador-umd": fileURLToPath(new URL("./node_modules/mirador/dist/mirador.min.js", import.meta.url)),
+    },
+  },
   server: {
     host: "127.0.0.1",
   },
