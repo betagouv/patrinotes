@@ -26,6 +26,8 @@ const formatPercent = (value: number, total: number): string => {
   return `${Math.round((value / total) * 100)} %`;
 };
 
+const formatDate = (isoDate: string): string => isoDate.split("-").reverse().join("/");
+
 const formatAverage = (value: number, total: number): string => {
   if (total === 0) return "—";
   return (value / total).toFixed(1);
@@ -63,6 +65,8 @@ type ServiceRow = {
   serviceId: string;
   serviceName: string | null;
   sentConstats: number;
+  downloadedConstats: number;
+  usedConstats: number;
   totalConstats: number;
 };
 
@@ -72,7 +76,9 @@ const serviceSortValues = {
   service: (s: ServiceRow) => s.serviceName ?? s.serviceId,
   totalConstats: (s: ServiceRow) => s.totalConstats,
   sentConstats: (s: ServiceRow) => s.sentConstats,
+  downloadedConstats: (s: ServiceRow) => s.downloadedConstats,
   adoptionRate: (s: ServiceRow) => (s.totalConstats === 0 ? null : s.sentConstats / s.totalConstats),
+  usageRate: (s: ServiceRow) => (s.totalConstats === 0 ? null : s.usedConstats / s.totalConstats),
 };
 
 const ConstatsByServiceTable = ({ rows }: { rows: ServiceRow[] }) => {
@@ -100,13 +106,17 @@ const ConstatsByServiceTable = ({ rows }: { rows: ServiceRow[] }) => {
             table.header("service", "Service"),
             table.header("totalConstats", "Constats créés"),
             table.header("sentConstats", "Constats envoyés"),
+            table.header("downloadedConstats", "Constats téléchargés"),
             table.header("adoptionRate", "Taux d'adoption"),
+            table.header("usageRate", "Taux d'utilisation (envoyés ou téléchargés)"),
           ]}
           data={table.rows.map((s) => [
             s.serviceName ?? s.serviceId,
             s.totalConstats,
             s.sentConstats,
+            s.downloadedConstats,
             formatPercent(s.sentConstats, s.totalConstats),
+            formatPercent(s.usedConstats, s.totalConstats),
           ])}
         />
       )}
@@ -141,6 +151,9 @@ const StatsPage = () => {
         activeUsersInPeriod: number;
         deployedUdapCount: number;
         deployedCrmhCount: number;
+        downloadedConstatsInPeriod: number;
+        downloadedNotSentConstatsInPeriod: number;
+        downloadTrackingSince: string | null;
         periodFrom: string;
         periodTo: string;
       }>(`${ENV.VITE_BACKEND_URL}/api/stats/public`, {
@@ -158,9 +171,12 @@ const StatsPage = () => {
           serviceId: string;
           serviceName: string | null;
           sentConstats: number;
+          downloadedConstats: number;
+          usedConstats: number;
           totalConstats: number;
         }>;
         abandonedConstats: number;
+        abandonedDownloadedConstats: number;
         abandonedReports: number;
         totalConstats: number;
         totalReports: number;
@@ -332,6 +348,13 @@ const StatsPage = () => {
                         <b>{formatAverage(data.totalReports, activeUsers)}</b> CR réalisés dont{" "}
                         <b>{formatAverage(data.sentReports, activeUsers)}</b> envoyés par utilisateur en moyenne
                       </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <b>{data.downloadedConstatsInPeriod}</b> CE téléchargés sur la période, dont{" "}
+                        <b>{data.downloadedNotSentConstatsInPeriod}</b> non envoyés par mail
+                        {data.downloadTrackingSince && range.from < data.downloadTrackingSince ? (
+                          <> (téléchargements suivis depuis le {formatDate(data.downloadTrackingSince)})</>
+                        ) : null}
+                      </Typography>
                     </Box>
                   }
                   value={formatAverage(totalDocuments, activeUsers)}
@@ -343,6 +366,12 @@ const StatsPage = () => {
                         Part de documents restés en brouillon sur le nombre total de documents créés
                         <Typography variant="body2" color="text.secondary" mt="0.25rem">
                           <b>{ceAbandonmentRate}</b> d'abandon en cours de CE
+                          {adminQuery.data!.abandonedDownloadedConstats > 0 ? (
+                            <>
+                              {" "}
+                              (dont <b>{adminQuery.data!.abandonedDownloadedConstats}</b> téléchargés)
+                            </>
+                          ) : null}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           <b>{crAbandonmentRate}</b> d'abandon en cours de CR

@@ -563,6 +563,9 @@ export namespace Endpoints {
       activeUsersInPeriod: number;
       deployedUdapCount: number;
       deployedCrmhCount: number;
+      downloadedConstatsInPeriod: number;
+      downloadedNotSentConstatsInPeriod: number;
+      downloadTrackingSince: string | Schemas.null | Array<string | Schemas.null>;
       periodFrom: string;
       periodTo: string;
     };
@@ -599,9 +602,12 @@ export namespace Endpoints {
         serviceId: string;
         serviceName: string | Schemas.null | Array<string | Schemas.null>;
         sentConstats: number;
+        downloadedConstats: number;
+        usedConstats: number;
         totalConstats: number;
       }>;
       abandonedConstats: number;
+      abandonedDownloadedConstats: number;
       abandonedReports: number;
       totalConstats: number;
       totalReports: number;
