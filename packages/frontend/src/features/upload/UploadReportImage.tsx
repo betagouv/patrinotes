@@ -32,6 +32,7 @@ export const UploadReportImage = ({ reportId }: { reportId: string }) => {
         multiple
         attachments={attachments}
         onDelete={({ id }) => deleteMutation.mutate({ id })}
+        onRetry={({ id }) => batchUpload.retry(id)}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
       />
     </Box>
@@ -43,12 +44,14 @@ export const PictureThumbnail = ({
   label,
   onEdit,
   onDelete,
+  onRetry,
   isDisabled,
 }: {
   picture: MinimalAttachment;
   label: string;
   onEdit: (attachment: MinimalAttachment, blobUrl: string) => void;
   onDelete: (props: { id: string }) => void;
+  onRetry?: () => void;
   isDisabled?: boolean;
 }) => {
   const [snapshot, send] = useActor(thumbnailMachine, {
@@ -93,7 +96,24 @@ export const PictureThumbnail = ({
       <ReportStatus status={badgeStatus as any} />
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
         <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
-          {hasError ? (
+          {picture.error ? (
+            <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
+              <Typography fontSize="12px" color="error.main" textAlign="center" px="8px">
+                {picture.error}
+              </Typography>
+              {onRetry ? (
+                <Button
+                  type="button"
+                  size="small"
+                  priority="tertiary no outline"
+                  iconId="fr-icon-refresh-line"
+                  onClick={onRetry}
+                >
+                  Réessayer
+                </Button>
+              ) : null}
+            </Flex>
+          ) : hasError ? (
             <Flex height="100%" alignItems="center" justifyContent="center" flexDirection="column" gap="4px">
               <Typography fontSize="12px" color="text.secondary" textAlign="center" px="8px">
                 {loadError ?? "Impossible de charger l'image"}
@@ -176,6 +196,7 @@ export const PictureThumbnail = ({
                   },
                 }}
                 nativeButtonProps={{
+                  "aria-label": "Supprimer la photo",
                   onClick: () => onDelete({ id: picture.id }),
                 }}
               >

@@ -1,5 +1,4 @@
 import { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
-import { Type } from "@sinclair/typebox";
 import { crudTSchema } from "../services/syncService";
 import { authenticate } from "./authMiddleware";
 
@@ -13,5 +12,4 @@ export const syncPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
 const uploadDataTSchema = {
   body: crudTSchema,
-  response: { 200: Type.Any() },
 };

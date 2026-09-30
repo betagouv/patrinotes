@@ -246,6 +246,20 @@
       "when": 1781685319257,
       "tag": "0034_ancient_songbird",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1785920102984,
+      "tag": "0035_thick_leech",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1789999451472,
+      "tag": "0036_military_rick_jones",
+      "breakpoints": true
     }
   ]
 }

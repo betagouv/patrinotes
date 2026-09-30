@@ -5,13 +5,18 @@ import { Multiline } from "./state-report.details";
 
 export const MainTitle = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   return (
-    <h1 style={{ marginTop: 0, lineHeight: "30pt" }}>
+    <h1 style={{ marginTop: 0, lineHeight: "30pt", marginBottom: "0" }}>
       <span style={{ fontSize: "20pt", fontWeight: "normal" }}>Constat d'état du monument historique</span>
       <br />
       {stateReport.titre_edifice ? (
-        <span style={{ fontSize: "20pt" }}>
-          <b>{stateReport.titre_edifice}</b>
-        </span>
+        <>
+          <span style={{ fontSize: "20pt" }}>
+            <b>{stateReport.titre_edifice}</b>
+          </span>
+          <div style={{ fontSize: "10pt", fontWeight: "normal", marginTop: "8px" }}>
+            Référence POP : {stateReport.reference_pop || "Non renseignée"}
+          </div>
+        </>
       ) : null}
     </h1>
   );

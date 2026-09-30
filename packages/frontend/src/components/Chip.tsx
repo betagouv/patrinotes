@@ -30,6 +30,8 @@ export const ChipGroup = ({
 
   const values = Object.values(options);
 
+  if (!values.length) return null;
+
   const ChipGroupList = (
     <Flex {...props} gap="8px" mt={label ? "8px" : 0} flexWrap="wrap">
       {values.map((option) => (
