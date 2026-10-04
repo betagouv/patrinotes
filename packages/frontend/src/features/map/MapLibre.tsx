@@ -337,35 +337,31 @@ export const MapLibre = ({
 
       <Box position="absolute" top={8} right={8} zIndex={1} display="flex" flexDirection="row">
         {mode === "pin" ? (
-          <>
-            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-fill" />
-            <CanvasButton
-              onClick={handleCancelPin}
-              title="Annuler le placement"
-              iconId="ri-close-line"
-              sx={{ marginLeft: "-1px" }}
-            />
-          </>
+          <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-fill">
+            Valider
+          </CanvasButton>
         ) : mode === "cadastre" ? (
-          <>
-            <CanvasButton
-              onClick={handleValidateCadastre}
-              title="Valider la sélection cadastrale"
-              iconId="ri-check-fill"
-            />
-            <CanvasButton
-              onClick={handleCancelCadastre}
-              title="Annuler la sélection"
-              iconId="ri-close-line"
-              sx={{ marginLeft: "-1px" }}
-            />
-          </>
+          <CanvasButton onClick={handleValidateCadastre} title="Valider la sélection cadastrale" iconId="ri-check-fill">
+            Valider
+          </CanvasButton>
         ) : (
           <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line">
             Fermer
           </CanvasButton>
         )}
       </Box>
+
+      {mode === "pin" || mode === "cadastre" ? (
+        <Box position="absolute" top={8} left={8} zIndex={1}>
+          <CanvasButton
+            onClick={mode === "pin" ? handleCancelPin : handleCancelCadastre}
+            title={mode === "pin" ? "Annuler le placement" : "Annuler la sélection"}
+            iconId="ri-arrow-go-back-fill"
+          >
+            Annuler
+          </CanvasButton>
+        </Box>
+      ) : null}
 
       <Box ref={layerButtonRef} position="absolute" top={56} right={8} zIndex={1}>
         <CanvasButton
