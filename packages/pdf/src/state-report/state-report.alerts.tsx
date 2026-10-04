@@ -64,6 +64,8 @@ export const Alerts = ({ alerts }: { alerts: MinimalAlert[] }) => {
                           attachmentId: a.id,
                           url: a.file!,
                           label: a.label ?? undefined,
+                          width: a.width,
+                          height: a.height,
                         }))}
                       />
                     </div>

@@ -86,6 +86,7 @@ export const SectionPhotos = ({
         attachments={attachments}
         onClick={(attachment, blobUrl) => setSelected({ attachment, blobUrl })}
         onDelete={(attachment) => deleteMutation.mutate(attachment)}
+        onRetry={({ id }) => batchUpload.retry(id)}
         isDisabled={isDisabled}
       />
     </Box>

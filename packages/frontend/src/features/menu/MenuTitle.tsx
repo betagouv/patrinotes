@@ -7,6 +7,7 @@ import { Button } from "#components/MUIDsfr.tsx";
 export const MenuTitle = ({
   children,
   backButtonOnClick,
+  leftButton,
   buttons,
   hideDivider,
   alert,
@@ -14,6 +15,7 @@ export const MenuTitle = ({
 }: {
   children: ReactNode;
   backButtonOnClick?: () => void;
+  leftButton?: ReactNode;
   buttons?: ReactNode;
   hideDivider?: boolean;
   onClose?: () => void;
@@ -31,13 +33,17 @@ export const MenuTitle = ({
       py={{ xs: "16px", lg: "30px" }}
       pl={{ xs: undefined, lg: "0" }}
     >
-      <Box display={{ lg: "none" }}>
-        {backButtonOnClick ? (
-          <Button priority="tertiary no outline" iconId="ri-arrow-left-s-line" onClick={backButtonOnClick}>
-            {null}
-          </Button>
-        ) : null}
-      </Box>
+      {leftButton ? (
+        <Box>{leftButton}</Box>
+      ) : (
+        <Box display={{ lg: "none" }}>
+          {backButtonOnClick ? (
+            <Button priority="tertiary no outline" iconId="ri-arrow-left-s-line" onClick={backButtonOnClick}>
+              {null}
+            </Button>
+          ) : null}
+        </Box>
+      )}
       <Typography
         display={{
           xs: buttons ? "none" : "block",

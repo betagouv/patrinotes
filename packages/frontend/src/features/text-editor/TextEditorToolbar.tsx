@@ -21,6 +21,7 @@ export const TextEditorToolbar = () => {
     <>
       <ToolbarButton
         isActive={editor.isActive("bold")}
+        title="Gras"
         size="medium"
         priority="tertiary no outline"
         iconId="fr-icon-bold"
@@ -34,6 +35,7 @@ export const TextEditorToolbar = () => {
       </ToolbarButton>
       <ToolbarButton
         isActive={editor.isActive("italic")}
+        title="Italique"
         size="medium"
         priority="tertiary no outline"
         type="button"
@@ -47,6 +49,7 @@ export const TextEditorToolbar = () => {
       </ToolbarButton>
       <ToolbarButton
         isActive={editor.isActive("underline")}
+        title="Souligné"
         size="medium"
         priority="tertiary no outline"
         iconId="ri-underline"
@@ -61,6 +64,7 @@ export const TextEditorToolbar = () => {
       {/* Bullet List */}
       <ToolbarButton
         isActive={editor.isActive("bulletList")}
+        title="Liste à puces"
         size="medium"
         priority="tertiary no outline"
         iconId="fr-icon-list-unordered"
@@ -76,6 +80,7 @@ export const TextEditorToolbar = () => {
       {/* Ordered List */}
       <ToolbarButton
         isActive={editor.isActive("orderedList")}
+        title="Liste numérotée"
         size="medium"
         priority="tertiary no outline"
         iconId="fr-icon-list-ordered"
@@ -113,6 +118,7 @@ const ColorInput = () => {
     <>
       <ToolbarButton
         aria-describedby="color-picker"
+        title="Couleur du texte"
         size="medium"
         priority="tertiary no outline"
         iconId="ri-palette-line"
@@ -160,6 +166,8 @@ const ColorButton = ({ color, value, onClose }: { color: string; value: string; 
     <Box
       component="button"
       type="button"
+      aria-label={`Appliquer la couleur ${color}`}
+      aria-pressed={isSelected}
       onClick={() => {
         editor.chain().focus().setColor(color).run();
         onClose?.();

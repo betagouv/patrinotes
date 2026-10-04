@@ -1,5 +1,5 @@
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Stack, Typography } from "@mui/material";
 import { Alert, Button, Input, Pagination, Table } from "#components/MUIDsfr.tsx";
@@ -27,6 +27,7 @@ import { Tabs } from "#components/Tabs.tsx";
 import { api, getErrorMessage } from "../api";
 import useDebounce from "react-use/lib/useDebounce";
 import { EnsureUser } from "#components/EnsureUser.tsx";
+import { SortableHeader, type SortState } from "#components/SortableTable.tsx";
 
 const PAGE_SIZE = 20;
 
@@ -34,9 +35,14 @@ const PAGE_SIZE = 20;
 // Query keys
 // ---------------------------------------------------------------------------
 
+type WhitelistSortKey = "email" | "createdAt" | "hasUser" | "lastCreatedStateReport" | "lastFinishedStateReport";
+type UsersSortKey = "name" | "email" | "job" | "service" | "department" | "role" | "createdAt";
+
 const adminKeys = {
-  whitelist: (page: number) => ["admin", "whitelist", page] as const,
-  users: (page: number, search: string) => ["admin", "users", page, search] as const,
+  whitelist: (page: number, search: string, sort: SortState<WhitelistSortKey>) =>
+    ["admin", "whitelist", page, search, sort] as const,
+  users: (page: number, search: string, sort: SortState<UsersSortKey>) =>
+    ["admin", "users", page, search, sort] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -46,6 +52,9 @@ const adminKeys = {
 const WhitelistPanel = () => {
   const [page, setPage] = useState(1);
   const [newEmail, setNewEmail] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortState<WhitelistSortKey>>(null);
   const queryClient = useQueryClient();
 
   const exportMutation = useMutation({
@@ -59,10 +68,31 @@ const WhitelistPanel = () => {
     },
   });
 
+  useDebounce(
+    () => {
+      setSearch(searchInput);
+      setPage(1);
+    },
+    300,
+    [searchInput],
+  );
+
   const { data, isLoading, error } = useQuery({
-    queryKey: adminKeys.whitelist(page),
-    queryFn: () => api.get("/api/admin/whitelist", { query: { page, limit: PAGE_SIZE } }),
+    queryKey: adminKeys.whitelist(page, search, sort),
+    queryFn: () =>
+      api.get("/api/admin/whitelist", {
+        query: { page, limit: PAGE_SIZE, search: search || undefined, sortBy: sort?.key, sortDir: sort?.dir },
+      }),
+    placeholderData: keepPreviousData,
   });
+
+  const onSortChange = (newSort: SortState<WhitelistSortKey>) => {
+    setSort(newSort);
+    setPage(1);
+  };
+  const header = (key: WhitelistSortKey, label: string) => (
+    <SortableHeader label={label} sortKey={key} sort={sort} onSortChange={onSortChange} />
+  );
 
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
@@ -147,17 +177,35 @@ const WhitelistPanel = () => {
         {exportMutation.isPending ? "Export..." : "Exporter en CSV"}
       </Button>
 
+      <Input
+        label="Rechercher"
+        nativeInputProps={{
+          type: "search",
+          placeholder: "Email...",
+          value: searchInput,
+          onChange: (e) => setSearchInput(e.target.value),
+        }}
+        style={{ maxWidth: "400px" }}
+      />
+
       {isLoading ? (
         <Center py="3rem">
           <Spinner />
         </Center>
       ) : tableData.length === 0 ? (
-        <Alert severity="info" title="Aucun email dans la whitelist." />
+        <Alert severity="info" title={search ? "Aucun email trouvé." : "Aucun email dans la whitelist."} />
       ) : (
         <Table
           id="whitelist-table"
           caption={`${data?.total ?? 0} email${(data?.total ?? 0) !== 1 ? "s" : ""} autorisé${(data?.total ?? 0) !== 1 ? "s" : ""}`}
-          headers={["Email", "Date de création", "Compte créé", "Dernier constat créé", "Dernier constat finalisé", ""]}
+          headers={[
+            header("email", "Email"),
+            header("createdAt", "Date de création"),
+            header("hasUser", "Compte créé"),
+            header("lastCreatedStateReport", "Dernier constat créé"),
+            header("lastFinishedStateReport", "Dernier constat finalisé"),
+            "",
+          ]}
           data={tableData}
           noCaption={false}
         />
@@ -166,7 +214,7 @@ const WhitelistPanel = () => {
       {totalPages > 1 && (
         <Center>
           <Pagination
-            key={page}
+            key={`${page}-${search}-${sort?.key}-${sort?.dir}`}
             count={totalPages}
             defaultPage={page}
             getPageLinkProps={(nb) => ({
@@ -192,6 +240,7 @@ const UsersPanel = () => {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortState<UsersSortKey>>(null);
   const exportMutation = useMutation({
     mutationFn: () => api.get("/api/admin/users/export", { query: { search: search || undefined } }),
     onSuccess: (rows) => {
@@ -221,9 +270,21 @@ const UsersPanel = () => {
   );
 
   const { data, isLoading, error } = useQuery({
-    queryKey: adminKeys.users(page, search),
-    queryFn: () => api.get("/api/admin/users", { query: { page, limit: PAGE_SIZE, search: search || undefined } }),
+    queryKey: adminKeys.users(page, search, sort),
+    queryFn: () =>
+      api.get("/api/admin/users", {
+        query: { page, limit: PAGE_SIZE, search: search || undefined, sortBy: sort?.key, sortDir: sort?.dir },
+      }),
+    placeholderData: keepPreviousData,
   });
+
+  const onSortChange = (newSort: SortState<UsersSortKey>) => {
+    setSort(newSort);
+    setPage(1);
+  };
+  const header = (key: UsersSortKey, label: string) => (
+    <SortableHeader label={label} sortKey={key} sort={sort} onSortChange={onSortChange} />
+  );
 
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
@@ -273,7 +334,15 @@ const UsersPanel = () => {
         <Table
           id="users-table"
           caption={`${data?.total ?? 0} utilisateur${(data?.total ?? 0) !== 1 ? "s" : ""}`}
-          headers={["Nom", "Email", "Fonction", "Service", "Département", "Rôle", "Date de création"]}
+          headers={[
+            header("name", "Nom"),
+            header("email", "Email"),
+            header("job", "Fonction"),
+            header("service", "Service"),
+            header("department", "Département"),
+            header("role", "Rôle"),
+            header("createdAt", "Date de création"),
+          ]}
           data={tableData}
           noCaption={false}
         />
@@ -282,7 +351,7 @@ const UsersPanel = () => {
       {totalPages > 1 && (
         <Center>
           <Pagination
-            key={`${page}-${search}`}
+            key={`${page}-${search}-${sort?.key}-${sort?.dir}`}
             count={totalPages}
             defaultPage={page}
             getPageLinkProps={(nb) => ({

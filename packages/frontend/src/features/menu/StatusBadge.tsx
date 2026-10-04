@@ -1,8 +1,8 @@
 import Badge from "@codegouvfr/react-dsfr/Badge";
-import { useStatus } from "@powersync/react";
+import { useIsOnline } from "../../hooks/useIsOnline";
 
 export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
-  const status = noProvider ? null : useStatus();
+  const isOnline = useIsOnline();
 
   if (noProvider) {
     return (
@@ -12,11 +12,9 @@ export const StatusBadge = ({ noProvider }: { noProvider?: boolean }) => {
     );
   }
 
-  const isConnected = status?.connected;
-
   return (
-    <Badge small as="span" noIcon severity={status ? (isConnected ? "success" : "error") : "success"}>
-      {status ? (isConnected ? "En ligne" : "Hors ligne") : "Beta"}
+    <Badge small as="span" noIcon severity={isOnline ? "success" : "error"}>
+      {isOnline ? "En ligne" : "Hors ligne"}
     </Badge>
   );
 };

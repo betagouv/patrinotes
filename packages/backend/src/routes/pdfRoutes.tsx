@@ -65,6 +65,29 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
   );
 
+  fastify.post(
+    "/state-report/log-download",
+    {
+      schema: {
+        body: Type.Object({ stateReportId: Type.String() }),
+        response: { 200: Type.Object({ ok: Type.Boolean() }) },
+      },
+    },
+    async (request) => {
+      const { stateReportId } = request.body;
+      await db
+        .insertInto("constat_pdf_download")
+        .values({
+          id: v4(),
+          user_id: request.user.id,
+          state_report_id: stateReportId,
+          created_at: new Date().toISOString(),
+        })
+        .execute();
+      return { ok: true };
+    },
+  );
+
   fastify.post("/report", { schema: reportPdfTSchema }, async (request) => {
     const { reportId, pdfPath, pdfSize, recipients: rawRecipients } = request.body;
     const { service_id } = request.user!;

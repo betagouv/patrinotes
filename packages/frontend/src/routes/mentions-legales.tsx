@@ -59,14 +59,24 @@ const MentionLegales = () => {
       <Typography variant="body1">
         <Box mb="8px">
           La conformité aux normes d'accessibilité numérique est un{" "}
-          <a className="fr-link" target="_blank" href="https://collectif-objets.beta.gouv.fr/declaration_accessibilite">
+          <a
+            className="fr-link"
+            target="_blank"
+            title="collectif-objets.beta.gouv.fr - ouvre une nouvelle fenêtre"
+            href="https://collectif-objets.beta.gouv.fr/declaration_accessibilite"
+          >
             objectif ultérieur
           </a>{" "}
           mais nous tâchons de rendre cette plateforme accessible à toutes et à tous.
           <br />
         </Box>
         Pour en savoir plus, vous pouvez consulter la{" "}
-        <a className="fr-link" target="_blank" href="https://accessibilite.numerique.gouv.fr/">
+        <a
+          className="fr-link"
+          target="_blank"
+          title="accessibilite.numerique.gouv.fr - ouvre une nouvelle fenêtre"
+          href="https://accessibilite.numerique.gouv.fr/"
+        >
           politique d'accessibilité numérique de l'État
         </a>
       </Typography>

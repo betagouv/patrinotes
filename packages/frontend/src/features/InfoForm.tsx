@@ -9,6 +9,8 @@ import { Flex } from "#components/ui/Flex.tsx";
 import { Box, Stack } from "@mui/material";
 import { format, parse } from "date-fns";
 import { useRef, useState } from "react";
+import { IconLink } from "#components/ui/IconLink.tsx";
+import { CadastreMapModal } from "./CadastreMapModal";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useUser } from "../contexts/AuthContext";
 import { Report } from "../db/AppSchema";
@@ -92,6 +94,8 @@ export const InfoForm = () => {
 
   const applicantEmail = useWatch({ control: form.control, name: "applicantEmail" });
 
+  const [isCadastreMapOpen, setIsCadastreMapOpen] = useState(false);
+
   return (
     <Flex flexDirection="column" width="100%" maxWidth="800px" padding="16px" mt={{ lg: "24px", xs: "16px" }}>
       <InputGroupWithTitle title="Le rendez-vous">
@@ -126,15 +130,15 @@ export const InfoForm = () => {
           />
         </Box>
 
-        <Flex gap="16px" flexDirection="row" mt="8px">
+        <Flex gap="16px" flexDirection="row" mt="8px" width="100%">
           <Input
-            sx={{ flex: { xs: "none", lg: 1 }, mb: { xs: "16px", lg: undefined } }}
+            sx={{ flex: 1, mb: { xs: "16px", lg: undefined } }}
             disabled={isFormDisabled}
             label="Date"
             nativeInputProps={{ type: "date", onChange: setDay, value: meetDateRef.current.day }}
           />
           <Input
-            sx={{ flex: { xs: "none", lg: 1 }, mb: { xs: "16px", lg: undefined } }}
+            sx={{ flex: 1, mb: { xs: "16px", lg: undefined } }}
             disabled={isFormDisabled}
             label="Horaire"
             nativeInputProps={{ type: "time", onChange: setTime, value: meetDateRef.current.time }}
@@ -167,12 +171,26 @@ export const InfoForm = () => {
           />
         </Flex>
         <Flex gap={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column", lg: "row" }}>
-          <Input
-            sx={{ flex: { xs: "none", lg: 1 }, mb: "24px" }}
-            disabled={isFormDisabled}
-            label="Référence cadastrale"
-            nativeInputProps={{ ...form.register("projectCadastralRef"), placeholder: "Seulement la principale" }}
-          />
+          <Box sx={{ flex: { xs: "none", lg: 1 }, mb: "24px" }}>
+            <Input
+              disabled={isFormDisabled}
+              label="Référence cadastrale"
+              nativeInputProps={{ ...form.register("projectCadastralRef"), placeholder: "Seulement la principale" }}
+            />
+            <IconLink
+              icon="fr-icon-road-map-fill"
+              disabled={isFormDisabled}
+              sx={{ mt: "-8px" }}
+              onClick={(e) => {
+                e.preventDefault();
+                if (isFormDisabled) return;
+                setIsCadastreMapOpen(true);
+              }}
+            >
+              Sélectionner cadastre sur la carte
+            </IconLink>
+          </Box>
+          {isCadastreMapOpen ? <CadastreMapModal onClose={() => setIsCadastreMapOpen(false)} /> : null}
           <Box
             sx={{
               flex: {

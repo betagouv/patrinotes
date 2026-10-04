@@ -152,6 +152,7 @@ export const SignupForm = () => {
                     <Link
                       className="fr-link"
                       target="_blank"
+                      title="app.patrinotes.beta.gouv.fr - ouvre une nouvelle fenêtre"
                       to="/cgu"
                       style={{ textDecoration: "underline", textUnderlineOffset: 2 }}
                     >

@@ -17,6 +17,7 @@ import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 import { Accordion } from "#components/MUIDsfr.tsx";
+import { PlanDeSituationModal } from "./PlanDeSituationModal";
 // import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
@@ -66,6 +67,7 @@ export const MonumentHistorique = () => {
           variant="h3"
           fontWeight="500"
           pt="0 !important"
+          component="h3"
           mb="24px"
           color={fr.colors.decisions.text.actionHigh.blueFrance.default}
         >
@@ -96,6 +98,7 @@ export const MonumentHistorique = () => {
                       component="a"
                       href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
                       target="_blank"
+                      title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
                       rel="noopener external"
                     >
                       {value ?? "Non renseigné"}
@@ -120,24 +123,8 @@ export const MonumentHistorique = () => {
           {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
         </Flex>
 
-        {/* {referencePop && !isCustom ? (
-          <Button
-            priority="tertiary no outline"
-            iconId="fr-icon-road-map-line"
-            onClick={() => setIsPlanModalOpen(true)}
-            type="button"
-            sx={{ alignSelf: "flex-start", mt: isEditing ? "8px" : "4px" }}
-          >
-            Voir plan de situation
-          </Button>
-        ) : null} */}
-
-        {/* {isPlanModalOpen ? (
-          <PlanDeSituationModal referencePop={referencePop!} onClose={() => setIsPlanModalOpen(false)} />
-        ) : null} */}
-
         <Flex
-          flexDirection={{ xs: "column", lg: "row" }}
+          flexDirection={{ xs: "column", lg: "row-reverse" }}
           width="100%"
           gap={isEditing ? { xs: 0, lg: "16px" } : "16px"}
           mt={isEditing ? "16px" : 0}
@@ -159,6 +146,21 @@ export const MonumentHistorique = () => {
             isDisabled={isDisabled}
           />
         </Flex>
+
+        {referencePop && !isCustom ? (
+          <Button
+            priority="tertiary"
+            iconId="fr-icon-road-map-fill"
+            onClick={() => setIsPlanModalOpen(true)}
+            type="button"
+            sx={{ alignSelf: "flex-start", mt: isEditing ? "8px" : "4px" }}
+          >
+            Voir le plan de situation
+          </Button>
+        ) : null}
+        {isPlanModalOpen ? (
+          <PlanDeSituationModal referencePop={referencePop!} onClose={() => setIsPlanModalOpen(false)} />
+        ) : null}
 
         <Divider my={isEditing ? "24px" : { xs: "16px", lg: "8px" }} />
 
@@ -240,7 +242,7 @@ export const MonumentHistorique = () => {
           <Box
             component="a"
             href={`https://pop.culture.gouv.fr/notice/merimee/${value}`}
-            title="En savoir plus sur l'édifice - Nouvelle fenêtre"
+            title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
             target="_blank"
             rel="noopener external"
             sx={{
@@ -308,6 +310,7 @@ const PreviousConstatsList = ({ constats }: { constats: StateReport[] }) => {
             target="_blank"
             rel="noopener external"
             className="fr-link"
+            title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
             sx={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
           >
             {new Date(constat.created_at!).toLocaleDateString("fr-FR")} - visite{" "}
@@ -453,6 +456,7 @@ const MonumentObjetItem = ({ popObjet, images }: { popObjet: PopObjet; images: P
       // @ts-ignore mui error
       href={`https://pop.culture.gouv.fr/notice/palissy/${popObjet.reference}`}
       target="_blank"
+      title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
       rel="noopener external"
       flexDirection="column"
       flex="1"

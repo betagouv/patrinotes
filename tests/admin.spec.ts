@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, mockServices, signup } from "./utils";
+import { mockUsers, mockServices, signup, login } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 
@@ -7,6 +7,7 @@ const BACKEND_URL = `http://localhost:${process.env.BACKEND_PORT}`;
 
 test.describe("Admin whitelist", () => {
   let adminToken: string;
+  let nonAdminToken: string;
 
   test.beforeAll(async ({ browser }) => {
     await resetDatabase();
@@ -16,6 +17,12 @@ test.describe("Admin whitelist", () => {
     const page = await context.newPage();
     await signup({ page, user: mockUsers[0] });
     await context.close();
+
+    // Create a second, non-admin user for access-control tests
+    const context2 = await browser.newContext();
+    const page2 = await context2.newPage();
+    await signup({ page: page2, user: mockUsers[1] });
+    await context2.close();
 
     // Upgrade to admin role
     await db.updateTable("internal_user").set({ role: "admin" }).where("email", "=", mockUsers[0].email).execute();
@@ -27,6 +34,14 @@ test.describe("Admin whitelist", () => {
     });
     const data = (await resp.json()) as { accessToken: string };
     adminToken = data.accessToken;
+
+    const resp2 = await fetch(`${BACKEND_URL}/api/login-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: mockUsers[1].email, password: mockUsers[1].password }),
+    });
+    const data2 = (await resp2.json()) as { accessToken: string };
+    nonAdminToken = data2.accessToken;
   });
 
   // ---------------------------------------------------------------------------
@@ -115,6 +130,66 @@ test.describe("Admin whitelist", () => {
     expect(resp.status()).toBe(404);
   });
 
+  test("GET /api/admin/me returns the authenticated admin's profile", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/me`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(data.email).toBe(mockUsers[0].email);
+  });
+
+  test("GET /api/admin/whitelist/export returns whitelist rows as JSON", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/whitelist/export`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.map((d: { email: string }) => d.email)).toContain(mockUsers[0].email);
+  });
+
+  test("GET /api/admin/users/export returns user rows, filtered by search", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/users/export`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(data.map((d: { email: string }) => d.email)).toContain(mockUsers[0].email);
+    expect(data.map((d: { email: string }) => d.email)).toContain(mockUsers[1].email);
+
+    const filteredResp = await request.get(`${BACKEND_URL}/api/admin/users/export`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      params: { search: mockUsers[0].email },
+    });
+    const filtered = await filteredResp.json();
+    expect(filtered.map((d: { email: string }) => d.email)).toEqual([mockUsers[0].email]);
+  });
+
+  test("GET /api/admin/users respects the search filter", async ({ request }) => {
+    const resp = await request.get(`${BACKEND_URL}/api/admin/users`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      params: { search: mockUsers[1].email },
+    });
+
+    expect(resp.ok()).toBe(true);
+    const data = await resp.json();
+    expect(data.data.map((u: { email: string }) => u.email)).toEqual([mockUsers[1].email]);
+  });
+
+  test("admin routes return 403 for an authenticated non-admin user", async ({ request }) => {
+    for (const req of [
+      () => request.get(`${BACKEND_URL}/api/admin/whitelist`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
+      () => request.get(`${BACKEND_URL}/api/admin/users`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
+      () => request.get(`${BACKEND_URL}/api/admin/me`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
+    ]) {
+      const resp = await req();
+      expect(resp.status()).toBe(403);
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // UI test
   // ---------------------------------------------------------------------------
@@ -122,12 +197,7 @@ test.describe("Admin whitelist", () => {
   test("admin page shows whitelist and allows add/delete", async ({ page }) => {
     test.setTimeout(60000);
     // Log in via the login form (mockUsers[0] is already admin from beforeAll)
-    await page.goto("./connexion");
-    await page.fill("input[name=email]", mockUsers[0].email);
-    await page.fill("input[name=password]", mockUsers[0].password);
-    await page.click("button[type=submit]");
-    await page.waitForURL((url) => url.pathname === "/");
-    await page.waitForTimeout(1000);
+    await login({ page, user: mockUsers[0] });
 
     // Navigate to admin page
     await page.goto("./admin");
@@ -143,7 +213,6 @@ test.describe("Admin whitelist", () => {
     const newEmail = "ui-added@whitelist-test.com";
     await page.fill("input[type=email]", newEmail);
     await page.click("button[type=submit]");
-    await page.waitForTimeout(500);
 
     // Wait for the new email to appear in the table
     await expect(page.locator("#whitelist-table > table")).toContainText(newEmail, { timeout: 5000 });
@@ -156,113 +225,116 @@ test.describe("Admin whitelist", () => {
     await expect(page.locator("#whitelist-table > table")).not.toContainText(newEmail, { timeout: 5000 });
   });
 
-  test("whitelist table shows pagination and navigates to page 2", async ({ page }) => {
-    test.setTimeout(60000);
+  const paginationScenarios = [
+    {
+      name: "whitelist",
+      tab: null as string | null,
+      tableSelector: "#whitelist-table > table tbody tr",
+      tabpanelSelector: "#tabpanel-whitelist",
+      countBefore: async () =>
+        Number(
+          (await db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst())
+            ?.count ?? 0,
+        ),
+      seed: async () => {
+        const extraEmails = Array.from({ length: 22 }, (_, i) => `wl-pagination-${i + 1}@test.com`);
+        await db
+          .insertInto("whitelist")
+          .values(extraEmails.map((email) => ({ email })))
+          .execute();
+        return extraEmails;
+      },
+      cleanup: async (extraEmails: string[]) => {
+        await db.deleteFrom("whitelist").where("email", "in", extraEmails).execute();
+      },
+    },
+    {
+      name: "users",
+      tab: "Utilisateurs",
+      tableSelector: "#users-table > table tbody tr",
+      tabpanelSelector: "#tabpanel-users",
+      countBefore: async () =>
+        Number(
+          (await db.selectFrom("user").select(db.fn.countAll<number>().as("count")).executeTakeFirst())?.count ?? 0,
+        ),
+      seed: async () => {
+        const extraUsers = Array.from({ length: 22 }, (_, i) => ({
+          id: `pagination-user-${i + 1}`,
+          name: `Pagination User ${i + 1}`,
+          email: `users-pagination-${i + 1}@test.com`,
+          service_id: mockServices[0].id,
+        }));
+        const extraInternalUsers = extraUsers.map((u) => ({
+          id: `pagination-internal-${u.id}`,
+          email: u.email,
+          role: "user",
+          userId: u.id,
+        }));
+        await db.insertInto("user").values(extraUsers).execute();
+        await db.insertInto("internal_user").values(extraInternalUsers).execute();
+        return { extraUsers, extraInternalUsers };
+      },
+      cleanup: async ({
+        extraUsers,
+        extraInternalUsers,
+      }: {
+        extraUsers: { id: string }[];
+        extraInternalUsers: { id: string }[];
+      }) => {
+        await db
+          .deleteFrom("internal_user")
+          .where(
+            "id",
+            "in",
+            extraInternalUsers.map((u) => u.id),
+          )
+          .execute();
+        await db
+          .deleteFrom("user")
+          .where(
+            "id",
+            "in",
+            extraUsers.map((u) => u.id),
+          )
+          .execute();
+      },
+    },
+  ];
 
-    const beforeCount = Number(
-      (await db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst())?.count ?? 0,
-    );
-    const extraEmails = Array.from({ length: 22 }, (_, i) => `wl-pagination-${i + 1}@test.com`);
-    await db
-      .insertInto("whitelist")
-      .values(extraEmails.map((email) => ({ email })))
-      .execute();
-    const total = beforeCount + 22;
-    const page2Count = total - 20;
+  for (const scenario of paginationScenarios) {
+    test(`${scenario.name} table shows pagination and navigates to page 2`, async ({ page }) => {
+      test.setTimeout(60000);
 
-    try {
-      await page.goto("./connexion");
-      await page.fill("input[name=email]", mockUsers[0].email);
-      await page.fill("input[name=password]", mockUsers[0].password);
-      await page.click("button[type=submit]");
-      await page.waitForURL((url) => url.pathname === "/");
-      await page.waitForTimeout(1000);
+      const beforeCount = await scenario.countBefore();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const seeded: any = await scenario.seed();
+      const page2Count = beforeCount + 22 - 20;
 
-      await page.goto("./admin");
-      await page.waitForSelector("h1");
+      try {
+        await login({ page, user: mockUsers[0] });
 
-      // Page 1 should have exactly 20 rows
-      await expect(page.locator("#whitelist-table > table tbody tr")).toHaveCount(20, { timeout: 5000 });
+        await page.goto("./admin");
+        await page.waitForSelector("h1");
 
-      // Pagination nav should be visible
-      await expect(page.locator("#tabpanel-whitelist nav.fr-pagination")).toBeVisible();
+        if (scenario.tab) {
+          await page.getByRole("button", { name: scenario.tab }).click();
+        }
 
-      // Click page 2
-      await page.locator("#tabpanel-whitelist button[title='Page 2']").click();
+        // Page 1 should have exactly 20 rows
+        await expect(page.locator(scenario.tableSelector)).toHaveCount(20, { timeout: 5000 });
 
-      // Page 2 should show the remaining rows
-      await expect(page.locator("#whitelist-table > table tbody tr")).toHaveCount(page2Count, { timeout: 5000 });
-    } finally {
-      await db.deleteFrom("whitelist").where("email", "in", extraEmails).execute();
-    }
-  });
+        // Pagination nav should be visible
+        await expect(page.locator(`${scenario.tabpanelSelector} nav.fr-pagination`)).toBeVisible();
 
-  test("users table shows pagination and navigates to page 2", async ({ page }) => {
-    test.setTimeout(60000);
+        // Click page 2
+        await page.locator(`${scenario.tabpanelSelector} button[title='Page 2']`).click();
 
-    const beforeUserCount = Number(
-      (await db.selectFrom("user").select(db.fn.countAll<number>().as("count")).executeTakeFirst())?.count ?? 0,
-    );
-    const page2UserCount = beforeUserCount + 22 - 20;
-    const extraUsers = Array.from({ length: 22 }, (_, i) => ({
-      id: `pagination-user-${i + 1}`,
-      name: `Pagination User ${i + 1}`,
-      email: `users-pagination-${i + 1}@test.com`,
-      service_id: mockServices[0].id,
-    }));
-    const extraInternalUsers = extraUsers.map((u) => ({
-      id: `pagination-internal-${u.id}`,
-      email: u.email,
-      role: "user",
-      userId: u.id,
-    }));
-
-    await db.insertInto("user").values(extraUsers).execute();
-    await db.insertInto("internal_user").values(extraInternalUsers).execute();
-
-    try {
-      await page.goto("./connexion");
-      await page.fill("input[name=email]", mockUsers[0].email);
-      await page.fill("input[name=password]", mockUsers[0].password);
-      await page.click("button[type=submit]");
-
-      await page.waitForURL((url) => url.pathname === "/");
-      await page.waitForTimeout(1000);
-
-      await page.goto("./admin");
-      await page.waitForSelector("h1");
-
-      // Switch to the Utilisateurs tab
-      await page.getByRole("button", { name: "Utilisateurs" }).click();
-
-      // Page 1 should have exactly 20 rows
-      await expect(page.locator("#users-table > table tbody tr")).toHaveCount(20, { timeout: 5000 });
-
-      // Pagination nav should be visible
-      await expect(page.locator("#tabpanel-users nav.fr-pagination")).toBeVisible();
-
-      // Click page 2
-      await page.locator("#tabpanel-users button[title='Page 2']").click();
-
-      // Page 2 should show the remaining rows
-      await expect(page.locator("#users-table > table tbody tr")).toHaveCount(page2UserCount, { timeout: 5000 });
-    } finally {
-      await db
-        .deleteFrom("internal_user")
-        .where(
-          "id",
-          "in",
-          extraInternalUsers.map((u) => u.id),
-        )
-        .execute();
-      await db
-        .deleteFrom("user")
-        .where(
-          "id",
-          "in",
-          extraUsers.map((u) => u.id),
-        )
-        .execute();
-    }
-  });
+        // Page 2 should show the remaining rows
+        await expect(page.locator(scenario.tableSelector)).toHaveCount(page2Count, { timeout: 5000 });
+      } finally {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (scenario.cleanup as any)(seeded);
+      }
+    });
+  }
 });

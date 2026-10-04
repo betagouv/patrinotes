@@ -72,7 +72,13 @@ test.describe("Image upload — compte-rendu flow", () => {
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(page.locator("img[data-picture-id]")).toHaveCount(2, { timeout: 15_000 });
 
-    // Verify the thumbnail canvas has actual pixel content (not blank)
+    // Verify the thumbnails actually loaded real image content (not blank/broken)
+    const thumbnails = page.locator("img[data-picture-id]");
+    for (const naturalWidth of await thumbnails.evaluateAll((imgs) =>
+      (imgs as HTMLImageElement[]).map((img) => img.naturalWidth),
+    )) {
+      expect(naturalWidth).toBeGreaterThan(0);
+    }
 
     // Button stays visible (multiple=true)
     await expect(page.getByRole("button", { name: "Ajouter photo" })).toBeVisible();
@@ -80,17 +86,17 @@ test.describe("Image upload — compte-rendu flow", () => {
     // ---------------------------------------------------------------------------
     // Step 6: Create the CR and navigate to PDF view
     // ---------------------------------------------------------------------------
-    await page.waitForTimeout(2000);
-
-    await page.getByRole("button", { name: "Créer le CR" }).click();
+    const createButton = page.getByRole("button", { name: "Créer le CR" });
+    await expect(createButton).toBeEnabled();
+    await createButton.click();
     await page.waitForURL((url) => url.pathname.startsWith("/pdf/") && url.search.includes("mode=view"));
 
     // ---------------------------------------------------------------------------
     // Step 7: Navigate to send mode and submit
     // ---------------------------------------------------------------------------
-    await page.waitForTimeout(1000);
-    await page.getByRole("button", { name: "Envoyer" }).click();
-    await page.waitForURL((url) => url.search.includes("mode=send"));
+    const envoyerButton = page.getByRole("button", { name: "Envoyer" });
+    await expect(envoyerButton).toBeEnabled();
+    await envoyerButton.click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
 
     const emailInput = page.locator('input[type="text"]').first();

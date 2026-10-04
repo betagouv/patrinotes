@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup } from "./utils";
+import { mockUsers, signup, fillMinimalConstat, finalizeConstat } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
@@ -31,7 +31,7 @@ test.describe("Constat with alerts flow", () => {
     // Scroll to alertes-mh section
     await page.locator("#alertes-mh").scrollIntoViewIfNeeded();
 
-    await page.waitForTimeout(1000);
+    await page.getByLabel("Courriel CRMH").waitFor();
     await page.getByLabel("Courriel CRMH").fill("crmh-alert@test.com");
     await page.getByLabel("Courriel CAOA").fill("caoa-alert@test.com");
     await page.getByLabel("Courriel UDAP").fill("udap-alert@test.com");
@@ -46,48 +46,11 @@ test.describe("Constat with alerts flow", () => {
     await page.waitForResponse((response) => response.url().includes("/upload-data") && response.status() === 200);
 
     // ---------------------------------------------------------------------------
-    // Step 3: Create a new constat
+    // Step 3-6: Create a new constat, select monument, fill contexte-visite
+    // and one section
     // ---------------------------------------------------------------------------
     await page.goto("./");
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-
-    // ---------------------------------------------------------------------------
-    // Step 4: Informations — select monument
-    // ---------------------------------------------------------------------------
-    const autocomplete = page.getByLabel("Nom ou référence du monument");
-    await autocomplete.waitFor();
-    await autocomplete.fill("Château de Test");
-    await page.getByRole("option", { name: /Château de Test/ }).click();
-    await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
-
-    await page.getByRole("button", { name: "Contexte de la visite" }).click();
-    await page.waitForURL((url) => url.search.includes("contexte-visite"));
-
-    // ---------------------------------------------------------------------------
-    // Step 5: Contexte de la visite
-    // ---------------------------------------------------------------------------
-    await page.locator("input[id=nature-visite-0]").check({ force: true });
-    await page.getByLabel("Date de la visite").fill("2024-01-15");
-    await page.fill("input[name=redacted_by]", "Agent Test");
-    await page.fill("input[name=proprietaire]", "Jean Dupont");
-    await page.fill("input[name=proprietaire_email]", "jean.dupont@example.com");
-
-    await page.getByRole("button", { name: /Constat d'état/ }).click();
-    await page.waitForURL((url) => url.search.includes("constat-detaille"));
-
-    // ---------------------------------------------------------------------------
-    // Step 6: Constat détaillé — fill one section
-    // ---------------------------------------------------------------------------
-    await page.getByRole("button", { name: "Couverture" }).click();
-
-    const sectionDialog = page.getByRole("dialog");
-    await sectionDialog.waitFor();
-    await sectionDialog.getByRole("radio", { name: "Bon" }).check({ force: true });
-    await sectionDialog.getByRole("radio", { name: "50%" }).check({ force: true });
-    await sectionDialog.locator("textarea").fill("Bon état général, pas de dégradation visible.");
-    await sectionDialog.getByRole("button", { name: "Valider" }).click();
-    await sectionDialog.waitFor({ state: "hidden" });
+    await fillMinimalConstat(page);
 
     // ---------------------------------------------------------------------------
     // Step 7: Open Alertes panel
@@ -186,23 +149,13 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     // Step 8: Close the alerts drawer
     // ---------------------------------------------------------------------------
-    await page.waitForTimeout(500);
     await page.keyboard.press("Escape");
     await drawer.waitFor({ state: "hidden" });
 
     // ---------------------------------------------------------------------------
-    // Step 9: Navigate to Constat général
+    // Step 9: Navigate to Constat général and finalize
     // ---------------------------------------------------------------------------
-    await page.getByRole("button", { name: "Constat général" }).click();
-    await page.waitForURL((url) => url.search.includes("constat-general"));
-
-    await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
-    await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
-
-    // Finalize
-    await page.waitForTimeout(1000);
-    await page.getByRole("button", { name: "Finaliser le constat" }).click();
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await finalizeConstat(page);
 
     // ---------------------------------------------------------------------------
     // Step 10: PDF preview → send mode → send
@@ -336,7 +289,7 @@ test.describe("Alerts with validation flow", () => {
     await page.goto("./service");
     await page.waitForURL((url) => url.pathname === "/service");
     await page.locator("#alertes-mh").scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
+    await page.getByLabel("Courriel CRMH").waitFor();
     await page.getByLabel("Courriel CRMH").fill("crmh-alert-validation@test.com");
 
     const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
@@ -344,38 +297,11 @@ test.describe("Alerts with validation flow", () => {
     await page.waitForResponse((response) => response.url().includes("/upload-data") && response.status() === 200);
 
     // -------------------------------------------------------------------------
-    // 3. Create a constat
+    // 3. Create a constat, select monument, fill contexte-visite and one section
     // -------------------------------------------------------------------------
     await page.goto("./");
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
+    await fillMinimalConstat(page, { visitDate: "2024-03-01" });
     const constatBaseUrl = page.url().split("?")[0];
-
-    const autocomplete = page.getByLabel("Nom ou référence du monument");
-    await autocomplete.waitFor();
-    await autocomplete.fill("Château de Test");
-    await page.getByRole("option", { name: /Château de Test/ }).click();
-    await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
-    await page.getByRole("button", { name: "Contexte de la visite" }).click();
-    await page.waitForURL((url) => url.search.includes("contexte-visite"));
-
-    await page.locator("input[id=nature-visite-0]").check({ force: true });
-    await page.getByLabel("Date de la visite").fill("2024-03-01");
-    await page.fill("input[name=redacted_by]", "Agent Test");
-    await page.fill("input[name=proprietaire]", "Jean Dupont");
-    await page.fill("input[name=proprietaire_email]", "jean.dupont@example.com");
-    await page.getByRole("button", { name: /Constat d'état/ }).click();
-    await page.waitForURL((url) => url.search.includes("constat-detaille"));
-
-    // Fill one section
-    await page.getByRole("button", { name: "Couverture" }).click();
-    const sectionDialog = page.getByRole("dialog");
-    await sectionDialog.waitFor();
-    await sectionDialog.getByRole("radio", { name: "Bon" }).check({ force: true });
-    await sectionDialog.getByRole("radio", { name: "50%" }).check({ force: true });
-    await sectionDialog.locator("textarea").fill("Bon état général.");
-    await sectionDialog.getByRole("button", { name: "Valider" }).click();
-    await sectionDialog.waitFor({ state: "hidden" });
 
     // -------------------------------------------------------------------------
     // 4. Add an alert (Édifice en péril)
@@ -390,22 +316,13 @@ test.describe("Alerts with validation flow", () => {
     await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
 
-    await page.waitForTimeout(500);
     await page.keyboard.press("Escape");
-
     await drawer.waitFor({ state: "hidden" });
 
     // -------------------------------------------------------------------------
     // 5. Finalize and go to send mode
     // -------------------------------------------------------------------------
-    await page.getByRole("button", { name: "Constat général" }).click();
-    await page.waitForURL((url) => url.search.includes("constat-general"));
-    await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
-    await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
-    await page.waitForTimeout(1000);
-    await page.getByRole("button", { name: "Finaliser le constat" }).click();
-
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await finalizeConstat(page);
     await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
 
@@ -472,9 +389,10 @@ test.describe("Alerts with validation flow", () => {
     // Navigate to constat-general directly (reference_pop exists → home list also lands here)
     await page.goto(`${constatBaseUrl}?step=constat-general&mode=view`);
     await page.waitForURL((url) => url.search.includes("constat-general"));
-    await page.waitForTimeout(1000);
 
-    await page.getByRole("button", { name: "Finaliser le constat" }).click();
+    const finalizeButton = page.getByRole("button", { name: "Finaliser le constat" });
+    await finalizeButton.waitFor();
+    await finalizeButton.click();
     await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
     await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));

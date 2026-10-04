@@ -47,6 +47,7 @@ function buildQuery(config: AttachmentTableConfig) {
         .select((eb) => [
           "visited_section_attachment.id",
           "visited_section_attachment.label",
+          "visited_section_attachment.attachment_id",
           "attachments.local_uri",
           "attachments.state",
           eb.ref("attachments.media_type").as("mediaType"),
