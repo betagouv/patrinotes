@@ -126,6 +126,7 @@ type Props = {
   onSaveReferenceCadastrale?: (ref: string) => void;
   initialCoordinates: string | null;
   initialReferenceCadastrale: string | null;
+  singleCadastreSelection?: boolean;
 };
 
 export const MapLibre = ({
@@ -135,6 +136,7 @@ export const MapLibre = ({
   onSaveReferenceCadastrale,
   initialCoordinates,
   initialReferenceCadastrale,
+  singleCadastreSelection = false,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -194,9 +196,11 @@ export const MapLibre = ({
       const { section, numero } = features[0].properties as { section: string; numero: string };
 
       setSelectedParcels((prev) => {
-        const exists = prev.findIndex((p) => p.section === section && p.numero === numero);
-        if (exists >= 0) return prev.filter((_, i) => i !== exists);
-        return [...prev, { section, numero }];
+        const alreadySelected = prev.some((p) => p.section === section && p.numero === numero);
+        if (singleCadastreSelection) return alreadySelected ? [] : [{ section, numero }];
+        return alreadySelected
+          ? prev.filter((p) => !(p.section === section && p.numero === numero))
+          : [...prev, { section, numero }];
       });
     };
 
@@ -205,7 +209,7 @@ export const MapLibre = ({
       map.off("click", handler);
       map.getCanvas().style.cursor = "";
     };
-  }, [mode]);
+  }, [mode, singleCadastreSelection]);
 
   const handleZoom = (direction: "in" | "out") => {
     const map = mapRef.current;
@@ -258,12 +262,6 @@ export const MapLibre = ({
   const handleValidateCadastre = () => {
     const refs = selectedParcels.map((p) => `${p.section} ${p.numero}`).join(";");
     onSaveReferenceCadastrale?.(refs);
-    setMode("move");
-  };
-
-  const handleActivateMove = () => {
-    if (mode === "pin") handleCancelPin();
-    if (mode === "cadastre") handleCancelCadastre();
     setMode("move");
   };
 
@@ -339,35 +337,31 @@ export const MapLibre = ({
 
       <Box position="absolute" top={8} right={8} zIndex={1} display="flex" flexDirection="row">
         {mode === "pin" ? (
-          <>
-            <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-fill" />
-            <CanvasButton
-              onClick={handleCancelPin}
-              title="Annuler le placement"
-              iconId="ri-close-line"
-              sx={{ marginLeft: "-1px" }}
-            />
-          </>
+          <CanvasButton onClick={handleValidatePin} title="Valider la nouvelle position" iconId="ri-check-fill">
+            Valider
+          </CanvasButton>
         ) : mode === "cadastre" ? (
-          <>
-            <CanvasButton
-              onClick={handleValidateCadastre}
-              title="Valider la sélection cadastrale"
-              iconId="ri-check-fill"
-            />
-            <CanvasButton
-              onClick={handleCancelCadastre}
-              title="Annuler la sélection"
-              iconId="ri-close-line"
-              sx={{ marginLeft: "-1px" }}
-            />
-          </>
+          <CanvasButton onClick={handleValidateCadastre} title="Valider la sélection cadastrale" iconId="ri-check-fill">
+            Valider
+          </CanvasButton>
         ) : (
           <CanvasButton onClick={onClose} title="Fermer le plan de situation" iconId="ri-close-line">
             Fermer
           </CanvasButton>
         )}
       </Box>
+
+      {mode === "pin" || mode === "cadastre" ? (
+        <Box position="absolute" top={8} left={8} zIndex={1}>
+          <CanvasButton
+            onClick={mode === "pin" ? handleCancelPin : handleCancelCadastre}
+            title={mode === "pin" ? "Annuler le placement" : "Annuler la sélection"}
+            iconId="ri-arrow-go-back-fill"
+          >
+            Annuler
+          </CanvasButton>
+        </Box>
+      ) : null}
 
       <Box ref={layerButtonRef} position="absolute" top={56} right={8} zIndex={1}>
         <CanvasButton
@@ -420,23 +414,16 @@ export const MapLibre = ({
 
       <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0}>
         <CanvasButton
-          onClick={handleActivateMove}
-          title="Déplacer la carte"
-          iconId="ri-drag-move-2-fill"
-          isSelected={mode === "move"}
+          onClick={handleActivateCadastre}
+          title="Sélectionner un cadastre"
+          iconId="ri-collage-fill"
+          isSelected={mode === "cadastre"}
         />
         <CanvasButton
           onClick={handleActivatePin}
           title="Placer le point de localisation"
           iconId="ri-map-pin-line"
           isSelected={mode === "pin"}
-          sx={{ marginLeft: "-1px" }}
-        />
-        <CanvasButton
-          onClick={handleActivateCadastre}
-          title="Sélectionner des cadastres"
-          iconId="ri-collage-fill"
-          isSelected={mode === "cadastre"}
           sx={{ marginLeft: "-1px" }}
         />
       </Box>

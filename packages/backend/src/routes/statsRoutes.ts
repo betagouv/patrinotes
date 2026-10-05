@@ -44,6 +44,9 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
             activeUsersInPeriod: Type.Number(),
             deployedUdapCount: Type.Number(),
             deployedCrmhCount: Type.Number(),
+            downloadedConstatsInPeriod: Type.Number(),
+            downloadedNotSentConstatsInPeriod: Type.Number(),
+            downloadTrackingSince: Type.Union([Type.String(), Type.Null()]),
             periodFrom: Type.String(),
             periodTo: Type.String(),
           }),
@@ -66,6 +69,8 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         activeUsersResult,
         deployedUdapResult,
         deployedCrmhResult,
+        downloadedConstatsResult,
+        downloadTrackingSinceResult,
       ] = await Promise.all([
         db
           .selectFrom("state_report")
@@ -159,6 +164,25 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           )
           .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
+
+        db
+          .selectFrom("constat_pdf_download")
+          .innerJoin("state_report", "state_report.id", "constat_pdf_download.state_report_id")
+          .where("state_report.disabled", "is not", true)
+          .where(sql`constat_pdf_download.created_at::date`, ">=", sql`${periodFrom}::date`)
+          .where(sql`constat_pdf_download.created_at::date`, "<=", sql`${periodTo}::date`)
+          .select([
+            sql<number>`COUNT(DISTINCT state_report.id)`.as("downloaded"),
+            sql<number>`COUNT(DISTINCT CASE WHEN state_report.attachment_id IS NULL THEN state_report.id END)`.as(
+              "downloadedNotSent",
+            ),
+          ])
+          .executeTakeFirst(),
+
+        db
+          .selectFrom("constat_pdf_download")
+          .select(sql<string | null>`MIN(created_at)::date::text`.as("since"))
+          .executeTakeFirst(),
       ]);
 
       return {
@@ -171,6 +195,9 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
         activeUsersInPeriod: Number(activeUsersResult?.count ?? 0),
         deployedUdapCount: Number(deployedUdapResult?.count ?? 0),
         deployedCrmhCount: Number(deployedCrmhResult?.count ?? 0),
+        downloadedConstatsInPeriod: Number(downloadedConstatsResult?.downloaded ?? 0),
+        downloadedNotSentConstatsInPeriod: Number(downloadedConstatsResult?.downloadedNotSent ?? 0),
+        downloadTrackingSince: downloadTrackingSinceResult?.since ?? null,
         periodFrom,
         periodTo,
       };
@@ -376,10 +403,13 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 serviceId: Type.String(),
                 serviceName: Type.Union([Type.String(), Type.Null()]),
                 sentConstats: Type.Number(),
+                downloadedConstats: Type.Number(),
+                usedConstats: Type.Number(),
                 totalConstats: Type.Number(),
               }),
             ),
             abandonedConstats: Type.Number(),
+            abandonedDownloadedConstats: Type.Number(),
             abandonedReports: Type.Number(),
             totalConstats: Type.Number(),
             totalReports: Type.Number(),
@@ -390,9 +420,12 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       preHandler: [authenticateAdmin],
     },
     async () => {
+      const hasDownload = sql<boolean>`EXISTS (SELECT 1 FROM constat_pdf_download cpd WHERE cpd.state_report_id = state_report.id)`;
+
       const [
         constatsByService,
         abandonedConstatsResult,
+        abandonedDownloadedConstatsResult,
         abandonedReportsResult,
         totalConstatsResult,
         totalReportsResult,
@@ -414,6 +447,10 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
             sql<number>`COUNT(DISTINCT CASE WHEN state_report.attachment_id IS NOT NULL THEN state_report.id END)`.as(
               "sentConstats",
             ),
+            sql<number>`COUNT(DISTINCT CASE WHEN ${hasDownload} THEN state_report.id END)`.as("downloadedConstats"),
+            sql<number>`COUNT(DISTINCT CASE WHEN state_report.attachment_id IS NOT NULL OR ${hasDownload} THEN state_report.id END)`.as(
+              "usedConstats",
+            ),
             db.fn.count<number>("state_report.id").distinct().as("totalConstats"),
           ])
           .execute(),
@@ -423,6 +460,15 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           .where("disabled", "is not", true)
           .where("created_at", "<", sql<string>`NOW() - INTERVAL '21 days'`)
           .where("attachment_id", "is", null)
+          .select(db.fn.countAll<number>().as("count"))
+          .executeTakeFirst(),
+
+        db
+          .selectFrom("state_report")
+          .where("disabled", "is not", true)
+          .where("created_at", "<", sql<string>`NOW() - INTERVAL '21 days'`)
+          .where("attachment_id", "is", null)
+          .where(hasDownload)
           .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
 
@@ -454,9 +500,12 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           serviceId: r.serviceId,
           serviceName: r.serviceName ?? null,
           sentConstats: Number(r.sentConstats),
+          downloadedConstats: Number(r.downloadedConstats),
+          usedConstats: Number(r.usedConstats),
           totalConstats: Number(r.totalConstats),
         })),
         abandonedConstats: Number(abandonedConstatsResult?.count ?? 0),
+        abandonedDownloadedConstats: Number(abandonedDownloadedConstatsResult?.count ?? 0),
         abandonedReports: Number(abandonedReportsResult?.count ?? 0),
         totalConstats: Number(totalConstatsResult?.count ?? 0),
         totalReports: Number(totalReportsResult?.count ?? 0),

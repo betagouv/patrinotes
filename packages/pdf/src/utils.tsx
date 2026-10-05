@@ -87,11 +87,22 @@ export const getIsAlertVisited = (alert: MinimalAlert): boolean => {
   return Boolean(hasAttachments || hasDescription);
 };
 
+const hasLocalisationPins = (raw: unknown): boolean => {
+  if (!raw || typeof raw !== "string") return false;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 export const getIsSectionVisited = (section: any) => {
   return (
     (section?.etat_general && section?.proportion_dans_cet_etat) ||
     section?.niveau_degradation ||
-    section?.attachments?.length
+    section?.attachments?.length ||
+    hasLocalisationPins(section?.localisation_pins)
   );
 };
 

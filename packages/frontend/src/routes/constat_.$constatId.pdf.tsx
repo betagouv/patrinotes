@@ -296,6 +296,10 @@ const ViewButtons = () => {
 
     a.click();
     URL.revokeObjectURL(url);
+
+    api
+      .post("/api/pdf/state-report/log-download", { body: { stateReportId: constatId } } as any)
+      .catch((e) => console.error(e));
   };
 
   const downloadLabel = getDownloadLabel(pdfSize);

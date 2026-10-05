@@ -1,7 +1,7 @@
 export const HomeImageSvg = () => (
   <svg
-    width="282"
-    height="247"
+    width="228"
+    height="200"
     viewBox="0 0 282 247"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"

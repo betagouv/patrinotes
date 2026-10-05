@@ -76,8 +76,8 @@ export const StateReportAlertObjetSectionForm = ({
   if (!objetsQuery.isLoading && objetsQuery.data?.length === 0) {
     return (
       <Stack>
-        <MenuTitle onClose={onClose} hideDivider>
-          <ModalBackButton onClick={onBack} />
+        <MenuTitle onClose={onClose} hideDivider leftButton={<ModalBackButton onClick={onBack} />}>
+          {null}
         </MenuTitle>
         <Center width="100%">
           <Alert
@@ -93,8 +93,8 @@ export const StateReportAlertObjetSectionForm = ({
 
   return (
     <Stack>
-      <MenuTitle onClose={onClose} hideDivider>
-        <ModalBackButton onClick={onBack} />
+      <MenuTitle onClose={onClose} hideDivider leftButton={<ModalBackButton onClick={onBack} />}>
+        {null}
       </MenuTitle>
 
       {objetsQuery.isLoading ? (

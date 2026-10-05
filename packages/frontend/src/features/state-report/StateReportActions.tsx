@@ -39,7 +39,7 @@ export const StateReportActions = forwardRef<HTMLDivElement, { report: StateRepo
   const downloadPdfMutation = useMutation({
     mutationFn: async () => {
       const buffer = (await api.get("/api/upload/attachment", {
-        query: { filePath: report.attachment_id! },
+        query: { filePath: report.attachment_id!, stateReportId: report.id },
       } as any)) as Blob;
 
       const name = getStateReportMailName(report);

@@ -25,6 +25,7 @@ export const Layout = ({ children }: PropsWithChildren) => {
       <SkipLinks
         links={[
           { label: "Contenu", anchor: "#content" },
+          { label: "Menu", anchor: "#header-menu" },
           { label: "Pied de page", anchor: "#fr-footer" },
         ]}
       />
@@ -196,6 +197,9 @@ const LoggedInHeader = () => {
 
   const serviceType = useServiceType();
 
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+
   return (
     <>
       {!isDesktop ? (
@@ -224,10 +228,7 @@ const LoggedInHeader = () => {
           ".fr-btns-group": {
             userSelect: "none !important",
           },
-          ".fr-header__service": {
-            padding: { xs: "0 !important", lg: "unset" },
-            margin: { xs: "0 !important", lg: "unset" },
-          },
+          ".fr-header__service": {},
         }}
         brandTop={
           <>
@@ -248,8 +249,11 @@ const LoggedInHeader = () => {
                 <StatusBadge />
               </Box>
             </Flex>
-          ) : null
+          ) : isHome ? (
+            "Patrinotes"
+          ) : undefined
         }
+        serviceTagline={isDesktop || isHome ? "Les outils du patrimoine en mobilité" : undefined}
         quickAccessItems={[
           {
             iconId: "fr-icon-account-circle-fill",
