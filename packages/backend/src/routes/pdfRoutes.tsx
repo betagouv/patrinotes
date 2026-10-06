@@ -88,6 +88,49 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
   );
 
+  fastify.post(
+    "/state-report/share-link",
+    {
+      schema: {
+        body: Type.Object({ stateReportId: Type.String(), pdfPath: Type.String() }),
+        response: { 200: Type.Object({ url: Type.String() }) },
+      },
+    },
+    async (request) => {
+      const { stateReportId, pdfPath } = request.body;
+
+      if (!pdfPath.startsWith(stateReportId + "/")) {
+        throw new AppError(400, "Chemin du PDF invalide");
+      }
+
+      const stateReport = await db
+        .selectFrom("state_report")
+        .where("id", "=", stateReportId)
+        .selectAll()
+        .executeTakeFirst();
+      if (!stateReport) throw new AppError(404, "Constat d'état non trouvé");
+
+      if (stateReport.service_id !== request.user!.service_id) {
+        const canAccess =
+          !!stateReport.reference_pop &&
+          (await request.services.stateReport.canServiceAccessMonument(
+            stateReport.reference_pop,
+            request.user!.service?.dept_numbers,
+          ));
+        if (!canAccess) throw new AppError(403, "Accès non autorisé à ce constat");
+      }
+
+      const url = await createAttachmentRedirection({
+        s3Key: "attachment/" + pdfPath,
+        createdBy: request.user!.id,
+        sentTo: "",
+        name: getStateReportMailName({ titre_edifice: stateReport.titre_edifice }),
+      });
+
+      return { url };
+    },
+  );
+
   fastify.post("/report", { schema: reportPdfTSchema }, async (request) => {
     const { reportId, pdfPath, pdfSize, recipients: rawRecipients } = request.body;
     const { service_id } = request.user!;

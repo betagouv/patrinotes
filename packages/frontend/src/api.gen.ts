@@ -280,6 +280,14 @@ export namespace Endpoints {
     };
     response: { ok: boolean };
   };
+  export type post_ApipdfstateReportshareLink = {
+    method: "POST";
+    path: "/api/pdf/state-report/share-link";
+    parameters: {
+      body: { stateReportId: string; pdfPath: string };
+    };
+    response: { url: string };
+  };
   export type post_Apipdfreport = {
     method: "POST";
     path: "/api/pdf/report";
@@ -714,6 +722,7 @@ export type EndpointByMethod = {
     "/api/reset-password": Endpoints.post_ApiresetPassword;
     "/api/pdf/report/upload-url": Endpoints.post_ApipdfreportuploadUrl;
     "/api/pdf/state-report/log-download": Endpoints.post_ApipdfstateReportlogDownload;
+    "/api/pdf/state-report/share-link": Endpoints.post_ApipdfstateReportshareLink;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
     "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;
