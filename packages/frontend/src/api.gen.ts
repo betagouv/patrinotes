@@ -280,6 +280,14 @@ export namespace Endpoints {
     };
     response: { ok: boolean };
   };
+  export type post_ApipdfstateReportshareLink = {
+    method: "POST";
+    path: "/api/pdf/state-report/share-link";
+    parameters: {
+      body: { stateReportId: string; pdfPath: string };
+    };
+    response: { url: string };
+  };
   export type post_Apipdfreport = {
     method: "POST";
     path: "/api/pdf/report";
@@ -353,6 +361,23 @@ export namespace Endpoints {
       dept_number?: string | Schemas.null | Array<string | Schemas.null> | undefined;
       label?: string | Schemas.null | Array<string | Schemas.null> | undefined;
       copyright?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+    }>;
+  };
+  export type get_ApistateReportprevious = {
+    method: "GET";
+    path: "/api/state-report/previous";
+    parameters: {
+      query: { referencePop: string };
+    };
+    response: Array<{
+      id: string;
+      created_at?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      nature_visite?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      redacted_by?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      titre_edifice?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      pdf_size?: number | Schemas.null | Array<number | Schemas.null> | undefined;
+      service_id?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      service_name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
     }>;
   };
   export type get_ApiconstatValidationToken = {
@@ -670,6 +695,7 @@ export type EndpointByMethod = {
     "/api/pdf/report": Endpoints.get_Apipdfreport;
     "/api/pdf/state-report": Endpoints.get_ApipdfstateReport;
     "/api/state-report/objets-images": Endpoints.get_ApistateReportobjetsImages;
+    "/api/state-report/previous": Endpoints.get_ApistateReportprevious;
     "/api/constat-validation/{token}": Endpoints.get_ApiconstatValidationToken;
     "/api/constat-validation/{token}/pdf": Endpoints.get_ApiconstatValidationTokenpdf;
     "/api/admin/me": Endpoints.get_Apiadminme;
@@ -696,6 +722,7 @@ export type EndpointByMethod = {
     "/api/reset-password": Endpoints.post_ApiresetPassword;
     "/api/pdf/report/upload-url": Endpoints.post_ApipdfreportuploadUrl;
     "/api/pdf/state-report/log-download": Endpoints.post_ApipdfstateReportlogDownload;
+    "/api/pdf/state-report/share-link": Endpoints.post_ApipdfstateReportshareLink;
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
     "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;

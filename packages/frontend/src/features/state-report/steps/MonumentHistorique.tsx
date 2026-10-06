@@ -8,10 +8,13 @@ import { PropsWithChildren, useState } from "react";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { ButtonsSwitch } from "../WithReferencePop";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../../api";
 import { db, useDbQuery } from "../../../db/db";
-import { PopImage, PopObjet, StateReport } from "../../../db/AppSchema";
+import { PopImage, PopObjet } from "../../../db/AppSchema";
+import { useIsOnline } from "../../../hooks/useIsOnline";
+import { downloadFile } from "../../../utils";
+import { getStateReportMailName } from "@patrinotes/pdf/constat";
 import { getRouteApi } from "@tanstack/react-router";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
@@ -262,9 +265,24 @@ export const MonumentHistorique = () => {
   );
 };
 
+type PreviousConstatRow = {
+  id: string;
+  created_at: string | null;
+  nature_visite: string | null;
+  redacted_by: string | null;
+  titre_edifice: string | null;
+  pdf_size: number | null;
+  service_name: string | null;
+  isLocal: boolean;
+};
+
 const PreviousConstats = ({ referencePop }: { referencePop: string }) => {
   const { constatId } = routeApi.useParams();
-  const constatsQuery = useDbQuery(
+  const isOnline = useIsOnline();
+
+  // Constats already synced to this device (own service). Source of truth when offline,
+  // and used to decide whether a constat can be opened in-app or must be downloaded.
+  const localQuery = useDbQuery(
     db
       .selectFrom("state_report")
       .selectAll()
@@ -276,10 +294,48 @@ const PreviousConstats = ({ referencePop }: { referencePop: string }) => {
     [referencePop],
   );
 
-  const constats = constatsQuery.data ?? [];
+  // Constats made on the same historic monument by any service sharing its department.
+  const remoteQuery = useQuery({
+    queryKey: ["previous-constats", referencePop],
+    queryFn: () => api.get("/api/state-report/previous", { query: { referencePop } }),
+    enabled: isOnline && !!referencePop && referencePop !== "CUSTOM",
+    retry: false,
+  });
 
   if (!referencePop || referencePop === "CUSTOM") return null;
-  if (!constats.length) return null;
+
+  const local = (localQuery.data ?? []).filter((c) => c.id !== constatId);
+  const localById = new Map(local.map((c) => [c.id, c]));
+  const remote = (remoteQuery.data ?? []).filter((c) => c.id !== constatId);
+  const remoteIds = new Set(remote.map((c) => c.id));
+
+  const rows: PreviousConstatRow[] = [
+    ...remote.map((c) => ({
+      id: c.id,
+      created_at: c.created_at,
+      nature_visite: c.nature_visite,
+      redacted_by: c.redacted_by,
+      titre_edifice: c.titre_edifice,
+      pdf_size: c.pdf_size,
+      service_name: c.service_name,
+      isLocal: localById.has(c.id),
+    })),
+    // keep local constats the backend didn't return (offline, or department mismatch)
+    ...local
+      .filter((c) => !remoteIds.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        created_at: c.created_at,
+        nature_visite: c.nature_visite,
+        redacted_by: c.redacted_by,
+        titre_edifice: c.titre_edifice,
+        pdf_size: c.pdf_size,
+        service_name: null,
+        isLocal: true,
+      })),
+  ].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+
+  if (!rows.length) return null;
 
   return (
     <Box mt="16px">
@@ -293,36 +349,76 @@ const PreviousConstats = ({ referencePop }: { referencePop: string }) => {
           },
         }}
       >
-        <PreviousConstatsList constats={constats} />
+        <PreviousConstatsList constats={rows} />
       </Accordion>
     </Box>
   );
 };
 
-const PreviousConstatsList = ({ constats }: { constats: StateReport[] }) => {
+const PreviousConstatsList = ({ constats }: { constats: PreviousConstatRow[] }) => {
+  const downloadMutation = useMutation({
+    mutationFn: async (constat: PreviousConstatRow) => {
+      const base64 = (await api.get("/api/pdf/state-report", {
+        query: { stateReportId: constat.id },
+      })) as string;
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      downloadFile(URL.createObjectURL(blob), getStateReportMailName({ titre_edifice: constat.titre_edifice ?? undefined }));
+    },
+  });
+
   return (
     <Stack gap="8px" px="16px">
-      {constats.map((constat, index) => (
-        <Stack key={constat.id}>
-          <Typography
-            component="a"
-            href={`/constat/${constat.id}/pdf`}
-            target="_blank"
-            rel="noopener external"
-            className="fr-link"
-            title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
-            sx={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
-          >
-            {new Date(constat.created_at!).toLocaleDateString("fr-FR")} - visite{" "}
-            {constat.nature_visite === "complète" ? "complète" : "partielle"}
-          </Typography>
-          <Typography mt="2px" color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
-            Par {constat.redacted_by}
-          </Typography>
+      {constats.map((constat, index) => {
+        const label = `${new Date(constat.created_at!).toLocaleDateString("fr-FR")} - visite ${
+          constat.nature_visite === "complète" ? "complète" : "partielle"
+        }`;
+        const isDownloading = downloadMutation.isPending && downloadMutation.variables?.id === constat.id;
 
-          {index !== constats.length - 1 ? <Divider my="8px" /> : null}
-        </Stack>
-      ))}
+        return (
+          <Stack key={constat.id}>
+            {constat.isLocal ? (
+              <Typography
+                component="a"
+                href={`/constat/${constat.id}/pdf`}
+                target="_blank"
+                rel="noopener external"
+                className="fr-link"
+                title="Ouvre le constat dans un nouvel onglet"
+                sx={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
+              >
+                {label}
+              </Typography>
+            ) : (
+              <Typography
+                component="a"
+                role="button"
+                href="#"
+                className="fr-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!downloadMutation.isPending) downloadMutation.mutate(constat);
+                }}
+                sx={{ textDecoration: "underline", textUnderlineOffset: "5px" }}
+              >
+                {label}
+                {isDownloading ? " (téléchargement…)" : " (PDF)"}
+              </Typography>
+            )}
+            <Typography mt="2px" color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
+              Par {constat.redacted_by}
+              {constat.service_name && !constat.isLocal ? ` — ${constat.service_name}` : ""}
+            </Typography>
+            {!constat.isLocal && downloadMutation.isError && downloadMutation.variables?.id === constat.id ? (
+              <Typography mt="2px" fontSize="12px" color={fr.colors.decisions.text.actionHigh.redMarianne.default}>
+                Le téléchargement a échoué, veuillez réessayer.
+              </Typography>
+            ) : null}
+
+            {index !== constats.length - 1 ? <Divider my="8px" /> : null}
+          </Stack>
+        );
+      })}
     </Stack>
   );
 };

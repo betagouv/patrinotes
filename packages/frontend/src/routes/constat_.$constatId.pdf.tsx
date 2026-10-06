@@ -1,6 +1,7 @@
 import { SimpleBanner } from "#components/Banner.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { Box, BoxProps, Dialog, Stack, styled, Typography } from "@mui/material";
+import { Box, BoxProps, Dialog, Popover, Portal, Stack, styled, Typography } from "@mui/material";
+import { MobileModalActions } from "#components/MobileModalActions.tsx";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createContext, ReactNode, useContext, useEffect, useId, useRef, useState } from "react";
 import {
@@ -44,7 +45,8 @@ import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 import { useSyncStream } from "@powersync/react";
 import { IconLink } from "#components/ui/IconLink.tsx";
 import { LinkButton } from "#components/ui/LinkButton.tsx";
-import { getDownloadLabel } from "../features/state-report/StateReportActions";
+import { formatSize, ReportAction } from "../features/state-report/StateReportActions";
+import { Divider } from "#components/ui/Divider.tsx";
 
 export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
@@ -302,36 +304,9 @@ const ViewButtons = () => {
       .catch((e) => console.error(e));
   };
 
-  const downloadLabel = getDownloadLabel(pdfSize);
-
   return (
     <Flex gap="8px" pr={{ xs: "0", lg: "16px" }} flexDirection={{ xs: "column-reverse", lg: "row" }} width="100%">
-      <Box
-        component="a"
-        // @ts-ignore
-        download="true"
-        href={pdfBlob ? pdfName : null}
-        className="fr-link fr-link--download"
-        onClick={(e) => {
-          e.preventDefault();
-          handleDownload();
-        }}
-        sx={{
-          borderBottom: "1px solid",
-          borderColor: pdfBlob
-            ? fr.colors.decisions.border.actionHigh.blueFrance.default
-            : fr.colors.decisions.text.disabled.grey.default,
-
-          whiteSpace: "nowrap",
-          alignSelf: "center",
-          "::after": {
-            verticalAlign: "middle !important",
-            marginBottom: "0 !important",
-          },
-        }}
-      >
-        {downloadLabel}
-      </Box>
+      <DownloadMenu pdfBlob={pdfBlob} pdfSize={pdfSize} onDownload={handleDownload} />
       {!isDisabled ? (
         <Button
           type="button"
@@ -356,6 +331,140 @@ const ViewButtons = () => {
     </Flex>
   );
 };
+
+const DownloadMenu = ({
+  pdfBlob,
+  pdfSize,
+  onDownload,
+}: {
+  pdfBlob: Blob | null | undefined;
+  pdfSize: number | null | undefined;
+  onDownload: () => void;
+}) => {
+  const { constatId } = Route.useParams();
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const menuId = useId();
+
+  // the uploaded link only reflects the blob it was created from, so cache it per blob
+  const shareLinkRef = useRef<{ blob: Blob; url: Promise<string> } | null>(null);
+
+  const getShareLink = (blob: Blob) => {
+    if (shareLinkRef.current?.blob === blob) return shareLinkRef.current.url;
+
+    const url = (async () => {
+      const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
+        body: { stateReportId: constatId },
+      });
+      await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+      const { url } = await api.post("/api/pdf/state-report/share-link", {
+        body: { stateReportId: constatId, pdfPath },
+      });
+      return url;
+    })();
+
+    shareLinkRef.current = { blob, url };
+    url.catch(() => {
+      if (shareLinkRef.current?.url === url) shareLinkRef.current = null;
+    });
+    return url;
+  };
+
+  const copyLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!pdfBlob) return;
+      const url = getShareLink(pdfBlob);
+
+      // Safari only allows clipboard writes synchronously within the user gesture,
+      // so hand it a pending ClipboardItem instead of awaiting the upload first
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "text/plain": url.then((u) => new Blob([u], { type: "text/plain" })) }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(await url);
+      }
+    },
+    onSuccess: () => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 3000);
+    },
+    onError: (e) => console.error(e),
+  });
+
+  const onClose = () => setAnchorEl(null);
+  const isOpen = Boolean(anchorEl);
+
+  const copyLabel = copyLinkMutation.isPending
+    ? "Génération du lien..."
+    : copyLinkMutation.isError
+      ? "Erreur, réessayer de copier le lien"
+      : isCopied
+        ? "Lien copié !"
+        : "Copier le lien de téléchargement";
+
+  const menuContent = (
+    <Flex bgcolor="#ECECFE" gap="0" flexDirection="column" role="menu">
+      <ReportAction
+        iconId={isCopied ? "ri-check-line" : "ri-link"}
+        label={copyLabel}
+        onClick={() => {
+          if (copyLinkMutation.isPending) return;
+          copyLinkMutation.mutate();
+        }}
+      />
+      <Divider height="1px" color="#DDD" />
+      <ReportAction
+        iconId="ri-download-line"
+        label={getMenuDownloadLabel(pdfSize ?? null)}
+        onClick={() => {
+          onDownload();
+          onClose();
+        }}
+      />
+    </Flex>
+  );
+
+  return (
+    <>
+      <Button
+        type="button"
+        priority="secondary"
+        iconId={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
+        iconPosition="right"
+        disabled={!pdfBlob}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? menuId : undefined}
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        sx={{ whiteSpace: "nowrap", justifyContent: "center", width: { xs: "100%", lg: "auto" } }}
+      >
+        Télécharger
+      </Button>
+      <Popover
+        id={menuId}
+        open={isOpen}
+        anchorEl={anchorEl}
+        onClose={onClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { sx: { mt: "4px" } } }}
+        sx={{ display: { xs: "none", lg: "block" } }}
+      >
+        {menuContent}
+      </Popover>
+      {isOpen ? (
+        // portal out of the page <form> so the menu buttons don't submit it
+        <Portal>
+          <MobileModalActions onClose={onClose}>{menuContent}</MobileModalActions>
+        </Portal>
+      ) : null}
+    </>
+  );
+};
+
+const getMenuDownloadLabel = (pdfSize: number | null) =>
+  pdfSize ? `Télécharger (PDF - ${formatSize(pdfSize)})` : "Télécharger (PDF)";
 
 type BannerProps = { content: () => ReactNode; buttons: () => ReactNode; alignTop?: boolean };
 const Banner = ({ content }: BannerProps) => {
