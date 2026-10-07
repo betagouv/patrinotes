@@ -3,7 +3,8 @@ import { BlobProvider } from "@react-pdf/renderer";
 import { JSX, useEffect, useMemo } from "react";
 import { useUser } from "../../../contexts/AuthContext";
 import { useHtmlString } from "./ConstatPdf.hook";
-import { Center } from "#components/MUIDsfr.tsx";
+import { Alert, Center } from "#components/MUIDsfr.tsx";
+import { useWatch } from "react-hook-form";
 import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Spinner } from "#components/Spinner.tsx";
 import { useSendConstatFormContext } from "./ConstatPdfContext";
@@ -28,6 +29,7 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
     <Center flexDirection="column">
       <Center width={{ xs: "100%", lg: "944px" }} flexDirection="column" marginBottom="96px">
         {step === "send" ? <AlertsReminder /> : null}
+        <PlanSituationOfflineAlert />
         <Box mt={{ xs: "16px", lg: "24px" }} px="8px">
           <BlobProvider document={document}>
             {({ blob, loading, error }) => {
@@ -51,6 +53,23 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
         </Box>
       </Center>
     </Center>
+  );
+};
+
+const PlanSituationOfflineAlert = () => {
+  const form = useSendConstatFormContext();
+  const planSituationOffline = useWatch({ control: form.control, name: "stateReport.planSituationOffline" });
+
+  if (!planSituationOffline) return null;
+
+  return (
+    <Box mt={{ xs: "16px", lg: "24px" }} px="8px" width="100%">
+      <Alert
+        severity="warning"
+        small
+        description="Le plan de situation n'a pas pu être généré car l'appareil est hors ligne. Reconnectez-vous à internet puis rouvrez ce constat pour l'inclure au PDF."
+      />
+    </Box>
   );
 };
 
