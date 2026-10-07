@@ -1,10 +1,9 @@
-import { Button, Input } from "#components/MUIDsfr.tsx";
-import { Flex } from "#components/ui/Flex.tsx";
 import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
-import { Box, Stack } from "@mui/material";
+import { Box } from "@mui/material";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { DictationTextArea } from "../../audio-record/DictationTextArea";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
@@ -32,26 +31,15 @@ export const SectionCommentaires = ({ form, name }: { form: AlertSectionsForm; n
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
 
   return (
-    <Stack>
-      <Input
-        sx={{ mt: "16px" }}
-        disabled={(isFormDisabled || isRecording) ?? false}
-        label="Commentaires"
-        textArea
-        nativeTextAreaProps={{ ...textAreaProps, rows: 5 }}
-      />
-      <Flex justifyContent="space-between" mt="-8px">
-        <Button
-          disabled={isFormDisabled}
-          type="button"
-          priority={isRecording ? "primary" : "tertiary"}
-          iconId="ri-mic-fill"
-          onClick={() => toggle()}
-        >
-          {isRecording ? <>En cours</> : <>Dicter</>}
-        </Button>
-      </Flex>
-    </Stack>
+    <DictationTextArea
+      sx={{ mt: "16px" }}
+      label="Commentaires"
+      disabled={(isFormDisabled || isRecording) ?? false}
+      isRecording={isRecording}
+      onToggleRecording={toggle}
+      isDictationDisabled={isFormDisabled}
+      nativeTextAreaProps={{ ...textAreaProps, rows: 5 }}
+    />
   );
 };
 

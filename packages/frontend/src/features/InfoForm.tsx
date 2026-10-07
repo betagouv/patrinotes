@@ -18,6 +18,7 @@ import { db, useDbQuery } from "../db/db";
 import { useIsFormDisabled } from "./DisabledContext";
 import { ServiceInstructeurSelect } from "./ServiceInstructeurSelect";
 import { useSpeechToTextV2 } from "./audio-record/SpeechRecorder.hook";
+import { DictationTextArea } from "./audio-record/DictationTextArea";
 import { PeopleList } from "./state-report/steps/ContexteVisite";
 
 export const InfoForm = () => {
@@ -246,24 +247,14 @@ const DescriptionInput = () => {
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
 
   return (
-    <Flex flexDirection="column">
-      <Input
-        sx={{ mt: "0", "& > textarea": { mt: "0 !important" } }}
-        disabled={(isFormDisabled || isRecording) ?? false}
-        label={"Description"}
-        textArea
-        nativeTextAreaProps={{ ...textAreaProps, rows: 5 }}
-      />
-      <Button
-        disabled={isFormDisabled}
-        type="button"
-        sx={{ mt: "-16px", mb: "24px", width: "fit-content" }}
-        priority={isRecording ? "primary" : "tertiary"}
-        iconId="ri-mic-fill"
-        onClick={() => toggle()}
-      >
-        {isRecording ? <>En cours</> : <>Dicter</>}
-      </Button>
-    </Flex>
+    <DictationTextArea
+      sx={{ mt: "0" }}
+      label="Description"
+      disabled={(isFormDisabled || isRecording) ?? false}
+      isRecording={isRecording}
+      onToggleRecording={toggle}
+      isDictationDisabled={isFormDisabled}
+      nativeTextAreaProps={{ ...textAreaProps, rows: 5 }}
+    />
   );
 };

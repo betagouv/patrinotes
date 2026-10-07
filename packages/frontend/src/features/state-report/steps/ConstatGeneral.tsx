@@ -1,4 +1,4 @@
-import { Alert, Button, Input } from "#components/MUIDsfr.tsx";
+import { Alert, Button } from "#components/MUIDsfr.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -15,6 +15,7 @@ import { useLiveUser } from "../../../contexts/AuthContext";
 import { attachmentQueue, db } from "../../../db/db";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { DictationTextArea } from "../../audio-record/DictationTextArea";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
@@ -116,28 +117,20 @@ const StateReportTextAreaWithSpeechToText = ({
 
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
   return (
-    <Flex flexDirection="column" {...props}>
-      <Input
-        sx={{ mb: "16px !important", "& > textarea": { mt: "0 !important" } }}
+    <Box {...props}>
+      <DictationTextArea
+        sx={{ mb: "0 !important" }}
+        label={label}
         disabled={isDisabled || isRecording}
-        label={<Box mb="8px">{label}</Box>}
-        textArea
+        isRecording={isRecording}
+        onToggleRecording={toggle}
+        hideDictationButton={isDisabled}
         nativeTextAreaProps={{
           ...textAreaProps,
           rows: 5,
         }}
       />
-      {isDisabled ? null : (
-        <Button
-          type="button"
-          priority={isDisabled || isRecording ? "primary" : "tertiary"}
-          iconId="ri-mic-fill"
-          onClick={() => toggle()}
-        >
-          {isRecording ? <>En cours</> : <>Dicter</>}
-        </Button>
-      )}
-    </Flex>
+    </Box>
   );
 };
 
@@ -535,30 +528,17 @@ const SectionCommentaire = ({
       };
 
   return (
-    <Box mb="24px" mt="16px">
-      <Input
-        sx={{
-          marginBottom: "16px !important",
-        }}
-        label="Commentaire"
-        disabled={isDisabled}
-        textArea
-        nativeTextAreaProps={{
-          rows: 4,
-          ...inputProps,
-        }}
-      />
-
-      {isDisabled ? null : (
-        <Button
-          type="button"
-          priority={isRecording ? "primary" : "tertiary"}
-          iconId="ri-mic-fill"
-          onClick={() => toggle()}
-        >
-          {isRecording ? <>En cours</> : <>Dicter</>}
-        </Button>
-      )}
-    </Box>
+    <DictationTextArea
+      sx={{ mt: "16px", mb: "24px !important" }}
+      label="Commentaire"
+      disabled={isDisabled}
+      isRecording={isRecording}
+      onToggleRecording={toggle}
+      hideDictationButton={isDisabled}
+      nativeTextAreaProps={{
+        rows: 4,
+        ...inputProps,
+      }}
+    />
   );
 };

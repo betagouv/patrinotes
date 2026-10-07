@@ -13,9 +13,10 @@ import { useUnsyncedReportAttachments } from "./upload/hooks/useUnsyncedReportAt
 import { Flex } from "#components/ui/Flex.tsx";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Box, Stack, Typography } from "@mui/material";
-import { Button, Center, Input } from "#components/MUIDsfr.tsx";
+import { Button, Center } from "#components/MUIDsfr.tsx";
 import { useStyles } from "tss-react";
 import { useSpeechToTextV2 } from "./audio-record/SpeechRecorder.hook";
+import { DictationTextArea } from "./audio-record/DictationTextArea";
 import { fr } from "@codegouvfr/react-dsfr";
 
 export const NotesForm = () => {
@@ -101,28 +102,18 @@ const PrecisionsTextArea = () => {
 
   const textAreaProps = isRecording ? isListeningProps : isIdleProps;
   return (
-    <Flex flexDirection="column">
-      <Input
-        sx={{ mt: "24px" }}
-        disabled={isFormDisabled || isRecording}
-        label={"Commentaire"}
-        textArea
-        nativeTextAreaProps={{
-          ...textAreaProps,
-          id: "precisions",
-          rows: 5,
-        }}
-      />
-      <Button
-        disabled={isFormDisabled}
-        type="button"
-        priority={isRecording ? "primary" : "tertiary"}
-        iconId="ri-mic-fill"
-        onClick={() => toggle()}
-        sx={{ mt: "-16px", mb: "8px", width: "fit-content" }}
-      >
-        {isRecording ? <>En cours</> : <>Dicter</>}
-      </Button>
-    </Flex>
+    <DictationTextArea
+      sx={{ mt: "24px" }}
+      label="Commentaire"
+      disabled={isFormDisabled || isRecording}
+      isRecording={isRecording}
+      onToggleRecording={toggle}
+      isDictationDisabled={isFormDisabled}
+      nativeTextAreaProps={{
+        ...textAreaProps,
+        id: "precisions",
+        rows: 5,
+      }}
+    />
   );
 };

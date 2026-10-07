@@ -17,6 +17,7 @@ import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
 import { defaultSections, serializePreconisations } from "@patrinotes/pdf/constat";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { DictationTextArea } from "../../audio-record/DictationTextArea";
 import { useIsStateReportDisabled, useStateReportVersion } from "../utils";
 import { SectionLocalisationModal } from "./SectionLocalisationModal";
 import { clearLocalisationData, isLocalisationAttachment } from "../localisationAttachment";
@@ -364,29 +365,19 @@ const SectionForm = ({
           />
         ) : null}
 
-        <Flex flexDirection="column" mb="24px">
-          <Input
-            sx={{ mb: "16px !important" }}
-            textArea
-            disabled={isDisabled || isRecording}
-            hintText="Cause(s) probable(s) des désordres, incidences sur d’autres éléments…"
-            label="Commentaires"
-            nativeTextAreaProps={{
-              rows: 6,
-              ...textAreaProps,
-            }}
-          />
-          {isDisabled ? null : (
-            <Button
-              type="button"
-              priority={isRecording ? "primary" : "tertiary"}
-              iconId="ri-mic-fill"
-              onClick={() => toggle()}
-            >
-              {isRecording ? <>En cours</> : <>Dicter</>}
-            </Button>
-          )}
-        </Flex>
+        <DictationTextArea
+          sx={{ mb: "24px !important" }}
+          label="Commentaires"
+          hintText="Cause(s) probable(s) des désordres, incidences sur d’autres éléments…"
+          disabled={isDisabled || isRecording}
+          isRecording={isRecording}
+          onToggleRecording={toggle}
+          hideDictationButton={isDisabled}
+          nativeTextAreaProps={{
+            rows: 6,
+            ...textAreaProps,
+          }}
+        />
         <SectionImageUpload section={visitedSection} isDisabled={isDisabled} />
 
         <Box mt="24px">

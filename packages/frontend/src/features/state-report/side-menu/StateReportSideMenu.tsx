@@ -1,10 +1,10 @@
-import { Button, Input } from "#components/MUIDsfr.tsx";
-import { Flex } from "#components/ui/Flex.tsx";
+import { Button } from "#components/MUIDsfr.tsx";
 import { Box, Drawer, Stack, Typography } from "@mui/material";
 import { getRouteApi } from "@tanstack/react-router";
 import { ReactNode, useState } from "react";
 import { UseFormReturn, useWatch } from "react-hook-form";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
+import { DictationTextArea } from "../../audio-record/DictationTextArea";
 import { MenuTitle } from "../../menu/MenuTitle";
 import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { StateReportAlertsMenu } from "../alerts/StateReportAlertsMenu";
@@ -116,29 +116,20 @@ const StateReportNotesMenu = ({ onClose }: StateReportAlertModalContentProps) =>
               ".fr-tile__content": { paddingBottom: "0 !important" },
             }}
           >
-            <Input
-              sx={{ width: "100%" }}
-              textArea
-              label=""
+            <DictationTextArea
+              sx={{ width: "100%", mb: "8px !important" }}
+              label="Notes"
+              hideLabel
+              disabled={(isFormDisabled || isRecording) ?? false}
+              isRecording={isRecording}
+              onToggleRecording={toggle}
+              isDictationDisabled={isFormDisabled}
               nativeTextAreaProps={{
                 ...textAreaProps,
                 rows: 10,
               }}
-              disabled={(isFormDisabled || isRecording) ?? false}
             />
-
-            <Flex justifyContent="space-between" alignItems="center" mt="-8px" width="100%">
-              <Button
-                disabled={isFormDisabled}
-                type="button"
-                priority={isRecording ? "primary" : "tertiary"}
-                iconId="ri-mic-fill"
-                onClick={() => toggle()}
-              >
-                {isRecording ? <>En cours</> : <>Dicter</>}
-              </Button>
-              <Typography fontSize="12px">Sauvegarde automatique.</Typography>
-            </Flex>
+            <Typography fontSize="12px">Sauvegarde automatique.</Typography>
           </Stack>
         </>
       )}
