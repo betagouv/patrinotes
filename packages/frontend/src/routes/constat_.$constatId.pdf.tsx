@@ -455,7 +455,16 @@ const SendBannerContent = () => {
       <Flex display={{ lg: "flex", xs: "none" }} flex="1" justifyContent="flex-end" alignItems="flex-start">
         <GoBackButton sx={{ mt: "0", mx: "16px" }} />
       </Flex>
-      <Flex width="100%" maxWidth="944px" flexDirection={{ xs: "column", lg: "column" }}>
+      <Flex
+        width="100%"
+        maxWidth="944px"
+        flexDirection={{ xs: "column", lg: "column" }}
+        sx={{
+          input: {
+            bgcolor: "white",
+          },
+        }}
+      >
         <EmailInput
           sx={{ width: "100%" }}
           label={

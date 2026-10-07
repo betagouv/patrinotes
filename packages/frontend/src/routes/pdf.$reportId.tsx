@@ -540,7 +540,18 @@ const EditBanner = ({
             </Flex>
 
             {isSend ? (
-              <Box width="100%" ml={{ xs: 0, lg: "16px" }} mr="16px" mt="16px" mb="16px">
+              <Box
+                width="100%"
+                ml={{ xs: 0, lg: "16px" }}
+                mr="16px"
+                mt="16px"
+                mb="16px"
+                sx={{
+                  input: {
+                    bgcolor: "white",
+                  },
+                }}
+              >
                 <EmailInput
                   value={recipients.split(",")}
                   onValueChange={(value) => form.setValue("recipients", value.join(","))}
