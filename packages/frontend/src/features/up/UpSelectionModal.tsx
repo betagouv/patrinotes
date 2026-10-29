@@ -3,17 +3,37 @@ import { fr } from "@codegouvfr/react-dsfr";
 import { ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { Alert, Button } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { ModalBackButton, ModalCloseButton } from "../menu/MenuTitle";
-import { getUpLevel, getUpRoot, type UnitePatrimoniale, type UpLevel, type UpSelection, type UpTree } from "./upApi";
+import { ModalCloseButton } from "../menu/MenuTitle";
+import { getUpRoot, type UnitePatrimoniale, type UpCheminItem, type UpSelection, type UpTree } from "./upApi";
 
 const WHOLE = "__whole__";
 const ALREADY_IN_RAPPORT = "Déjà constatée dans ce rapport";
 
-type Selected = { up: UnitePatrimoniale | null; chemin: UpSelection["chemin"] };
+/** An UP of the monument with its ancestors below the root. */
+type FlatUp = { up: UnitePatrimoniale; chemin: UpCheminItem[] };
+
+/** Every UP below the monument root, depth-first: each UP is followed by its own sub-UP. */
+const flattenUpTree = (tree: UpTree): FlatUp[] => {
+  const byId = new Map(tree.ups.map((up) => [up.id, up]));
+  const result: FlatUp[] = [];
+  const seen = new Set<string>([tree.rootId]);
+  const visit = (parent: UnitePatrimoniale, chemin: UpCheminItem[]) => {
+    for (const childId of parent.enfantsIds) {
+      const child = byId.get(childId);
+      if (!child || seen.has(child.id)) continue;
+      seen.add(child.id);
+      result.push({ up: child, chemin });
+      visit(child, [...chemin, { id: child.id, intitule: child.intitule }]);
+    }
+  };
+  const root = byId.get(tree.rootId);
+  if (root) visit(root, []);
+  return result;
+};
 
 /**
  * "Pour quelle partie du monument … souhaitez-vous réaliser un constat ?"
- * Lets the user pick the whole monument or one unité patrimoniale, browsing the hierarchy one level at a time.
+ * Lets the user pick the whole monument or any unité patrimoniale, all levels listed one under the other.
  */
 export const UpSelectionModal = ({
   open,
@@ -49,44 +69,25 @@ export const UpSelectionModal = ({
   onConfirm: (selection: UpSelection) => void;
 }) => {
   const groupName = useId();
-  const rootLevel = useMemo(() => getUpLevel(tree, tree.rootId), [tree]);
+  const allUps = useMemo(() => flattenUpTree(tree), [tree]);
+  // an UP already in the rapport cannot be chosen again
+  const visibleUps = allUps.filter(({ up }) => !excludedUpIds?.has(up.id));
 
-  const [stack, setStack] = useState<UpLevel[]>([rootLevel]);
-  const [selected, setSelected] = useState<Selected | undefined>(undefined);
+  /** WHOLE, or the id of the chosen UP */
+  const [selected, setSelected] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!open) return;
-    setStack([rootLevel]);
-    // null = whole monument; an UP below the root level is not pre-selected (it is not visible here)
-    if (initialUpId === null) setSelected(excludedUpIds?.has(null) ? undefined : { up: null, chemin: [] });
-    else {
-      const initial = initialUpId ? rootLevel.enfants.find((e) => e.id === initialUpId) : undefined;
-      setSelected(initial ? { up: initial, chemin: [] } : undefined);
-    }
-  }, [open, rootLevel, initialUpId]);
-
-  const isRoot = stack.length === 1;
-  const current = stack[stack.length - 1]!;
-  // ancestors below the monument root, up to and including the current level's parent
-  const cheminToCurrent = stack.slice(1).map((level) => ({ id: level.parent.id, intitule: level.parent.intitule }));
-
-  // the radio value of the current level's "ensemble" option: the whole monument at root, the current UP below
-  const wholeUp = isRoot ? null : current.parent;
-  const selectedValue =
-    selected === undefined ? undefined : selected.up === null ? (isRoot ? WHOLE : undefined) : selected.up.id;
-  const wholeChecked = isRoot ? selectedValue === WHOLE : selectedValue === wholeUp?.id;
-
-  const selectWhole = () => setSelected({ up: wholeUp, chemin: cheminToCurrent.slice(0, -1) });
-  const selectChild = (up: UnitePatrimoniale) => setSelected({ up, chemin: cheminToCurrent });
-
-  // an UP already in the rapport is hidden, unless its sub-UP can still be chosen
-  const visibleEnfants = current.enfants.filter((up) => !excludedUpIds?.has(up.id) || up.enfantsIds.length > 0);
-
-  const openChild = (up: UnitePatrimoniale) => setStack((st) => [...st, getUpLevel(tree, up.id)]);
+    if (initialUpId === null) setSelected(excludedUpIds?.has(null) ? undefined : WHOLE);
+    else setSelected(initialUpId && visibleUps.some(({ up }) => up.id === initialUpId) ? initialUpId : undefined);
+  }, [open, allUps, initialUpId]);
 
   const confirm = () => {
     if (!selected) return;
-    onConfirm({ up: selected.up, chemin: selected.chemin, monument: getUpRoot(tree) });
+    const monument = getUpRoot(tree);
+    if (selected === WHOLE) return onConfirm({ up: null, chemin: [], monument });
+    const choice = allUps.find(({ up }) => up.id === selected);
+    if (choice) onConfirm({ up: choice.up, chemin: choice.chemin, monument });
   };
 
   return (
@@ -110,83 +111,74 @@ export const UpSelectionModal = ({
           {title}
         </DialogTitle>
 
-        {isRoot ? (
-          <>
-            {showIntro ? (
-              <Alert
-                severity="info"
-                small
-                sx={{ mb: "24px" }}
-                description={
-                  <>
-                    Vous pouvez réaliser un constat pour l’ensemble du monument ou pour ses unités patrimoniales (UP).
-                    <br />
-                    Les constats de chaque UP pourront ensuite être réunis dans un même rapport.
-                  </>
-                }
-              />
-            ) : null}
-            {currentUpLabel ? (
-              <Typography mb="16px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
-                Partie actuellement sélectionnée : {currentUpLabel}
-              </Typography>
-            ) : null}
-            <Typography mb="24px">
-              {question ?? (
-                <>
-                  Pour quelle partie du monument <b>{monumentTitle}</b> souhaitez-vous réaliser un constat ?
-                </>
-              )}
-            </Typography>
-          </>
-        ) : (
-          <>
-            <Box mb="16px" ml="-12px">
-              <ModalBackButton onClick={() => setStack((s) => s.slice(0, -1))} />
-            </Box>
-            <Typography fontWeight="bold" mb="24px">
-              {current.parent.intitule}
-            </Typography>
-          </>
-        )}
+        {showIntro ? (
+          <Alert
+            severity="info"
+            small
+            sx={{ mb: "24px" }}
+            description={
+              <>
+                Vous pouvez réaliser un constat pour l’ensemble du monument ou pour ses unités patrimoniales (UP).
+                <br />
+                Les constats de chaque UP pourront ensuite être réunis dans un même rapport.
+              </>
+            }
+          />
+        ) : null}
+        {currentUpLabel ? (
+          <Typography mb="16px" fontSize="14px" color={fr.colors.decisions.text.mention.grey.default}>
+            Partie actuellement sélectionnée : {currentUpLabel}
+          </Typography>
+        ) : null}
+        <Typography mb="24px">
+          {question ?? (
+            <>
+              Pour quelle partie du monument <b>{monumentTitle}</b> souhaitez-vous réaliser un constat ?
+            </>
+          )}
+        </Typography>
 
         <Box component="fieldset" display="block" border="0" p="0" m="0" minWidth="0">
           <legend className="fr-sr-only">Partie du monument concernée par le constat</legend>
           <RadioRow
             name={groupName}
-            id={`${groupName}-whole-${current.parent.id}`}
-            label={isRoot ? "Ensemble du monument" : "Ensemble de l’UP"}
-            checked={wholeChecked}
-            onSelect={selectWhole}
-            disabledHint={excludedUpIds?.has(wholeUp?.id ?? null) ? ALREADY_IN_RAPPORT : undefined}
+            id={`${groupName}-whole`}
+            label="Ensemble du monument"
+            checked={selected === WHOLE}
+            onSelect={() => setSelected(WHOLE)}
+            disabledHint={excludedUpIds?.has(null) ? ALREADY_IN_RAPPORT : undefined}
           />
 
-          <Typography mt="24px" mb="8px" color={fr.colors.decisions.text.mention.grey.default}>
-            UP de niveau inférieur :
-          </Typography>
+          {visibleUps.length ? (
+            <>
+              <Typography mt="20px" mb="12px" color={fr.colors.decisions.text.mention.grey.default}>
+                UP de niveau inférieur :
+              </Typography>
 
-          <Box component="ul" p="0" m="0" sx={{ listStyle: "none" }}>
-            {visibleEnfants.map((up) => (
               <Box
-                component="li"
-                key={up.id}
-                borderTop={`1px solid ${fr.colors.decisions.border.default.grey.default}`}
-                sx={{
-                  "&:last-of-type": { borderBottom: `1px solid ${fr.colors.decisions.border.default.grey.default}` },
-                }}
+                component="ul"
+                p="0"
+                m="0"
+                display="flex"
+                flexDirection="column"
+                gap="14px"
+                sx={{ listStyle: "none" }}
               >
-                <RadioRow
-                  name={groupName}
-                  id={`${groupName}-${up.id}`}
-                  label={up.intitule}
-                  checked={selectedValue === up.id}
-                  onSelect={() => selectChild(up)}
-                  onOpen={up.enfantsIds.length ? () => openChild(up) : undefined}
-                  disabledHint={excludedUpIds?.has(up.id) ? ALREADY_IN_RAPPORT : undefined}
-                />
+                {visibleUps.map(({ up, chemin }) => (
+                  <Box component="li" key={up.id} p="0" m="0">
+                    <RadioRow
+                      name={groupName}
+                      id={`${groupName}-${up.id}`}
+                      label={up.intitule}
+                      hint={chemin.length ? chemin.map((c) => c.intitule).join(" › ") : undefined}
+                      checked={selected === up.id}
+                      onSelect={() => setSelected(up.id)}
+                    />
+                  </Box>
+                ))}
               </Box>
-            ))}
-          </Box>
+            </>
+          ) : null}
         </Box>
 
         <Flex
@@ -212,43 +204,33 @@ const RadioRow = ({
   name,
   id,
   label,
+  hint,
   checked,
   onSelect,
-  onOpen,
   disabledHint,
 }: {
   name: string;
   id: string;
   label: string;
+  /** e.g. the parent UP of a sub-UP */
+  hint?: string;
   checked: boolean;
   onSelect: () => void;
-  onOpen?: () => void;
   /** the option cannot be chosen; the hint says why */
   disabledHint?: string;
 }) => (
-  <Flex alignItems="center" justifyContent="space-between" gap="8px" py="12px" width="100%">
-    <div className="fr-radio-group" style={{ flex: 1 }}>
-      <input
-        type="radio"
-        id={id}
-        name={name}
-        checked={checked && !disabledHint}
-        disabled={!!disabledHint}
-        onChange={onSelect}
-      />
-      <label className="fr-label" htmlFor={id}>
-        {label}
-        {disabledHint ? <span className="fr-hint-text">{disabledHint}</span> : null}
-      </label>
-    </div>
-    {onOpen ? (
-      <button
-        type="button"
-        className={fr.cx("fr-btn", "fr-btn--tertiary-no-outline", "fr-btn--sm", "fr-icon-arrow-right-s-line")}
-        title={`Voir les UP de niveau inférieur de ${label}`}
-        aria-label={`Voir les UP de niveau inférieur de ${label}`}
-        onClick={onOpen}
-      />
-    ) : null}
-  </Flex>
+  <div className="fr-radio-group" style={{ margin: 0 }}>
+    <input
+      type="radio"
+      id={id}
+      name={name}
+      checked={checked && !disabledHint}
+      disabled={!!disabledHint}
+      onChange={onSelect}
+    />
+    <label className="fr-label" htmlFor={id}>
+      {label}
+      {disabledHint || hint ? <span className="fr-hint-text">{disabledHint ?? hint}</span> : null}
+    </label>
+  </div>
 );
