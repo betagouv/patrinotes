@@ -1,4 +1,4 @@
-import { ofetch } from "ofetch";
+import { FetchError, ofetch } from "ofetch";
 import { ENV } from "../../envVars";
 import { makeDebug } from "../debug";
 import type { RawUpDocument } from "./upTypes";
@@ -29,14 +29,24 @@ export class DataspaceUpProvider implements UpProvider {
 
   private async query(filter: Record<string, unknown>) {
     debug("POST", this.url, JSON.stringify(filter));
-    const result = await ofetch<RawUpDocument[]>(this.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apiKey: this.apiKey },
-      body: filter,
-      timeout: 15_000,
-      retry: 1,
-    });
-    return Array.isArray(result) ? result : [];
+    const start = Date.now();
+    try {
+      const result = await ofetch<RawUpDocument[]>(this.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apiKey: this.apiKey },
+        body: filter,
+        // Usually under a second; a timed-out request is retried once (an occasional cold start took over 15s).
+        timeout: 5_000,
+        retry: 1,
+      });
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      // The API answers 404 instead of an empty array when no document matches.
+      if (error instanceof FetchError && error.statusCode === 404) return [];
+      throw error;
+    } finally {
+      debug(`answered in ${Date.now() - start}ms`);
+    }
   }
 
   findByReferenceMerimee(reference: string) {
