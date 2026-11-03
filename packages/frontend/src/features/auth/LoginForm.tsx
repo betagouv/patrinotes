@@ -1,108 +1,52 @@
-import { Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { ProConnectButton } from "@codegouvfr/react-dsfr/ProConnectButton";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
 import { InputGroup } from "#components/InputGroup.tsx";
-import { PasswordInput } from "#components/PasswordInput.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
-import { unauthenticatedApi, getErrorMessage, RouterInputs, AuthUser } from "../../api";
-import { useAuthContext } from "../../contexts/AuthContext";
+import { unauthenticatedApi, getErrorMessage } from "../../api";
 import { Alert, Input } from "#components/MUIDsfr.tsx";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";
-import { useStyles } from "tss-react";
-import { searchStore } from "#components/SearchModal.tsx";
+import { startProConnectSignIn, useApplySignInResult } from "./signIn";
 
 export const LoginForm = () => {
-  const { auth, setAuth } = useAuthContext();
-  const form = useForm<LoginFormProps>();
-  const { cx, css } = useStyles();
+  const [email, setEmail] = useState<string | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: (body: LoginFormProps) => unauthenticatedApi.post("/api/login-user", { body }),
+  const configQuery = useQuery({
+    queryKey: ["auth-config"],
+    queryFn: () => unauthenticatedApi.get("/api/auth/config"),
+    staleTime: Infinity,
   });
 
-  const navigate = useNavigate();
-
-  const login = async (values: LoginFormProps) => {
-    const response = await mutation.mutateAsync(values);
-    localStorage.setItem("crvif/version", "1");
-    localStorage.removeItem("crvif/update-popup");
-    setAuth(response as any);
-
-    searchStore.send({ type: "setScope", scope: "my" });
-    searchStore.send({ type: "setDocument", document: "constats" });
-
-    navigate({ to: "/", search: { document: "constats" } });
-  };
-
-  const { error: mutationError } = mutation;
-  const { errors: formErrors } = form.formState;
+  const proConnectMutation = useMutation({ mutationFn: startProConnectSignIn });
 
   return (
     <Flex flexDirection={{ xs: "column", lg: "row" }} gap="16px">
-      <form onSubmit={form.handleSubmit(login)} style={{ flex: 1 }}>
-        {mutationError ? (
-          <Alert
-            sx={{ mb: "1.5rem" }}
-            severity="error"
-            title={<Typography fontWeight="regular">{getErrorMessage(mutationError)}</Typography>}
-          />
+      <Box flex={1}>
+        {configQuery.data?.proconnect ? (
+          <>
+            {proConnectMutation.error ? (
+              <Alert
+                sx={{ mb: "1.5rem" }}
+                severity="error"
+                title={<Typography fontWeight="regular">{getErrorMessage(proConnectMutation.error)}</Typography>}
+              />
+            ) : null}
+            <Typography fontSize="14px" mb="16px">
+              Connectez-vous avec votre compte professionnel :
+            </Typography>
+            <ProConnectButton onClick={() => proConnectMutation.mutate()} />
+
+            <Divider sx={{ my: "32px", fontSize: "14px", color: fr.colors.decisions.text.mention.grey.default }}>
+              ou
+            </Divider>
+          </>
         ) : null}
 
-        <InputGroup state={mutationError ? "error" : undefined}>
-          <Input
-            label="Courriel"
-            hintText="prenom.nom@culture.gouv.fr"
-            nativeInputProps={{
-              type: "email",
-              autoComplete: "username",
-              ...form.register("email", {
-                required: "Le courriel est requis",
-                pattern: {
-                  value: /\S+@\S+\.\S+/,
-                  message: "Le courriel n'est pas valide",
-                },
-              }),
-            }}
-            state={formErrors.email ? "error" : undefined}
-            stateRelatedMessage={formErrors.email?.message as string}
-          />
-          <PasswordInput
-            state={formErrors?.password ? "error" : undefined}
-            nativeInputProps={{
-              autoComplete: "current-password",
-              ...form.register("password", {
-                required: "Le mot de passe est requis",
-              }),
-            }}
-          />
-        </InputGroup>
-
-        <Box color={fr.colors.decisions.text.actionHigh.blueFrance.default}>
-          <Link
-            className="fr-link"
-            style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}
-            to="/reset-password"
-          >
-            Mot de passe oublié
-          </Link>
-        </Box>
-
-        <FullWidthButton
-          style={{
-            marginTop: "1.5rem",
-          }}
-          size="large"
-          type="submit"
-          nativeButtonProps={{ type: "submit" }}
-          onClick={form.handleSubmit(login)}
-          disabled={mutation.isPending}
-        >
-          Se connecter
-        </FullWidthButton>
-      </form>
+        {email ? <CodeStep email={email} onChangeEmail={() => setEmail(null)} /> : <EmailStep onSent={setEmail} />}
+      </Box>
 
       <Divider
         orientation="vertical"
@@ -122,12 +66,9 @@ export const LoginForm = () => {
         </Typography>
 
         <Typography fontSize="14px">
-          Pour accéder au service, vous devez d'abord vous inscrire en renseignant vos informations :
+          Connectez-vous de la même façon : votre compte est créé lors de votre première connexion, une fois votre
+          fonction et votre service renseignés.
         </Typography>
-
-        <FullWidthButton size="large" linkProps={{ to: "/inscription" }} priority="secondary">
-          Créer un compte
-        </FullWidthButton>
 
         <Typography fontSize="14px">
           Besoin d'aide ? Contactez l'équipe à{" "}
@@ -152,4 +93,141 @@ export const LoginForm = () => {
   );
 };
 
-export type LoginFormProps = RouterInputs<"/api/login-user">["body"];
+const EmailStep = ({ onSent }: { onSent: (email: string) => void }) => {
+  const form = useForm<{ email: string }>();
+
+  const mutation = useMutation({
+    mutationFn: (body: { email: string }) => unauthenticatedApi.post("/api/auth/magic-link", { body }),
+    onSuccess: (_, body) => onSent(body.email.trim()),
+  });
+
+  const { errors: formErrors } = form.formState;
+
+  return (
+    <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
+      {mutation.error ? (
+        <Alert
+          sx={{ mb: "1.5rem" }}
+          severity="error"
+          title={<Typography fontWeight="regular">{getErrorMessage(mutation.error)}</Typography>}
+        />
+      ) : null}
+
+      <Typography fontSize="14px" mb="16px">
+        Recevez par courriel un lien et un code de connexion :
+      </Typography>
+
+      <InputGroup state={mutation.error ? "error" : undefined}>
+        <Input
+          label="Courriel professionnel"
+          hintText="prenom.nom@culture.gouv.fr"
+          nativeInputProps={{
+            type: "email",
+            autoComplete: "username",
+            ...form.register("email", {
+              required: "Le courriel est requis",
+              pattern: {
+                value: /\S+@\S+\.\S+/,
+                message: "Le courriel n'est pas valide",
+              },
+            }),
+          }}
+          state={formErrors.email ? "error" : undefined}
+          stateRelatedMessage={formErrors.email?.message as string}
+        />
+      </InputGroup>
+
+      <FullWidthButton
+        style={{ marginTop: "1.5rem" }}
+        size="large"
+        type="submit"
+        nativeButtonProps={{ type: "submit" }}
+        disabled={mutation.isPending}
+      >
+        Recevoir un lien de connexion
+      </FullWidthButton>
+    </form>
+  );
+};
+
+const CodeStep = ({ email, onChangeEmail }: { email: string; onChangeEmail: () => void }) => {
+  const form = useForm<{ code: string }>();
+  const applySignInResult = useApplySignInResult();
+
+  const verifyMutation = useMutation({
+    mutationFn: (code: string) => unauthenticatedApi.post("/api/auth/magic-link/verify", { body: { email, code } }),
+    onSuccess: applySignInResult,
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: () => unauthenticatedApi.post("/api/auth/magic-link", { body: { email } }),
+  });
+
+  const error = verifyMutation.error ?? resendMutation.error;
+  const { errors: formErrors } = form.formState;
+
+  return (
+    <form onSubmit={form.handleSubmit((values) => verifyMutation.mutate(values.code))}>
+      {error ? (
+        <Alert
+          sx={{ mb: "1.5rem" }}
+          severity="error"
+          title={<Typography fontWeight="regular">{getErrorMessage(error)}</Typography>}
+        />
+      ) : resendMutation.isSuccess ? (
+        <Alert
+          sx={{ mb: "1.5rem" }}
+          severity="success"
+          title={<Typography fontWeight="regular">Un nouveau courriel vous a été envoyé.</Typography>}
+        />
+      ) : null}
+
+      <Typography fontSize="14px" mb="16px">
+        Un courriel a été envoyé à <strong>{email}</strong>. Cliquez sur le lien qu'il contient, ou saisissez ici le
+        code à 6 chiffres. Il est valable 15 minutes.
+      </Typography>
+
+      <InputGroup state={verifyMutation.error ? "error" : undefined}>
+        <Input
+          label="Code de connexion"
+          nativeInputProps={{
+            inputMode: "numeric",
+            autoComplete: "one-time-code",
+            autoFocus: true,
+            maxLength: 7,
+            ...form.register("code", {
+              required: "Le code est requis",
+              pattern: { value: /^\s*\d{3}\s?\d{3}\s*$/, message: "Le code contient 6 chiffres" },
+            }),
+          }}
+          state={formErrors.code ? "error" : undefined}
+          stateRelatedMessage={formErrors.code?.message as string}
+        />
+      </InputGroup>
+
+      <FullWidthButton
+        style={{ marginTop: "1.5rem" }}
+        size="large"
+        type="submit"
+        nativeButtonProps={{ type: "submit" }}
+        disabled={verifyMutation.isPending}
+      >
+        Se connecter
+      </FullWidthButton>
+
+      <Flex gap="24px" mt="16px" flexWrap="wrap">
+        <button
+          type="button"
+          className="fr-link"
+          disabled={resendMutation.isPending}
+          onClick={() => resendMutation.mutate()}
+        >
+          Renvoyer un code
+        </button>
+        <button type="button" className="fr-link" onClick={onChangeEmail}>
+          Changer de courriel
+        </button>
+      </Flex>
+    </form>
+  );
+};

@@ -12,52 +12,409 @@ export namespace Endpoints {
     parameters: never;
     response: unknown;
   };
-  export type post_Apiauthenticate = {
+  export type get_Apiauthconfig = {
+    method: "GET";
+    path: "/api/auth/config";
+    parameters: never;
+    response: { proconnect: boolean };
+  };
+  export type get_Apiauthproconnectauthorize = {
+    method: "GET";
+    path: "/api/auth/proconnect/authorize";
+    parameters: never;
+    response: { url: string; state: string };
+  };
+  export type post_Apiauthproconnectcallback = {
     method: "POST";
-    path: "/api/authenticate";
+    path: "/api/auth/proconnect/callback";
     parameters: {
-      body: { code: string };
+      body: { code: string; state: string };
     };
-    response: {
-      tokens: {
-        access_token: string;
-        expires_in: string;
-        refresh_token: string;
-        refresh_expires_in: string;
-        token_type: string;
-        session_state: string;
-        scope: string;
-        id_token: string;
-      };
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
+    response:
+      | {
+          status: "logged-in";
+          user: {
+            id: string;
+            name: string;
+            service_id: string;
+            service: {
+              id: string;
+              department: string;
+              completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+              name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            };
+            job: string | Schemas.null | Array<string | Schemas.null>;
+          };
+          accessToken: string;
+          refreshToken: string;
+          expiresAt: string;
+        }
+      | {
+          status: "signup-required";
+          signupToken: string;
+          email: string;
+          givenName: string | Schemas.null | Array<string | Schemas.null>;
+          usualName: string | Schemas.null | Array<string | Schemas.null>;
+          provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+          canCreateAccount: boolean;
+        }
+      | Array<
+          | {
+              status: "logged-in";
+              user: {
+                id: string;
+                name: string;
+                service_id: string;
+                service: {
+                  id: string;
+                  department: string;
+                  completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                  name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                };
+                job: string | Schemas.null | Array<string | Schemas.null>;
+              };
+              accessToken: string;
+              refreshToken: string;
+              expiresAt: string;
+            }
+          | {
+              status: "signup-required";
+              signupToken: string;
+              email: string;
+              givenName: string | Schemas.null | Array<string | Schemas.null>;
+              usualName: string | Schemas.null | Array<string | Schemas.null>;
+              provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+              canCreateAccount: boolean;
+            }
+        >;
+  };
+  export type post_ApiauthmagicLink = {
+    method: "POST";
+    path: "/api/auth/magic-link";
+    parameters: {
+      body: { email: string };
     };
+    response: { message: string };
+  };
+  export type post_ApiauthmagicLinkverify = {
+    method: "POST";
+    path: "/api/auth/magic-link/verify";
+    parameters: {
+      body: Partial<{ token: string; email: string; code: string }>;
+    };
+    response:
+      | {
+          status: "logged-in";
+          user: {
+            id: string;
+            name: string;
+            service_id: string;
+            service: {
+              id: string;
+              department: string;
+              completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+              name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            };
+            job: string | Schemas.null | Array<string | Schemas.null>;
+          };
+          accessToken: string;
+          refreshToken: string;
+          expiresAt: string;
+        }
+      | {
+          status: "signup-required";
+          signupToken: string;
+          email: string;
+          givenName: string | Schemas.null | Array<string | Schemas.null>;
+          usualName: string | Schemas.null | Array<string | Schemas.null>;
+          provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+          canCreateAccount: boolean;
+        }
+      | Array<
+          | {
+              status: "logged-in";
+              user: {
+                id: string;
+                name: string;
+                service_id: string;
+                service: {
+                  id: string;
+                  department: string;
+                  completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                  name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                };
+                job: string | Schemas.null | Array<string | Schemas.null>;
+              };
+              accessToken: string;
+              refreshToken: string;
+              expiresAt: string;
+            }
+          | {
+              status: "signup-required";
+              signupToken: string;
+              email: string;
+              givenName: string | Schemas.null | Array<string | Schemas.null>;
+              usualName: string | Schemas.null | Array<string | Schemas.null>;
+              provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+              canCreateAccount: boolean;
+            }
+        >;
+  };
+  export type post_ApiauthlinkAccount = {
+    method: "POST";
+    path: "/api/auth/link-account";
+    parameters: {
+      body: { signupToken: string; email: string; code: string };
+    };
+    response:
+      | {
+          status: "logged-in";
+          user: {
+            id: string;
+            name: string;
+            service_id: string;
+            service: {
+              id: string;
+              department: string;
+              completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+              name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            };
+            job: string | Schemas.null | Array<string | Schemas.null>;
+          };
+          accessToken: string;
+          refreshToken: string;
+          expiresAt: string;
+        }
+      | {
+          status: "signup-required";
+          signupToken: string;
+          email: string;
+          givenName: string | Schemas.null | Array<string | Schemas.null>;
+          usualName: string | Schemas.null | Array<string | Schemas.null>;
+          provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+          canCreateAccount: boolean;
+        }
+      | Array<
+          | {
+              status: "logged-in";
+              user: {
+                id: string;
+                name: string;
+                service_id: string;
+                service: {
+                  id: string;
+                  department: string;
+                  completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                  name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                };
+                job: string | Schemas.null | Array<string | Schemas.null>;
+              };
+              accessToken: string;
+              refreshToken: string;
+              expiresAt: string;
+            }
+          | {
+              status: "signup-required";
+              signupToken: string;
+              email: string;
+              givenName: string | Schemas.null | Array<string | Schemas.null>;
+              usualName: string | Schemas.null | Array<string | Schemas.null>;
+              provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+              canCreateAccount: boolean;
+            }
+        >;
+  };
+  export type post_Apiauthsignup = {
+    method: "POST";
+    path: "/api/auth/signup";
+    parameters: {
+      body: { signupToken: string; name: string; job: string; service_id: string; newsletter: boolean; cgu: boolean };
+    };
+    response:
+      | {
+          status: "logged-in";
+          user: {
+            id: string;
+            name: string;
+            service_id: string;
+            service: {
+              id: string;
+              department: string;
+              completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+              name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+              courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+            };
+            job: string | Schemas.null | Array<string | Schemas.null>;
+          };
+          accessToken: string;
+          refreshToken: string;
+          expiresAt: string;
+        }
+      | {
+          status: "signup-required";
+          signupToken: string;
+          email: string;
+          givenName: string | Schemas.null | Array<string | Schemas.null>;
+          usualName: string | Schemas.null | Array<string | Schemas.null>;
+          provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+          canCreateAccount: boolean;
+        }
+      | Array<
+          | {
+              status: "logged-in";
+              user: {
+                id: string;
+                name: string;
+                service_id: string;
+                service: {
+                  id: string;
+                  department: string;
+                  completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
+                  name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                  courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+                };
+                job: string | Schemas.null | Array<string | Schemas.null>;
+              };
+              accessToken: string;
+              refreshToken: string;
+              expiresAt: string;
+            }
+          | {
+              status: "signup-required";
+              signupToken: string;
+              email: string;
+              givenName: string | Schemas.null | Array<string | Schemas.null>;
+              usualName: string | Schemas.null | Array<string | Schemas.null>;
+              provider: "proconnect" | "magic_link" | Array<"proconnect" | "magic_link">;
+              canCreateAccount: boolean;
+            }
+        >;
   };
   export type post_ApirefreshToken = {
     method: "POST";
@@ -99,93 +456,13 @@ export namespace Endpoints {
       expiresAt: string;
     };
   };
-  export type post_ApicreateUser = {
+  export type post_Apiauthlogout = {
     method: "POST";
-    path: "/api/create-user";
+    path: "/api/auth/logout";
     parameters: {
-      body: {
-        password: string;
-        name: string;
-        email: string;
-        job: string;
-        service_id: string;
-        newsletter: boolean;
-        cgu: boolean;
-      };
+      body: { refreshToken: string };
     };
-    response: {
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: string;
-    };
-  };
-  export type post_ApiloginUser = {
-    method: "POST";
-    path: "/api/login-user";
-    parameters: {
-      body: { email: string; password: string };
-    };
-    response: {
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: string;
-    };
+    response: { proConnectLogoutUrl: string | Schemas.null | Array<string | Schemas.null> };
   };
   export type post_ApichangeService = {
     method: "POST";
@@ -200,22 +477,6 @@ export namespace Endpoints {
     path: "/api/created-at";
     parameters: never;
     response: { createdAt: string | Schemas.null | Array<string | Schemas.null> };
-  };
-  export type post_ApisendResetPassword = {
-    method: "POST";
-    path: "/api/send-reset-password";
-    parameters: {
-      body: { email: string };
-    };
-    response: { message: string };
-  };
-  export type post_ApiresetPassword = {
-    method: "POST";
-    path: "/api/reset-password";
-    parameters: {
-      body: { temporaryLink: string; newPassword: string };
-    };
-    response: { message: string };
   };
   export type get_Apiservices = {
     method: "GET";
@@ -782,6 +1043,8 @@ export namespace Endpoints {
 export type EndpointByMethod = {
   get: {
     "/health": Endpoints.get_Health;
+    "/api/auth/config": Endpoints.get_Apiauthconfig;
+    "/api/auth/proconnect/authorize": Endpoints.get_Apiauthproconnectauthorize;
     "/api/created-at": Endpoints.get_ApicreatedAt;
     "/api/services": Endpoints.get_Apiservices;
     "/api/upload/attachment/presigned-url": Endpoints.get_ApiuploadattachmentpresignedUrl;
@@ -809,13 +1072,14 @@ export type EndpointByMethod = {
     "/attachment/{id}/{filename}?": Endpoints.get_AttachmentIdFilename_;
   };
   post: {
-    "/api/authenticate": Endpoints.post_Apiauthenticate;
+    "/api/auth/proconnect/callback": Endpoints.post_Apiauthproconnectcallback;
+    "/api/auth/magic-link": Endpoints.post_ApiauthmagicLink;
+    "/api/auth/magic-link/verify": Endpoints.post_ApiauthmagicLinkverify;
+    "/api/auth/link-account": Endpoints.post_ApiauthlinkAccount;
+    "/api/auth/signup": Endpoints.post_Apiauthsignup;
     "/api/refresh-token": Endpoints.post_ApirefreshToken;
-    "/api/create-user": Endpoints.post_ApicreateUser;
-    "/api/login-user": Endpoints.post_ApiloginUser;
+    "/api/auth/logout": Endpoints.post_Apiauthlogout;
     "/api/change-service": Endpoints.post_ApichangeService;
-    "/api/send-reset-password": Endpoints.post_ApisendResetPassword;
-    "/api/reset-password": Endpoints.post_ApiresetPassword;
     "/api/pdf/report/upload-url": Endpoints.post_ApipdfreportuploadUrl;
     "/api/pdf/state-report/log-download": Endpoints.post_ApipdfstateReportlogDownload;
     "/api/pdf/state-report/share-link": Endpoints.post_ApipdfstateReportshareLink;

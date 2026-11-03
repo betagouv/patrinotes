@@ -1,4 +1,4 @@
-import { createStore, get, set, del } from "idb-keyval";
+import { createStore, get, promisifyRequest, set } from "idb-keyval";
 import { AuthUser } from "./api";
 import { ENV } from "./envVars";
 
@@ -15,12 +15,17 @@ export class ApiStore {
 
   async load() {
     await this.loadUrl();
-    this.accessToken = (await get("accessToken", this.store)) ?? null;
-    this.expiresAt = (await get("expiresAt", this.store)) ?? null;
-    this.refreshToken = (await get("refreshToken", this.store)) ?? null;
+    await this.reloadTokens();
     await this.loadUser();
 
     this.loaded = true;
+  }
+
+  /** Re-read the tokens another tab of the app may have rotated meanwhile. */
+  async reloadTokens() {
+    this.accessToken = (await get("accessToken", this.store)) ?? null;
+    this.expiresAt = (await get("expiresAt", this.store)) ?? null;
+    this.refreshToken = (await get("refreshToken", this.store)) ?? null;
   }
 
   async loadUrl() {
@@ -43,19 +48,23 @@ export class ApiStore {
     return this.user;
   }
 
+  /** One transaction: the session is never half-written (tab closed or reloaded right after sign-in). */
   async save() {
-    await set("url", this.url, this.store);
-    if (this.accessToken) await set("accessToken", this.accessToken, this.store);
-    else await del("accessToken", this.store);
+    const values: Record<string, string | null> = {
+      url: this.url,
+      accessToken: this.accessToken,
+      expiresAt: this.expiresAt,
+      refreshToken: this.refreshToken,
+      user: this.user ? JSON.stringify(this.user) : null,
+    };
 
-    if (this.expiresAt) await set("expiresAt", this.expiresAt, this.store);
-    else await del("expiresAt", this.store);
-
-    if (this.refreshToken) await set("refreshToken", this.refreshToken, this.store);
-    else await del("refreshToken", this.store);
-
-    if (this.user) await set("user", JSON.stringify(this.user), this.store);
-    else await del("user", this.store);
+    await this.store("readwrite", (store) => {
+      for (const [key, value] of Object.entries(values)) {
+        if (value) store.put(value, key);
+        else store.delete(key);
+      }
+      return promisifyRequest(store.transaction);
+    });
   }
 }
 

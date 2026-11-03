@@ -71,3 +71,6 @@ keycloak-theme/*
 .playwright-mcp
 .claude
 .references
+
+# development signing key of the access tokens (see packages/backend/src/features/auth)
+.auth-dev-key.pem

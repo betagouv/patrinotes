@@ -12,7 +12,8 @@
     "import-pop": "vite-node ./src/features/data/pop.ts --standalone",
     "check": "tsc --noEmit",
     "test": "vitest",
-    "drizzle": "drizzle-kit"
+    "drizzle": "drizzle-kit",
+    "auth:generate-key": "vite-node ./scripts/generate-auth-key.ts"
   },
   "exports": {
     ".": "./src/router.ts"

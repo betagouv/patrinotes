@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { mockUsers, signup, login } from "./utils";
+import { mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { hasUpLeftForRapport } from "../packages/frontend/src/features/up/rapportGroupe.utils";
@@ -33,17 +33,11 @@ const startConstatOnComplexMonument = async (page: Page) => {
 
 /**
  * The test stack sometimes reloads the page right after the first visit (service worker install), which wipes the
- * signup/login form: retry, logging in if the account was created by an earlier attempt.
+ * sign-in form: retry. `signup` signs in, and only creates the account on the first sign-in.
  */
-const ensureLoggedIn = async (page: Page, { signupFirst }: { signupFirst: boolean }) => {
-  let shouldSignup = signupFirst;
+const ensureLoggedIn = async (page: Page, _options: { signupFirst: boolean }) => {
   await expect(async () => {
-    const attempt = shouldSignup ? signup : login;
-    shouldSignup = !shouldSignup;
-    await page.goto(attempt === signup ? "./inscription" : "./connexion");
-    await page.waitForSelector("input[name=email]");
-    await page.waitForTimeout(1_000);
-    await attempt({ page, user: mockUsers[0] });
+    await signup({ page, user: mockUsers[0] });
   }).toPass({ timeout: 150_000 });
 };
 

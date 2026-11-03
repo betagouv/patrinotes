@@ -17,7 +17,7 @@ import { useServiceType } from "./useServiceType";
 
 export const Layout = ({ children }: PropsWithChildren) => {
   const location = useLocation();
-  const noProvider = ["/connexion", "/inscription"].includes(location.pathname);
+  const noProvider = ["/connexion", "/inscription", "/auth-callback"].includes(location.pathname);
   const shouldFooterTakeFullheight = location.pathname.startsWith("/constat/");
 
   return (

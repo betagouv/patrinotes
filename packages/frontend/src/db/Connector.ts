@@ -64,9 +64,25 @@ export const getTokenOrRefresh = async () => {
   return apiStore.accessToken;
 };
 
-const refreshAccessToken = async () => {
-  console.log("token expired, refreshing...", { ...apiStore });
-  const refreshToken = apiStore.refreshToken!;
+// The refresh token is rotated on every use and an old one replayed later revokes the session:
+// tabs of the app must not refresh concurrently, and each must start from the latest stored tokens.
+const refreshAccessToken = async (): Promise<string> => {
+  if (typeof navigator !== "undefined" && navigator.locks) {
+    return navigator.locks.request("patrinotes-refresh-token", refreshAccessTokenLocked);
+  }
+  return refreshAccessTokenLocked();
+};
+
+const refreshAccessTokenLocked = async () => {
+  // another tab may have refreshed while we waited for the lock
+  await apiStore.reloadTokens();
+  if (!apiStore.refreshToken) throw new Error("No token found");
+  if (apiStore.accessToken && apiStore.expiresAt && new Date(Number(apiStore.expiresAt)) > new Date()) {
+    return apiStore.accessToken;
+  }
+
+  console.log("token expired, refreshing...");
+  const refreshToken = apiStore.refreshToken;
 
   let resp: RouterOutputs<"/api/refresh-token">;
   try {

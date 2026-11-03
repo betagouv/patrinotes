@@ -18,9 +18,9 @@ import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ConnexionRouteImport } from './routes/connexion'
 import { Route as CompteRouteImport } from './routes/compte'
 import { Route as CguRouteImport } from './routes/cgu'
+import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$link'
 import { Route as PdfReportIdRouteImport } from './routes/pdf.$reportId'
 import { Route as EditReportIdRouteImport } from './routes/edit.$reportId'
 import { Route as ConstatConstatIdRouteImport } from './routes/constat.$constatId'
@@ -30,7 +30,6 @@ import { Route as ConstatConstatIdPdfRouteImport } from './routes/constat_.$cons
 const StatsLazyRouteImport = createFileRoute('/stats')()
 const AdminLazyRouteImport = createFileRoute('/admin')()
 const AccessibiliteLazyRouteImport = createFileRoute('/accessibilite')()
-const ResetPasswordIndexLazyRouteImport = createFileRoute('/reset-password/')()
 
 const StatsLazyRoute = StatsLazyRouteImport.update({
   id: '/stats',
@@ -83,6 +82,11 @@ const CguRoute = CguRouteImport.update({
   path: '/cgu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth-callback',
+  path: '/auth-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -91,18 +95,6 @@ const AccountRoute = AccountRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordIndexLazyRoute = ResetPasswordIndexLazyRouteImport.update({
-  id: '/reset-password/',
-  path: '/reset-password/',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() =>
-  import('./routes/reset-password.index.lazy').then((d) => d.Route),
-)
-const ResetPasswordLinkRoute = ResetPasswordLinkRouteImport.update({
-  id: '/reset-password/$link',
-  path: '/reset-password/$link',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PdfReportIdRoute = PdfReportIdRouteImport.update({
@@ -134,6 +126,7 @@ const ConstatConstatIdPdfRoute = ConstatConstatIdPdfRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/cgu': typeof CguRoute
   '/compte': typeof CompteRoute
   '/connexion': typeof ConnexionRoute
@@ -148,13 +141,12 @@ export interface FileRoutesByFullPath {
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
-  '/reset-password/$link': typeof ResetPasswordLinkRoute
-  '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/cgu': typeof CguRoute
   '/compte': typeof CompteRoute
   '/connexion': typeof ConnexionRoute
@@ -169,14 +161,13 @@ export interface FileRoutesByTo {
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
-  '/reset-password/$link': typeof ResetPasswordLinkRoute
-  '/reset-password': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/cgu': typeof CguRoute
   '/compte': typeof CompteRoute
   '/connexion': typeof ConnexionRoute
@@ -191,8 +182,6 @@ export interface FileRoutesById {
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
-  '/reset-password/$link': typeof ResetPasswordLinkRoute
-  '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat_/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
 export interface FileRouteTypes {
@@ -200,6 +189,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/auth-callback'
     | '/cgu'
     | '/compte'
     | '/connexion'
@@ -214,13 +204,12 @@ export interface FileRouteTypes {
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
-    | '/reset-password/$link'
-    | '/reset-password/'
     | '/constat/$constatId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
+    | '/auth-callback'
     | '/cgu'
     | '/compte'
     | '/connexion'
@@ -235,13 +224,12 @@ export interface FileRouteTypes {
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
-    | '/reset-password/$link'
-    | '/reset-password'
     | '/constat/$constatId/pdf'
   id:
     | '__root__'
     | '/'
     | '/account'
+    | '/auth-callback'
     | '/cgu'
     | '/compte'
     | '/connexion'
@@ -256,14 +244,13 @@ export interface FileRouteTypes {
     | '/constat/$constatId'
     | '/edit/$reportId'
     | '/pdf/$reportId'
-    | '/reset-password/$link'
-    | '/reset-password/'
     | '/constat_/$constatId/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CguRoute: typeof CguRoute
   CompteRoute: typeof CompteRoute
   ConnexionRoute: typeof ConnexionRoute
@@ -278,8 +265,6 @@ export interface RootRouteChildren {
   ConstatConstatIdRoute: typeof ConstatConstatIdRoute
   EditReportIdRoute: typeof EditReportIdRoute
   PdfReportIdRoute: typeof PdfReportIdRoute
-  ResetPasswordLinkRoute: typeof ResetPasswordLinkRoute
-  ResetPasswordIndexLazyRoute: typeof ResetPasswordIndexLazyRoute
   ConstatConstatIdPdfRoute: typeof ConstatConstatIdPdfRoute
 }
 
@@ -355,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CguRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth-callback': {
+      id: '/auth-callback'
+      path: '/auth-callback'
+      fullPath: '/auth-callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account': {
       id: '/account'
       path: '/account'
@@ -367,20 +359,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password/': {
-      id: '/reset-password/'
-      path: '/reset-password'
-      fullPath: '/reset-password/'
-      preLoaderRoute: typeof ResetPasswordIndexLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password/$link': {
-      id: '/reset-password/$link'
-      path: '/reset-password/$link'
-      fullPath: '/reset-password/$link'
-      preLoaderRoute: typeof ResetPasswordLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pdf/$reportId': {
@@ -424,6 +402,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CguRoute: CguRoute,
   CompteRoute: CompteRoute,
   ConnexionRoute: ConnexionRoute,
@@ -438,8 +417,6 @@ const rootRouteChildren: RootRouteChildren = {
   ConstatConstatIdRoute: ConstatConstatIdRoute,
   EditReportIdRoute: EditReportIdRoute,
   PdfReportIdRoute: PdfReportIdRoute,
-  ResetPasswordLinkRoute: ResetPasswordLinkRoute,
-  ResetPasswordIndexLazyRoute: ResetPasswordIndexLazyRoute,
   ConstatConstatIdPdfRoute: ConstatConstatIdPdfRoute,
 }
 export const routeTree = rootRouteImport

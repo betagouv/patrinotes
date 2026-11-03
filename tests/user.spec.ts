@@ -1,6 +1,5 @@
-import { test, expect, type Route } from "@playwright/test";
-import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
-import { cleanupDb, mockUsers, signup } from "./utils";
+import { test, expect } from "@playwright/test";
+import { apiSignIn, clearLoginMails, getLoginMail, login, mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 
@@ -18,35 +17,73 @@ test.describe("Create user", () => {
     expect(page.url()).toContain("connexion");
   });
 
-  test("should go to signup page", async ({ page }) => {
-    const button = await page.waitForSelector("[href='/inscription']");
-    expect(button).toBeDefined();
-
-    await button.click();
-    await page.waitForURL((url) => url.pathname === "/inscription");
-
-    expect(page.url()).toContain("inscription");
+  test("the profile form needs a verified sign-in first", async ({ page }) => {
+    await page.goto("./inscription");
+    await page.waitForURL((url) => url.pathname === "/connexion");
   });
 
-  test("should create a new user", async ({ page }) => {
+  test("should create a new user on the first sign-in", async ({ page }) => {
     await signup({ page, user: mockUsers[0] });
     expect(page.url()).toContain("/");
 
-    const button = await page.waitForSelector("[data-test-id=logout]");
-    await button.click();
+    const internalUser = await db
+      .selectFrom("internal_user")
+      .where("email", "=", mockUsers[0].email)
+      .selectAll()
+      .executeTakeFirstOrThrow();
+    expect(internalUser.role).toBe("user");
+
+    await page.getByRole("button", { name: "Déconnexion" }).click();
     await page.waitForURL((url) => url.pathname === "/connexion");
     expect(page.url()).toContain("connexion");
   });
 
-  test("should login", async ({ page }) => {
+  test("should login with the code received by email", async ({ page }) => {
+    await login({ page, user: mockUsers[0] });
+    expect(new URL(page.url()).pathname).toBe("/");
+  });
+
+  test("should login with the link received by email", async ({ page }) => {
+    await clearLoginMails(mockUsers[0].email);
     await page.goto("./connexion");
-
     await page.fill("input[name=email]", mockUsers[0].email);
-    await page.fill("input[name=password]", mockUsers[0].password);
+    await page.getByRole("button", { name: "Recevoir un lien de connexion" }).click();
+    await page.waitForSelector("input[name=code]");
 
-    await page.click("button[type=submit]");
+    const { link } = await getLoginMail(mockUsers[0].email);
+    await page.goto(link);
     await page.waitForURL((url) => url.pathname === "/");
-    expect(page.url()).toContain("/");
+    await page.waitForSelector("text=Déconnexion", { state: "attached" });
+
+    // single use
+    await page.getByRole("button", { name: "Déconnexion" }).click();
+    await page.waitForURL((url) => url.pathname === "/connexion");
+    await page.goto(link);
+    await expect(page.getByText("Le lien ou le code est invalide ou a expiré")).toBeVisible();
+  });
+
+  test("logout revokes the session", async () => {
+    const session = await apiSignIn(mockUsers[0]);
+    const BACKEND_API = `http://localhost:${process.env.BACKEND_PORT}/api`;
+
+    const logout = await fetch(`${BACKEND_API}/auth/logout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: session.refreshToken }),
+    });
+    expect(logout.status).toBe(200);
+
+    const refresh = await fetch(`${BACKEND_API}/refresh-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: session.refreshToken }),
+    });
+    expect(refresh.status).toBe(401);
+
+    const authed = await fetch(`${BACKEND_API}/created-at`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    });
+    expect(authed.status).toBe(403);
   });
 });
 
@@ -61,12 +98,12 @@ test.describe("Dept numbers on signup", () => {
     const internalUser = await db
       .selectFrom("internal_user")
       .where("email", "=", mockUsers[0].email)
-      .select("id")
+      .select("userId")
       .executeTakeFirstOrThrow();
 
     const userDepts = await db
       .selectFrom("user_dept")
-      .where("user_id", "=", internalUser.id)
+      .where("user_id", "=", internalUser.userId)
       .select("dept_number")
       .execute();
 

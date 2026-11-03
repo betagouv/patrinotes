@@ -53,4 +53,7 @@ export type Database = {
   attachment_redirection: Kyselify<typeof tables.attachment_redirection>;
   constat_pdf_download: Kyselify<typeof tables.constatPdfDownload>;
   up_cache: Kyselify<typeof tables.upCache>;
+  auth_session: Kyselify<typeof tables.authSession>;
+  login_challenge: Kyselify<typeof tables.loginChallenge>;
+  oidc_login_state: Kyselify<typeof tables.oidcLoginState>;
 };
