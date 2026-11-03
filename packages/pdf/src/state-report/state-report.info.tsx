@@ -10,6 +10,20 @@ import { Multiline } from "./state-report.details";
 
 export const MainTitle = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   return (
+    <>
+      <MainTitleHeading stateReport={stateReport} />
+      {stateReport.titre_edifice ? (
+        <div style={{ marginBottom: "16px" }}>
+          <MonumentReferences stateReport={stateReport} />
+          <UpSummary stateReport={stateReport} />
+        </div>
+      ) : null}
+    </>
+  );
+};
+
+const MainTitleHeading = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
+  return (
     <h1 style={{ marginTop: 0, lineHeight: "30pt", marginBottom: "0" }}>
       <span style={{ fontSize: "20pt", fontWeight: "normal" }}>Constat d'état du monument historique</span>
       <br />
@@ -24,18 +38,31 @@ export const MainTitle = ({ stateReport }: { stateReport: StateReportWithUserAnd
               <b>{stateReport.up_intitule}</b>
             </span>
           ) : null}
-          <div style={{ fontSize: "10pt", fontWeight: "normal", marginTop: "8px" }}>
-            Référence POP : {stateReport.reference_pop || "Non renseignée"}
-            {stateReport.up_monument_identifiant
-              ? ` — Identifiant agrégé : ${stateReport.up_monument_identifiant}`
-              : ""}
-          </div>
-          <UpSummary stateReport={stateReport} />
         </>
       ) : null}
     </h1>
   );
 };
+
+/** Lines of the references block: own line height, the h1's 30pt would space them out when they wrap. */
+const referenceLineStyle = { fontSize: "10pt", lineHeight: "14pt" } as const;
+
+/** Référence POP and identifiant AgrÉgée of the monument, below the main title. */
+export const MonumentReferences = ({
+  stateReport,
+}: {
+  stateReport: Pick<StateReportWithUserAndAttachments, "reference_pop" | "up_monument_identifiant">;
+}) => (
+  <div style={{ ...referenceLineStyle, marginTop: "8px" }}>
+    <b>Référence POP</b> : {stateReport.reference_pop || "Non renseignée"}
+    {stateReport.up_monument_identifiant ? (
+      <>
+        {" — "}
+        <b>Identifiant AgrÉgée</b> : {stateReport.up_monument_identifiant}
+      </>
+    ) : null}
+  </div>
+);
 
 /** Unité patrimoniale of a "MH complexe" constat (nothing for a constat on the whole monument). */
 const UpSummary = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
@@ -45,16 +72,26 @@ const UpSummary = ({ stateReport }: { stateReport: StateReportWithUserAndAttachm
     parents = JSON.parse(stateReport.up_chemin || "[]").map((c: { intitule: string }) => c.intitule);
   } catch {}
 
-  const details = [
-    stateReport.up_identifiant ? `Identifiant agrégé : ${stateReport.up_identifiant}` : null,
-    formatUpNiveau(stateReport.up_niveau),
-    formatUpProtection(stateReport.up_protection),
-  ].filter(Boolean);
+  const details = [formatUpNiveau(stateReport.up_niveau), formatUpProtection(stateReport.up_protection)].filter(
+    Boolean,
+  );
 
   return (
-    <div style={{ fontSize: "10pt", fontWeight: "normal", marginTop: "4px" }}>
-      Unité patrimoniale : {[...parents, stateReport.up_intitule].filter(Boolean).join(" › ")}
-      {details.length ? ` (${details.join(", ")})` : ""}
+    <div style={{ ...referenceLineStyle, marginTop: "4px" }}>
+      <div>
+        <b>Unité patrimoniale</b> : {[...parents, stateReport.up_intitule].filter(Boolean).join(" › ")}
+      </div>
+      {stateReport.up_identifiant || details.length ? (
+        <div>
+          {stateReport.up_identifiant ? (
+            <>
+              <b>Identifiant AgrÉgée de l’UP</b> : {stateReport.up_identifiant}
+            </>
+          ) : null}
+          {stateReport.up_identifiant && details.length ? " — " : null}
+          {details.join(" — ")}
+        </div>
+      ) : null}
     </div>
   );
 };

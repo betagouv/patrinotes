@@ -64,7 +64,7 @@ export const MonumentUpInfos = () => {
             ) : null
           }
         />
-        <InfoField label="Identifiant agrégé" value={monumentIdentifiant} />
+        <InfoField label="Identifiant AgrÉgée" value={monumentIdentifiant} />
       </Row>
 
       {upId ? (
@@ -72,7 +72,7 @@ export const MonumentUpInfos = () => {
           <SectionTitle mt="16px">Unité patrimoniale</SectionTitle>
           <Row>
             <InfoField label="Appellation" value={intitule} />
-            <InfoField label="Identifiant agrégé" value={identifiant} />
+            <InfoField label="Identifiant AgrÉgée" value={identifiant} />
           </Row>
           {parents.length ? (
             <Row>

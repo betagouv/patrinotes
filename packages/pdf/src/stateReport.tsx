@@ -280,7 +280,12 @@ const addBreaksAfterWords = (str: string, words: string[]) => {
 
   return newStr.replaceAll("<br/> ", "<br/>");
 };
-import { MainTitle, StateReportInfos, StateReportProtection } from "./state-report/state-report.info";
+import {
+  MainTitle,
+  MonumentReferences,
+  StateReportInfos,
+  StateReportProtection,
+} from "./state-report/state-report.info";
 
 export const getStateReportHtmlString = ({
   stateReport,
@@ -366,11 +371,7 @@ export type GroupedStateReportPart = {
  * Rapport groupé (MH complexe) : the constats of several unités patrimoniales of one monument in one document.
  * A cover lists the chapters, then each constat starts on a new page with its own title.
  */
-export const getGroupedStateReportHtmlString = ({
-  parts,
-}: {
-  parts: GroupedStateReportPart[];
-}) => {
+export const getGroupedStateReportHtmlString = ({ parts }: { parts: GroupedStateReportPart[] }) => {
   if (parts.length === 1) {
     const [part] = parts;
     return getStateReportHtmlString(part!);
@@ -386,11 +387,8 @@ export const getGroupedStateReportHtmlString = ({
         <span style={{ fontSize: "20pt" }}>
           <b>{monument.titre_edifice}</b>
         </span>
-        <div style={{ fontSize: "10pt", fontWeight: "normal", marginTop: "8px" }}>
-          Référence POP : {monument.reference_pop || "Non renseignée"}
-          {monument.up_monument_identifiant ? ` — Identifiant agrégé : ${monument.up_monument_identifiant}` : ""}
-        </div>
       </h1>
+      <MonumentReferences stateReport={monument} />
       <div style={{ marginTop: "24px" }}>
         <p>
           Ce document réunit les constats d'état de {parts.length} parties du monument, chacune faisant l'objet d'un
