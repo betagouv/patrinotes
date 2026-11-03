@@ -99,13 +99,17 @@ export const StateReportInfos = ({ stateReport }: { stateReport: StateReportWith
           {authorJob ? ` (${authorJob})` : ""}
         </b>{" "}
         suite à la visite {isPartielle ? "partielle " : ""}
-        {stateReport.date_visite ? `du ${format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}` : ""}
+        {stateReport.date_visite ? (
+          <>
+            du <b>{format(new Date(stateReport.date_visite!), "dd/MM/yyyy")}</b>
+          </>
+        ) : null}
         {personnesPresentes ? `, en présence de ${personnesPresentes}` : ""}.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div>
-          <b>Parties visitées</b> :{" "}
+          <b>Parties visitées :</b>{" "}
           {isPartielle ? stateReport.visite_partielle_details || "" : "Visite complète de l'édifice"}
         </div>
         {stateReport.visite_details ? (
