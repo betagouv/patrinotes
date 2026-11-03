@@ -1,10 +1,5 @@
 import { format } from "date-fns";
-import {
-  formatUpNiveau,
-  formatUpProtection,
-  uppercaseFirstLetter,
-  type StateReportWithUserAndAttachments,
-} from "../utils";
+import { uppercaseFirstLetter, type StateReportWithUserAndAttachments } from "../utils";
 import React from "react";
 import { Multiline } from "./state-report.details";
 
@@ -13,7 +8,7 @@ export const MainTitle = ({ stateReport }: { stateReport: StateReportWithUserAnd
     <>
       <MainTitleHeading stateReport={stateReport} />
       {stateReport.titre_edifice ? (
-        <div style={{ marginBottom: "16px" }}>
+        <div style={{ marginBottom: "24px" }}>
           <MonumentReferences stateReport={stateReport} />
           <UpSummary stateReport={stateReport} />
         </div>
@@ -28,17 +23,9 @@ const MainTitleHeading = ({ stateReport }: { stateReport: StateReportWithUserAnd
       <span style={{ fontSize: "20pt", fontWeight: "normal" }}>Constat d'état du monument historique</span>
       <br />
       {stateReport.titre_edifice ? (
-        <>
-          <span style={{ fontSize: "20pt" }}>
-            <b>{stateReport.titre_edifice}</b>
-          </span>
-          {stateReport.up_intitule ? (
-            <span style={{ fontSize: "16pt" }}>
-              <br />
-              <b>{stateReport.up_intitule}</b>
-            </span>
-          ) : null}
-        </>
+        <span style={{ fontSize: "20pt" }}>
+          <b>{stateReport.titre_edifice}</b>
+        </span>
       ) : null}
     </h1>
   );
@@ -47,51 +34,37 @@ const MainTitleHeading = ({ stateReport }: { stateReport: StateReportWithUserAnd
 /** Lines of the references block: own line height, the h1's 30pt would space them out when they wrap. */
 const referenceLineStyle = { fontSize: "10pt", lineHeight: "14pt" } as const;
 
-/** Référence POP and identifiant AgrÉgée of the monument, below the main title. */
+/** « Référence POP : … - identifiant AgrÉgée : … » of the monument, below the main title. */
 export const MonumentReferences = ({
   stateReport,
 }: {
   stateReport: Pick<StateReportWithUserAndAttachments, "reference_pop" | "up_monument_identifiant">;
 }) => (
   <div style={{ ...referenceLineStyle, marginTop: "8px" }}>
-    <b>Référence POP</b> : {stateReport.reference_pop || "Non renseignée"}
-    {stateReport.up_monument_identifiant ? (
-      <>
-        {" — "}
-        <b>Identifiant AgrÉgée</b> : {stateReport.up_monument_identifiant}
-      </>
-    ) : null}
+    Référence POP : {stateReport.reference_pop || "Non renseignée"}
+    {stateReport.up_monument_identifiant ? ` - identifiant AgrÉgée : ${stateReport.up_monument_identifiant}` : ""}
   </div>
 );
 
-/** Unité patrimoniale of a "MH complexe" constat (nothing for a constat on the whole monument). */
+/**
+ * Unité patrimoniale of a "MH complexe" constat (nothing for a constat on the whole monument):
+ * « Unité patrimoniale : Façades - identifiant AgrÉgée : … » then its path from the monument, in brackets.
+ */
 const UpSummary = ({ stateReport }: { stateReport: StateReportWithUserAndAttachments }) => {
   if (!stateReport.up_id) return null;
   let parents: string[] = [];
   try {
     parents = JSON.parse(stateReport.up_chemin || "[]").map((c: { intitule: string }) => c.intitule);
   } catch {}
-
-  const details = [formatUpNiveau(stateReport.up_niveau), formatUpProtection(stateReport.up_protection)].filter(
-    Boolean,
-  );
+  const chemin = [stateReport.titre_edifice, ...parents].filter(Boolean);
 
   return (
-    <div style={{ ...referenceLineStyle, marginTop: "4px" }}>
+    <div style={{ ...referenceLineStyle, marginTop: "14pt" }}>
       <div>
-        <b>Unité patrimoniale</b> : {[...parents, stateReport.up_intitule].filter(Boolean).join(" › ")}
+        <b>Unité patrimoniale : {stateReport.up_intitule}</b>
+        {stateReport.up_identifiant ? ` - identifiant AgrÉgée : ${stateReport.up_identifiant}` : ""}
       </div>
-      {stateReport.up_identifiant || details.length ? (
-        <div>
-          {stateReport.up_identifiant ? (
-            <>
-              <b>Identifiant AgrÉgée de l’UP</b> : {stateReport.up_identifiant}
-            </>
-          ) : null}
-          {stateReport.up_identifiant && details.length ? " — " : null}
-          {details.join(" — ")}
-        </div>
-      ) : null}
+      {chemin.length ? <div>({chemin.join(" > ")})</div> : null}
     </div>
   );
 };
