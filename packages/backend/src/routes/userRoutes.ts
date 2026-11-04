@@ -15,31 +15,11 @@ export const userPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     return { createdAt };
   });
 
-  fastify.post("/send-reset-password", { schema: sendResetPasswordTSchema }, async (request) => {
-    return request.services.user.generateResetLink(request.body.email) as Promise<{ message: string }>;
-  });
-
-  fastify.post("/reset-password", { schema: resetPasswordTSchema }, async (request) => {
-    return request.services.user.resetPassword(request.body);
-  });
 };
 
 export const changeServiceTSchema = {
   body: Type.Object({
     service_id: Type.String(),
-  }),
-  response: { 200: Type.Object({ message: Type.String() }) },
-};
-
-export const sendResetPasswordTSchema = {
-  body: Type.Object({ email: Type.String() }),
-  response: { 200: Type.Object({ message: Type.String() }) },
-};
-
-export const resetPasswordTSchema = {
-  body: Type.Object({
-    temporaryLink: Type.String(),
-    newPassword: Type.String(),
   }),
   response: { 200: Type.Object({ message: Type.String() }) },
 };

@@ -29,9 +29,7 @@ const envSchema = z.object({
   POSTGRES_DB: z.string(),
   DATABASE_URL: z.string(),
   DATAGOUV_API: z.string(),
-  TOKEN_LIFETIME: z.string().default("60m"),
   JWT_SECRET: z.string(),
-  JWT_REFRESH_SECRET: z.string(),
   NODE_ENV: z.string().default("development"),
   PORT: stringOrNumberAsNumber.default(3001),
   DEBUG: z.string().default("cr-vif:*"),
@@ -48,12 +46,30 @@ const envSchema = z.object({
   MINIO_PUBLIC_URL: z.string().optional(),
   MINIO_BUCKET: z.string(),
   SENTRY_DSN: z.string().optional(),
-  VITE_AUTH_CLIENT_ID: z.string(),
-  VITE_AUTH_URL: z.string(),
-  VITE_AUTH_REALM: z.string(),
-  AUTH_ADMIN_CLIENT_ID: z.string(),
-  AUTH_ADMIN_CLIENT_SECRET: z.string(),
-  AUTH_CLIENT_SECRET: z.string(),
+
+  // AUTH — sessions are issued by this backend (see features/auth)
+  // RS256 private key (PKCS8 PEM, "\n" escapes accepted) signing the access tokens PowerSync verifies
+  // through /api/auth/jwks.json. Required in production; an ephemeral key is generated otherwise.
+  AUTH_JWT_PRIVATE_KEY: z.string().optional(),
+  ACCESS_TOKEN_TTL_SECONDS: stringOrNumberAsNumber.default(3600),
+  // how long an agent may stay without syncing before having to sign in again (sliding)
+  AUTH_SESSION_IDLE_DAYS: stringOrNumberAsNumber.default(90),
+  // sign-in emails one address may request per hour
+  AUTH_MAGIC_LINK_MAX_PER_HOUR: stringOrNumberAsNumber.default(5),
+
+  // ProConnect (disabled when PROCONNECT_CLIENT_ID is not set)
+  // integration: fca.integ01.dev-agentconnect.fr — production: auth.agentconnect.gouv.fr
+  PROCONNECT_DOMAIN: z.string().default("fca.integ01.dev-agentconnect.fr"),
+  PROCONNECT_CLIENT_ID: z.string().optional(),
+  PROCONNECT_CLIENT_SECRET: z.string().optional(),
+  PROCONNECT_SCOPES: z.string().default("openid email given_name usual_name uid siret"),
+
+  // LEGACY KEYCLOAK — only to migrate sessions opened before ProConnect, remove once every agent has migrated.
+  // When set, a Keycloak refresh token presented to /api/refresh-token is exchanged for a new session.
+  VITE_AUTH_CLIENT_ID: z.string().optional(),
+  VITE_AUTH_URL: z.string().optional(),
+  VITE_AUTH_REALM: z.string().optional(),
+  AUTH_CLIENT_SECRET: z.string().optional(),
   // COLLECTIF_OBJETS_DATASETTE_URL: z.string(),
 
   FORCE_REFETCH_POP: anythingAsBoolean.default(false),
@@ -68,6 +84,14 @@ const envSchema = z.object({
 });
 
 export const ENV = envSchema
+  .refine((env) => !isProd || !!env.AUTH_JWT_PRIVATE_KEY, {
+    message: "AUTH_JWT_PRIVATE_KEY is required in production (generate it with: pnpm backend auth:generate-key)",
+    path: ["AUTH_JWT_PRIVATE_KEY"],
+  })
+  .refine((env) => !env.PROCONNECT_CLIENT_ID || !!env.PROCONNECT_CLIENT_SECRET, {
+    message: "PROCONNECT_CLIENT_SECRET is required when PROCONNECT_CLIENT_ID is set",
+    path: ["PROCONNECT_CLIENT_SECRET"],
+  })
   .refine((env) => env.UP_API_MODE !== "live" || !!env.UP_API_KEY, {
     message: "UP_API_KEY is required when UP_API_MODE=live",
     path: ["UP_API_KEY"],

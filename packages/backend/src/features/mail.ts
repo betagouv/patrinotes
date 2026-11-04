@@ -109,18 +109,22 @@ Cordialement, ${report.redactedBy}
   });
 };
 
-export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string; temporaryLink: string }) => {
-  const resetLink = `${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`;
-  const { html: resetHtml, attachments: resetAttachments } = wrapWithDsfrMail({
-    title: "Réinitialisation de mot de passe",
-    content: `<p>Voici le lien de réinitialisation de votre mot de passe :</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+export const sendMagicLinkMail = ({ email, link, code }: { email: string; link: string; code: string }) => {
+  const { html, attachments } = wrapWithDsfrMail({
+    title: "Connexion à Patrinotes",
+    content: `<p>Bonjour,</p>
+<p>Pour vous connecter à Patrinotes, cliquez sur ce lien :</p>
+<p><a href="${link}">Se connecter à Patrinotes</a></p>
+<p>Ou saisissez ce code dans l'application :</p>
+<p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;" data-test-id="login-code">${code}</p>
+<p>Ce lien et ce code sont valables 15 minutes et ne servent qu'une fois. Si vous n'êtes pas à l'origine de cette demande, ignorez ce courriel.</p>`,
   });
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
     to: email,
-    subject: "Patrinotes - Réinitialisation de mot de passe",
-    html: resetHtml,
-    attachments: resetAttachments,
+    subject: `Patrinotes - Votre code de connexion : ${code}`,
+    html,
+    attachments,
   });
 };
 

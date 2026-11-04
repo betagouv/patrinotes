@@ -2,7 +2,6 @@ import { FastifyPluginAsyncTypebox, Type } from "@fastify/type-provider-typebox"
 import { sql } from "kysely";
 import { AppError } from "../features/errors";
 import { db } from "../db/db";
-import { loginTSchema } from "./authRoutes";
 import { userTSchema } from "../services/authService";
 import { authenticateAdmin } from "./adminMiddleware";
 import { makeDebug } from "../features/debug";

@@ -18,10 +18,13 @@ sync_config:
   path: sync-config.yaml
 
 # Settings for client authentication
+# Access tokens are issued by the backend (RS256), its public keys are served at /api/auth/jwks.json.
+# While sessions opened with Keycloak are being migrated, production must also accept them:
+#   jwks_uri: [!env PS_JWKS_URI, https://<keycloak>/realms/<realm>/protocol/openid-connect/certs]
+#   audience: ["patrinotes", "account"]
 client_auth:
-  jwks_uri: http://keycloak:8080/realms/master/protocol/openid-connect/certs
-  issuer: "http://keycloak:8080/realms/master"
-  audience: ["account"]
+  jwks_uri: !env PS_JWKS_URI
+  audience: ["patrinotes"]
 
   # Settings for telemetry reporting
   # See https://docs.powersync.com/self-hosting/telemetry

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockClauses, mockServiceInstructeur, mockUsers, signup } from "./utils";
+import { apiSignIn, mockClauses, mockServiceInstructeur, mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
 import * as fs from "fs";
 import * as path from "path";
@@ -84,22 +84,7 @@ test.describe("Upload robustness", () => {
   test("GET /api/attachment and /api/attachment/size round-trip a real upload and 404 on unknown paths", async ({
     request,
   }) => {
-    await request.post(`${BACKEND_URL}/api/create-user`, {
-      data: {
-        name: "Upload Tester",
-        email: mockUsers[2].email,
-        password: mockUsers[2].password,
-        job: "Testeur",
-        service_id: "service-1",
-        newsletter: false,
-        cgu: true,
-      },
-    });
-
-    const loginResp = await request.post(`${BACKEND_URL}/api/login-user`, {
-      data: { email: mockUsers[2].email, password: mockUsers[2].password },
-    });
-    const { accessToken } = (await loginResp.json()) as { accessToken: string };
+    const { accessToken } = await apiSignIn(mockUsers[2], "service-1");
     const headers = { Authorization: `Bearer ${accessToken}` };
 
     const filePath = `test-upload-errors/${Date.now()}.txt`;

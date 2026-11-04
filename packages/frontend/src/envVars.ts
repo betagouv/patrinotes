@@ -15,9 +15,6 @@ const stringOrNumberAsBoolean = z
 const envSchema = z.object({
   VITE_BACKEND_URL: z.string(),
   VITE_POWERSYNC_URL: z.string(),
-  VITE_AUTH_URL: z.string(),
-  VITE_AUTH_REALM: z.string(),
-  VITE_AUTH_CLIENT_ID: z.string(),
   VITE_SENTRY_DSN: z.string().optional(),
 });
 

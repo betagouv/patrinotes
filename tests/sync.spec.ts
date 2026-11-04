@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup } from "./utils";
+import { mockUsers, signup, apiSignIn } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 
@@ -16,13 +16,7 @@ test.describe("Sync (upload-data) robustness", () => {
     await signup({ page, user: mockUsers[0] });
     await context.close();
 
-    const resp = await fetch(`${BACKEND_URL}/api/login-user`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: mockUsers[0].email, password: mockUsers[0].password }),
-    });
-    const data = (await resp.json()) as { accessToken: string };
-    accessToken = data.accessToken;
+    accessToken = (await apiSignIn(mockUsers[0])).accessToken;
   });
 
   test("POST /api/upload-data requires authentication", async ({ request }) => {

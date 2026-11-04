@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, mockServices, signup } from "./utils";
+import { mockUsers, mockServices, signup, apiSignIn } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { sql } from "kysely";
@@ -10,15 +10,7 @@ const BACKEND_URL = `http://localhost:${process.env.BACKEND_PORT}`;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const getToken = async (email: string, password: string) => {
-  const resp = await fetch(`${BACKEND_URL}/api/login-user`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = (await resp.json()) as { accessToken: string };
-  return data.accessToken;
-};
+const getToken = async (user: (typeof mockUsers)[number]) => (await apiSignIn(user)).accessToken;
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -61,8 +53,8 @@ test.describe("Stats", () => {
     await db.updateTable("internal_user").set({ role: "admin" }).where("email", "=", mockUsers[0].email).execute();
 
     // Get tokens
-    adminToken = await getToken(mockUsers[0].email, mockUsers[0].password);
-    regularToken = await getToken(mockUsers[1].email, mockUsers[1].password);
+    adminToken = await getToken(mockUsers[0]);
+    regularToken = await getToken(mockUsers[1]);
 
     // Insert test documents for user[0]
 

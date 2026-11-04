@@ -41,6 +41,8 @@ export const internalUser = pgTable(
     userId: text().notNull(),
     newsletter: boolean().default(false),
     createdAt: timestamp({ mode: "string" }).defaultNow(),
+    // stable ProConnect identifier ("sub"), set on the first ProConnect sign-in
+    proconnectSub: text("proconnect_sub"),
   },
   (table) => [
     foreignKey({
@@ -48,6 +50,7 @@ export const internalUser = pgTable(
       foreignColumns: [user.id],
       name: "internal_user_userId_fkey",
     }).onDelete("cascade"),
+    unique("internal_user_proconnect_sub_key").on(table.proconnectSub),
   ],
 );
 
@@ -805,3 +808,58 @@ export const constatPdfDownload = pgTable(
     }),
   ],
 );
+
+/**
+ * Long-lived sessions of the app (replaces Keycloak offline sessions).
+ * The refresh token handed to the client is `<id>.<secret>`; only sha256(secret) is stored.
+ * Rotated on every refresh; the previous hash stays valid for a short grace period so a refresh
+ * whose response was lost (flaky network on the field) doesn't log the agent out.
+ */
+export const authSession = pgTable(
+  "auth_session",
+  {
+    id: text().primaryKey().notNull(),
+    userId: text("user_id").notNull(),
+    provider: text().notNull(), // proconnect | magic_link | keycloak (migrated session)
+    tokenHash: text("token_hash").notNull(),
+    previousTokenHash: text("previous_token_hash"),
+    rotatedAt: timestamp("rotated_at", { mode: "string", withTimezone: true }),
+    // ProConnect id_token, needed as id_token_hint to log out of ProConnect
+    idToken: text("id_token"),
+    createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "auth_session_user_id_fkey",
+    }).onDelete("cascade"),
+    index("auth_session_user_id_idx").on(table.userId),
+  ],
+);
+
+/** One magic-link / one-time-code sign-in request. Single use, short lived. */
+export const loginChallenge = pgTable(
+  "login_challenge",
+  {
+    id: text().primaryKey().notNull(),
+    email: text().notNull(),
+    tokenHash: text("token_hash").notNull(),
+    codeHash: text("code_hash").notNull(),
+    attempts: integer().notNull().default(0),
+    createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
+  },
+  (table) => [index("login_challenge_email_idx").on(table.email)],
+);
+
+/** Pending ProConnect authorization requests (state -> nonce). Single use, short lived. */
+export const oidcLoginState = pgTable("oidc_login_state", {
+  state: text().primaryKey().notNull(),
+  nonce: text().notNull(),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+});

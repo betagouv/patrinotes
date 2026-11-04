@@ -1,7 +1,6 @@
 import { exec, execSync, spawnSync } from "child_process";
 import { db, makeDb } from "../packages/backend/src/db/db";
 import { mockClauses, mockPopImmeuble, mockPopImmeubleComplexe, mockPopObjets, mockServiceInstructeur, mockServices, mockUsers } from "./utils";
-import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
 export const resetDatabase = async () => {
   // Delete child tables first to satisfy foreign key constraints
@@ -32,12 +31,10 @@ export const resetDatabase = async () => {
     )
     .execute();
 
-  // delete keycloak users
-  for (const user of mockUsers) {
-    try {
-      await deleteUserByEmail(user.email);
-    } catch {}
-  }
+  // sessions and pending sign-ins
+  await db.deleteFrom("auth_session").execute();
+  await db.deleteFrom("login_challenge").execute();
+  await db.deleteFrom("oidc_login_state").execute();
 
   // delete and re-insert test data
   await db.deleteFrom("internal_user").execute();

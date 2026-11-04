@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
-import { AuthUser, type RouterOutputs } from "../api";
+import { AuthUser, type RouterOutputs, unauthenticatedApi } from "../api";
 import { apiStore } from "../ApiStore";
 import { db, powerSyncDb, useDbQuery } from "../db/db";
 import { menuActor } from "../features/menu/menuMachine";
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     apiStore.expiresAt = values.expiresAt;
     apiStore.refreshToken = values.refreshToken;
     apiStore.user = values.user as AuthUser;
-    apiStore.save().then(() => console.log("auth saved to storage", new Date(Number(apiStore.expiresAt!))));
+    return apiStore.save();
   };
 
   const value = {
@@ -114,10 +114,24 @@ export const useLogout = () => {
   const { auth, setAuth } = useAuthContext();
   const navigate = useNavigate();
 
-  return () => {
+  return async () => {
     menuActor.send({ type: "CLOSE" });
+    const refreshToken = auth.refreshToken;
     setAuth({ ...auth, accessToken: null, user: null, refreshToken: null, expiresAt: null });
-    navigate({ to: "/connexion" });
+
+    // Revoke the session and, after a ProConnect sign-in, end the ProConnect session too (it must be
+    // a browser redirection). Offline, only the local session is removed.
+    let proConnectLogoutUrl: string | null = null;
+    if (refreshToken) {
+      try {
+        ({ proConnectLogoutUrl } = await unauthenticatedApi.post("/api/auth/logout", { body: { refreshToken } }));
+      } catch (error) {
+        console.warn("could not revoke the session", error);
+      }
+    }
+
+    if (proConnectLogoutUrl) window.location.assign(proConnectLogoutUrl);
+    else navigate({ to: "/connexion" });
   };
 };
 
@@ -202,9 +216,10 @@ type AuthContextProps = {
     refreshToken: string | null;
     user: AuthUser | null;
   };
+  /** Resolves once the session is persisted. */
   setAuth: (
     dataOrCallback: AuthContextProps["auth"] | ((old: AuthContextProps["auth"]) => AuthContextProps["auth"]),
-  ) => void;
+  ) => Promise<void> | void;
 };
 
 // type AuthUser = Omit<RouterOutputs<"/api/authenticate">["user"], "service"> & {

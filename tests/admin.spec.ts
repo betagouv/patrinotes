@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, mockServices, signup, login } from "./utils";
+import { mockUsers, mockServices, signup, login, apiSignIn } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 
@@ -27,21 +27,8 @@ test.describe("Admin whitelist", () => {
     // Upgrade to admin role
     await db.updateTable("internal_user").set({ role: "admin" }).where("email", "=", mockUsers[0].email).execute();
     // Obtain admin token for API tests
-    const resp = await fetch(`${BACKEND_URL}/api/login-user`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: mockUsers[0].email, password: mockUsers[0].password }),
-    });
-    const data = (await resp.json()) as { accessToken: string };
-    adminToken = data.accessToken;
-
-    const resp2 = await fetch(`${BACKEND_URL}/api/login-user`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: mockUsers[1].email, password: mockUsers[1].password }),
-    });
-    const data2 = (await resp2.json()) as { accessToken: string };
-    nonAdminToken = data2.accessToken;
+    adminToken = (await apiSignIn(mockUsers[0])).accessToken;
+    nonAdminToken = (await apiSignIn(mockUsers[1])).accessToken;
   });
 
   // ---------------------------------------------------------------------------

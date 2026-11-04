@@ -1,43 +1,57 @@
 import { type UseFormReturn, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Flex } from "#components/ui/Flex.tsx";
-import { getErrorMessage, RouterInputs, unauthenticatedApi } from "../../api";
-import { Alert, Center, Checkbox, Input, Select } from "#components/MUIDsfr.tsx";
+import { getErrorMessage, unauthenticatedApi } from "../../api";
+import { Alert, Button, Checkbox, Input, Select } from "#components/MUIDsfr.tsx";
+import { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { Divider } from "#components/ui/Divider.tsx";
-import { useAuthContext } from "../../contexts/AuthContext";
 import { InputGroup } from "#components/InputGroup.tsx";
 import { FullWidthButton } from "#components/FullWidthButton.tsx";
-import { PasswordInput } from "#components/PasswordInput.tsx";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { omit } from "pastable";
+import { Link, Navigate } from "@tanstack/react-router";
 import { scrollToTop } from "../state-report/StateReportSummary";
 import { fr } from "@codegouvfr/react-dsfr";
-import { Notice } from "@codegouvfr/react-dsfr/Notice";
 import { JobSelect } from "../../routes/compte";
-import { searchStore } from "#components/SearchModal.tsx";
 import { InfoText } from "#components/ui/InfoText.tsx";
+import { getPendingSignup, PendingSignup, useApplySignInResult } from "./signIn";
 
+/**
+ * First sign-in: the identity was verified by ProConnect or by email, the agent completes their profile.
+ */
 export const SignupForm = () => {
+  const pending = getPendingSignup();
+  if (!pending) return <Navigate to="/connexion" replace />;
+  return <ProfileForm pending={pending} />;
+};
+
+const ProfileForm = ({ pending }: { pending: PendingSignup }) => {
   const form = useForm<SignupFormProps>({
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
+      prenom: pending.givenName ?? "",
+      nom: pending.usualName ?? "",
       service_id: "",
       newsletter: false,
       job: "",
-      nom: "",
-      prenom: "",
+      cgu: false,
     },
   });
 
-  const { setAuth } = useAuthContext();
-  const navigate = useNavigate();
+  const applySignInResult = useApplySignInResult();
 
   const mutation = useMutation({
-    mutationFn: (body: RouterInputs<"/api/create-user">["body"]) =>
-      unauthenticatedApi.post("/api/create-user", { body }),
+    mutationFn: (values: SignupFormProps) =>
+      unauthenticatedApi.post("/api/auth/signup", {
+        body: {
+          signupToken: pending.signupToken,
+          name: `${values.prenom.trim()} ${values.nom.trim()}`,
+          job: values.job,
+          service_id: values.service_id,
+          newsletter: values.newsletter,
+          cgu: values.cgu,
+        },
+      }),
+    onSuccess: applySignInResult,
+    onError: () => scrollToTop(),
   });
 
   const servicesQuery = useQuery({
@@ -48,18 +62,6 @@ export const SignupForm = () => {
     },
   });
 
-  const signup = async (values: SignupFormProps) => {
-    const name = `${values.prenom} ${values.nom}`;
-    const valuesWithName = { ...omit(values, ["nom", "prenom"]), name };
-    const response = await mutation.mutateAsync(valuesWithName, { onError: () => scrollToTop() });
-    setAuth(response as any);
-
-    searchStore.send({ type: "setScope", scope: "my" });
-    searchStore.send({ type: "setDocument", document: "constats" });
-
-    navigate({ to: "/" });
-  };
-
   const { errors: formErrors } = form.formState;
   const { error: mutationError } = mutation;
 
@@ -68,10 +70,59 @@ export const SignupForm = () => {
       <Typography variant="h4" mb="24px">
         Création de compte
       </Typography>
+      <Typography fontSize="14px" mb="8px">
+        Vous vous connectez pour la première fois avec <strong>{pending.email}</strong>.
+      </Typography>
+      {pending.provider === "proconnect" ? (
+        <LinkExistingAccount pending={pending} defaultOpen={!pending.canCreateAccount} />
+      ) : null}
+      {!pending.canCreateAccount ? (
+        <Alert
+          sx={{ mb: "40px" }}
+          severity="info"
+          title={
+            <Typography fontWeight="regular">
+              L'adresse {pending.email} n'est pas autorisée à créer un compte. Si vous utilisiez déjà Patrinotes,
+              rattachez votre compte ci-dessus. Sinon, écrivez à contact@patrinotes.beta.gouv.fr.
+            </Typography>
+          }
+        />
+      ) : (
+        <ProfileFields form={form} mutation={mutation} servicesQuery={servicesQuery} />
+      )}
+
+      <Divider my="40px" color="#DDDDDD" />
+
+      <FullWidthButton
+        sx={{ mb: { xs: "64px", lg: "80px" } }}
+        size="large"
+        priority="secondary"
+        linkProps={{ to: "/connexion" }}
+      >
+        Revenir à la connexion
+      </FullWidthButton>
+    </Flex>
+  );
+};
+
+const ProfileFields = ({
+  form,
+  mutation,
+  servicesQuery,
+}: {
+  form: UseFormReturn<SignupFormProps>;
+  mutation: { mutate: (values: SignupFormProps) => void; error: unknown; isPending: boolean };
+  servicesQuery: { data?: Array<{ id: string; name?: unknown }> };
+}) => {
+  const { errors: formErrors } = form.formState;
+  const { error: mutationError } = mutation;
+
+  return (
+    <>
       <Typography fontSize="12px" color={fr.colors.decisions.text.default.grey.default} mb="32px">
         Tous les champs sont obligatoires.
       </Typography>
-      <form onSubmit={form.handleSubmit(signup)}>
+      <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
         {mutationError ? (
           <Alert
             sx={{
@@ -82,24 +133,6 @@ export const SignupForm = () => {
           />
         ) : null}
         <InputGroup>
-          <Input
-            label="Courriel"
-            hintText="prenom.nom@culture.gouv.fr"
-            nativeInputProps={{
-              type: "email",
-              autoComplete: "username",
-              ...form.register("email", {
-                required: "Le courriel est requis",
-                pattern: {
-                  value: /\S+@\S+\.\S+/,
-                  message: "Le courriel n'est pas valide",
-                },
-              }),
-            }}
-            state={formErrors.email ? "error" : undefined}
-            stateRelatedMessage={formErrors.email?.message}
-          />
-          <SignupPasswordInput form={form} />
           <Input
             label="Nom"
             nativeInputProps={{
@@ -120,12 +153,6 @@ export const SignupForm = () => {
 
           <SignupJobSelect form={form} />
 
-          {/* <Input
-            label="Fonction"
-            nativeInputProps={{ ...form.register("job", { required: "La fonction est requise" }) }}
-            state={formErrors.job ? "error" : undefined}
-            stateRelatedMessage={formErrors.job?.message}
-          /> */}
           <Select
             label="Service"
             nativeSelectProps={form.register("service_id", { required: "Le service est requis" })}
@@ -137,7 +164,7 @@ export const SignupForm = () => {
             </option>
             {servicesQuery.data?.map((service) => (
               <option key={service.id} value={service.id}>
-                {service.name}
+                {service.name as string}
               </option>
             ))}
           </Select>
@@ -196,20 +223,99 @@ export const SignupForm = () => {
           Valider
         </FullWidthButton>
       </form>
+    </>
+  );
+};
 
-      <Divider my="40px" color="#DDDDDD" />
+/**
+ * ProConnect may send another address than the one the agent's account uses (alias, previous address):
+ * prove the old address with an emailed code and keep the existing account (and its documents).
+ */
+const LinkExistingAccount = ({ pending, defaultOpen }: { pending: PendingSignup; defaultOpen: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const applySignInResult = useApplySignInResult();
 
-      <h5>Vous avez déjà un compte ?</h5>
+  const sendCodeMutation = useMutation({
+    mutationFn: () => unauthenticatedApi.post("/api/auth/magic-link", { body: { email: email.trim() } }),
+    onSuccess: () => setCodeSent(true),
+  });
+  const linkMutation = useMutation({
+    mutationFn: () =>
+      unauthenticatedApi.post("/api/auth/link-account", {
+        body: { signupToken: pending.signupToken, email: email.trim(), code },
+      }),
+    onSuccess: applySignInResult,
+  });
+  const error = linkMutation.error ?? sendCodeMutation.error;
 
-      <FullWidthButton
-        sx={{ mb: { xs: "64px", lg: "80px" } }}
-        size="large"
-        priority="secondary"
-        linkProps={{ to: "/connexion" }}
-      >
-        Se connecter
-      </FullWidthButton>
-    </Flex>
+  return (
+    <Box bgcolor={fr.colors.decisions.background.default.grey.hover} p="16px 24px" mb="32px">
+      <Typography fontWeight="bold" mb="8px">
+        Vous utilisiez déjà Patrinotes avec une autre adresse ?
+      </Typography>
+      {!open ? (
+        <>
+          <Typography fontSize="14px" mb="16px">
+            Rattachez votre connexion ProConnect à votre compte existant pour retrouver vos constats et
+            comptes-rendus.
+          </Typography>
+          <Button priority="secondary" onClick={() => setOpen(true)} nativeButtonProps={{ type: "button" }}>
+            Rattacher mon compte existant
+          </Button>
+        </>
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (codeSent) linkMutation.mutate();
+            else sendCodeMutation.mutate();
+          }}
+        >
+          {error ? (
+            <Alert
+              sx={{ mb: "16px" }}
+              severity="error"
+              title={<Typography fontWeight="regular">{getErrorMessage(error)}</Typography>}
+            />
+          ) : null}
+          <Input
+            label="Courriel de votre compte Patrinotes"
+            nativeInputProps={{
+              name: "link-email",
+              type: "email",
+              value: email,
+              onChange: (e) => setEmail(e.target.value),
+              disabled: codeSent,
+              required: true,
+            }}
+          />
+          {codeSent ? (
+            <Input
+              label="Code reçu par courriel"
+              hintText="Valable 15 minutes"
+              nativeInputProps={{
+                name: "link-code",
+                inputMode: "numeric",
+                autoComplete: "one-time-code",
+                value: code,
+                onChange: (e) => setCode(e.target.value),
+                required: true,
+              }}
+            />
+          ) : null}
+          <Button
+            type="submit"
+            nativeButtonProps={{ type: "submit" }}
+            disabled={sendCodeMutation.isPending || linkMutation.isPending}
+          >
+            {codeSent ? "Rattacher et me connecter" : "Recevoir un code"}
+          </Button>
+        </form>
+      )}
+    </Box>
   );
 };
 
@@ -227,55 +333,11 @@ const SignupJobSelect = ({ form }: { form: UseFormReturn<SignupFormProps> }) => 
   );
 };
 
-export const SignupPasswordInput = ({ form }: { form: UseFormReturn<SignupFormProps> }) => {
-  const value = useWatch({ control: form.control, name: "password" });
-
-  const hasNumber = /\d/.test(value);
-  const hasUpperCase = /[A-Z]/.test(value);
-  const hasLowerCase = /[a-z]/.test(value);
-  const hasSpecial = /[^A-Za-z0-9]/.test(value);
-
-  const formErrors = form.formState.errors;
-
-  return (
-    <PasswordInput
-      state={formErrors.password ? "error" : undefined}
-      messages={
-        formErrors.password
-          ? [
-              {
-                message: "Un chiffre",
-                severity: hasNumber ? "valid" : "error",
-              },
-              {
-                message: "Une majuscule",
-                severity: hasUpperCase ? "valid" : "error",
-              },
-              {
-                message: "Une minuscule",
-                severity: hasLowerCase ? "valid" : "error",
-              },
-              {
-                message: "Un caractère spécial",
-                severity: hasSpecial ? "valid" : "error",
-              },
-            ]
-          : []
-      }
-      nativeInputProps={form.register("password", {
-        required: "Le mot de passe est requis",
-        minLength: {
-          value: 8,
-          message: "Le mot de passe doit contenir au moins 8 caractères",
-        },
-        validate: () => {
-          const isValid = hasNumber && hasUpperCase && hasLowerCase && hasSpecial;
-
-          return isValid || "Mot de passe invalide";
-        },
-      })}
-    />
-  );
+type SignupFormProps = {
+  nom: string;
+  prenom: string;
+  job: string;
+  service_id: string;
+  newsletter: boolean;
+  cgu: boolean;
 };
-
-type SignupFormProps = RouterInputs<"/api/create-user">["body"] & { nom: string; prenom: string };

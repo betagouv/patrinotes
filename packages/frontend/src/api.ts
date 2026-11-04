@@ -30,7 +30,7 @@ export const unauthenticatedApi = createApiClientWithUrl(ENV.VITE_BACKEND_URL, {
 export type RouterInputs<T extends keyof AllEndpoints> = AllEndpoints[T]["parameters"];
 export type RouterOutputs<T extends keyof AllEndpoints> = AllEndpoints[T]["response"];
 
-export type AuthUser = Prettify<RouterOutputs<"/api/authenticate">["user"]>;
+export type AuthUser = Prettify<RouterOutputs<"/api/refresh-token">["user"]>;
 type AllEndpoints = GetEndpoints & PostEndpoints;
 
 export const getErrorMessage = (error: any) => {
