@@ -19,8 +19,28 @@ import { sentry } from "../features/sentry";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
 import { getPDFInMailName } from "@patrinotes/pdf";
+import { canEditReport, canEditStateReport, findReport, findStateReport } from "../features/sync/syncPolicy";
 
 const debug = makeDebug("pdf-plugin");
+
+/** A document not synced yet may get an upload URL; a stored one only for whoever may edit it. */
+const assertCanEditReportIfStored = async (user: { id: string; service_id: string }, reportId: string) => {
+  const report = await findReport(db, reportId);
+  if (report && !(await canEditReport(db, user, report)))
+    throw new AppError(403, "Vous ne pouvez pas modifier ce compte-rendu");
+};
+
+const assertCanEditStateReportIfStored = async (user: { id: string; service_id: string }, stateReportId: string) => {
+  const stateReport = await findStateReport(db, stateReportId);
+  if (stateReport && !(await canEditStateReport(db, user, stateReport))) {
+    throw new AppError(403, "Vous ne pouvez pas modifier ce constat");
+  }
+};
+
+const assertPdfPathOf = (pdfPath: string, documentId: string) => {
+  if (!pdfPath.startsWith(documentId + "/") || pdfPath.includes(".."))
+    throw new AppError(400, "Chemin du PDF invalide");
+};
 
 const createAttachmentRedirection = async ({
   s3Key,
@@ -56,6 +76,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
     async (request) => {
       const { reportId } = request.body;
+      await assertCanEditReportIfStored(request.user!, reportId);
       const pdfPath = reportId + "/compte_rendu_" + Math.round(Date.now() / 1000) + ".pdf";
       const uploadUrl = await request.services.upload.getPresignedUploadUrl({
         filePath: pdfPath,
@@ -135,6 +156,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const { reportId, pdfPath, pdfSize, recipients: rawRecipients } = request.body;
     const { service_id } = request.user!;
 
+    assertPdfPathOf(pdfPath, reportId);
+    if (!(await canEditReport(db, request.user!, await findReport(db, reportId)))) {
+      throw new AppError(403, "Vous ne pouvez pas envoyer ce compte-rendu");
+    }
+
     const pdf = await request.services.upload.getAttachment({ filePath: pdfPath });
 
     await db.transaction().execute(async (tx) => {
@@ -203,6 +229,10 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
     async (request) => {
       const { reportId } = request.query;
+      const report = await findReport(db, reportId);
+      if (!report) throw new AppError(404, "Compte-rendu non trouvé");
+      if (report.service_id !== request.user!.service_id)
+        throw new AppError(403, "Accès non autorisé à ce compte-rendu");
       const buffer = await request.services.upload.getReportPDF({ reportId });
 
       return buffer.toString("base64");
@@ -258,6 +288,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     },
     async (request) => {
       const { stateReportId } = request.body;
+      await assertCanEditStateReportIfStored(request.user!, stateReportId);
       const pdfPath = stateReportId + "/constat_d_etat_" + Math.round(Date.now() / 1000) + ".pdf";
       const uploadUrl = await request.services.upload.getPresignedUploadUrl({
         filePath: pdfPath,
@@ -284,6 +315,10 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
     if (!stateReportQuery) {
       throw new AppError(404, "Constat d'état non trouvé");
+    }
+    assertPdfPathOf(pdfPath, stateReportId);
+    if (!(await canEditStateReport(db, user, stateReportQuery))) {
+      throw new AppError(403, "Vous ne pouvez pas envoyer ce constat");
     }
 
     // rapport groupé (MH complexe): the PDF holds every constat of the rapport, all of them are sent with it
@@ -418,11 +453,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       await db
         .updateTable("state_report")
         .set({ alerts_sent: true })
-        .where(
-          "id",
-          "in",
-          Array.from(new Set(unsentAlerts.map((a) => getAlertReport(a.id)!.id))),
-        )
+        .where("id", "in", Array.from(new Set(unsentAlerts.map((a) => getAlertReport(a.id)!.id))))
         .execute();
     }
 

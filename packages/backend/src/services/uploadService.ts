@@ -104,12 +104,14 @@ export class UploadService {
   }
 
   async getReportPDF({ reportId }: { reportId: string }) {
-    const attachment = await db
+    const attachments = await db
       .selectFrom("report_attachment")
       .where("report_id", "=", reportId)
       .where("attachment_id", "like", "%.pdf")
       .selectAll()
-      .executeTakeFirst();
+      .execute();
+    // the PDF is stored under the report's own folder; an attachment row pointing elsewhere is ignored
+    const attachment = attachments.find((a) => a.attachment_id.startsWith(reportId + "/"));
     if (!attachment) throw new AppError(404, "PDF not found");
 
     const command = new GetObjectCommand({ Bucket: bucketUrl, Key: addAttachmentPrefix(attachment.attachment_id) });

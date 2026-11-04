@@ -1,4 +1,4 @@
-import type { Transaction } from "kysely";
+import type { Kysely } from "kysely";
 import type { Database } from "../../db/db";
 
 /**
@@ -18,7 +18,8 @@ import type { Database } from "../../db/db";
 
 export type CrudOp = "PUT" | "PATCH" | "DELETE";
 export type Row = Record<string, unknown>;
-type Trx = Transaction<Database>;
+/** The database or a transaction on it */
+type Trx = Kysely<Database>;
 
 export type SyncUser = { id: string; service_id: string };
 
