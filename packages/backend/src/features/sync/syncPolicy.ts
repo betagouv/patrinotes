@@ -424,6 +424,12 @@ export const evaluateWrite = async ({
   if (!policy) return { allowed: false, reason: `table ${table} non modifiable` };
   if (!policy.ops.includes(op as CrudOp)) return { allowed: false, reason: `opération ${op} interdite sur ${table}` };
 
+  // Tables that declare `id` in the client schema (state_report) get it repeated in the data: it must be the row's id.
+  if ("id" in data) {
+    if (data.id !== id) return { allowed: false, reason: "id différent de celui de l'opération" };
+    data = Object.fromEntries(Object.entries(data).filter(([column]) => column !== "id"));
+  }
+
   const unknown = Object.keys(data).filter((column) => !policy.columns.includes(column));
   if (unknown.length) return { allowed: false, reason: `colonnes inconnues : ${unknown.join(", ")}` };
 

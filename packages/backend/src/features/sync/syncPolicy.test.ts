@@ -178,6 +178,31 @@ describe("evaluateWrite", () => {
     });
   });
 
+  it("accepts the row id repeated in the data, and refuses another one", async () => {
+    const same = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "state_report",
+      op: "PUT",
+      id: "constat-2",
+      data: { id: "constat-2", titre_edifice: "Église" },
+      existing: null,
+    });
+    expect(same).toMatchObject({ allowed: true, values: { titre_edifice: "Église", created_by: "user-a" } });
+    expect((same as any).values.id).toBeUndefined();
+
+    const other = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "state_report",
+      op: "PUT",
+      id: "constat-2",
+      data: { id: "constat-victime", titre_edifice: "Église" },
+      existing: null,
+    });
+    expect(other.allowed).toBe(false);
+  });
+
   it("refuses replaying a PUT on an existing row", async () => {
     const decision = await evaluateWrite({
       trx: noDb,
