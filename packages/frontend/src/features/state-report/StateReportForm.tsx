@@ -16,9 +16,7 @@ export const StateReportForm = ({ report }: { report: StateReport }) => {
     defaultValues: { ...emptyStateReport, ...report },
   });
   const bgColor = useBannerBgColor();
-  const onSubmit = (data: StateReportFormType) => {
-    console.log(data);
-  };
+  const onSubmit = (_data: StateReportFormType) => {};
 
   useRefreshForm({
     form,
