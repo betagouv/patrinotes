@@ -18,7 +18,26 @@ export class UserService {
       throw new AppError(400, "Le service n'existe pas");
     }
 
-    await db.updateTable("user").set({ service_id: serviceId }).where("id", "=", userId).execute();
+    const previous = await db.selectFrom("user").select("service_id").where("id", "=", userId).executeTakeFirst();
+
+    // Joining any service is allowed (decision of 2026-11-04): each change is recorded in the audit log.
+    await db.transaction().execute(async (trx) => {
+      await trx.updateTable("user").set({ service_id: serviceId }).where("id", "=", userId).execute();
+      await trx
+        .insertInto("transactions")
+        .values({
+          id: crypto.randomUUID(),
+          entity_id: userId,
+          type: "user",
+          op: "CHANGE_SERVICE",
+          op_id: 0,
+          tx_id: null,
+          data: JSON.stringify({ from: previous?.service_id ?? null, to: serviceId }),
+          user_id: userId,
+          created_at: new Date().toISOString(),
+        })
+        .execute();
+    });
 
     const deptNumbers = service[0].dept_numbers?.split(",").map((num) => num.trim());
 

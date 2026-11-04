@@ -22,29 +22,6 @@ const jwksClient = jwks({
 });
 
 export class AuthService {
-  async authenticate({ code }: AuthenticateProps) {
-    const params = new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: `${ENV.FRONTEND_URL}/auth-callback`,
-      client_id: ENV.VITE_AUTH_CLIENT_ID,
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      client_assertion: getClientAssertion(),
-    });
-
-    const response = await authApi<Static<typeof keycloakTokenResponseTSchema>>("/protocol/openid-connect/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
-
-    const user = await this.getOrCreateUserFromToken(response.access_token);
-
-    return { tokens: response, user: user! };
-  }
-
   async checkToken(token: string) {
     const decoded = jwt.decode(token, { complete: true });
     const key = await getKey(decoded!.header);
@@ -58,22 +35,19 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     let keycloakTokens: Static<typeof keycloakTokenResponseTSchema>;
     try {
-      keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
-        "/protocol/openid-connect/token",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: ENV.VITE_AUTH_CLIENT_ID,
-            refresh_token: refreshToken,
-            client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-            client_assertion: getClientAssertion(),
-          }).toString(),
+      keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>("/protocol/openid-connect/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-      );
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          client_id: ENV.VITE_AUTH_CLIENT_ID,
+          refresh_token: refreshToken,
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+          client_assertion: getClientAssertion(),
+        }).toString(),
+      });
     } catch (error) {
       if (error instanceof FetchError) {
         debug("refresh token rejected", error.data?.error, error.data?.error_description);
@@ -90,24 +64,6 @@ export class AuthService {
       expiresAt: get80PercentOfTokenLifespan(Number(keycloakTokens.expires_in)).toString(),
       user: user!,
     };
-  }
-
-  async getOrCreateUserFromToken(token: string) {
-    const checked = await this.checkToken(token);
-
-    const userPayload = {
-      id: v7(),
-      name: checked.name ?? checked.preferred_username!,
-      service_id: "no-service",
-      email: checked.email,
-    };
-
-    const existingUser = await this.getUserFromToken(token);
-    if (existingUser) return existingUser;
-
-    const user = await db.insertInto("user").values(userPayload).returningAll().executeTakeFirstOrThrow();
-    const populatedUser = { ...(await populateService(user!)), isFirstConnection: true };
-    return populatedUser;
   }
 
   async getUserFromToken(token: string) {
@@ -299,10 +255,6 @@ const getKey = async (header: jwt.JwtHeader) => {
 };
 
 export const get80PercentOfTokenLifespan = (expiresIn: number) => Date.now() + expiresIn * 0.8 * 1000;
-
-type AuthenticateProps = {
-  code: string;
-};
 
 type ExtraTokenInfo = {
   name: string;
