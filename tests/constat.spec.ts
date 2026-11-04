@@ -126,7 +126,8 @@ test.describe("Constat d'état flow", () => {
     test.setTimeout(60_000);
 
     const longComment =
-      "Commentaire très long ".repeat(80) + "avec des caractères spéciaux: <script>alert('x')</script> & \"quotes\" 'apos' — é à ç ù €";
+      "Commentaire très long ".repeat(80) +
+      "avec des caractères spéciaux: <script>alert('x')</script> & \"quotes\" 'apos' — é à ç ù €";
 
     await signup({ page, user: mockUsers[2] });
     await fillMinimalConstat(page, { sectionComment: longComment });

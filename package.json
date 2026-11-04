@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "packageManager": "pnpm@10.12.4",
   "scripts": {
     "frontend": "pnpm --filter @patrinotes/frontend",
     "backend": "pnpm --filter @patrinotes/backend",

@@ -26,8 +26,8 @@ test.describe("Constat validation flow", () => {
     // Navigate via the in-app link to avoid a full page reload (auth is saved
     // async to storage; a page.goto would race with that save).
     // -------------------------------------------------------------------------
-    await page.locator('a[href="/account"]').first().click();
-    await page.waitForURL((url) => url.pathname === "/account");
+    await page.locator('a[href="/compte"]').first().click();
+    await page.waitForURL((url) => url.pathname === "/compte");
 
     // Toggle "Envoyer les constats sous couvert de validation"
     await page.getByLabel("Envoyer les constats sous couvert de validation").check({ force: true });
@@ -76,8 +76,7 @@ test.describe("Constat validation flow", () => {
     await page.getByRole("button", { name: "Couverture" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.waitFor();
-    await dialog.getByRole("radio", { name: "Bon" }).check({ force: true });
-    await dialog.getByRole("radio", { name: "50%" }).check({ force: true });
+    await dialog.getByRole("radio", { name: "Léger" }).check({ force: true });
     await dialog.locator("textarea").fill("Bon état général.");
     await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
@@ -86,7 +85,8 @@ test.describe("Constat validation flow", () => {
 
     // Step 4: Constat général
     await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
-    await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
+    if (await page.getByRole("radio", { name: "50%" }).first().isVisible())
+      await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
     await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
 
@@ -258,8 +258,7 @@ test.describe("Constat validation flow", () => {
     await page.getByRole("button", { name: "Couverture" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.waitFor();
-    await dialog.getByRole("radio", { name: "Bon" }).check({ force: true });
-    await dialog.getByRole("radio", { name: "50%" }).check({ force: true });
+    await dialog.getByRole("radio", { name: "Léger" }).check({ force: true });
     await dialog.locator("textarea").fill("Bon état général.");
     await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
@@ -267,7 +266,8 @@ test.describe("Constat validation flow", () => {
     await page.waitForURL((url) => url.search.includes("constat-general"));
 
     await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
-    await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
+    if (await page.getByRole("radio", { name: "50%" }).first().isVisible())
+      await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
     await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
 
@@ -369,10 +369,9 @@ test.describe("Constat validation flow", () => {
 
       // ...but acting on it again (accept or decline) is rejected: the WHERE status='pending'
       // clause finds nothing, so it's treated the same as an unknown token.
-      const acceptResp = await request.post(
-        `http://127.0.0.1:${backendPort}/api/constat-validation/${token}/accept`,
-        { data: {} },
-      );
+      const acceptResp = await request.post(`http://127.0.0.1:${backendPort}/api/constat-validation/${token}/accept`, {
+        data: {},
+      });
       expect(acceptResp.status()).toBe(404);
 
       const declineResp = await request.post(

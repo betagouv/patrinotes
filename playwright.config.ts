@@ -32,6 +32,24 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
     headless: true,
+    /*
+     * The app reloads itself on a first visit (AuthContext, missing "crvif/version") and when a new service worker
+     * is installed (main.tsx). A reload wipes whatever a test is typing, so tests start as a returning visitor
+     * and without service worker (offline caching is not tested here).
+     */
+    serviceWorkers: "block",
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${process.env.FRONTEND_PORT}`,
+          localStorage: [{ name: "crvif/version", value: "1" }],
+        },
+      ],
+    },
+    /* A stuck step fails in seconds instead of waiting for the whole test timeout */
+    actionTimeout: 10_000,
+    navigationTimeout: 15_000,
   },
 
   /* Configure projects for major browsers */

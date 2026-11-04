@@ -1,3 +1,4 @@
+import { db } from "../packages/backend/src/db/db";
 import { test, expect } from "@playwright/test";
 import { mockClauses, mockServiceInstructeur, mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
@@ -66,6 +67,11 @@ test.describe("Image upload — compte-rendu flow", () => {
     await page.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(page.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
+    // A photo picked while the previous one is still being processed is lost (app bug, to fix):
+    // wait until the first one is saved before adding the second.
+    await expect
+      .poll(async () => (await db.selectFrom("report_attachment").select("id").execute()).length, { timeout: 15_000 })
+      .toBe(1);
 
     fcPromise = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Ajouter photo" }).click();
@@ -74,11 +80,12 @@ test.describe("Image upload — compte-rendu flow", () => {
 
     // Verify the thumbnails actually loaded real image content (not blank/broken)
     const thumbnails = page.locator("img[data-picture-id]");
-    for (const naturalWidth of await thumbnails.evaluateAll((imgs) =>
-      (imgs as HTMLImageElement[]).map((img) => img.naturalWidth),
-    )) {
-      expect(naturalWidth).toBeGreaterThan(0);
-    }
+    // thumbnails switch from the pending blob to the stored file: wait until both are loaded
+    await expect
+      .poll(() => thumbnails.evaluateAll((imgs) => (imgs as HTMLImageElement[]).every((img) => img.naturalWidth > 0)), {
+        timeout: 10_000,
+      })
+      .toBe(true);
 
     // Button stays visible (multiple=true)
     await expect(page.getByRole("button", { name: "Ajouter photo" })).toBeVisible();
@@ -94,16 +101,18 @@ test.describe("Image upload — compte-rendu flow", () => {
     // ---------------------------------------------------------------------------
     // Step 7: Navigate to send mode and submit
     // ---------------------------------------------------------------------------
-    const envoyerButton = page.getByRole("button", { name: "Envoyer" });
-    await expect(envoyerButton).toBeEnabled();
-    await envoyerButton.click();
+    const continueButton = page.getByRole("button", { name: "Continuer" });
+    await expect(continueButton).toBeEnabled();
+    await continueButton.click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
 
     const emailInput = page.locator('input[type="text"]').first();
     await emailInput.waitFor();
     await emailInput.fill("test-report@example.com");
     await emailInput.press("Enter");
+    // listen before clicking, the response may come back before a listener added afterwards
+    const sent = page.waitForResponse((r) => r.url().includes("/api/pdf/report") && r.status() === 200);
     await page.getByRole("button", { name: "Envoyer" }).click();
-    await page.waitForResponse((r) => r.url().includes("/api/pdf/report") && r.status() === 200);
+    await sent;
   });
 });

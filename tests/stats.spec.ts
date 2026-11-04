@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, mockServices, signup } from "./utils";
+import { mockUsers, mockServices, signup, login } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { sql } from "kysely";
@@ -313,7 +313,7 @@ test.describe("Stats", () => {
 
     await page.goto("./stats");
 
-    await expect(page.locator("h1")).toContainText("Statistiques", { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Statistiques", level: 1 })).toBeVisible({ timeout: 10000 });
 
     // KPI cards showing counts should be visible
     await expect(page.getByText("Nombre de constats créés en 2026")).toBeVisible();
@@ -322,7 +322,7 @@ test.describe("Stats", () => {
     await expect(page.getByRole("heading", { name: "Taux d'adoption" })).toBeVisible();
 
     // Admin section should not be visible (not logged in)
-    await expect(page.getByText("Statistiques par service (admin)")).not.toBeVisible();
+    await expect(page.getByText("Répartition des utilisateurs inscrits par métier")).not.toBeVisible();
   });
 
   test("stats page shows admin section when logged in as admin", async ({ page }) => {
@@ -331,18 +331,18 @@ test.describe("Stats", () => {
     await login({ page, user: mockUsers[0] });
 
     await page.goto("./stats");
-    await expect(page.locator("h1")).toContainText("Statistiques", { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Statistiques", level: 1 })).toBeVisible({ timeout: 10000 });
 
     // Admin section should be visible
-    await expect(page.getByText("Statistiques par service (admin)")).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText("Constats abandonnés")).toBeVisible();
+    await expect(page.getByText("Répartition des utilisateurs inscrits par métier")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("d'abandon en cours de CE")).toBeVisible();
   });
 
   test("changing date range refetches retention stats", async ({ page }) => {
     test.setTimeout(60000);
 
     await page.goto("./stats");
-    await expect(page.locator("h1")).toContainText("Statistiques", { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Statistiques", level: 1 })).toBeVisible({ timeout: 10000 });
 
     // Set a range far in the past — active users should become 0
     const fromInput = page.locator("input[type=date]").first();

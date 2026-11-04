@@ -125,7 +125,10 @@ test.describe("Upload robustness", () => {
     expect(await getResp.text()).toBe(content);
 
     const unknownPath = `test-upload-errors/does-not-exist-${Date.now()}.txt`;
-    const missingGetResp = await request.get(`${BACKEND_URL}/api/upload/attachment`, { headers, params: { filePath: unknownPath } });
+    const missingGetResp = await request.get(`${BACKEND_URL}/api/upload/attachment`, {
+      headers,
+      params: { filePath: unknownPath },
+    });
     expect(missingGetResp.status()).toBe(404);
 
     const missingSizeResp = await request.get(`${BACKEND_URL}/api/upload/attachment/size`, {

@@ -137,7 +137,13 @@ test.describe("Admin whitelist", () => {
 
     expect(resp.ok()).toBe(true);
     const data = await resp.json();
-    expect(data.email).toBe(mockUsers[0].email);
+    // the profile schema has no email: check it is the admin's own user row
+    const adminUser = await db
+      .selectFrom("user")
+      .where("email", "=", mockUsers[0].email)
+      .select("id")
+      .executeTakeFirstOrThrow();
+    expect(data.id).toBe(adminUser.id);
   });
 
   test("GET /api/admin/whitelist/export returns whitelist rows as JSON", async ({ request }) => {
@@ -176,12 +182,13 @@ test.describe("Admin whitelist", () => {
 
     expect(resp.ok()).toBe(true);
     const data = await resp.json();
-    expect(data.data.map((u: { email: string }) => u.email)).toEqual([mockUsers[1].email]);
+    expect(data.users.map((u: { email: string }) => u.email)).toEqual([mockUsers[1].email]);
   });
 
   test("admin routes return 403 for an authenticated non-admin user", async ({ request }) => {
     for (const req of [
-      () => request.get(`${BACKEND_URL}/api/admin/whitelist`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
+      () =>
+        request.get(`${BACKEND_URL}/api/admin/whitelist`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
       () => request.get(`${BACKEND_URL}/api/admin/users`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
       () => request.get(`${BACKEND_URL}/api/admin/me`, { headers: { Authorization: `Bearer ${nonAdminToken}` } }),
     ]) {
@@ -203,8 +210,8 @@ test.describe("Admin whitelist", () => {
     await page.goto("./admin");
 
     // Page should show the admin heading
-    await page.waitForSelector("h1");
-    await expect(page.locator("h1")).toContainText("Administration");
+    await page.getByRole("heading", { name: "Administration", level: 1 }).waitFor();
+    await expect(page.getByRole("heading", { name: "Administration", level: 1 })).toBeVisible();
 
     // The existing whitelisted emails should be visible
     await expect(page.locator("#whitelist-table > table")).toContainText(mockUsers[0].email);
@@ -233,8 +240,8 @@ test.describe("Admin whitelist", () => {
       tabpanelSelector: "#tabpanel-whitelist",
       countBefore: async () =>
         Number(
-          (await db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst())
-            ?.count ?? 0,
+          (await db.selectFrom("whitelist").select(db.fn.countAll<number>().as("count")).executeTakeFirst())?.count ??
+            0,
         ),
       seed: async () => {
         const extraEmails = Array.from({ length: 22 }, (_, i) => `wl-pagination-${i + 1}@test.com`);
@@ -314,10 +321,11 @@ test.describe("Admin whitelist", () => {
         await login({ page, user: mockUsers[0] });
 
         await page.goto("./admin");
-        await page.waitForSelector("h1");
+        await page.getByRole("heading", { name: "Administration", level: 1 }).waitFor();
 
         if (scenario.tab) {
-          await page.getByRole("button", { name: scenario.tab }).click();
+          // exact: the "Liste d'utilisateurs autorisés" tab also contains "utilisateurs"
+          await page.getByRole("button", { name: scenario.tab, exact: true }).click();
         }
 
         // Page 1 should have exactly 20 rows

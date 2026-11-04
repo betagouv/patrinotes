@@ -201,8 +201,8 @@ export const fillMinimalConstat = async (
   await page.getByRole("button", { name: "Couverture" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.waitFor();
-  await dialog.getByRole("radio", { name: "Bon" }).check({ force: true });
-  await dialog.getByRole("radio", { name: "50%" }).check({ force: true });
+  // constat V2: a section has a degradation level (V1 had an état and a proportion)
+  await dialog.getByRole("radio", { name: "Léger" }).check({ force: true });
   await dialog.locator("textarea").fill(opts?.sectionComment ?? "Bon état général, pas de dégradation visible.");
   await dialog.getByRole("button", { name: "Valider" }).click();
   await dialog.waitFor({ state: "hidden" });
@@ -218,7 +218,9 @@ export const finalizeConstat = async (page: Page) => {
   await page.waitForURL((url) => url.search.includes("constat-general"));
 
   await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
-  await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
+  // the proportion only exists on V1 constats
+  const proportion = page.getByRole("radio", { name: "50%" }).first();
+  if (await proportion.isVisible()) await proportion.check({ force: true });
 
   await page.getByRole("button", { name: "Finaliser le constat" }).click();
   await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));

@@ -32,8 +32,7 @@ test.describe("Create user", () => {
     await signup({ page, user: mockUsers[0] });
     expect(page.url()).toContain("/");
 
-    const button = await page.waitForSelector("[data-test-id=logout]");
-    await button.click();
+    await page.getByRole("button", { name: "Déconnexion" }).first().click();
     await page.waitForURL((url) => url.pathname === "/connexion");
     expect(page.url()).toContain("connexion");
   });
@@ -58,17 +57,13 @@ test.describe("Dept numbers on signup", () => {
   test("should create all dept_number rows when service has multiple depts", async ({ page }) => {
     await signup({ page, user: mockUsers[0], udap: "service-multi-dept" });
 
-    const internalUser = await db
-      .selectFrom("internal_user")
+    const user = await db
+      .selectFrom("user")
       .where("email", "=", mockUsers[0].email)
       .select("id")
       .executeTakeFirstOrThrow();
 
-    const userDepts = await db
-      .selectFrom("user_dept")
-      .where("user_id", "=", internalUser.id)
-      .select("dept_number")
-      .execute();
+    const userDepts = await db.selectFrom("user_dept").where("user_id", "=", user.id).select("dept_number").execute();
 
     const deptNumbers = userDepts.map((d) => d.dept_number);
     expect(deptNumbers).toHaveLength(3);
