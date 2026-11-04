@@ -1,30 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { mockUsers, signup } from "./utils";
 import { resetDatabase } from "./setup";
-import { db } from "../packages/backend/src/db/db";
 
-/**
- * A photo picked while the previous one is still being processed is lost (app bug, to fix):
- * wait until the first one reaches the database before adding the next.
- */
-const waitForSavedPhotos = (
-  table: "visited_section_attachment" | "state_report_attachment",
-  count: number,
-  type?: string,
-) =>
-  expect
-    .poll(
-      async () =>
-        (
-          await db
-            .selectFrom(table)
-            .select("id")
-            .$if(!!type, (qb) => qb.where("type" as any, "=", type!))
-            .execute()
-        ).length,
-      { timeout: 15_000 },
-    )
-    .toBe(count);
 import * as fs from "fs";
 import * as path from "path";
 
@@ -110,7 +87,6 @@ test.describe("Image upload — constat flow", () => {
     await dialog.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(dialog.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
-    await waitForSavedPhotos("visited_section_attachment", 1);
 
     // Upload image 2
     fcPromise = page.waitForEvent("filechooser");
@@ -177,14 +153,12 @@ test.describe("Image upload — constat flow", () => {
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(planEdificeSection.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
     await expect(planEdificeSection.getByRole("button", { name: "Ajouter photo" })).toHaveCount(0);
-    await waitForSavedPhotos("state_report_attachment", 1, "plan_edifice");
 
     // ---- VuesGenerales (multiple=true) ----
     fcPromise = page.waitForEvent("filechooser");
     await vuesGeneralesSection.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(vuesGeneralesSection.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
-    await waitForSavedPhotos("state_report_attachment", 1, "vue_generale");
 
     fcPromise = page.waitForEvent("filechooser");
     await vuesGeneralesSection.getByRole("button", { name: "Ajouter photo" }).click();

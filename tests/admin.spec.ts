@@ -334,11 +334,12 @@ test.describe("Admin whitelist", () => {
         // Pagination nav should be visible
         await expect(page.locator(`${scenario.tabpanelSelector} nav.fr-pagination`)).toBeVisible();
 
-        // Click page 2
-        await page.locator(`${scenario.tabpanelSelector} button[title='Page 2']`).click();
-
-        // Page 2 should show the remaining rows
-        await expect(page.locator(scenario.tableSelector)).toHaveCount(page2Count, { timeout: 5000 });
+        // Click page 2; page 2 should show the remaining rows. A click landing before the table has finished
+        // loading is ignored, so click again until page 2 shows.
+        await expect(async () => {
+          await page.locator(`${scenario.tabpanelSelector} button[title='Page 2']`).click();
+          await expect(page.locator(scenario.tableSelector)).toHaveCount(page2Count, { timeout: 3000 });
+        }).toPass({ timeout: 20_000 });
       } finally {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (scenario.cleanup as any)(seeded);

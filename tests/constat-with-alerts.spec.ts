@@ -5,42 +5,36 @@ import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
 
 /**
- * Fills an alert comment and waits until it reaches the database. The alert form is saved after a debounce, and an
- * edit made before the alert row exists locally is lost: refill until it lands. An alert without comment is not sent.
+ * Fills an alert comment and waits until it reaches the database (saved after a debounce, then uploaded by PowerSync).
+ * An alert without comment is not sent.
  */
 const fillAlertComment = async (textarea: Locator, text: string) => {
-  await expect(async () => {
-    await textarea.fill("");
-    await textarea.fill(text);
-    await expect
-      .poll(
-        async () =>
-          (await db.selectFrom("state_report_alert").select("id").where("commentaires", "=", text).execute()).length,
-        { timeout: 3_000 },
-      )
-      .toBeGreaterThan(0);
-  }).toPass({ timeout: 30_000 });
+  await textarea.fill(text);
+  await expect
+    .poll(
+      async () =>
+        (await db.selectFrom("state_report_alert").select("id").where("commentaires", "=", text).execute()).length,
+      { timeout: 10_000 },
+    )
+    .toBeGreaterThan(0);
 };
 
 /**
- * Saves the alert emails of the service page and waits until they reach the database.
- * The page edits the local PowerSync copy of the service: right after signup that row may not be synced yet,
- * the edit then changes nothing, so the save is repeated until it lands.
+ * Saves the alert emails of the service page and waits until they reach the database (uploaded by PowerSync).
+ * Saved once, right after signup: the page waits for the service to be synced before editing it.
  */
 const saveAlertEmails = async (page: Page, emails: Record<string, string>) => {
   const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
-  await expect(async () => {
-    for (const [label, email] of Object.entries(emails)) await page.getByLabel(label).fill(email);
-    await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
-    await expect
-      .poll(
-        async () =>
-          (await db.selectFrom("service").where("id", "=", "service-1").select("courriel_crmh").executeTakeFirst())
-            ?.courriel_crmh,
-        { timeout: 3_000 },
-      )
-      .toBe(emails["Courriel CRMH"]);
-  }).toPass({ timeout: 30_000 });
+  for (const [label, email] of Object.entries(emails)) await page.getByLabel(label).fill(email);
+  await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
+  await expect
+    .poll(
+      async () =>
+        (await db.selectFrom("service").where("id", "=", "service-1").select("courriel_crmh").executeTakeFirst())
+          ?.courriel_crmh,
+      { timeout: 30_000 },
+    )
+    .toBe(emails["Courriel CRMH"]);
 };
 
 test.describe("Constat with alerts flow", () => {
@@ -449,6 +443,11 @@ test.describe("Alerts with validation flow", () => {
     // Navigate to constat-general directly (reference_pop exists → home list also lands here)
     await page.goto(`${constatBaseUrl}?step=constat-general&mode=view`);
     await page.waitForURL((url) => url.search.includes("constat-general"));
+    // the decline happened on the server: wait until PowerSync brings it to the browser, the constat is read-only
+    // ("constat envoyé") until then
+    await expect(page.getByText("Vous ne pouvez pas modifier les informations d'un constat envoyé.")).toHaveCount(0, {
+      timeout: 30_000,
+    });
 
     const finalizeButton = page.getByRole("button", { name: "Finaliser le constat" });
     await finalizeButton.waitFor();
