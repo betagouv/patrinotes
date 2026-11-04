@@ -30,10 +30,9 @@ export class Connector implements PowerSyncBackendConnector {
       const isDeletion = payload.op === "DELETE";
 
       if (isPayloadEmpty && !isDeletion) {
-        console.warn("skipping empty operation", payload);
+        console.warn("skipping empty operation", payload.op, payload.type, payload.id);
         continue;
       }
-      console.log("applying operation", payload);
       await api.post("/api/upload-data", { body: payload });
     }
 
@@ -65,7 +64,7 @@ export const getTokenOrRefresh = async () => {
 };
 
 const refreshAccessToken = async () => {
-  console.log("token expired, refreshing...", { ...apiStore });
+  console.log("token expired, refreshing...");
   const refreshToken = apiStore.refreshToken!;
 
   let resp: RouterOutputs<"/api/refresh-token">;

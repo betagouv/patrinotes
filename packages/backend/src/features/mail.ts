@@ -45,8 +45,6 @@ export const sendStateReportMail = async ({
   groupedReports?: Selectable<Database["state_report"]>[];
   user: Selectable<Database["user"]>;
 }) => {
-  sentry?.captureMessage("Sending state report mail", { extra: { recipients, stateReport } });
-
   const { html, attachments } = createBordereauMailContent({ stateReport, groupedReports, user, pdfUrl });
   const title = getMailStateReportTitle(stateReport, groupedReports);
 
@@ -68,8 +66,6 @@ export const sendReportMail = async ({
   pdfUrl: string;
   report: Selectable<Database["report"]>;
 }) => {
-  sentry?.captureMessage("Sending report mail", { extra: { recipients, report } });
-
   const { html: reportHtml, attachments: reportAttachments } = wrapWithDsfrMail({
     title: "Compte-rendu UDAP" + (report?.title ? ` : ${report.title}` : ""),
     content: `
@@ -207,10 +203,6 @@ export const sendAlertEmail = async ({
   alert: MinimalAlert;
   user: AuthUser;
 }) => {
-  sentry?.captureMessage("Sending alert mail", {
-    extra: { to, alertType: alert.alert, monumentName: getStateReportTitle(stateReport) },
-  });
-
   try {
     const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
     const subject = getAlertMailSubject(alert.alert!, getStateReportTitle(stateReport));
@@ -224,7 +216,7 @@ export const sendAlertEmail = async ({
     });
   } catch (error) {
     sentry?.captureException(error, {
-      extra: { to, alertType: alert.alert, monumentName: getStateReportTitle(stateReport) },
+      extra: { alertType: alert.alert, stateReportId: stateReport.id },
     });
     throw error;
   }

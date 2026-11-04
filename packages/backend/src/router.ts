@@ -58,7 +58,8 @@ export const initFastify = async () => {
     async (instance) => {
       instance.setErrorHandler((error, request, reply) => {
         console.error(error);
-        sentry?.captureException(error, { data: { request: request.body, params: request.params } });
+        // route pattern only: the body may hold passwords or document data, params may hold tokens
+        sentry?.captureException(error, { extra: { method: request.method, route: request.routeOptions?.url } });
         if (error instanceof AppError) {
           reply.status(error.status).send({ error: error.message });
         } else {
