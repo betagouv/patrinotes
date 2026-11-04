@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { v4 } from "uuid";
 import { useLiveService, useRefreshUser, useService, useUser } from "../contexts/AuthContext";
 import { ServiceInstructeurs, Service, Clause_v2 } from "../db/AppSchema";
-import { db, useDbQuery } from "../db/db";
+import { db, updateSyncedRow, useDbQuery } from "../db/db";
 import { AccordionIfMobile, BreadcrumbNav, GoHomeButton } from "./compte";
 import { useForm, useWatch } from "react-hook-form";
 import { fr } from "@codegouvfr/react-dsfr";
@@ -151,7 +151,7 @@ const ServiceForm = () => {
         service_text: format.service_text(serviceData.service_text ?? ""),
       };
 
-      await db.updateTable("service").set(value).where("id", "=", service.id).execute();
+      await updateSyncedRow("service", service.id, value);
       await refreshServiceMutation.mutateAsync();
     },
   });
@@ -227,6 +227,7 @@ const ServiceForm = () => {
         </Button>
       </Flex>
       {saveServiceMutation.isSuccess ? <SuccessAlert /> : null}
+      {saveServiceMutation.isError ? <ErrorAlert error={saveServiceMutation.error} /> : null}
     </Flex>
   );
 };
@@ -784,6 +785,19 @@ export const Route = createFileRoute("/service")({
   ),
 });
 
+export const ErrorAlert = ({ error }: { error: unknown }) => {
+  return (
+    // @ts-ignore title is required by DSFR
+    <Alert
+      style={{ marginBottom: "8px", marginTop: "16px" }}
+      severity="error"
+      closable={false}
+      small={false}
+      description={error instanceof Error ? error.message : "Vos modifications n'ont pas pu être enregistrées."}
+    />
+  );
+};
+
 export const SuccessAlert = () => {
   return (
     // @ts-ignore title is required by DSFR
@@ -818,7 +832,7 @@ const AlertesForm = ({ service }: { service: Service }) => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<Service>) => {
-      await db.updateTable("service").set(data).where("id", "=", service.id).execute();
+      await updateSyncedRow("service", service.id, data);
       await refreshUser.mutateAsync();
     },
   });
@@ -877,6 +891,7 @@ const AlertesForm = ({ service }: { service: Service }) => {
         <AlertesSaveButton form={form} defaultValues={service} saveMutation={saveMutation} />
       </Flex>
       {saveMutation.isSuccess ? <SuccessAlert /> : null}
+      {saveMutation.isError ? <ErrorAlert error={saveMutation.error} /> : null}
     </Stack>
   );
 };

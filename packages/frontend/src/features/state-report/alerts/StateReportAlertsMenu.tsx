@@ -111,7 +111,22 @@ const AlertSectionsForm = ({
   const constatId = routeApi.useParams().constatId;
   const updateAlertMutation = useMutation({
     mutationFn: async () => {
-      const toUpdate = getChangesToPush(alertSections, sectionsForm.getValues("alertSections"));
+      // Compare with the rows stored now, not with the alerts loaded when the drawer opened: an alert created
+      // during this session is not in that list, and its comment and recipients were never saved.
+      // (The debounced sync also keeps the first instance of this mutation, so props seen here may be stale.)
+      const currentAlerts = sectionsForm.getValues("alertSections");
+      const storedAlerts = currentAlerts.length
+        ? await db
+            .selectFrom("state_report_alert")
+            .selectAll()
+            .where(
+              "id",
+              "in",
+              currentAlerts.map((alert) => alert.id),
+            )
+            .execute()
+        : [];
+      const toUpdate = getChangesToPush(storedAlerts as AlertWithAttachments[], currentAlerts);
 
       return await db.transaction().execute(async (tx) => {
         for (const { id, changes } of toUpdate) {
@@ -295,7 +310,10 @@ const getChangesToPush = (baseAlerts: AlertWithAttachments[], currentAlerts: Ale
 
     if (!base || !current) continue;
 
-    const diff: Partial<AlertWithAttachments> = getDiff(current, base);
+    // only the columns of the stored row: form-only fields are not written
+    const diff: Partial<AlertWithAttachments> = Object.fromEntries(
+      Object.entries(getDiff(current, base)).filter(([key]) => key in base),
+    );
     if (Object.keys(diff).length === 0) continue;
 
     toUpdate.push({ id, changes: diff });

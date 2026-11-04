@@ -67,11 +67,6 @@ test.describe("Image upload — compte-rendu flow", () => {
     await page.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);
     await expect(page.locator("img[data-picture-id]")).toHaveCount(1, { timeout: 15_000 });
-    // A photo picked while the previous one is still being processed is lost (app bug, to fix):
-    // wait until the first one is saved before adding the second.
-    await expect
-      .poll(async () => (await db.selectFrom("report_attachment").select("id").execute()).length, { timeout: 15_000 })
-      .toBe(1);
 
     fcPromise = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Ajouter photo" }).click();

@@ -23,15 +23,18 @@ export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImag
   const uploadImageMutation = useMutation({
     mutationFn: async ({ files }: { files: File[] }) => {
       await addImage(files);
-      fileInputRef.current!.value = "";
     },
   });
 
   const onChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    const selected = Array.from(files);
+    // Clear the input right away: while it still holds a file, picking the same file again (during an upload, or
+    // after a failed one) fires no change event and the photo was silently ignored.
+    e.target.value = "";
 
-    await uploadImageMutation.mutateAsync({ files: Array.from(files) });
+    await uploadImageMutation.mutateAsync({ files: selected });
   };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);

@@ -102,6 +102,37 @@ export const attachmentQueue = new AttachmentQueue({
 export const db = wrapPowerSyncWithKysely<Database>(powerSyncDb);
 export const useDbQuery = useQuery;
 
+/**
+ * Updates a row that the server sends (the user's service, their profile). Right after signup or login the row may
+ * not be synced to the local database yet: an update would then change nothing and the edit would be lost silently.
+ * Waits for the first sync when the row is missing, and fails with a message if it is still not there.
+ */
+export const updateSyncedRow = async <T extends "service" | "user">(
+  table: T,
+  id: string,
+  values: Partial<Database[T]>,
+) => {
+  const exists = () =>
+    db
+      .selectFrom(table as "service")
+      .select("id")
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+  if (!(await exists())) {
+    await powerSyncDb.waitForFirstSync(AbortSignal.timeout(30_000)).catch(() => {});
+    if (!(await exists())) {
+      throw new Error("Vos données ne sont pas encore synchronisées. Vérifiez votre connexion et réessayez.");
+    }
+  }
+
+  await db
+    .updateTable(table as "service")
+    .set(values as any)
+    .where("id", "=", id)
+    .execute();
+};
+
 export const setupPowersync = async () => {
   const connector = new Connector();
   await powerSyncDb.init();

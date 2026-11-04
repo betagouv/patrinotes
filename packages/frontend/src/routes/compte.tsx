@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import Download from "@codegouvfr/react-dsfr/Download";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useMutation, UseMutationResult, useQuery } from "@tanstack/react-query";
-import { db, useDbQuery } from "../db/db";
+import { db, updateSyncedRow, useDbQuery } from "../db/db";
 import { useLiveUser, useRefreshUser, useSetService, useUser } from "../contexts/AuthContext";
 import { v4, v7 } from "uuid";
 import { Spinner } from "#components/Spinner";
@@ -14,7 +14,7 @@ import Alert from "@codegouvfr/react-dsfr/Alert";
 import { api, AuthUser } from "../api";
 import JSZip from "jszip";
 import { downloadFile } from "../utils";
-import { datePresets, DateRangePicker, SuccessAlert } from "./service";
+import { datePresets, DateRangePicker, ErrorAlert, SuccessAlert } from "./service";
 import { ReactNode, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { getPDFInMailName } from "@patrinotes/pdf";
@@ -154,7 +154,7 @@ const Profile = () => {
 
   const saveUserMutation = useMutation({
     mutationFn: async (data: { name: string; job: string }) => {
-      await db.updateTable("user").set({ name: data.name, job: data.job }).where("id", "=", user.id).execute();
+      await updateSyncedRow("user", user.id, { name: data.name, job: data.job });
       await refreshUser.mutateAsync();
     },
   });
@@ -184,6 +184,7 @@ const Profile = () => {
       </Flex>
 
       {saveUserMutation.isSuccess ? <SuccessAlert /> : null}
+      {saveUserMutation.isError ? <ErrorAlert error={saveUserMutation.error} /> : null}
     </Stack>
   );
 };
@@ -364,7 +365,7 @@ const Share = () => {
           <ManageDelegations coworkers={coworkers} delegations={delegations} />
           {delegatedToMe.length ? (
             // @ts-ignore alert needs a title ?
-            (<Alert
+            <Alert
               style={{
                 marginTop: "16px",
               }}
@@ -375,21 +376,21 @@ const Share = () => {
                 delegatedToMe.map((user) => user.createdByName).join(", ") +
                 ` vous autorise${delegatedToMe.length > 1 ? "nt" : ""} à créer, modifier et supprimer ${delegatedToMe.length > 1 ? "leurs" : "ses"} CRs.`
               }
-            />)
+            />
           ) : null}
         </Box>
       ) : (
         // @ts-ignore alert needs a title ?
-        (<Alert
+        <Alert
           small={false}
           severity="info"
           description={
             "Aucun autre utilisateur de votre UDAP n'est enregistré sur Patrinotes. Vous ne pouvez donc pas autoriser d'autres personnes à créer, modifier et supprimer vos CR."
           }
-        />)
+        />
       )}
     </Flex>
-  )
+  );
 };
 
 export const BreadcrumbNav = ({ label }: { label: string }) => {
@@ -578,7 +579,7 @@ const ConstatValidation = () => {
       </Flex>
       {saveMutation.isSuccess ? <SuccessAlert /> : null}
     </Stack>
-  )
+  );
 };
 
 const SaveValidationButton = ({
