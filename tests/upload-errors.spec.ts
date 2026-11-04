@@ -102,7 +102,22 @@ test.describe("Upload robustness", () => {
     const { accessToken } = (await loginResp.json()) as { accessToken: string };
     const headers = { Authorization: `Bearer ${accessToken}` };
 
-    const filePath = `test-upload-errors/${Date.now()}.txt`;
+    // files belong to a document of the user's service: create a compte-rendu to hold this one
+    const reportId = `report-upload-errors-${Date.now()}`;
+    const reportResp = await request.post(`${BACKEND_URL}/api/upload-data`, {
+      headers,
+      data: {
+        op_id: 1,
+        tx_id: 1,
+        id: reportId,
+        type: "report",
+        op: "PUT",
+        data: { title: "Upload test", disabled: 0, createdAt: new Date().toISOString() },
+      },
+    });
+    expect((await reportResp.json()).success).toBe(true);
+
+    const filePath = `${reportId}/images/${Date.now()}.txt`;
     const content = "hello attachment round-trip";
 
     const presignedResp = await request.get(`${BACKEND_URL}/api/upload/attachment/presigned-url`, {
@@ -124,7 +139,7 @@ test.describe("Upload robustness", () => {
     expect(getResp.ok()).toBeTruthy();
     expect(await getResp.text()).toBe(content);
 
-    const unknownPath = `test-upload-errors/does-not-exist-${Date.now()}.txt`;
+    const unknownPath = `${reportId}/images/does-not-exist-${Date.now()}.txt`;
     const missingGetResp = await request.get(`${BACKEND_URL}/api/upload/attachment`, {
       headers,
       params: { filePath: unknownPath },
