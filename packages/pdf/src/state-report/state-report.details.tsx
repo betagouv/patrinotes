@@ -28,122 +28,71 @@ export const ConstatDetaille = ({
     return null;
   }
 
-  if (version === 1) {
-    return (
-      <div>
-        <h2>Constat détaillé</h2>
-        <ul>
-          {sections.map((section) => {
-            return (
-              <li style={{ marginBottom: 0, padding: 0 }}>
-                <b>{section.section} : </b>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  <div>
-                    {section.proportion_dans_cet_etat} des parties protégées sont évaluées{" "}
-                    {etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"}.
-                  </div>
+  const getStateLabel = (section: SectionWithAttachments) =>
+    version === 1
+      ? `${section.proportion_dans_cet_etat} des parties protégées sont évaluées ${
+          etatGeneralMap[section.etat_general as keyof typeof etatGeneralMap] || "Non renseigné"
+        }.`
+      : sectionNiveauDegradationMapV2[section.niveau_degradation as keyof typeof sectionNiveauDegradationMapV2] ||
+        "Non renseigné";
 
-                  <div>
-                    <u>Commentaires</u> :{" "}
-                    <div>{section.commentaires ? <Multiline text={section.commentaires} /> : "Aucun"}</div>
-                  </div>
+  return (
+    <div>
+      <h2>Constat détaillé</h2>
+      <ul>
+        {sections.map((section, index) => {
+          const commentaires = section.commentaires?.trim();
+          return (
+            <li key={section.id} style={{ marginTop: index === 0 ? 0 : "24px", marginBottom: 0, padding: 0 }}>
+              <b>{section.section} : </b>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                <div>{getStateLabel(section)}</div>
 
-                  {section.preconisations ? (
-                    <div>
-                      <u>Préconisations de travaux</u> :{" "}
-                      {deserializePreconisations(section.preconisations)?.map((p) => (
-                        <div>
-                          - {p.preconisation} :{" "}
-                          {p.commentaire ? <Multiline text={p.commentaire} /> : "Aucun commentaire"}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {section.attachments?.length ? (
-                    <ImagesTable
-                      images={section.attachments.map((attachment) => ({
-                        url: attachment.file!,
-                        label: attachment.label ?? undefined,
-                        attachmentId: attachment.id,
-                        width: attachment.width,
-                        height: attachment.height,
-                      }))}
-                    />
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
-
-  if (version === 2) {
-    return (
-      <div>
-        <h2>Constat détaillé</h2>
-        <ul>
-          {sections.map((section) => {
-            return (
-              <li style={{ marginBottom: 0, padding: 0 }}>
-                <b>{section.section} : </b>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  <div>
-                    {sectionNiveauDegradationMapV2[
-                      section.niveau_degradation as keyof typeof sectionNiveauDegradationMapV2
-                    ] || "Non renseigné"}
-                  </div>
-
+                {commentaires ? (
                   <div>
                     <u>Commentaires</u> :{" "}
-                    <div>{section.commentaires ? <Multiline text={section.commentaires} /> : "Aucun"}</div>
-                  </div>
-
-                  {section.preconisations ? (
                     <div>
-                      <u>Préconisations de travaux</u> :{" "}
-                      {deserializePreconisations(section.preconisations)?.map((p) => (
-                        <div>
-                          - {p.preconisation} :{" "}
-                          {p.commentaire ? <Multiline text={p.commentaire} /> : "Aucun commentaire"}
-                        </div>
-                      ))}
+                      <Multiline text={commentaires} />
                     </div>
-                  ) : null}
+                  </div>
+                ) : null}
 
-                  {section.attachments?.length ? (
-                    <ImagesTable
-                      images={section.attachments.map((attachment) => ({
-                        url: attachment.file!,
-                        label: attachment.label ?? undefined,
-                        attachmentId: attachment.id,
-                        width: attachment.width,
-                        height: attachment.height,
-                      }))}
-                    />
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
+                {section.preconisations ? (
+                  <div>
+                    <u>Préconisations de travaux</u> :{" "}
+                    {deserializePreconisations(section.preconisations)?.map((p, i) => (
+                      <div key={i}>
+                        - {p.preconisation} :{" "}
+                        {p.commentaire ? <Multiline text={p.commentaire} /> : "Aucun commentaire"}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {section.attachments?.length ? (
+                  <ImagesTable
+                    images={section.attachments.map((attachment) => ({
+                      url: attachment.file!,
+                      label: attachment.label ?? undefined,
+                      attachmentId: attachment.id,
+                      width: attachment.width,
+                      height: attachment.height,
+                    }))}
+                  />
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 };
 
 /**
