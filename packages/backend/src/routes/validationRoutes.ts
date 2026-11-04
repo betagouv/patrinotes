@@ -6,13 +6,28 @@ import { sendStateReportMail, sendValidationResultMail } from "../features/mail"
 import { v4 } from "uuid";
 import { AppError } from "../features/errors";
 
+const optionalString = Type.Optional(Type.Union([Type.String(), Type.Null()]));
+
+const validationInfoTSchema = Type.Object({
+  stateReport: Type.Object({
+    id: optionalString,
+    titre_edifice: optionalString,
+    commune: optionalString,
+    date_visite: optionalString,
+  }),
+  pdfUrl: Type.String(),
+  status: optionalString,
+  comment: optionalString,
+});
+
 export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.get(
     "/constat-validation/:token",
     {
       schema: {
         params: Type.Object({ token: Type.String() }),
-        response: { 200: Type.Any() },
+        // Fastify 4 reads an empty schema such as Type.Any() as an object without properties and sent `{}`
+        response: { 200: validationInfoTSchema },
       },
     },
     async (request) => {
@@ -25,11 +40,11 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (!validation) {
-        throw { statusCode: 404, message: "Lien de validation introuvable" };
+        throw new AppError(404, "Lien de validation introuvable");
       }
 
       if (new Date(validation.token_expires_at) < new Date() && validation.status === "pending") {
-        throw { statusCode: 410, message: "Ce lien de validation a expiré" };
+        throw new AppError(410, "Ce lien de validation a expiré");
       }
 
       const stateReport = await db
@@ -71,10 +86,10 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (!validation) {
-        throw { statusCode: 404, message: "Lien de validation introuvable" };
+        throw new AppError(404, "Lien de validation introuvable");
       }
       if (new Date(validation.token_expires_at) < new Date() && validation.status === "pending") {
-        throw { statusCode: 410, message: "Ce lien de validation a expiré" };
+        throw new AppError(410, "Ce lien de validation a expiré");
       }
 
       const pdfBuffer = await request.services.upload.getAttachment({ filePath: validation.pdf_path });
@@ -105,11 +120,11 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (!validation) {
-        throw { statusCode: 404, message: "Lien invalide ou déjà traité" };
+        throw new AppError(404, "Lien invalide ou déjà traité");
       }
 
       if (new Date(validation.token_expires_at) < new Date()) {
-        throw { statusCode: 410, message: "Ce lien de validation a expiré" };
+        throw new AppError(410, "Ce lien de validation a expiré");
       }
 
       await db.transaction().execute(async (trx) => {
