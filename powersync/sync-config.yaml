@@ -33,18 +33,27 @@ streams:
       - SELECT * FROM pdf_snapshot WHERE user_id IN current_user_id
       - SELECT * FROM user_settings WHERE user_id IN current_user_id
 
+  # The document id comes from the client: the document must also belong to the user's service.
+  # The check goes through the document because older attachment rows may have no service_id.
   state_report_attachments_stream:
     queries:
       - SELECT * FROM state_report_attachment WHERE state_report_id = subscription.parameter('state_report_id') AND
-        is_deprecated = 0
+        is_deprecated = 0 AND state_report_id IN (SELECT id FROM state_report WHERE service_id IN (SELECT service_id
+        FROM "user" WHERE email = auth.parameter('email')))
       - SELECT * FROM visited_section_attachment WHERE visited_section_id IN (SELECT id FROM visited_section WHERE
-        state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
+        state_report_id = subscription.parameter('state_report_id') AND state_report_id IN (SELECT id FROM
+        state_report WHERE service_id IN (SELECT service_id FROM "user" WHERE email = auth.parameter('email')))) AND
+        is_deprecated = 0
       - SELECT * FROM state_report_alert_attachment WHERE state_report_alert_id IN (SELECT id FROM state_report_alert
-        WHERE state_report_id = subscription.parameter('state_report_id')) AND is_deprecated = 0
+        WHERE state_report_id = subscription.parameter('state_report_id') AND state_report_id IN (SELECT id FROM
+        state_report WHERE service_id IN (SELECT service_id FROM "user" WHERE email = auth.parameter('email')))) AND
+        is_deprecated = 0
 
   report_attachments_stream:
     queries:
       - SELECT * FROM report_attachment WHERE report_id = subscription.parameter('report_id') AND is_deprecated = 0
+        AND report_id IN (SELECT id FROM report WHERE service_id IN (SELECT service_id FROM "user" WHERE email =
+        auth.parameter('email')))
 
   reports_stream:
     auto_subscribe: true
