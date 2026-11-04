@@ -11,6 +11,7 @@ import fs from "fs/promises";
 import path from "node:path";
 import { NoSuchKey } from "@aws-sdk/client-s3";
 import { v4 } from "uuid";
+import { assertCanReadAttachment, assertCanUploadAttachment } from "../features/attachmentAccess";
 
 const debug = makeDebug("upload");
 const pump = util.promisify(pipeline);
@@ -34,6 +35,7 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     async (request, reply) => {
       const { filePath } = request.query as any;
       if (!filePath) throw new AppError(400, "No filePath provided");
+      await assertCanUploadAttachment(request.user, filePath);
       const url = await request.services.upload.getPresignedUploadUrl({ filePath });
       reply.send({ url });
     },
@@ -42,6 +44,7 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.get("/attachment", async (request, reply) => {
     const { filePath, stateReportId } = request.query as any;
     if (!filePath) throw new AppError(400, "No filePath provided");
+    await assertCanReadAttachment(request.user, decodeURIComponent(filePath));
     try {
       const fileBuffer = await request.services.upload.getAttachment({ filePath: decodeURIComponent(filePath) });
 
@@ -69,6 +72,7 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.get("/attachment/size", async (request, reply) => {
     const { filePath } = request.query as any;
     if (!filePath) throw new AppError(400, "No filePath provided");
+    await assertCanReadAttachment(request.user, decodeURIComponent(filePath));
     const size = await request.services.upload.getAttachmentSize({ filePath: decodeURIComponent(filePath) });
     reply.send({ size });
   });

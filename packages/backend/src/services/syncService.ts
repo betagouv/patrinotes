@@ -3,19 +3,16 @@ import { db } from "../db/db";
 import { makeDebug } from "../features/debug";
 import { v4 } from "uuid";
 import { AuthUser } from "../routes/authMiddleware";
-import { ENV } from "../envVars";
+import { Decision, evaluateWrite, Row, syncPolicies } from "../features/sync/syncPolicy";
+import { sentry } from "../features/sentry";
+import type { Kysely } from "kysely";
+import type { Database } from "../db/db";
 
 const debug = makeDebug("sync-service");
 
 export const Nullable = <T extends TSchema>(schema: T) => Type.Optional(Type.Union([schema, Type.Null()]));
 
-const blackListedTables = ["internal_user"];
-
-const getBlackListedTables = () => {
-  const base = [...blackListedTables];
-
-  return base;
-};
+type Trx = Kysely<Database>;
 
 // Tables belonging to a state report (constat d'état), with how to reach its state_report_id.
 // Reports (compte-rendus) are intentionally not listed: they stay editable after sending.
@@ -43,7 +40,7 @@ export const isStateReportLocked = (stateReport: {
   validation_status: string | null;
 }) => !!stateReport.attachment_id && stateReport.validation_status !== "declined";
 
-const findStateReportId = async (operation: Static<typeof crudTSchema>): Promise<string | null> => {
+const findStateReportId = async (trx: Trx, operation: Static<typeof crudTSchema>): Promise<string | null> => {
   const { type, id, op } = operation;
   const data = (operation.data ?? {}) as Record<string, unknown>;
 
@@ -58,7 +55,7 @@ const findStateReportId = async (operation: Static<typeof crudTSchema>): Promise
   if (op === "PUT") {
     foreignId = (data[mapping.column] as string | undefined) ?? null;
   } else {
-    const row = await db
+    const row = await trx
       .selectFrom(type as any)
       .select(mapping.column as any)
       .where("id", "=", id)
@@ -69,7 +66,7 @@ const findStateReportId = async (operation: Static<typeof crudTSchema>): Promise
 
   if (!mapping.parent) return foreignId;
 
-  const parentRow = await db
+  const parentRow = await trx
     .selectFrom(mapping.parent.table as any)
     .select(mapping.parent.column as any)
     .where("id", "=", foreignId)
@@ -77,11 +74,11 @@ const findStateReportId = async (operation: Static<typeof crudTSchema>): Promise
   return ((parentRow as any)?.[mapping.parent.column] as string | undefined) ?? null;
 };
 
-const isForbiddenOnLockedStateReport = async (operation: Static<typeof crudTSchema>) => {
-  const stateReportId = await findStateReportId(operation);
+const isForbiddenOnLockedStateReport = async (trx: Trx, operation: Static<typeof crudTSchema>) => {
+  const stateReportId = await findStateReportId(trx, operation);
   if (!stateReportId) return false;
 
-  const stateReport = await db
+  const stateReport = await trx
     .selectFrom("state_report")
     .select(["attachment_id", "validation_status"])
     .where("id", "=", stateReportId)
@@ -98,6 +95,8 @@ const isForbiddenOnLockedStateReport = async (operation: Static<typeof crudTSche
 
 export class SyncService {
   async applyCrud(operation: Static<typeof crudTSchema>, user: AuthUser) {
+    if (!user) return { success: false, error: "Unauthorized" };
+
     await db
       .insertInto("transactions")
       .values({
@@ -113,55 +112,98 @@ export class SyncService {
       })
       .execute();
 
-    if (getBlackListedTables().includes(operation.type)) {
-      return { error: "Unauthorized" };
-    }
+    const { type: table, id, op } = operation;
+    const data = (operation.data ?? {}) as Row;
+    const syncUser = { id: user.id, service_id: user.service_id };
+
+    const refuse = (reason: string) => {
+      // Refused writes are answered with 200, like other failures: a 4xx would block the client's upload queue.
+      // The client gets the stored row back at its next sync.
+      debug("Refused", op, "on", table, id, "for user", user.id, ":", reason);
+      sentry?.captureMessage("Écriture de synchronisation refusée", {
+        level: "warning",
+        extra: { table, op, id, userId: user.id, reason },
+      });
+      return { success: false, error: "Forbidden" };
+    };
+
+    // unknown tables are refused before any query, so their name never reaches SQL
+    if (!Object.hasOwn(syncPolicies, table)) return refuse(`table ${table} non modifiable`);
 
     try {
-      if (operation.type === "user_settings" && (operation.op === "PUT" || operation.op === "PATCH")) {
-        const handled = await applyUserSettingsWrite(operation, user);
-        if (handled) return { success: true };
-      }
-
-      if (await isForbiddenOnLockedStateReport(operation)) {
-        debug("Rejecting", operation.op, "on", operation.type, operation.id, ": state report already sent");
-        // Answer 200 so the client drops the operation instead of retrying it forever;
-        // PowerSync then syncs the server state back, undoing the local change.
-        return { success: false, error: "Ce constat d'état a été envoyé et ne peut plus être modifié" };
-      }
-
-      if (operation.op === "DELETE") {
-        debug("Deleting row on table", operation.type, "with id", operation.id);
-        const { type, id } = operation;
-        await db
-          .deleteFrom(type as any)
+      return await db.transaction().execute(async (trx) => {
+        const existing = (await trx
+          .selectFrom(table as any)
+          .selectAll()
           .where("id", "=", id)
-          .execute();
-      }
-      if (operation.op === "PATCH") {
-        debug("Patching row on table", operation.type, "with id", operation.id);
-        const { type, id, data } = operation;
-        await db
-          .updateTable(type as any)
-          .set(data as any)
-          .where("id", "=", id)
-          .execute();
-      }
-      if (operation.op === "PUT") {
-        debug("Inserting row on table", operation.type);
-        const { type, data, id } = operation;
-        await db
-          .insertInto(type as any)
-          .values({ id, ...data } as any)
-          .execute();
-      }
+          .forUpdate()
+          .executeTakeFirst()) as Row | undefined;
+
+        const decision: Decision = await evaluateWrite({
+          trx,
+          user: syncUser,
+          table,
+          op,
+          id,
+          data,
+          existing: existing ?? null,
+        });
+
+        if (!decision.allowed) return refuse(decision.reason);
+
+        if (decision.dropped.length) {
+          debug("Ignored server-owned columns", decision.dropped, "on", table, id, "for user", user.id);
+        }
+
+        if (await isForbiddenOnLockedStateReport(trx, operation)) {
+          debug("Rejecting", op, "on", table, id, ": state report already sent");
+          // Answer 200 so the client drops the operation instead of retrying it forever;
+          // PowerSync then syncs the server state back, undoing the local change.
+          return { success: false, error: "Ce constat d'état a été envoyé et ne peut plus être modifié" };
+        }
+
+        if (table === "user_settings" && (op === "PUT" || op === "PATCH")) {
+          // On a PATCH of a row the server never received, the policy has nothing to check: keep the client columns
+          // minus the server-owned ones, and apply them to the user's own row.
+          const serverColumns = syncPolicies.user_settings?.serverColumns ?? [];
+          const values =
+            op === "PATCH" && !existing
+              ? Object.fromEntries(Object.entries(data).filter(([column]) => column !== "id" && !serverColumns.includes(column)))
+              : decision.values;
+          const handled = await applyUserSettingsWrite(trx, operation, user, values);
+          if (handled) return { success: true };
+        }
+
+        if (op === "DELETE") {
+          debug("Deleting row on table", table, "with id", id);
+          await trx
+            .deleteFrom(table as any)
+            .where("id", "=", id)
+            .execute();
+        }
+        if (op === "PATCH" && Object.keys(decision.values).length) {
+          debug("Patching row on table", table, "with id", id);
+          await trx
+            .updateTable(table as any)
+            .set(decision.values as any)
+            .where("id", "=", id)
+            .execute();
+        }
+        if (op === "PUT") {
+          debug("Inserting row on table", table);
+          await trx
+            .insertInto(table as any)
+            .values({ ...decision.values, id } as any)
+            .execute();
+        }
+
+        return { success: true };
+      });
     } catch (e) {
       debug("Error on applyCrud", e);
 
       return { success: false, error: e };
     }
-
-    return { success: true };
   }
 }
 
@@ -173,15 +215,18 @@ export class SyncService {
  * replaced by the server one at its next sync.
  * Returns true when the write was applied here.
  */
-const applyUserSettingsWrite = async (operation: Static<typeof crudTSchema>, user: AuthUser) => {
+const applyUserSettingsWrite = async (
+  trx: Trx,
+  operation: Static<typeof crudTSchema>,
+  user: AuthUser,
+  data: Record<string, unknown>,
+) => {
   const { id, op } = operation;
-  const data = { ...((operation.data ?? {}) as Record<string, unknown>) };
-  delete data.id;
 
   if (op === "PUT") {
     const userId = (data.user_id as string | undefined) ?? user.id;
     const serviceId = (data.service_id as string | undefined) ?? user.service_id;
-    const existing = await db
+    const existing = await trx
       .selectFrom("user_settings")
       .select("id")
       .where("user_id", "=", userId)
@@ -193,7 +238,7 @@ const applyUserSettingsWrite = async (operation: Static<typeof crudTSchema>, use
 
     debug("user_settings already exists for this user and service, updating", existing.id, "instead of inserting", id);
     if (Object.keys(data).length > 0) {
-      await db
+      await trx
         .updateTable("user_settings")
         .set(data as any)
         .where("id", "=", existing.id)
@@ -204,7 +249,7 @@ const applyUserSettingsWrite = async (operation: Static<typeof crudTSchema>, use
 
   // PATCH
   if (Object.keys(data).length === 0) return false;
-  const result = await db
+  const result = await trx
     .updateTable("user_settings")
     .set(data as any)
     .where("id", "=", id)
@@ -212,7 +257,7 @@ const applyUserSettingsWrite = async (operation: Static<typeof crudTSchema>, use
   if (Number(result.numUpdatedRows) > 0) return true;
 
   debug("user_settings", id, "unknown on the server, patching the row of user", user.id, "instead");
-  await db
+  await trx
     .updateTable("user_settings")
     .set(data as any)
     .where("id", "=", (eb) =>
