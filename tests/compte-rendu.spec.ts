@@ -48,9 +48,9 @@ test.describe("Compte-rendu flow", () => {
     await page.waitForURL((url) => url.pathname.startsWith("/pdf/") && url.search.includes("mode=view"));
 
     // ---------------------------------------------------------------------------
-    // Step 3: PDF preview — click "Envoyer" to go to send mode
+    // Step 3: PDF preview — click "Continuer" to go to send mode
     // ---------------------------------------------------------------------------
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
 
     // ---------------------------------------------------------------------------

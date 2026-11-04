@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../packages/backend/src/db/db";
-import { subDays } from "date-fns";
+// date-fns is a dependency of the packages, not of the root where the tests run
+const subDays = (date: Date, days: number) => new Date(date.getTime() - days * 24 * 60 * 60 * 1000);
 
 const backendPort = process.env.BACKEND_PORT ?? "3011";
 

@@ -69,7 +69,7 @@ test.describe("Image upload — drawing and légende", () => {
     await page.fill("input[name=proprietaire_email]", "jean.dupont@example.com");
 
     // ---------------------------------------------------------------------------
-    // Step 6: Constat général — upload to Plan de situation with drawing + légende
+    // Step 6: Constat général — upload to Plan de l'édifice with drawing + légende
     // ---------------------------------------------------------------------------
     await page.getByRole("button", { name: /Constat d'état/ }).click();
     await page.waitForTimeout(500);
@@ -78,9 +78,11 @@ test.describe("Image upload — drawing and légende", () => {
 
     // Fill mandatory radio fields
     await page.getByRole("radio", { name: "Bon" }).first().check({ force: true });
-    await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
+    if (await page.getByRole("radio", { name: "50%" }).first().isVisible())
+      await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
 
-    const planSituationSection = page.getByText("Plan de situation").locator("..");
+    // the plan de situation is generated from the map now: draw on the plan de l'édifice instead
+    const planSituationSection = page.getByText("Plan de l'édifice").locator("..");
 
     const [fileChooser] = await Promise.all([
       page.waitForEvent("filechooser"),

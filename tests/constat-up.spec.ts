@@ -135,12 +135,18 @@ test.describe("Constat d'état sur un MH complexe", () => {
         const report = await db.selectFrom("state_report").selectAll().where("id", "=", id).executeTakeFirst();
         return report && { ref: report.reference_pop, up: report.up_id, chemin: report.up_chemin };
       })
-      .toEqual({ ref: "TEST00002", up: "mock-test-6", chemin: JSON.stringify([{ id: "mock-test-2", intitule: "Corps de logis" }]) });
+      .toEqual({
+        ref: "TEST00002",
+        up: "mock-test-6",
+        chemin: JSON.stringify([{ id: "mock-test-2", intitule: "Corps de logis" }]),
+      });
 
     // switch to another UP of the same monument without losing the constat
     await page.getByText("Changer de monument ou d’UP").click();
     await page.getByRole("button", { name: "Changer d’UP" }).click();
     const changeDialog = page.getByRole("dialog");
+    // the dialog opens on the level of the current UP (inside "Corps de logis"): go back up to reach "Chapelle"
+    await changeDialog.getByText("Retour").click();
     await changeDialog.getByRole("radio", { name: "Chapelle" }).check({ force: true });
     await changeDialog.getByRole("button", { name: "Valider" }).click();
     await expect(page.getByText("Château complexe de Test | Chapelle")).toBeVisible();

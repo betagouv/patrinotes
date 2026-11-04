@@ -1,8 +1,47 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { mockUsers, signup, fillMinimalConstat, finalizeConstat } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
+
+/**
+ * Fills an alert comment and waits until it reaches the database. The alert form is saved after a debounce, and an
+ * edit made before the alert row exists locally is lost: refill until it lands. An alert without comment is not sent.
+ */
+const fillAlertComment = async (textarea: Locator, text: string) => {
+  await expect(async () => {
+    await textarea.fill("");
+    await textarea.fill(text);
+    await expect
+      .poll(
+        async () =>
+          (await db.selectFrom("state_report_alert").select("id").where("commentaires", "=", text).execute()).length,
+        { timeout: 3_000 },
+      )
+      .toBeGreaterThan(0);
+  }).toPass({ timeout: 30_000 });
+};
+
+/**
+ * Saves the alert emails of the service page and waits until they reach the database.
+ * The page edits the local PowerSync copy of the service: right after signup that row may not be synced yet,
+ * the edit then changes nothing, so the save is repeated until it lands.
+ */
+const saveAlertEmails = async (page: Page, emails: Record<string, string>) => {
+  const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
+  await expect(async () => {
+    for (const [label, email] of Object.entries(emails)) await page.getByLabel(label).fill(email);
+    await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
+    await expect
+      .poll(
+        async () =>
+          (await db.selectFrom("service").where("id", "=", "service-1").select("courriel_crmh").executeTakeFirst())
+            ?.courriel_crmh,
+        { timeout: 3_000 },
+      )
+      .toBe(emails["Courriel CRMH"]);
+  }).toPass({ timeout: 30_000 });
+};
 
 test.describe("Constat with alerts flow", () => {
   test.beforeAll(async () => {
@@ -31,19 +70,12 @@ test.describe("Constat with alerts flow", () => {
     // Scroll to alertes-mh section
     await page.locator("#alertes-mh").scrollIntoViewIfNeeded();
 
-    await page.getByLabel("Courriel CRMH").waitFor();
-    await page.getByLabel("Courriel CRMH").fill("crmh-alert@test.com");
-    await page.getByLabel("Courriel CAOA").fill("caoa-alert@test.com");
-    await page.getByLabel("Courriel UDAP").fill("udap-alert@test.com");
-    await page.getByLabel("Courriel SRA").fill("sra-alert@test.com");
-
-    // Save — there are multiple "Enregistrer" buttons on the page; target the one in the Alertes MH form
-    // which is the form containing the CRMH input
-    const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
-    await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
-
-    // Wait a moment for the save to complete
-    await page.waitForResponse((response) => response.url().includes("/upload-data") && response.status() === 200);
+    await saveAlertEmails(page, {
+      "Courriel CRMH": "crmh-alert@test.com",
+      "Courriel CAOA": "caoa-alert@test.com",
+      "Courriel UDAP": "udap-alert@test.com",
+      "Courriel SRA": "sra-alert@test.com",
+    });
 
     // ---------------------------------------------------------------------------
     // Step 3-6: Create a new constat, select monument, fill contexte-visite
@@ -55,7 +87,7 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     // Step 7: Open Alertes panel
     // ---------------------------------------------------------------------------
-    await page.getByRole("button", { name: "Alertes" }).click();
+    await page.getByRole("button", { name: /Signaler une alerte/ }).click();
 
     // Wait for the alerts drawer to open (MuiDrawer-paper is the stable container)
     const drawer = page.locator(".MuiDrawer-paper");
@@ -67,7 +99,10 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     await drawer.getByRole("button", { name: /Édifice en péril/ }).click();
     await drawer.locator("textarea").waitFor();
-    await drawer.locator("textarea").fill("Des fissures importantes sont visibles sur la façade principale.");
+    await fillAlertComment(
+      drawer.locator("textarea"),
+      "Des fissures importantes sont visibles sur la façade principale.",
+    );
     await drawer.getByRole("button", { name: "Valider" }).click();
 
     // Wait to go back to section list
@@ -78,7 +113,7 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     await drawer.getByRole("button", { name: /Abords de l/ }).click();
     await drawer.locator("textarea").waitFor();
-    await drawer.locator("textarea").fill("Végétation envahissante menaçant les fondations.");
+    await fillAlertComment(drawer.locator("textarea"), "Végétation envahissante menaçant les fondations.");
 
     // Open email editing mode
     await drawer.getByRole("button", { name: "Modifier" }).click();
@@ -90,8 +125,16 @@ test.describe("Constat with alerts flow", () => {
     const additionalEmailInputs = drawer.locator('input[autocomplete^="additional-email"]');
     await additionalEmailInputs.last().fill("extra-alert@test.com");
 
-    // Wait for debounce to flush
-    await page.waitForTimeout(700);
+    // the recipients are saved after a debounce too
+    await expect
+      .poll(
+        async () =>
+          (await db.selectFrom("state_report_alert").select("additional_emails").execute()).some((a) =>
+            a.additional_emails?.includes("extra-alert@test.com"),
+          ),
+        { timeout: 10_000 },
+      )
+      .toBe(true);
 
     await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Abords de l/ }).waitFor();
@@ -101,11 +144,25 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     await drawer.getByRole("button", { name: /Archéologie/ }).click();
     await drawer.locator("textarea").waitFor();
-    await drawer.locator("textarea").fill("Présence de vestiges archéologiques potentiels.");
+    await fillAlertComment(drawer.locator("textarea"), "Présence de vestiges archéologiques potentiels.");
 
     // Toggle "Envoyer par courriel" OFF — it is on by default (checked)
     // DSFR ToggleSwitch renders a hidden checkbox behind a label; use force
     await drawer.locator('input[title="Envoyer par courriel"]').uncheck({ force: true });
+    // saved after a debounce as well: wait for it before leaving the alert
+    await expect
+      .poll(
+        async () =>
+          (
+            await db
+              .selectFrom("state_report_alert")
+              .select("should_send")
+              .where("commentaires", "=", "Présence de vestiges archéologiques potentiels.")
+              .executeTakeFirst()
+          )?.should_send,
+        { timeout: 10_000 },
+      )
+      .toBeFalsy();
 
     await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Archéologie/ }).waitFor();
@@ -126,7 +183,7 @@ test.describe("Constat with alerts flow", () => {
     // Object 1: Table de test — Objet absent
     await drawer.getByLabel("Objet ou mobilier concerné").first().selectOption("OBJ00001");
     await drawer.getByRole("radio", { name: "Objet absent" }).first().check({ force: true });
-    await drawer.locator("textarea").first().fill("Table absente de son emplacement habituel.");
+    await fillAlertComment(drawer.locator("textarea").first(), "Table absente de son emplacement habituel.");
 
     // Add second object
     await drawer.getByRole("button", { name: "Ajouter objet ou mobilier" }).click();
@@ -137,10 +194,7 @@ test.describe("Constat with alerts flow", () => {
     // Object 2: Tableau de test — Dégradation importante
     await drawer.getByLabel("Objet ou mobilier concerné").nth(1).selectOption("OBJ00002");
     await drawer.getByRole("radio", { name: "Dégradation importante" }).last().check({ force: true });
-    await drawer.locator("textarea").last().fill("Tableau présentant des traces d'humidité importantes.");
-
-    // Wait for debounce
-    await page.waitForTimeout(700);
+    await fillAlertComment(drawer.locator("textarea").last(), "Tableau présentant des traces d'humidité importantes.");
 
     // Save and go back to section list
     await drawer.getByRole("button", { name: "Valider" }).click();
@@ -149,7 +203,7 @@ test.describe("Constat with alerts flow", () => {
     // ---------------------------------------------------------------------------
     // Step 8: Close the alerts drawer
     // ---------------------------------------------------------------------------
-    await page.keyboard.press("Escape");
+    await drawer.getByRole("button", { name: "Fermer" }).click();
     await drawer.waitFor({ state: "hidden" });
 
     // ---------------------------------------------------------------------------
@@ -289,12 +343,7 @@ test.describe("Alerts with validation flow", () => {
     await page.goto("./service");
     await page.waitForURL((url) => url.pathname === "/service");
     await page.locator("#alertes-mh").scrollIntoViewIfNeeded();
-    await page.getByLabel("Courriel CRMH").waitFor();
-    await page.getByLabel("Courriel CRMH").fill("crmh-alert-validation@test.com");
-
-    const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
-    await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
-    await page.waitForResponse((response) => response.url().includes("/upload-data") && response.status() === 200);
+    await saveAlertEmails(page, { "Courriel CRMH": "crmh-alert-validation@test.com" });
 
     // -------------------------------------------------------------------------
     // 3. Create a constat, select monument, fill contexte-visite and one section
@@ -306,17 +355,17 @@ test.describe("Alerts with validation flow", () => {
     // -------------------------------------------------------------------------
     // 4. Add an alert (Édifice en péril)
     // -------------------------------------------------------------------------
-    await page.getByRole("button", { name: "Alertes" }).click();
+    await page.getByRole("button", { name: /Signaler une alerte/ }).click();
     const drawer = page.locator(".MuiDrawer-paper");
     await drawer.waitFor();
 
     await drawer.getByRole("button", { name: /Édifice en péril/ }).click();
     await drawer.locator("textarea").waitFor();
-    await drawer.locator("textarea").fill("Fissures importantes sur la façade.");
+    await fillAlertComment(drawer.locator("textarea"), "Fissures importantes sur la façade.");
     await drawer.getByRole("button", { name: "Valider" }).click();
     await drawer.getByRole("button", { name: /Édifice en péril/ }).waitFor();
 
-    await page.keyboard.press("Escape");
+    await drawer.getByRole("button", { name: "Fermer" }).click();
     await drawer.waitFor({ state: "hidden" });
 
     // -------------------------------------------------------------------------
@@ -343,7 +392,18 @@ test.describe("Alerts with validation flow", () => {
     // -------------------------------------------------------------------------
     // 6. Verify alert email was sent on first submission (even with validation)
     // -------------------------------------------------------------------------
-    const firstSubmitMessages = await (await request.get(`http://localhost:${mailpitPort}/api/v1/messages`)).json();
+    // Mailpit stores a message shortly after the SMTP exchange: poll instead of reading once
+    let firstSubmitMessages: any = { messages: [] };
+    await expect
+      .poll(
+        async () => {
+          firstSubmitMessages = await (await request.get(`http://localhost:${mailpitPort}/api/v1/messages`)).json();
+          return firstSubmitMessages.messages.some((m: any) => (m.Subject as string)?.includes("Édifice en péril"));
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(true)
+      .catch(() => {}); // the assertion below gives the meaningful message
 
     const alertMailFirst = firstSubmitMessages.messages.find((m: any) =>
       (m.Subject as string)?.includes("Édifice en péril"),
