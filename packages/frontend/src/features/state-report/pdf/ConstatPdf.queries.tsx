@@ -8,7 +8,8 @@ import React from "react";
 import { Service } from "../../../db/AppSchema";
 import { getImageDimensions } from "../../../utils";
 import { ensurePlanSituationAttachment } from "../planSituationAttachment";
-import { PlanSituationOfflineError } from "../../map/planSituationSnapshot";
+import * as Sentry from "@sentry/react";
+import { PlanSituationOfflineError, PlanSituationUnavailableError } from "../../map/planSituationSnapshot";
 
 export const constatPdfQueries = {
   stateReport: ({ constatId }: { constatId: string }) =>
@@ -30,7 +31,7 @@ export const constatPdfQueries = {
 
         const stateReport = stateReportQuery[0];
 
-        let planSituationOffline = false;
+        let planSituationFailure: "offline" | "unavailable" | null = null;
         try {
           await ensurePlanSituationAttachment({
             stateReportId: constatId,
@@ -41,8 +42,14 @@ export const constatPdfQueries = {
             adresse: stateReport.adresse,
           });
         } catch (e) {
-          if (e instanceof PlanSituationOfflineError) planSituationOffline = true;
-          else console.error(e);
+          if (e instanceof PlanSituationOfflineError) planSituationFailure = "offline";
+          else {
+            console.error(e);
+            if (e instanceof PlanSituationUnavailableError) planSituationFailure = "unavailable";
+            Sentry.captureException(e, {
+              extra: e instanceof PlanSituationUnavailableError ? { ...e.failure, failedTiles: e.failure.failedTiles.slice(0, 10) } : {},
+            });
+          }
         }
 
         const attachmentQuery = await db
@@ -90,7 +97,7 @@ export const constatPdfQueries = {
         return {
           ...stateReport,
           attachments: attachmentsWithFiles,
-          planSituationOffline,
+          planSituationFailure,
         };
       },
       refetchOnWindowFocus: false,

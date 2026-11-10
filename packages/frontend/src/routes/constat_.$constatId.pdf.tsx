@@ -190,7 +190,10 @@ const ConstatPdf = () => {
     if (!stateReport || !parts) return;
     form.setValue("stateReport", {
       ...stateReport,
-      planSituationOffline: parts.some((part) => part.stateReport.planSituationOffline),
+      planSituationFailure:
+        parts.find((part) => part.stateReport.planSituationFailure === "offline")?.stateReport.planSituationFailure ??
+        parts.find((part) => part.stateReport.planSituationFailure)?.stateReport.planSituationFailure ??
+        null,
     });
     form.setValue(
       "stateReportIds",

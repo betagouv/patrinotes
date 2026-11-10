@@ -111,8 +111,25 @@ function addCadastreLayers(map: maplibregl.Map) {
   });
 }
 
+/**
+ * The Géoplateforme geocoder (api-adresse redirects there) answers 400 to a query of more than 200 characters
+ * or not starting with a letter or digit, which POP addresses sometimes are (lists, parentheses…).
+ */
+export const toGeocodingQuery = (adresse: string) => {
+  const query = adresse
+    .split(/[;\n]/)[0]!
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (query.length <= 200) return query;
+  const cut = query.slice(0, 200);
+  return cut.slice(0, cut.lastIndexOf(" ") > 0 ? cut.lastIndexOf(" ") : 200);
+};
+
 export async function geocode(adresse: string): Promise<[number, number] | null> {
-  const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(adresse)}&limit=1`);
+  const query = toGeocodingQuery(adresse);
+  if (query.length < 3) return null;
+  const res = await fetch(`https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(query)}&limit=1`);
   if (!res.ok) return null;
   const data = await res.json();
   const coords = data.features?.[0]?.geometry?.coordinates;

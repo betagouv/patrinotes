@@ -22,7 +22,9 @@ export async function cropMapToZone({
   containerEl: HTMLElement;
   zoneEl: HTMLElement;
 }): Promise<Blob> {
-  await waitForIdle(map, () => new MapOfflineError());
+  await waitForIdle(map, () =>
+    navigator.onLine ? new Error("La carte n'a pas pu être chargée : le service cartographique n'a pas répondu.") : new MapOfflineError(),
+  );
   await new Promise((resolve) => requestAnimationFrame(resolve));
 
   const containerRect = containerEl.getBoundingClientRect();

@@ -5,7 +5,7 @@ import {
   buildParcelFilter,
   parseReferenceCadastrale,
 } from "./MapLibre";
-import { waitForIdle } from "./waitForIdle";
+import { MapLoadFailure, waitForIdle } from "./waitForIdle";
 
 const SNAPSHOT_WIDTH = 640;
 const SNAPSHOT_HEIGHT = 480;
@@ -20,6 +20,22 @@ export class PlanSituationOfflineError extends Error {
     this.name = "PlanSituationOfflineError";
   }
 }
+
+/** Online, but the map could not be drawn (IGN tiles failing or too slow): not the user's connection. */
+export class PlanSituationUnavailableError extends Error {
+  constructor(public failure: MapLoadFailure) {
+    super(
+      failure.timedOut
+        ? "Le plan de situation n'a pas pu être généré : la carte a mis trop de temps à charger."
+        : "Le plan de situation n'a pas pu être généré : le service cartographique n'a pas répondu.",
+    );
+    this.name = "PlanSituationUnavailableError";
+  }
+}
+
+/** Offline only when the device says so; anything else is the map service. */
+const planSituationError = (failure: MapLoadFailure) =>
+  navigator.onLine ? new PlanSituationUnavailableError(failure) : new PlanSituationOfflineError();
 
 function zoomForScale(scaleDenominator: number, latitude: number): number {
   const metersPerPixel = (scaleDenominator * 0.0254) / DPI;
@@ -52,7 +68,7 @@ async function drawMarkerPin(ctx: CanvasRenderingContext2D, x: number, y: number
 /**
  * Renders an offscreen satellite snapshot centered on `coordonnees`, at a true 1:5000
  * scale, showing only the parcels selected in `referenceCadastrale` (not the full cadastre
- * layer). Throws PlanSituationOfflineError if tiles can't be fetched (offline).
+ * layer). Throws PlanSituationOfflineError when offline, PlanSituationUnavailableError when the map service fails.
  */
 export async function generatePlanSituationSnapshot({
   coordonnees,
@@ -85,7 +101,7 @@ export async function generatePlanSituationSnapshot({
   });
 
   try {
-    await waitForIdle(map, () => new PlanSituationOfflineError());
+    await waitForIdle(map, planSituationError);
 
     const parcels = parseReferenceCadastrale(referenceCadastrale);
     if (parcels.length) {
@@ -108,7 +124,7 @@ export async function generatePlanSituationSnapshot({
         paint: { "line-color": "#000091", "line-width": 3 },
       });
 
-      await waitForIdle(map, () => new PlanSituationOfflineError());
+      await waitForIdle(map, planSituationError);
     }
 
     await new Promise((resolve) => requestAnimationFrame(resolve));

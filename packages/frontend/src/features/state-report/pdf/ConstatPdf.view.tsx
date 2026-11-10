@@ -58,16 +58,20 @@ export const ViewConstatPdf = ({ step }: { step: "view" | "send" | "sent" }) => 
 
 const PlanSituationOfflineAlert = () => {
   const form = useSendConstatFormContext();
-  const planSituationOffline = useWatch({ control: form.control, name: "stateReport.planSituationOffline" });
+  const planSituationFailure = useWatch({ control: form.control, name: "stateReport.planSituationFailure" });
 
-  if (!planSituationOffline) return null;
+  if (!planSituationFailure) return null;
 
   return (
     <Box mt={{ xs: "16px", lg: "24px" }} px="8px" width="100%">
       <Alert
         severity="warning"
         small
-        description="Le plan de situation n'a pas pu être généré car l'appareil est hors ligne. Reconnectez-vous à internet puis rouvrez ce constat pour l'inclure au PDF."
+        description={
+          planSituationFailure === "offline"
+            ? "Le plan de situation n'a pas pu être généré car l'appareil est hors ligne. Reconnectez-vous à internet puis rouvrez ce constat pour l'inclure au PDF."
+            : "Le plan de situation n'a pas pu être généré : le service cartographique de l'IGN n'a pas répondu à temps. Rouvrez ce constat dans quelques instants pour l'inclure au PDF."
+        }
       />
     </Box>
   );

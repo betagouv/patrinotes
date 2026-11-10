@@ -137,7 +137,8 @@ export type StateReportWithUserAndAttachments = StateReport & {
   attachments: (StateReportAttachment & { file: string; width?: number | null; height?: number | null })[];
   createdByName: string | null;
   createdByJob?: string | null;
-  planSituationOffline?: boolean;
+  /** why the plan de situation could not be generated for the PDF */
+  planSituationFailure?: "offline" | "unavailable" | null;
 };
 
 export type SectionWithAttachments = VisitedSection & {
