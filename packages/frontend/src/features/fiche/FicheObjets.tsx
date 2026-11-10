@@ -10,6 +10,7 @@ import { PopImage, PopObjet } from "../../db/AppSchema";
 import { db, useDbQuery } from "../../db/db";
 import { useIsOnline } from "../../hooks/useIsOnline";
 import { MonumentAlertContext } from "./alerts/monumentAlerts";
+import { ObjetAnnotationModal } from "./alerts/ObjetAnnotationModal";
 import { FicheSectionIntro, FicheSectionTitle } from "./FicheLayout";
 
 const colors = fr.colors.decisions;
@@ -18,10 +19,11 @@ const PAGE = 6;
 
 type ObjetCard = Pick<PopObjet, "id" | "reference" | "titre_editorial">;
 
-/** « Objets mobiliers conservés » of a monument: cards to their fiche. */
+/** « Objets mobiliers conservés » of a monument: cards to their fiche, with a quick annotation. */
 export const FicheObjets = ({ context }: { context: MonumentAlertContext }) => {
   const reference = context.referencePop.trim();
   const [shown, setShown] = useState(FIRST_PAGE);
+  const [annotated, setAnnotated] = useState<ObjetCard | null>(null);
 
   const objetsQuery = useDbQuery(
     db
@@ -41,7 +43,7 @@ export const FicheObjets = ({ context }: { context: MonumentAlertContext }) => {
         <>
           <FicheSectionIntro>Consultez la fiche d’un objet, annotez-le rapidement ou déclenchez une alerte.</FicheSectionIntro>
           <Box display="grid" gridTemplateColumns={{ xs: "1fr", lg: "1fr 1fr" }} gap="24px" mt="16px">
-            <ObjetCards objets={visible} />
+            <ObjetCards objets={visible} onAnnotate={setAnnotated} />
           </Box>
           {shown < objets.length ? (
             <Button
@@ -57,11 +59,19 @@ export const FicheObjets = ({ context }: { context: MonumentAlertContext }) => {
       ) : (
         <FicheSectionIntro>Cet édifice ne contient pas d’objets mobiliers.</FicheSectionIntro>
       )}
+
+      {annotated ? (
+        <ObjetAnnotationModal
+          open
+          onClose={() => setAnnotated(null)}
+          context={{ ...context, objetReference: annotated.reference!, objetTitre: annotated.titre_editorial }}
+        />
+      ) : null}
     </Box>
   );
 };
 
-const ObjetCards = ({ objets }: { objets: ObjetCard[] }) => {
+const ObjetCards = ({ objets, onAnnotate }: { objets: ObjetCard[]; onAnnotate: (objet: ObjetCard) => void }) => {
   const images = useObjetImages(objets.map((o) => o.reference!).filter(Boolean));
   return (
     <>
@@ -70,6 +80,7 @@ const ObjetCards = ({ objets }: { objets: ObjetCard[] }) => {
           key={objet.id}
           objet={objet}
           image={images.find((image) => image.reference === objet.reference)?.url ?? null}
+          onAnnotate={() => onAnnotate(objet)}
         />
       ))}
     </>
@@ -89,7 +100,7 @@ export const useObjetImages = (references: string[]) => {
   return query.data ?? [];
 };
 
-const ObjetCardItem = ({ objet, image }: { objet: ObjetCard; image: string | null }) => (
+const ObjetCardItem = ({ objet, image, onAnnotate }: { objet: ObjetCard; image: string | null; onAnnotate: () => void }) => (
   <Flex
     flexDirection="column"
     border="1px solid"
@@ -123,6 +134,11 @@ const ObjetCardItem = ({ objet, image }: { objet: ObjetCard; image: string | nul
         </Typography>
         <Box color={colors.text.actionHigh.blueFrance.default} className="fr-icon fr-icon-arrow-right-line fr-icon--sm" />
       </Flex>
+      <Box position="relative" zIndex={1}>
+        <Button priority="tertiary no outline" size="small" iconId="fr-icon-edit-line" type="button" onClick={onAnnotate}>
+          Annoter
+        </Button>
+      </Box>
     </Flex>
   </Flex>
 );
