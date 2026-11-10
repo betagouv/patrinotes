@@ -7,12 +7,11 @@ import { UpSelectionModal } from "../up/UpSelectionModal";
 import { getUpRoot, getUpSelection, type UpSelection, type UpTree } from "../up/upApi";
 import { FicheAlertDrawer } from "./alerts/FicheAlertDrawer";
 import type { MonumentAlertContext } from "./alerts/monumentAlerts";
-import { ObjetAnnotationModal } from "./alerts/ObjetAnnotationModal";
 import { createConstatFromFiche } from "./createConstat";
 
 const fullWidth = { width: "100%", justifyContent: "center" };
 
-/** « Signaler une alerte… », « Créer un constat d'état » (and « Annoter l'objet » on an objet's fiche). */
+/** « Signaler une alerte… » and « Créer un constat d'état ». */
 export const FicheActions = ({
   context,
   tree,
@@ -24,8 +23,6 @@ export const FicheActions = ({
   isTreeLoading: boolean;
 }) => {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [isAnnotationOpen, setIsAnnotationOpen] = useState(false);
-  const isObjet = !!context.objetReference;
 
   return (
     <>
@@ -33,27 +30,8 @@ export const FicheActions = ({
         Signaler une alerte…
       </Button>
       <CreateConstatButton context={context} tree={tree} isTreeLoading={isTreeLoading} />
-      {isObjet ? (
-        <Button
-          priority="tertiary"
-          iconId="fr-icon-edit-line"
-          type="button"
-          onClick={() => setIsAnnotationOpen(true)}
-          sx={fullWidth}
-        >
-          Annoter l’objet
-        </Button>
-      ) : null}
 
       <FicheAlertDrawer open={isAlertOpen} onClose={() => setIsAlertOpen(false)} context={context} />
-      {isObjet && isAnnotationOpen ? (
-        <ObjetAnnotationModal
-          open
-          onClose={() => setIsAnnotationOpen(false)}
-          showFicheLink={false}
-          context={{ ...context, objetReference: context.objetReference!, objetTitre: context.objetTitre ?? null }}
-        />
-      ) : null}
     </>
   );
 };

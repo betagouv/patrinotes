@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { db } from "../packages/backend/src/db/db";
 import { resetDatabase } from "./setup";
-import { login, mockUsers, openMonumentFiche, signup } from "./utils";
+import { login, mockUsers, openMonumentFiche, signup, startConstatFromFiche } from "./utils";
 
 // "Château de Test" (TEST00001) is a MH simple with two objets mobiliers; "Château complexe de Test" (TEST00002)
 // is split into unités patrimoniales by the backend UP mock: Chapelle, Corps de logis (> Aile nord, Aile sud), Jardin.
@@ -137,18 +137,12 @@ test.describe("Fiche MH", () => {
     await screenshot(page, "4-historique");
   });
 
-  test("fiche d'un objet mobilier : annotation et alerte", async ({ page }) => {
+  test("fiche d'un objet mobilier : annotation depuis le constat et alerte", async ({ page }) => {
     await ensureLoggedIn(page, { signupFirst: false });
-    await openMonumentFiche(page, "Château de Test", /^Château de Test/);
 
-    await page.getByRole("link", { name: "Table de test" }).click();
-    await page.waitForURL((url) => url.pathname === "/objet/OBJ00001");
-    await expect(page.getByRole("heading", { level: 1, name: "Table de test" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Édifice de conservation" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Château de Test" }).first()).toBeVisible();
-
-    // annotation de visite, kept on the fiche without email
-    await page.getByRole("button", { name: "Annoter l’objet" }).click();
+    // annotation de visite: a click on the objet's card in the constat, kept on the objet's fiche without email
+    await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
+    await page.getByRole("button", { name: "Table de test" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("group", { name: "Présence de l’objet" }).getByText("Oui").click();
     await dialog.getByRole("group", { name: "L’objet est-il en sécurité ?" }).getByText("Non").click();
@@ -156,6 +150,12 @@ test.describe("Fiche MH", () => {
     await screenshot(page, "5-annotation");
     await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
+    await expect(page).toHaveURL(/\/constat\//);
+
+    await page.goto("./objet/OBJ00001");
+    await expect(page.getByRole("heading", { level: 1, name: "Table de test" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Édifice de conservation" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Château de Test" }).first()).toBeVisible();
 
     await page.getByRole("button", { name: /^Historique/ }).click();
     await expect(page.getByText("Annotations de visite")).toBeVisible();
