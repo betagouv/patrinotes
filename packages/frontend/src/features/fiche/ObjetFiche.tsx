@@ -26,7 +26,18 @@ const colors = fr.colors.decisions;
  * First Mérimée reference (PA…) of an objet's monument field, which may hold several references
  * or full POP URLs (https://www.pop.culture.gouv.fr/notice/merimee/PA00088392).
  */
-const getMonumentReference = (value: string | null | undefined) => value?.match(/\b[A-Z]{2}\d{8}\b/)?.[0] ?? null;
+const getMonumentReference = (value: string | null | undefined) => {
+  if (!value) return null;
+  const merimee = value.match(/\b[A-Z]{2}\d{8}\b/)?.[0];
+  if (merimee) return merimee;
+  // other identifiers (e.g. test monuments): the first one, or the last segment of its URL
+  return (
+    value
+      .split(/[\s,;]+/)
+      .map((reference) => reference.trim().split("/").filter(Boolean).pop() ?? "")
+      .find(Boolean) ?? null
+  );
+};
 
 /** Fiche of an objet mobilier: its monument, its POP information and photos, alerts and annotations. */
 export const ObjetFiche = ({ reference }: { reference: string }) => {
