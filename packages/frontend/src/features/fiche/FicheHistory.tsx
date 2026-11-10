@@ -44,15 +44,15 @@ export const buildHistory = ({
     ...extra,
   ].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 
-/** « Constats antérieurs et alertes »: constats, alerts and annotations created on Patrinotes. */
-export const FicheHistory = ({ items, showObjet }: { items: HistoryItem[]; showObjet?: boolean }) => {
+/** « Historique »: constats, alerts and annotations created on Patrinotes. */
+export const FicheHistory = ({ items }: { items: HistoryItem[] }) => {
   return (
     <Box>
       <Accordion
         label={
           <Flex alignItems="center" gap="16px">
             <span className={fr.cx("fr-icon-article-fill", "fr-icon--sm")} aria-hidden="true" />
-            {`Constats antérieurs et alertes${items.length ? ` (${items.length})` : ""}`}
+            {`Historique${items.length ? ` (${items.length})` : ""}`}
           </Flex>
         }
         sx={{
@@ -70,7 +70,7 @@ export const FicheHistory = ({ items, showObjet }: { items: HistoryItem[]; showO
             {items.map((item, index) => (
               <Fragment key={getKey(item, index)}>
                 {index > 0 ? <Divider my="24px" /> : null}
-                <HistoryEntry item={item} showObjet={showObjet} />
+                <HistoryEntry item={item} />
               </Fragment>
             ))}
           </Stack>
@@ -88,7 +88,7 @@ const getKey = (item: HistoryItem, index: number) =>
 const formatDate = (date: string | null) =>
   date ? new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "";
 
-const HistoryEntry = ({ item, showObjet }: { item: HistoryItem; showObjet?: boolean }) => {
+const HistoryEntry = ({ item }: { item: HistoryItem }) => {
   if (item.type === "constat") {
     return (
       <EntryLayout date={item.date} tag="Constat d’état">
@@ -120,14 +120,10 @@ const HistoryEntry = ({ item, showObjet }: { item: HistoryItem; showObjet?: bool
       ? `Envoyée à : ${recipients.join(", ")}`
       : `Envoi en attente (${recipients.join(", ")})`;
 
-  const objetLine =
-    showObjet && alert.objet_titre ? <Typography color={colors.text.mention.grey.default}>{alert.objet_titre}</Typography> : null;
-
   if (alert.kind === "annotation") {
     const summary = getObjetAnnotationSummary(alert);
     return (
-      <EntryLayout date={item.date} tag="Annotations de visite" detail={sendingState} author={alert.created_by_name}>
-        {objetLine}
+      <EntryLayout date={item.date} tag="Annotations de visite" detail={sendingState}>
         {summary.length ? (
           <Box component="ul" m="0 !important" pl="24px !important">
             {summary.map((line) => (
@@ -144,8 +140,7 @@ const HistoryEntry = ({ item, showObjet }: { item: HistoryItem; showObjet?: bool
   }
 
   return (
-    <EntryLayout date={item.date} tag="Alerte" detail={sendingState} author={alert.created_by_name}>
-      {objetLine}
+    <EntryLayout date={item.date} tag="Alerte" detail={sendingState}>
       <Typography fontWeight="bold">{alert.probleme || alert.alert}</Typography>
       {alert.commentaires ? <Typography>Commentaires : {alert.commentaires}</Typography> : null}
       <Thumbnails attachments={alert.attachments} />
@@ -157,13 +152,11 @@ const EntryLayout = ({
   date,
   tag,
   detail,
-  author,
   children,
 }: {
   date: string | null;
   tag: string;
   detail?: string | null;
-  author?: string | null;
   children: ReactNode;
 }) => (
   <Stack gap="12px">
@@ -171,7 +164,6 @@ const EntryLayout = ({
       <span className={fr.cx("fr-icon-time-fill", "fr-icon--sm")} aria-hidden="true" />
       <Typography fontSize="14px">
         {formatDate(date)}
-        {author ? ` — ${author}` : ""}
       </Typography>
     </Flex>
     <Flex alignItems="center" gap="12px" flexWrap="wrap">

@@ -446,8 +446,11 @@ const MonumentObjets = () => {
 
   return (
     <>
-      <Typography variant="subtitle1" fontWeight="bold" mb="16px">
+      <Typography variant="subtitle1" fontWeight="bold" mb="8px">
         Objets mobiliers conservés
+      </Typography>
+      <Typography mb="16px" color={fr.colors.decisions.text.mention.grey.default}>
+        Consultez la fiche d’un objet, annotez-le rapidement ou déclenchez une alerte.
       </Typography>
       {objetsQuery.isLoading ? (
         <Box mb="16px" mt="64px">
@@ -532,6 +535,7 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
   );
 };
 
+/** As in the prototype: the whole card opens the « Annotations de visite » of the objet. */
 const MonumentObjetItem = ({
   popObjet,
   images,
@@ -543,63 +547,63 @@ const MonumentObjetItem = ({
 }) => {
   return (
     <Flex
+      position="relative"
       flexDirection="column"
       flex="1"
+      gap="8px"
       border="1px solid"
       borderColor={fr.colors.decisions.border.default.grey.default}
       minWidth={{ xs: "100%", lg: "calc(50% - 8px)" }}
       maxWidth={{ xs: "100%", lg: "calc(50% - 8px)" }}
+      sx={{
+        "&:hover": { bgcolor: fr.colors.decisions.background.default.grey.hover },
+        "&:focus-within": { outline: "2px solid #0a76f6", outlineOffset: "2px" },
+      }}
     >
-      <Flex
-        component="a"
-        // @ts-ignore mui error
-        href={`https://pop.culture.gouv.fr/notice/palissy/${popObjet.reference}`}
-        target="_blank"
-        title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
-        rel="noopener external"
-        flexDirection="column"
-        flex="1"
-        gap="8px"
+      <Box
+        component="img"
+        height="216px"
+        alt=""
+        src={images?.[0]?.url ? images[0].url : "/objet-sans-image.png"}
         sx={{
-          "::after": {
-            display: "none",
-          },
+          objectFit: "cover",
         }}
-      >
+      />
+      <Flex flexDirection="column" justifyContent="space-between" px="16px" gap={"8px"} py="16px" height="100%">
         <Box
-          component="img"
-          height="216px"
-          src={images?.[0]?.url ? images[0].url : "/objet-sans-image.png"}
-          sx={{
-            objectFit: "cover",
-          }}
-        />
-        <Flex flexDirection="column" justifyContent="space-between" px="16px" gap={"8px"} py="16px" height="100%">
-          <Typography fontSize="20px" color={fr.colors.decisions.text.actionHigh.blueFrance.default} fontWeight="bold">
-            {popObjet.titre_editorial}
-          </Typography>
-          <Flex alignItems="center" justifyContent="space-between">
-            <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
-              {popObjet.reference}
-            </Typography>
-            <Box
-              color={fr.colors.decisions.text.actionHigh.blueFrance.default}
-              className="fr-icon fr-icon-arrow-right-line"
-            />
-          </Flex>
-        </Flex>
-      </Flex>
-      <Box px="8px" pb="12px">
-        <Button
-          priority="tertiary no outline"
-          size="small"
-          iconId="fr-icon-edit-line"
+          component="button"
           type="button"
           onClick={onAnnotate}
+          aria-haspopup="dialog"
+          title={`Annoter ${popObjet.titre_editorial || popObjet.reference}`}
+          p="0"
+          border="none"
+          bgcolor="transparent"
+          textAlign="left"
+          fontSize="20px"
+          fontWeight="bold"
+          lineHeight="28px"
+          color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+          sx={{
+            cursor: "pointer",
+            "&:focus-visible": { outline: "none" },
+            // the whole card is clickable
+            "&::after": { content: '""', position: "absolute", inset: 0 },
+          }}
         >
-          Annoter
-        </Button>
-      </Box>
+          {popObjet.titre_editorial || popObjet.reference}
+        </Box>
+        <Flex alignItems="center" justifyContent="space-between">
+          <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
+            {popObjet.reference}
+          </Typography>
+          <Box
+            aria-hidden="true"
+            color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+            className="fr-icon fr-icon-arrow-right-line"
+          />
+        </Flex>
+      </Flex>
     </Flex>
   );
 };

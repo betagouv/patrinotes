@@ -175,7 +175,7 @@ export const MonumentFiche = ({ reference, upId }: { reference: string; upId?: s
         <Box id="fiche-informations">{infos}</Box>
 
         <Box mt="40px">
-          <FicheHistory items={buildHistory({ constats: historyConstats, alerts: historyAlerts })} showObjet />
+          <FicheHistory items={buildHistory({ constats: historyConstats, alerts: historyAlerts })} />
         </Box>
 
         <Box mt="48px">

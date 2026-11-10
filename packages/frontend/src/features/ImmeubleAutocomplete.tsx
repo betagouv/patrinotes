@@ -332,7 +332,7 @@ export const ImmeubleAutocomplete = () => {
             sx={{ fontSize: "14px" }}
             onClick={() => (isDisabled ? null : setIsWarningOpen(true))}
           >
-            {monumentHasUps ? "Changer de monument ou d’UP" : "Changer de monument"}
+            Changer de monument ou d’UP
           </IconLink>
         </Box>
         {upWarning ? <Alert severity="info" small sx={{ mt: "16px" }} description={upWarning} /> : null}

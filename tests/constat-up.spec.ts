@@ -405,6 +405,6 @@ test.describe("Constat d'état sur un MH complexe", () => {
     await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
     await expect(page.getByRole("heading", { name: "Château de Test", exact: true })).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByText("Changer de monument", { exact: true })).toBeVisible();
+    await expect(page.getByText("Changer de monument ou d’UP", { exact: true })).toBeVisible();
   });
 });

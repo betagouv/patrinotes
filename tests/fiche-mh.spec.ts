@@ -131,7 +131,7 @@ test.describe("Fiche MH", () => {
       .toContain("Alerte Abords de l'édifice - Château de Test");
 
     // it shows in the history of the fiche
-    await page.getByRole("button", { name: /Constats antérieurs et alertes/ }).click();
+    await page.getByRole("button", { name: /^Historique/ }).click();
     await expect(page.getByText("Commentaires : Fissure sur le mur d'enceinte")).toBeVisible();
     await expect(page.getByText(/Envoyée à : udap@test.fr/)).toBeVisible({ timeout: 30_000 });
     await screenshot(page, "4-historique");
@@ -157,7 +157,7 @@ test.describe("Fiche MH", () => {
     await dialog.getByRole("button", { name: "Valider" }).click();
     await dialog.waitFor({ state: "hidden" });
 
-    await page.getByRole("button", { name: /Constats antérieurs et alertes/ }).click();
+    await page.getByRole("button", { name: /^Historique/ }).click();
     await expect(page.getByText("Annotations de visite")).toBeVisible();
     await expect(page.getByText("Objet présent au sein de l’édifice")).toBeVisible();
     await expect(page.getByText("Objet en insécurité")).toBeVisible();

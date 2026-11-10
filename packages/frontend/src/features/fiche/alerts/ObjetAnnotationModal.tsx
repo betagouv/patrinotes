@@ -170,17 +170,19 @@ const AnnotationForm = ({
       <Typography component="h2" fontSize="28px !important" lineHeight="36px" fontWeight="bold" mb="16px !important">
         {context.objetTitre || context.objetReference}
       </Typography>
-      <Box mb="24px">
+      {/* « Palissy : PM61000888 voir sur POP ↗ » as in the mockup */}
+      <Flex alignItems="center" gap="8px" flexWrap="wrap" mb="24px">
+        <Typography lineHeight="24px">Palissy : {context.objetReference}</Typography>
         <a
           className="fr-link fr-icon-external-link-line fr-link--icon-right"
           href={getPopUrl(context.objetReference, "palissy")}
           target="_blank"
           rel="noopener external"
-          title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
+          title={`Voir ${context.objetReference} sur POP - ouvre une nouvelle fenêtre`}
         >
-          Référence POP : {context.objetReference}
+          voir sur POP
         </a>
-      </Box>
+      </Flex>
       {/* @ts-ignore title is optional */}
       <Alert
         severity="info"

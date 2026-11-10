@@ -5,7 +5,7 @@ import { Box, IconButton } from "@mui/material";
 import { useSyncStream } from "@powersync/react";
 import { useNavigate } from "@tanstack/react-router";
 import Fuse, { IFuseOptions } from "fuse.js";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import Highlighter from "react-highlight-words";
 import { PopImmeuble, PopObjet } from "../../db/AppSchema";
 import { db, useDbQuery } from "../../db/db";
@@ -64,7 +64,8 @@ export const HomeMonumentSearch = () => {
   const inputId = useId();
   const listboxId = useId();
   const [inputValue, setInputValue] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const [isListOpen, setIsListOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [tab, setTab] = useState<Tab>("edifices");
   const [isMapOpen, setIsMapOpen] = useState(false);
 
@@ -139,8 +140,50 @@ export const HomeMonumentSearch = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, tab, edificeSearch, mobilierSearch]);
 
-  const isOpen = isFocused && !!query;
+  const isOpen = isListOpen && !!query;
   const isLoading = tab === "edifices" ? edificesQuery.isLoading : mobiliersQuery.isLoading;
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
+
+  // a new search or another tab starts again from the input
+  useEffect(() => setActiveIndex(-1), [query, tab]);
+
+  const openSuggestion = (index: number) => suggestions[index]?.open();
+
+  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setIsListOpen(true);
+        setActiveIndex((i) => Math.min(suggestions.length - 1, i + 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setActiveIndex((i) => Math.max(-1, i - 1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        openSuggestion(activeIndex >= 0 ? activeIndex : 0);
+        break;
+      case "Escape":
+        // first closes the list, then clears the search
+        if (isOpen) setIsListOpen(false);
+        else setInputValue("");
+        setActiveIndex(-1);
+        break;
+    }
+  };
+
+  const tabs = [
+    ["edifices", "Édifices"],
+    ["mobiliers", "Mobiliers"],
+  ] as const;
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const next: Tab = e.key === "ArrowLeft" || e.key === "Home" ? "edifices" : "mobiliers";
+    setTab(next);
+    document.getElementById(`${listboxId}-tab-${next}`)?.focus();
+  };
 
   return (
     <Box width="100%">
@@ -148,8 +191,16 @@ export const HomeMonumentSearch = () => {
         <label className="fr-label" htmlFor={inputId}>
           Rechercher un monument historique :
         </label>
-        <Flex alignItems="flex-end" gap="8px" mt="8px" position="relative">
-          <Box flex="1" position="relative">
+        <Flex alignItems="flex-end" gap="8px" mt="8px">
+          <Box
+            flex="1"
+            position="relative"
+            // the list stays open while the focus is in the input or the tabs
+            onFocus={() => setIsListOpen(true)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsListOpen(false);
+            }}
+          >
             <input
               id={inputId}
               className="fr-input"
@@ -159,17 +210,106 @@ export const HomeMonumentSearch = () => {
               aria-expanded={isOpen}
               aria-controls={listboxId}
               aria-autocomplete="list"
+              aria-activedescendant={isOpen && activeIndex >= 0 ? optionId(activeIndex) : undefined}
+              aria-describedby={`${listboxId}-help`}
               autoComplete="off"
               placeholder="édifice, objet mobilier..."
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && suggestions[0]) suggestions[0].open();
-                if (e.key === "Escape") (e.target as HTMLInputElement).blur();
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                setIsListOpen(true);
               }}
+              onKeyDown={onInputKeyDown}
             />
+            <span id={`${listboxId}-help`} className="fr-sr-only">
+              Flèches haut et bas pour parcourir les suggestions, Entrée pour ouvrir la fiche, Échap pour fermer.
+              Les onglets Édifices et Mobiliers suivent le champ.
+            </span>
+            <span className="fr-sr-only" aria-live="polite">
+              {isOpen && !isLoading ? `${suggestions.length || "Aucun"} résultat${suggestions.length > 1 ? "s" : ""}` : ""}
+            </span>
+
+            {isOpen ? (
+              <Box
+                position="absolute"
+                top="calc(100% + 4px)"
+                left={0}
+                right="-48px"
+                zIndex={1000}
+                bgcolor="white"
+                boxShadow="0px 4px 12px rgba(0, 0, 18, 0.16)"
+              >
+                <Flex role="tablist" aria-label="Type de monument">
+                  {tabs.map(([value, label]) => (
+                    <SuggestionTab
+                      key={value}
+                      id={`${listboxId}-tab-${value}`}
+                      controls={listboxId}
+                      selected={tab === value}
+                      // a click keeps the focus in the input
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setTab(value)}
+                      onKeyDown={onTabKeyDown}
+                    >
+                      {label}
+                    </SuggestionTab>
+                  ))}
+                  <Box flex="1" borderTop={`2px solid ${fr.colors.decisions.border.active.blueFrance.default}`} />
+                </Flex>
+                <Box
+                  component="ul"
+                  id={listboxId}
+                  role="listbox"
+                  aria-label={tab === "edifices" ? "Édifices" : "Mobiliers"}
+                  m="0"
+                  p="0"
+                  sx={{ listStyle: "none" }}
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  {suggestions.length ? (
+                    suggestions.map((suggestion, index) => (
+                      <Box
+                        component="li"
+                        key={suggestion.key}
+                        id={optionId(index)}
+                        role="option"
+                        aria-selected={index === activeIndex}
+                        onClick={suggestion.open}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        px="16px"
+                        py="12px"
+                        color={fr.colors.decisions.text.title.blueFrance.default}
+                        bgcolor={index === activeIndex ? fr.colors.decisions.background.default.grey.hover : undefined}
+                        sx={{
+                          cursor: "pointer",
+                          outline: index === activeIndex ? "2px solid #0a76f6" : "none",
+                          outlineOffset: "-2px",
+                        }}
+                      >
+                        <Box fontSize="16px" lineHeight="24px">
+                          {/* @ts-ignore */}
+                          <Highlighter
+                            searchWords={query.split(/\s+/)}
+                            autoEscape
+                            textToHighlight={suggestion.title}
+                            highlightStyle={highlightStyle}
+                          />
+                        </Box>
+                        {suggestion.subtitle ? (
+                          <Box fontSize="12px" lineHeight="20px">
+                            {suggestion.subtitle}
+                          </Box>
+                        ) : null}
+                      </Box>
+                    ))
+                  ) : (
+                    <Box component="li" role="presentation" px="16px" py="24px" display="flex" justifyContent="center">
+                      {isLoading || !popSynced ? <Spinner size={40} /> : "Aucun résultat"}
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            ) : null}
           </Box>
           <IconButton
             type="button"
@@ -188,73 +328,6 @@ export const HomeMonumentSearch = () => {
           >
             <span className={fr.cx("fr-icon-road-map-line")} aria-hidden="true" />
           </IconButton>
-
-          {isOpen ? (
-            <Box
-              position="absolute"
-              top="calc(100% + 4px)"
-              left={0}
-              right={0}
-              zIndex={1000}
-              bgcolor="white"
-              boxShadow="0px 4px 12px rgba(0, 0, 18, 0.16)"
-              // keep the focus in the input while clicking a tab or a suggestion
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <Flex role="tablist" aria-label="Type de monument">
-                {(
-                  [
-                    ["edifices", "Édifices"],
-                    ["mobiliers", "Mobiliers"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <SuggestionTab key={value} selected={tab === value} onClick={() => setTab(value)}>
-                    {label}
-                  </SuggestionTab>
-                ))}
-                <Box flex="1" borderTop={`2px solid ${fr.colors.decisions.border.active.blueFrance.default}`} />
-              </Flex>
-              <Box component="ul" id={listboxId} role="listbox" m="0" p="0" sx={{ listStyle: "none" }}>
-                {suggestions.length ? (
-                  suggestions.map((suggestion) => (
-                    <Box
-                      component="li"
-                      key={suggestion.key}
-                      role="option"
-                      aria-selected={false}
-                      onClick={suggestion.open}
-                      px="16px"
-                      py="12px"
-                      color={fr.colors.decisions.text.title.blueFrance.default}
-                      sx={{
-                        cursor: "pointer",
-                        "&:hover": { backgroundColor: fr.colors.decisions.background.default.grey.hover },
-                      }}
-                    >
-                      <Box fontSize="16px" lineHeight="24px">
-                        {/* @ts-ignore */}
-                        <Highlighter
-                          searchWords={query.split(/\s+/)}
-                          autoEscape
-                          textToHighlight={suggestion.title}
-                          highlightStyle={highlightStyle}
-                        />
-                      </Box>
-                      {suggestion.subtitle ? (
-                        <Box fontSize="12px" lineHeight="20px">
-                          {suggestion.subtitle}
-                        </Box>
-                      ) : null}
-                    </Box>
-                  ))
-                ) : (
-                  <Box component="li" px="16px" py="24px" display="flex" justifyContent="center">
-                    {isLoading || !popSynced ? <Spinner size={40} /> : "Aucun résultat"}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          ) : null}
         </Flex>
       </div>
 
@@ -271,20 +344,34 @@ export const HomeMonumentSearch = () => {
 };
 
 const SuggestionTab = ({
+  id,
+  controls,
   selected,
   onClick,
+  onMouseDown,
+  onKeyDown,
   children,
 }: {
+  id: string;
+  controls: string;
   selected: boolean;
   onClick: () => void;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
   children: React.ReactNode;
 }) => (
   <Box
     component="button"
     type="button"
     role="tab"
+    id={id}
     aria-selected={selected}
+    aria-controls={controls}
+    // roving tabindex: Tab reaches the selected tab, arrows switch
+    tabIndex={selected ? 0 : -1}
     onClick={onClick}
+    onMouseDown={onMouseDown}
+    onKeyDown={onKeyDown}
     px="16px"
     py="8px"
     fontSize="16px"
@@ -295,7 +382,7 @@ const SuggestionTab = ({
     borderLeft={selected ? "none" : `1px solid ${fr.colors.decisions.border.default.grey.default}`}
     bgcolor={selected ? fr.colors.decisions.background.actionLow.blueFrance.default : "white"}
     color={selected ? fr.colors.decisions.text.actionHigh.grey.default : fr.colors.decisions.text.active.blueFrance.default}
-    sx={{ cursor: "pointer" }}
+    sx={{ cursor: "pointer", "&:focus-visible": { outline: "2px solid #0a76f6", outlineOffset: "-2px" } }}
   >
     {children}
   </Box>
