@@ -91,7 +91,7 @@ const ObjetCards = ({ objets, onAnnotate }: { objets: ObjetCard[]; onAnnotate: (
 export const useObjetImages = (references: string[]) => {
   const isOnline = useIsOnline();
   const query = useQuery({
-    queryKey: ["pop-images-for-objets", references],
+    queryKey: ["fiche-objets-images", references],
     queryFn: async () =>
       (await api.get("/api/state-report/objets-images", { query: { references: references.join(",") as any } })) as PopImage[],
     enabled: isOnline && references.length > 0,
