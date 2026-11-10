@@ -14,7 +14,7 @@ import {
 import { AuthUser } from "../../routes/authMiddleware";
 import { getServices } from "../../services/services";
 
-const getProblemDescription = ({ alert, user }: { alert: MinimalAlert; user: AuthUser }) => {
+export const getProblemDescription = ({ alert, user }: { alert: MinimalAlert; user: AuthUser }) => {
   if (alert.alert === EDIFICE_EN_PERIL_SECTION) {
     return `des potentiels désordres susceptibles de relever de votre pouvoir de police ont été repérés par`;
   }
@@ -89,14 +89,14 @@ export const createAlertEmailContent = async ({
   return { html, attachments: [...dsfrAttachments, ...mailAttachments] };
 };
 
-const getServicePronom = (serviceName: string) => {
+export const getServicePronom = (serviceName: string) => {
   if (serviceName.includes("UDAP")) return `de l’${serviceName}`;
   if (serviceName.includes("SRA")) return `du ${serviceName}`;
   if (serviceName.includes("CRMH")) return `de la ${serviceName}`;
   return `du ${serviceName}`;
 };
 
-const uppercaseFirstLetter = (str: string) => {
+export const uppercaseFirstLetter = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 

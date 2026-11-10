@@ -475,6 +475,17 @@ export namespace Endpoints {
           >;
     };
   };
+  export type post_ApimonumentAlertsend = {
+    method: "POST";
+    path: "/api/monument-alert/send";
+    parameters: {
+      body: { id: string };
+    };
+    response: {
+      status: "sent" | "pending" | "not_sent" | Array<"sent" | "pending" | "not_sent">;
+      sentAt?: string | undefined;
+    };
+  };
   export type get_ApiconstatValidationToken = {
     method: "GET";
     path: "/api/constat-validation/{token}";
@@ -824,6 +835,7 @@ export type EndpointByMethod = {
     "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;
     "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenaccept;
     "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokendecline;
+    "/api/monument-alert/send": Endpoints.post_ApimonumentAlertsend;
     "/api/upload-data": Endpoints.post_ApiuploadData;
     "/api/admin/whitelist": Endpoints.post_Apiadminwhitelist;
   };

@@ -102,6 +102,16 @@ const findStateReportOfAlert = async (trx: Trx, alertId: unknown) => {
   return alert ? findStateReport(trx, alert.state_report_id) : null;
 };
 
+/**
+ * Alert or annotation of a fiche: its author or someone the author delegated to, within the author's service,
+ * while it is a draft. A submitted one is kept as sent (only the server changes it afterwards).
+ */
+export const canEditMonumentAlert = async (trx: Trx, user: SyncUser, alert: Row | null | undefined) => {
+  if (!alert || !isInUserService(alert, user) || alert.status !== "draft") return false;
+  if (alert.created_by === user.id) return true;
+  return hasDelegation(trx, alert.created_by, user.id);
+};
+
 /** The row's parent reference: stored value on PATCH/DELETE (it can't change), new value on PUT. */
 const parentRef = (ctx: WriteContext, column: string) => (ctx.existing ?? ctx.next)[column];
 
@@ -299,6 +309,79 @@ export const syncPolicies: Record<string, TablePolicy> = {
     "state_report_alert_id",
     async (ctx, alertId) => canEditStateReport(ctx.trx, ctx.user, await findStateReportOfAlert(ctx.trx, alertId)),
   ),
+
+  monument_alert: {
+    // alert or annotation made from a fiche: created by a member of the service, edited by its author (or a delegate)
+    // while it is a draft; once submitted, only its emailing state changes, on the server (sent_at)
+    ops: ["PUT", "PATCH", "DELETE"],
+    columns: [
+      "kind",
+      "status",
+      "reference_pop",
+      "titre_edifice",
+      "commune",
+      "up_id",
+      "up_intitule",
+      "objet_reference",
+      "objet_titre",
+      "alert",
+      "probleme",
+      "presence",
+      "etat",
+      "securite",
+      "commentaires",
+      "should_send",
+      "mandatory_emails",
+      "additional_emails",
+      "created_by",
+      "created_by_name",
+      "created_at",
+      "submitted_at",
+      "sent_at",
+      "service_id",
+    ],
+    serverColumns: ["created_by", "sent_at", "service_id"],
+    immutableColumns: ["kind", "reference_pop"],
+    forced: (user) => ({ created_by: user.id, service_id: user.service_id }),
+    canWrite: async (ctx) => {
+      if (ctx.op === "PUT") return isInUserService(ctx.next, ctx.user) && ctx.next.status === "draft";
+      return canEditMonumentAlert(ctx.trx, ctx.user, ctx.existing);
+    },
+  },
+
+  monument_alert_attachment: documentChild(
+    ["monument_alert_id", "attachment_id", "is_deprecated", "label", "created_at", "service_id"],
+    "monument_alert_id",
+    async (ctx, alertId) => canEditMonumentAlert(ctx.trx, ctx.user, await findById(ctx.trx, "monument_alert", alertId)),
+  ),
+
+  monument_correction: {
+    // any member of the service may correct the information of a fiche, for their service
+    ops: ["PUT", "PATCH", "DELETE"],
+    columns: [
+      "target",
+      "reference_pop",
+      "up_id",
+      "objet_reference",
+      "nature_edifice",
+      "adresse",
+      "commune",
+      "commune_historique",
+      "reference_cadastrale",
+      "periode_construction",
+      "nature_protection",
+      "parties_protegees",
+      "description",
+      "emplacement",
+      "updated_at",
+      "updated_by",
+      "service_id",
+    ],
+    serverColumns: ["updated_by", "service_id"],
+    immutableColumns: ["target", "reference_pop", "up_id", "objet_reference"],
+    forced: (user) => ({ updated_by: user.id, service_id: user.service_id }),
+    canWrite: ({ user, next }) => isInUserService(next, user),
+  },
 
   delegation: {
     // a user grants or withdraws their own delegations, to colleagues of their service

@@ -20,8 +20,11 @@ import { Route as CompteRouteImport } from './routes/compte'
 import { Route as CguRouteImport } from './routes/cgu'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MonumentIndexRouteImport } from './routes/monument.index'
 import { Route as ResetPasswordLinkRouteImport } from './routes/reset-password.$link'
 import { Route as PdfReportIdRouteImport } from './routes/pdf.$reportId'
+import { Route as ObjetReferenceRouteImport } from './routes/objet.$reference'
+import { Route as MonumentReferenceRouteImport } from './routes/monument.$reference'
 import { Route as EditReportIdRouteImport } from './routes/edit.$reportId'
 import { Route as ConstatConstatIdRouteImport } from './routes/constat.$constatId'
 import { Route as ConstatValidationTokenRouteImport } from './routes/constat-validation.$token'
@@ -100,6 +103,11 @@ const ResetPasswordIndexLazyRoute = ResetPasswordIndexLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/reset-password.index.lazy').then((d) => d.Route),
 )
+const MonumentIndexRoute = MonumentIndexRouteImport.update({
+  id: '/monument/',
+  path: '/monument/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordLinkRoute = ResetPasswordLinkRouteImport.update({
   id: '/reset-password/$link',
   path: '/reset-password/$link',
@@ -108,6 +116,16 @@ const ResetPasswordLinkRoute = ResetPasswordLinkRouteImport.update({
 const PdfReportIdRoute = PdfReportIdRouteImport.update({
   id: '/pdf/$reportId',
   path: '/pdf/$reportId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjetReferenceRoute = ObjetReferenceRouteImport.update({
+  id: '/objet/$reference',
+  path: '/objet/$reference',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonumentReferenceRoute = MonumentReferenceRouteImport.update({
+  id: '/monument/$reference',
+  path: '/monument/$reference',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditReportIdRoute = EditReportIdRouteImport.update({
@@ -147,8 +165,11 @@ export interface FileRoutesByFullPath {
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
+  '/monument/$reference': typeof MonumentReferenceRoute
+  '/objet/$reference': typeof ObjetReferenceRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
+  '/monument/': typeof MonumentIndexRoute
   '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
@@ -168,8 +189,11 @@ export interface FileRoutesByTo {
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
+  '/monument/$reference': typeof MonumentReferenceRoute
+  '/objet/$reference': typeof ObjetReferenceRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
+  '/monument': typeof MonumentIndexRoute
   '/reset-password': typeof ResetPasswordIndexLazyRoute
   '/constat/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
@@ -190,8 +214,11 @@ export interface FileRoutesById {
   '/constat-validation/$token': typeof ConstatValidationTokenRoute
   '/constat/$constatId': typeof ConstatConstatIdRoute
   '/edit/$reportId': typeof EditReportIdRoute
+  '/monument/$reference': typeof MonumentReferenceRoute
+  '/objet/$reference': typeof ObjetReferenceRoute
   '/pdf/$reportId': typeof PdfReportIdRoute
   '/reset-password/$link': typeof ResetPasswordLinkRoute
+  '/monument/': typeof MonumentIndexRoute
   '/reset-password/': typeof ResetPasswordIndexLazyRoute
   '/constat_/$constatId/pdf': typeof ConstatConstatIdPdfRoute
 }
@@ -213,8 +240,11 @@ export interface FileRouteTypes {
     | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
+    | '/monument/$reference'
+    | '/objet/$reference'
     | '/pdf/$reportId'
     | '/reset-password/$link'
+    | '/monument/'
     | '/reset-password/'
     | '/constat/$constatId/pdf'
   fileRoutesByTo: FileRoutesByTo
@@ -234,8 +264,11 @@ export interface FileRouteTypes {
     | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
+    | '/monument/$reference'
+    | '/objet/$reference'
     | '/pdf/$reportId'
     | '/reset-password/$link'
+    | '/monument'
     | '/reset-password'
     | '/constat/$constatId/pdf'
   id:
@@ -255,8 +288,11 @@ export interface FileRouteTypes {
     | '/constat-validation/$token'
     | '/constat/$constatId'
     | '/edit/$reportId'
+    | '/monument/$reference'
+    | '/objet/$reference'
     | '/pdf/$reportId'
     | '/reset-password/$link'
+    | '/monument/'
     | '/reset-password/'
     | '/constat_/$constatId/pdf'
   fileRoutesById: FileRoutesById
@@ -277,8 +313,11 @@ export interface RootRouteChildren {
   ConstatValidationTokenRoute: typeof ConstatValidationTokenRoute
   ConstatConstatIdRoute: typeof ConstatConstatIdRoute
   EditReportIdRoute: typeof EditReportIdRoute
+  MonumentReferenceRoute: typeof MonumentReferenceRoute
+  ObjetReferenceRoute: typeof ObjetReferenceRoute
   PdfReportIdRoute: typeof PdfReportIdRoute
   ResetPasswordLinkRoute: typeof ResetPasswordLinkRoute
+  MonumentIndexRoute: typeof MonumentIndexRoute
   ResetPasswordIndexLazyRoute: typeof ResetPasswordIndexLazyRoute
   ConstatConstatIdPdfRoute: typeof ConstatConstatIdPdfRoute
 }
@@ -376,6 +415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordIndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/monument/': {
+      id: '/monument/'
+      path: '/monument'
+      fullPath: '/monument/'
+      preLoaderRoute: typeof MonumentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password/$link': {
       id: '/reset-password/$link'
       path: '/reset-password/$link'
@@ -388,6 +434,20 @@ declare module '@tanstack/react-router' {
       path: '/pdf/$reportId'
       fullPath: '/pdf/$reportId'
       preLoaderRoute: typeof PdfReportIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objet/$reference': {
+      id: '/objet/$reference'
+      path: '/objet/$reference'
+      fullPath: '/objet/$reference'
+      preLoaderRoute: typeof ObjetReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monument/$reference': {
+      id: '/monument/$reference'
+      path: '/monument/$reference'
+      fullPath: '/monument/$reference'
+      preLoaderRoute: typeof MonumentReferenceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/edit/$reportId': {
@@ -437,8 +497,11 @@ const rootRouteChildren: RootRouteChildren = {
   ConstatValidationTokenRoute: ConstatValidationTokenRoute,
   ConstatConstatIdRoute: ConstatConstatIdRoute,
   EditReportIdRoute: EditReportIdRoute,
+  MonumentReferenceRoute: MonumentReferenceRoute,
+  ObjetReferenceRoute: ObjetReferenceRoute,
   PdfReportIdRoute: PdfReportIdRoute,
   ResetPasswordLinkRoute: ResetPasswordLinkRoute,
+  MonumentIndexRoute: MonumentIndexRoute,
   ResetPasswordIndexLazyRoute: ResetPasswordIndexLazyRoute,
   ConstatConstatIdPdfRoute: ConstatConstatIdPdfRoute,
 }

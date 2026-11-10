@@ -2,6 +2,7 @@ import MuiDsfrThemeProvider from "@codegouvfr/react-dsfr/mui";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import type { RouterOutputs } from "../api";
 import { Layout } from "../features/Layout";
+import { MonumentAlertOutbox } from "../features/fiche/alerts/MonumentAlertOutbox";
 
 export const Route = createRootRouteWithContext<Partial<RouterOutputs<"/api/authenticate">>>()({
   beforeLoad: (ctx) => {
@@ -13,6 +14,7 @@ export const Route = createRootRouteWithContext<Partial<RouterOutputs<"/api/auth
         <Layout>
           <Outlet />
         </Layout>
+        <MonumentAlertOutbox />
       </MuiDsfrThemeProvider>
     </>
   ),
@@ -25,6 +27,14 @@ const getTitle = (pathname: string) => {
 
   if (pathname.startsWith("/constat/")) {
     return "Patrinotes | Constat d'état";
+  }
+
+  if (pathname.startsWith("/monument")) {
+    return "Patrinotes | Fiche monument historique";
+  }
+
+  if (pathname.startsWith("/objet/")) {
+    return "Patrinotes | Fiche objet mobilier";
   }
 
   if (pathname.startsWith("/pdf")) {

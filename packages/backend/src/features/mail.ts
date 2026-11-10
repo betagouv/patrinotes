@@ -8,6 +8,7 @@ import { Selectable } from "kysely";
 import { getStateReportTitle, MinimalAlert } from "@patrinotes/pdf/constat";
 import { createBordereauMailContent } from "./bordereau";
 import { getAlertMailSubject, createAlertEmailContent } from "./mail/alertMail";
+import { createMonumentAlertEmailContent, getMonumentAlertTitle } from "./mail/monumentAlertMail";
 import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
 import { AuthUser } from "../routes/authMiddleware";
 
@@ -220,4 +221,27 @@ export const sendAlertEmail = async ({
     });
     throw error;
   }
+};
+
+/** Email of an alert or annotation made from a fiche (MH, UP or objet), outside any constat. */
+export const sendMonumentAlertEmail = async ({
+  to,
+  alert,
+  attachments,
+  user,
+}: {
+  to: string;
+  alert: Selectable<Database["monument_alert"]>;
+  attachments: Selectable<Database["monument_alert_attachment"]>[];
+  user: AuthUser;
+}) => {
+  const { html, attachments: mailAttachments } = await createMonumentAlertEmailContent({ alert, attachments, user });
+
+  return transporter.sendMail({
+    from: ENV.EMAIL_EMITTER,
+    to,
+    subject: getMonumentAlertTitle(alert),
+    html,
+    attachments: mailAttachments,
+  });
 };

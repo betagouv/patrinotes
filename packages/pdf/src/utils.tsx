@@ -169,3 +169,35 @@ export const formatUpProtection = (protection?: string | null) => {
 };
 
 export const formatUpNiveau = (niveau?: string | null) => (niveau ? uppercaseFirstLetter(niveau) : null);
+
+/** Problems an alert on an objet mobilier can report (stored as these labels, as in constats). */
+export const OBJET_PROBLEMES = ["Objet absent", "Objet en insécurité", "Dégradation importante"] as const;
+
+/** Annotation de visite of an objet mobilier: stored values and their labels. */
+export const OBJET_ANNOTATION_OPTIONS = {
+  presence: [
+    { value: "oui", label: "Oui", summary: "Objet présent au sein de l’édifice" },
+    { value: "non", label: "Non", summary: "Objet absent de l’édifice" },
+    { value: "non_localise", label: "Non localisé", summary: "Objet non localisé" },
+  ],
+  etat: [
+    { value: "bon", label: "Bon", summary: "Objet en bon état" },
+    { value: "moyen", label: "Moyen", summary: "Objet en état moyen" },
+    { value: "mauvais", label: "Mauvais", summary: "Objet en mauvais état" },
+    { value: "peril", label: "Péril", summary: "Objet en péril" },
+  ],
+  securite: [
+    { value: "oui", label: "Oui", summary: "Objet en sécurité" },
+    { value: "non", label: "Non", summary: "Objet en insécurité" },
+  ],
+} as const;
+
+/** "Objet présent au sein de l’édifice", "Objet en insécurité"… for the filled answers of an annotation. */
+export const getObjetAnnotationSummary = (annotation: {
+  presence?: string | null;
+  etat?: string | null;
+  securite?: string | null;
+}): string[] =>
+  (["presence", "securite", "etat"] as const)
+    .map((key) => OBJET_ANNOTATION_OPTIONS[key].find((option) => option.value === annotation[key])?.summary)
+    .filter((summary): summary is NonNullable<typeof summary> => !!summary);

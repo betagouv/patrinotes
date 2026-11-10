@@ -39,6 +39,36 @@ export const getUpLevel = (tree: UpTree, id: string): UpLevel => {
 
 export const getUpRoot = (tree: UpTree) => tree.ups.find((up) => up.id === tree.rootId)!;
 
+/** Ids from the monument root down to (and including) the given UP, or undefined when it is not in the tree. */
+export const getPathToUp = (tree: UpTree, upId: string): string[] | undefined => {
+  const parentOf = new Map<string, string>();
+  for (const up of tree.ups) {
+    for (const childId of up.enfantsIds) if (!parentOf.has(childId)) parentOf.set(childId, up.id);
+  }
+  const path = [upId];
+  const seen = new Set(path);
+  while (path[0] !== tree.rootId) {
+    const parentId = parentOf.get(path[0]!);
+    if (!parentId || seen.has(parentId)) return undefined;
+    seen.add(parentId);
+    path.unshift(parentId);
+  }
+  return path;
+};
+
+/** The selection of a constat on this UP (null or the root = ensemble du monument). */
+export const getUpSelection = (tree: UpTree, upId: string | null): UpSelection => {
+  const monument = getUpRoot(tree);
+  if (!upId || upId === tree.rootId) return { up: null, chemin: [], monument };
+  const byId = new Map(tree.ups.map((up) => [up.id, up]));
+  const path = getPathToUp(tree, upId) ?? [tree.rootId, upId];
+  return {
+    up: byId.get(upId) ?? null,
+    chemin: path.slice(1, -1).map((id) => ({ id, intitule: byId.get(id)?.intitule ?? "" })),
+    monument,
+  };
+};
+
 /** Ancestors of the chosen UP, below the monument root (the root itself is not included). */
 export type UpCheminItem = { id: string; intitule: string };
 

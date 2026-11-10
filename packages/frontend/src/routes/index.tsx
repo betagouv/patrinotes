@@ -53,35 +53,6 @@ const Index = () => {
     },
   });
 
-  const createStateReportMutation = useMutation({
-    mutationFn: async () => {
-      const id = v4();
-      await db
-        .insertInto("state_report")
-        .values({
-          id,
-          created_by: user.id,
-          created_at: new Date().toISOString(),
-          disabled: 1,
-          version: 2,
-          service_id: user.service_id,
-          redacted_by: user.name,
-          date_visite: new Date().toISOString(),
-        })
-        .execute();
-
-      return id;
-    },
-    onSuccess: (id) => {
-      id &&
-        navigate({
-          to: "/constat/$constatId",
-          params: { constatId: id },
-          search: { step: "informations", mode: "view" },
-        });
-    },
-  });
-
   return (
     <Flex flexDirection="column" color="text-label-grey">
       <SimpleBanner pb={{ xs: "40px", lg: "72px" }} alignItems="flex-start">
@@ -97,7 +68,8 @@ const Index = () => {
                 small
                 title="Créer un constat d'état"
                 buttonProps={{
-                  onClick: () => createStateReportMutation.mutate(),
+                  // the constat starts from the fiche of its monument
+                  onClick: () => navigate({ to: "/monument" }),
                 }}
                 noIcon
               />

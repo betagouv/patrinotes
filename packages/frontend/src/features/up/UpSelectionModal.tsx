@@ -5,6 +5,7 @@ import { Alert, Button } from "#components/MUIDsfr.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { ModalCloseButton } from "../menu/MenuTitle";
 import {
+  getPathToUp,
   getUpLevel,
   getUpRoot,
   type UnitePatrimoniale,
@@ -22,22 +23,6 @@ const separator = `1px solid ${colors.border.default.grey.default}`;
 /** The chosen part: up null = ensemble du monument; chemin = its ancestors below the monument root. */
 type Selected = { up: UnitePatrimoniale | null; chemin: UpCheminItem[] };
 
-/** Ids from the monument root down to (and including) the given UP, or undefined when it is not in the tree. */
-const getPathToUp = (tree: UpTree, upId: string): string[] | undefined => {
-  const parentOf = new Map<string, string>();
-  for (const up of tree.ups) {
-    for (const childId of up.enfantsIds) if (!parentOf.has(childId)) parentOf.set(childId, up.id);
-  }
-  const path = [upId];
-  const seen = new Set(path);
-  while (path[0] !== tree.rootId) {
-    const parentId = parentOf.get(path[0]!);
-    if (!parentId || seen.has(parentId)) return undefined;
-    seen.add(parentId);
-    path.unshift(parentId);
-  }
-  return path;
-};
 
 /**
  * "Pour quelle partie du monument … souhaitez-vous réaliser un constat ?"

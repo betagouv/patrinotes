@@ -216,3 +216,103 @@ describe("evaluateWrite", () => {
     expect(decision.allowed).toBe(false);
   });
 });
+
+describe("fiche alerts and corrections", () => {
+  const draft = {
+    id: "alert-1",
+    kind: "alerte",
+    status: "draft",
+    reference_pop: "PA00079952",
+    service_id: "service-a",
+    created_by: "user-a",
+    sent_at: null,
+  };
+
+  it("creates fiche alerts as drafts of the user, in the user's service, never already sent", async () => {
+    const decision = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "PUT",
+      id: "alert-1",
+      data: { ...draft, service_id: "service-b", created_by: "user-b", sent_at: "2026-11-10T10:00:00.000Z" },
+      existing: null,
+    });
+    expect(decision).toMatchObject({
+      allowed: true,
+      values: { service_id: "service-a", created_by: "user-a", sent_at: null, status: "draft" },
+    });
+
+    const submitted = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "PUT",
+      id: "alert-2",
+      data: { ...draft, status: "submitted" },
+      existing: null,
+    });
+    expect(submitted.allowed).toBe(false);
+  });
+
+  it("lets the author submit a draft, then refuses any further change", async () => {
+    const submit = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "PATCH",
+      id: "alert-1",
+      data: { status: "submitted", commentaires: "Fissure" },
+      existing: draft,
+    });
+    expect(submit).toMatchObject({ allowed: true, values: { status: "submitted", commentaires: "Fissure" } });
+
+    const edit = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "PATCH",
+      id: "alert-1",
+      data: { commentaires: "Autre" },
+      existing: { ...draft, status: "submitted" },
+    });
+    expect(edit.allowed).toBe(false);
+  });
+
+  it("refuses alerts of another service", async () => {
+    const decision = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "DELETE",
+      id: "alert-1",
+      data: {},
+      existing: { ...draft, service_id: "service-b", created_by: "user-b" },
+    });
+    expect(decision.allowed).toBe(false);
+  });
+
+  it("keeps corrections in the user's service and their target fixed", async () => {
+    const decision = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_correction",
+      op: "PUT",
+      id: "correction-1",
+      data: { target: "mh", reference_pop: "PA00079952", adresse: "1 rue", service_id: "service-b" },
+      existing: null,
+    });
+    expect(decision).toMatchObject({ allowed: true, values: { service_id: "service-a", updated_by: "user-a" } });
+
+    const other = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_correction",
+      op: "PATCH",
+      id: "correction-2",
+      data: { adresse: "2 rue" },
+      existing: { id: "correction-2", target: "mh", reference_pop: "PA1", service_id: "service-b" },
+    });
+    expect(other.allowed).toBe(false);
+  });
+});

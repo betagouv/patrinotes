@@ -13,6 +13,7 @@ type AttachmentTableConfig =
   | { table: "report_attachment"; fkColumn: "report_id"; fkValue: string }
   | { table: "visited_section_attachment"; fkColumn: "visited_section_id"; fkValue: string }
   | { table: "state_report_alert_attachment"; fkColumn: "state_report_alert_id"; fkValue: string }
+  | { table: "monument_alert_attachment"; fkColumn: "monument_alert_id"; fkValue: string }
   | {
       table: "state_report_attachment";
       fkColumn: "state_report_id";
@@ -68,6 +69,21 @@ function buildQuery(config: AttachmentTableConfig) {
           eb.ref("attachments.media_type").as("mediaType"),
         ])
         .orderBy("state_report_alert_attachment.created_at", "asc");
+
+    case "monument_alert_attachment":
+      return db
+        .selectFrom("monument_alert_attachment")
+        .leftJoin("attachments", "attachments.id", "monument_alert_attachment.attachment_id")
+        .where("monument_alert_attachment.monument_alert_id", "=", config.fkValue)
+        .where("monument_alert_attachment.is_deprecated", "=", 0)
+        .select((eb) => [
+          "monument_alert_attachment.id",
+          "monument_alert_attachment.label",
+          "attachments.local_uri",
+          "attachments.state",
+          eb.ref("attachments.media_type").as("mediaType"),
+        ])
+        .orderBy("monument_alert_attachment.created_at", "asc");
 
     case "state_report_attachment":
       return db
@@ -145,6 +161,20 @@ export function useAttachmentImages(config: AttachmentTableConfig, parentId: str
             created_at: data?.created_at ?? new Date().toISOString(),
             is_deprecated: 0,
             ...data,
+          })
+          .execute();
+        break;
+      case "monument_alert_attachment":
+        await db
+          .insertInto("monument_alert_attachment")
+          .values({
+            id: attachmentId,
+            attachment_id: attachmentId,
+            monument_alert_id: config.fkValue,
+            label: data?.label ?? "",
+            service_id: user.service_id,
+            created_at: data?.created_at ?? new Date().toISOString(),
+            is_deprecated: 0,
           })
           .execute();
         break;

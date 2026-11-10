@@ -53,4 +53,7 @@ export type Database = {
   attachment_redirection: Kyselify<typeof tables.attachment_redirection>;
   constat_pdf_download: Kyselify<typeof tables.constatPdfDownload>;
   up_cache: Kyselify<typeof tables.upCache>;
+  monument_alert: Kyselify<typeof tables.monumentAlert>;
+  monument_alert_attachment: Kyselify<typeof tables.monumentAlertAttachment>;
+  monument_correction: Kyselify<typeof tables.monumentCorrection>;
 };

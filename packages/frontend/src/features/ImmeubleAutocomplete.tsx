@@ -31,6 +31,7 @@ import {
 import { useIsOnline } from "../hooks/useIsOnline";
 import { RapportGroupeNotice } from "./up/RapportGroupeNotice";
 import { scrollToTop } from "./state-report/StateReportSummary";
+import { getCorrectedMonumentValues, getCorrection } from "./fiche/corrections";
 
 type FilterablePopImmeubles = Pick<
   PopImmeuble,
@@ -124,6 +125,14 @@ export const ImmeubleAutocomplete = () => {
       // @ts-ignore mismatch between PopImmeuble and StateReportFormType keys
       const value = immeubleDetails[key as keyof PopImmeuble] || null;
       form.setValue(formField as keyof StateReportFormType, value);
+    }
+
+    // the service's corrections of the monument (« Compléter les infos » on its fiche) prefill its constats
+    const correction = await getCorrection({ target: "mh", referencePop: item.id! });
+    if (correction) {
+      for (const [field, value] of Object.entries(getCorrectedMonumentValues(immeubleDetails, correction))) {
+        form.setValue(field as keyof StateReportFormType, value as any);
+      }
     }
   };
 

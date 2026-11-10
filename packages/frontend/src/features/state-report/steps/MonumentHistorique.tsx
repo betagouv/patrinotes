@@ -15,13 +15,14 @@ import { PopImage, PopObjet } from "../../../db/AppSchema";
 import { useIsOnline } from "../../../hooks/useIsOnline";
 import { downloadFile } from "../../../utils";
 import { getStateReportMailName } from "@patrinotes/pdf/constat";
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import { Divider } from "#components/ui/Divider.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { MHAddressAutocomplete } from "../MHAddressAutocomplete";
 import { Accordion } from "#components/MUIDsfr.tsx";
 import { PlanDeSituationModal } from "./PlanDeSituationModal";
 import { MonumentUpInfos, useIsMonumentComplexe } from "../../up/MonumentUpInfos";
+import { MonumentConstatRow, useMonumentConstats } from "../../fiche/useMonumentConstats";
 // import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
@@ -79,6 +80,18 @@ export const MonumentHistorique = () => {
         >
           Informations
         </Typography>
+        {referencePop && !isCustom ? (
+          <Box mb={{ xs: "8px", lg: "16px" }}>
+            <Link
+              to="/monument/$reference"
+              params={{ reference: referencePop }}
+              search={upId ? { up: upId } : {}}
+              className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
+            >
+              {upId ? "Voir la fiche de l’unité patrimoniale" : "Voir la fiche du monument"}
+            </Link>
+          </Box>
+        ) : null}
         {isComplexe ? (
           <>
             <MonumentUpInfos />
@@ -274,17 +287,7 @@ export const MonumentHistorique = () => {
   );
 };
 
-type PreviousConstatRow = {
-  id: string;
-  created_at: string | null;
-  nature_visite: string | null;
-  redacted_by: string | null;
-  titre_edifice: string | null;
-  pdf_size: number | null;
-  service_name: string | null;
-  up_intitule: string | null;
-  isLocal: boolean;
-};
+type PreviousConstatRow = MonumentConstatRow;
 
 /**
  * Sent constats of the same monument. For a constat on an unité patrimoniale, only those of that UP;
@@ -292,63 +295,11 @@ type PreviousConstatRow = {
  */
 const PreviousConstats = ({ referencePop, upId }: { referencePop: string; upId: string | null }) => {
   const { constatId } = routeApi.useParams();
-  const isOnline = useIsOnline();
-
-  // Constats already synced to this device (own service). Source of truth when offline,
-  // and used to decide whether a constat can be opened in-app or must be downloaded.
-  let localDbQuery = db
-    .selectFrom("state_report")
-    .selectAll()
-    .where("reference_pop", "like", "%" + referencePop.trim())
-    .where("id", "<>", constatId ?? "")
-    .where("disabled", "<>", 1)
-    .where("attachment_id", "is not", null);
-  if (upId) localDbQuery = localDbQuery.where("up_id", "=", upId);
-  const localQuery = useDbQuery(localDbQuery.orderBy("created_at", "desc"), [referencePop, upId]);
-
-  // Constats made on the same historic monument by any service sharing its department.
-  const remoteQuery = useQuery({
-    queryKey: ["previous-constats", referencePop],
-    queryFn: () => api.get("/api/state-report/previous", { query: { referencePop } }),
-    enabled: isOnline && !!referencePop && referencePop !== "CUSTOM",
-    retry: false,
-  });
+  const { rows: allRows } = useMonumentConstats(referencePop, constatId);
 
   if (!referencePop || referencePop === "CUSTOM") return null;
 
-  const local = (localQuery.data ?? []).filter((c) => c.id !== constatId);
-  const localById = new Map(local.map((c) => [c.id, c]));
-  const remote = (remoteQuery.data ?? []).filter((c) => c.id !== constatId && (!upId || c.up_id === upId));
-  const remoteIds = new Set(remote.map((c) => c.id));
-
-  const rows: PreviousConstatRow[] = [
-    ...remote.map((c) => ({
-      id: c.id,
-      created_at: c.created_at,
-      nature_visite: c.nature_visite,
-      redacted_by: c.redacted_by,
-      titre_edifice: c.titre_edifice,
-      pdf_size: c.pdf_size,
-      service_name: c.service_name,
-      up_intitule: c.up_intitule,
-      isLocal: localById.has(c.id),
-    })),
-    // keep local constats the backend didn't return (offline, or department mismatch)
-    ...local
-      .filter((c) => !remoteIds.has(c.id))
-      .map((c) => ({
-        id: c.id,
-        created_at: c.created_at,
-        nature_visite: c.nature_visite,
-        redacted_by: c.redacted_by,
-        titre_edifice: c.titre_edifice,
-        pdf_size: c.pdf_size,
-        service_name: null,
-        up_intitule: c.up_intitule,
-        isLocal: true,
-      })),
-  ].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-
+  const rows = upId ? allRows.filter((c) => c.up_id === upId) : allRows;
   if (!rows.length) return null;
 
   return (

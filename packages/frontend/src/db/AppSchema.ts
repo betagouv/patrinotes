@@ -435,6 +435,62 @@ const state_report_alert_attachment = new Table({
   service_id: column.text,
 });
 
+const monument_alert = new Table({
+  kind: column.text,
+  status: column.text,
+  reference_pop: column.text,
+  titre_edifice: column.text,
+  commune: column.text,
+  up_id: column.text,
+  up_intitule: column.text,
+  objet_reference: column.text,
+  objet_titre: column.text,
+  alert: column.text,
+  probleme: column.text,
+  presence: column.text,
+  etat: column.text,
+  securite: column.text,
+  commentaires: column.text,
+  should_send: column.integer,
+  mandatory_emails: column.text,
+  additional_emails: column.text,
+  created_by: column.text,
+  created_by_name: column.text,
+  created_at: column.text,
+  submitted_at: column.text,
+  sent_at: column.text,
+  service_id: column.text,
+});
+
+const monument_alert_attachment = new Table({
+  monument_alert_id: column.text,
+  attachment_id: column.text,
+  is_deprecated: column.integer,
+  label: column.text,
+  created_at: column.text,
+  service_id: column.text,
+});
+
+const monument_correction = new Table({
+  target: column.text,
+  reference_pop: column.text,
+  up_id: column.text,
+  objet_reference: column.text,
+  nature_edifice: column.text,
+  adresse: column.text,
+  commune: column.text,
+  commune_historique: column.text,
+  reference_cadastrale: column.text,
+  periode_construction: column.text,
+  nature_protection: column.text,
+  parties_protegees: column.text,
+  description: column.text,
+  emplacement: column.text,
+  updated_at: column.text,
+  updated_by: column.text,
+  service_id: column.text,
+});
+
 export const AppSchema = new Schema({
   report,
   service,
@@ -459,6 +515,9 @@ export const AppSchema = new Schema({
   pop_images,
   state_report_alert,
   state_report_alert_attachment,
+  monument_alert,
+  monument_alert_attachment,
+  monument_correction,
   attachments: new AttachmentTable() as any as typeof _attachmentTable,
 });
 
@@ -498,6 +557,9 @@ export type PopObjet = Database["pop_objets"];
 export type PopImage = Database["pop_images"];
 export type StateReportAlert = Database["state_report_alert"];
 export type StateReportAlertAttachment = Database["state_report_alert_attachment"];
+export type MonumentAlert = Database["monument_alert"];
+export type MonumentAlertAttachment = Database["monument_alert_attachment"];
+export type MonumentCorrection = Database["monument_correction"];
 
 import type { Database as BackendDatabase } from "../../../backend/src/db/db";
 
@@ -534,4 +596,7 @@ const _checkTables: { [K in SharedTables]: IsTableOk<K> } = {
   pop_images: true,
   state_report_alert: true,
   state_report_alert_attachment: true,
+  monument_alert: true,
+  monument_alert_attachment: true,
+  monument_correction: true,
 };

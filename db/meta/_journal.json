@@ -267,6 +267,13 @@
       "when": 1792487882931,
       "tag": "0037_up_unites_patrimoniales",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794302342439,
+      "tag": "0038_fiche_monument",
+      "breakpoints": true
     }
   ]
 }

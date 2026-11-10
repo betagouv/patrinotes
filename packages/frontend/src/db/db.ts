@@ -72,6 +72,8 @@ export const attachmentQueue = new AttachmentQueue({
         SELECT attachment_id FROM visited_section_attachment WHERE is_deprecated = 0
         UNION ALL
         SELECT attachment_id FROM state_report_alert_attachment WHERE is_deprecated = 0
+        UNION ALL
+        SELECT attachment_id FROM monument_alert_attachment WHERE is_deprecated = 0
         `,
       [],
       {

@@ -805,3 +805,85 @@ export const constatPdfDownload = pgTable(
     }),
   ],
 );
+
+/**
+ * Alert or visit annotation made from a fiche (MH, unité patrimoniale or objet mobilier), outside any constat.
+ * - kind "alerte": a problem to report (`alert` = section, as in a constat), optionally emailed;
+ * - kind "annotation": quick observations on an objet mobilier (presence, état, sécurité), optionally emailed.
+ * A row is a "draft" while the user fills it in, then "submitted"; the backend emails it (POST /api/monument-alert/send)
+ * and sets `sent_at`.
+ */
+export const monumentAlert = pgTable(
+  "monument_alert",
+  {
+    id: text().primaryKey().notNull(),
+    kind: text().notNull(),
+    status: text().notNull(),
+    referencePop: text("reference_pop").notNull(),
+    titreEdifice: text("titre_edifice"),
+    commune: text(),
+    upId: text("up_id"),
+    upIntitule: text("up_intitule"),
+    objetReference: text("objet_reference"),
+    objetTitre: text("objet_titre"),
+    alert: text(),
+    probleme: text(),
+    presence: text(),
+    etat: text(),
+    securite: text(),
+    commentaires: text(),
+    shouldSend: boolean("should_send"),
+    mandatoryEmails: text("mandatory_emails"),
+    additionalEmails: text("additional_emails"),
+    createdBy: text("created_by"),
+    createdByName: text("created_by_name"),
+    createdAt: timestamp("created_at", { mode: "string" }),
+    submittedAt: timestamp("submitted_at", { mode: "string" }),
+    sentAt: timestamp("sent_at", { mode: "string" }),
+    service_id: text("service_id"),
+  },
+  (table) => [
+    index("monument_alert_reference_pop_idx").on(table.referencePop),
+    index("monument_alert_service_id_idx").on(table.service_id),
+  ],
+);
+
+export const monumentAlertAttachment = pgTable("monument_alert_attachment", {
+  id: text().primaryKey().notNull(),
+  isDeprecated: boolean("is_deprecated"),
+  attachmentId: text("attachment_id").notNull(),
+  monumentAlertId: text("monument_alert_id").notNull(),
+  label: text(),
+  createdAt: timestamp("created_at", { mode: "string" }),
+  service_id: text("service_id"),
+});
+
+/**
+ * A service's corrections of the information of a fiche (`target`: "mh", "up" or "objet").
+ * They replace the POP / dataspace values on the fiche and prefill the service's next constats.
+ * Null = no correction for that field.
+ */
+export const monumentCorrection = pgTable(
+  "monument_correction",
+  {
+    id: text().primaryKey().notNull(),
+    target: text().notNull(),
+    referencePop: text("reference_pop").notNull(),
+    upId: text("up_id"),
+    objetReference: text("objet_reference"),
+    natureEdifice: text("nature_edifice"),
+    adresse: text(),
+    commune: text(),
+    communeHistorique: text("commune_historique"),
+    referenceCadastrale: text("reference_cadastrale"),
+    periodeConstruction: text("periode_construction"),
+    natureProtection: text("nature_protection"),
+    partiesProtegees: text("parties_protegees"),
+    description: text(),
+    emplacement: text(),
+    updatedAt: timestamp("updated_at", { mode: "string" }),
+    updatedBy: text("updated_by"),
+    service_id: text("service_id"),
+  },
+  (table) => [index("monument_correction_reference_pop_idx").on(table.referencePop)],
+);

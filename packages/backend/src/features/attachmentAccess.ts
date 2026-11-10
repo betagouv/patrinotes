@@ -3,7 +3,7 @@ import { AppError } from "./errors";
 
 /**
  * Files live under `attachment/<document id>/…`: the first segment of a path is the compte-rendu, constat,
- * visited section or alert it belongs to (`<id>/images/<uuid>.jpg`, `<id>/compte_rendu_<epoch>.pdf`…).
+ * visited section, alert or fiche alert (monument_alert) it belongs to (`<id>/images/<uuid>.jpg`, `<id>/compte_rendu_<epoch>.pdf`…).
  * Access to a file is the access to that document's service.
  */
 
@@ -27,6 +27,7 @@ export const getAttachmentServiceId = async (filePath: string): Promise<string |
     .unionAll(db.selectFrom("state_report").select("service_id").where("id", "=", documentId))
     .unionAll(db.selectFrom("visited_section").select("service_id").where("id", "=", documentId))
     .unionAll(db.selectFrom("state_report_alert").select("service_id").where("id", "=", documentId))
+    .unionAll(db.selectFrom("monument_alert").select("service_id").where("id", "=", documentId))
     .executeTakeFirst();
 
   return row ? (row.service_id ?? "") : undefined;
