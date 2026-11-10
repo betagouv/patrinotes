@@ -152,6 +152,14 @@ test.describe("Fiche MH", () => {
     await dialog.waitFor({ state: "hidden" });
     await expect(page).toHaveURL(/\/constat\//);
 
+    // the card shows it, and opening it again gives back the same annotation
+    await expect(page.getByText("Annoté", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Table de test" }).click();
+    await expect(dialog.getByLabel("Commentaires")).toHaveValue("La porte de l’édifice ne ferme pas.");
+    await dialog.getByLabel("Commentaires").fill("La porte de l’édifice ne ferme pas, même à clé.");
+    await dialog.getByRole("button", { name: "Valider" }).click();
+    await dialog.waitFor({ state: "hidden" });
+
     await page.goto("./objet/OBJ00001");
     await expect(page.getByRole("heading", { level: 1, name: "Table de test" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Édifice de conservation" })).toBeVisible();

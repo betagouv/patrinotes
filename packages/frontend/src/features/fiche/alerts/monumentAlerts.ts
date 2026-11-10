@@ -13,6 +13,8 @@ export type MonumentAlertContext = {
   upIntitule?: string | null;
   objetReference?: string | null;
   objetTitre?: string | null;
+  /** constat during which an annotation is made: it is reopened from that constat's objets */
+  stateReportId?: string | null;
 };
 
 export type MonumentAlertKind = "alerte" | "annotation";
@@ -56,6 +58,7 @@ export const createMonumentAlertDraft = async ({
       created_by_name: user.name,
       created_at: new Date().toISOString(),
       service_id: user.service_id,
+      state_report_id: context.stateReportId ?? null,
     })
     .execute();
   return id;

@@ -279,6 +279,31 @@ describe("fiche alerts and corrections", () => {
     expect(edit.allowed).toBe(false);
   });
 
+  it("lets the author complete a submitted annotation until it is emailed", async () => {
+    const annotation = { ...draft, kind: "annotation", status: "submitted", state_report_id: "constat-1" };
+    const edit = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "PATCH",
+      id: "alert-1",
+      data: { commentaires: "Autre" },
+      existing: annotation,
+    });
+    expect(edit).toMatchObject({ allowed: true, values: { commentaires: "Autre" } });
+
+    const sent = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "monument_alert",
+      op: "PATCH",
+      id: "alert-1",
+      data: { commentaires: "Autre" },
+      existing: { ...annotation, sent_at: "2026-11-10T10:00:00.000Z" },
+    });
+    expect(sent.allowed).toBe(false);
+  });
+
   it("refuses alerts of another service", async () => {
     const decision = await evaluateWrite({
       trx: noDb,

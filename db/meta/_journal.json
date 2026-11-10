@@ -274,6 +274,13 @@
       "when": 1794302342439,
       "tag": "0038_fiche_monument",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794314650686,
+      "tag": "0039_monument_alert_constat",
+      "breakpoints": true
     }
   ]
 }

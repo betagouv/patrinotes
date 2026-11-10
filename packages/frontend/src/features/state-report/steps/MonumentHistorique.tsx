@@ -330,7 +330,10 @@ const PreviousConstatsList = ({ constats }: { constats: PreviousConstatRow[] }) 
       })) as string;
       const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: "application/pdf" });
-      downloadFile(URL.createObjectURL(blob), getStateReportMailName({ titre_edifice: constat.titre_edifice ?? undefined }));
+      downloadFile(
+        URL.createObjectURL(blob),
+        getStateReportMailName({ titre_edifice: constat.titre_edifice ?? undefined }),
+      );
     },
   });
 
@@ -460,7 +463,7 @@ const MonumentObjets = () => {
         <>
           <Stack width="100%" gap="16px">
             {objetsQuery.data?.pages.filter(Boolean).map((page) => (
-              <MonumentObjetPage popObjets={page.objets} />
+              <MonumentObjetPage key={page.offset} popObjets={page.objets} />
             ))}
           </Stack>
           {shouldShowLoadMore ? (
@@ -484,13 +487,32 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
     control: form.control,
     name: ["reference_pop", "titre_edifice", "commune"],
   });
+  const { constatId } = routeApi.useParams();
   const [annotated, setAnnotated] = useState<PopObjet | null>(null);
-  // an annotation is about the objet, kept on its fiche: not tied to the constat nor to an UP
+  // an annotation is about the objet, kept on its fiche (not tied to an UP); the constat only lets it be reopened
   const context: MonumentAlertContext = {
     referencePop: (referencePop ?? "").trim(),
     titreEdifice: titreEdifice ?? null,
     commune: commune ?? null,
+    stateReportId: constatId,
   };
+
+  // annotations already made during this constat, newest first: one per objet is reopened
+  const annotationsQuery = useDbQuery(
+    db
+      .selectFrom("monument_alert")
+      .select(["id", "objet_reference"])
+      .where("state_report_id", "=", constatId)
+      .where("kind", "=", "annotation")
+      .where("status", "=", "submitted")
+      .orderBy("submitted_at", "desc"),
+    [constatId],
+  );
+  const annotationByObjet = new Map<string, string>();
+  for (const row of annotationsQuery.data ?? []) {
+    if (row.objet_reference && !annotationByObjet.has(row.objet_reference))
+      annotationByObjet.set(row.objet_reference, row.id);
+  }
   const imagesQuery = useQuery({
     queryKey: ["pop-images-for-objets", popObjets.map((o) => o.reference)],
     queryFn: async () => {
@@ -515,6 +537,7 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
               key={obj.id}
               popObjet={obj}
               images={images.filter((img) => img.reference === obj.reference)}
+              isAnnotated={annotationByObjet.has(obj.reference ?? "")}
               onAnnotate={() => setAnnotated(obj)}
             />
           ))}
@@ -527,6 +550,8 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
       {annotated?.reference ? (
         <ObjetAnnotationModal
           open
+          key={annotated.reference}
+          existingAlertId={annotationByObjet.get(annotated.reference) ?? null}
           onClose={() => setAnnotated(null)}
           context={{ ...context, objetReference: annotated.reference, objetTitre: annotated.titre_editorial }}
         />
@@ -539,12 +564,16 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
 const MonumentObjetItem = ({
   popObjet,
   images,
+  isAnnotated,
   onAnnotate,
 }: {
   popObjet: PopObjet;
   images: PopImage[];
+  /** an annotation was already made on this objet during the constat */
+  isAnnotated: boolean;
   onAnnotate: () => void;
 }) => {
+  const titre = popObjet.titre_editorial || popObjet.reference;
   return (
     <Flex
       position="relative"
@@ -575,7 +604,7 @@ const MonumentObjetItem = ({
           type="button"
           onClick={onAnnotate}
           aria-haspopup="dialog"
-          title={`Annoter ${popObjet.titre_editorial || popObjet.reference}`}
+          title={isAnnotated ? `Voir l’annotation de ${titre}` : `Annoter ${titre}`}
           p="0"
           border="none"
           bgcolor="transparent"
@@ -591,8 +620,16 @@ const MonumentObjetItem = ({
             "&::after": { content: '""', position: "absolute", inset: 0 },
           }}
         >
-          {popObjet.titre_editorial || popObjet.reference}
+          {titre}
         </Box>
+        {isAnnotated ? (
+          <p
+            className="fr-badge fr-badge--sm fr-badge--success fr-badge--no-icon"
+            style={{ margin: 0, alignSelf: "flex-start" }}
+          >
+            Annoté
+          </p>
+        ) : null}
         <Flex alignItems="center" justifyContent="space-between">
           <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
             {popObjet.reference}

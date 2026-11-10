@@ -460,6 +460,8 @@ const monument_alert = new Table({
   submitted_at: column.text,
   sent_at: column.text,
   service_id: column.text,
+  // constat during which an annotation was made
+  state_report_id: column.text,
 });
 
 const monument_alert_attachment = new Table({

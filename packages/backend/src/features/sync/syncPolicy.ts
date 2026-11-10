@@ -104,10 +104,14 @@ const findStateReportOfAlert = async (trx: Trx, alertId: unknown) => {
 
 /**
  * Alert or annotation of a fiche: its author or someone the author delegated to, within the author's service,
- * while it is a draft. A submitted one is kept as sent (only the server changes it afterwards).
+ * while it is a draft. A submitted alert is kept as sent (only the server changes it afterwards); a submitted
+ * annotation can still be completed from its constat until it is emailed.
  */
 export const canEditMonumentAlert = async (trx: Trx, user: SyncUser, alert: Row | null | undefined) => {
-  if (!alert || !isInUserService(alert, user) || alert.status !== "draft") return false;
+  if (!alert || !isInUserService(alert, user)) return false;
+  const isEditable =
+    alert.status === "draft" || (alert.kind === "annotation" && alert.status === "submitted" && !alert.sent_at);
+  if (!isEditable) return false;
   if (alert.created_by === user.id) return true;
   return hasDelegation(trx, alert.created_by, user.id);
 };
@@ -339,9 +343,10 @@ export const syncPolicies: Record<string, TablePolicy> = {
       "submitted_at",
       "sent_at",
       "service_id",
+      "state_report_id",
     ],
     serverColumns: ["created_by", "sent_at", "service_id"],
-    immutableColumns: ["kind", "reference_pop"],
+    immutableColumns: ["kind", "reference_pop", "state_report_id"],
     forced: (user) => ({ created_by: user.id, service_id: user.service_id }),
     canWrite: async (ctx) => {
       if (ctx.op === "PUT") return isInUserService(ctx.next, ctx.user) && ctx.next.status === "draft";

@@ -841,10 +841,13 @@ export const monumentAlert = pgTable(
     submittedAt: timestamp("submitted_at", { mode: "string" }),
     sentAt: timestamp("sent_at", { mode: "string" }),
     service_id: text("service_id"),
+    // constat during which an annotation was made (reopened from that constat's objets)
+    stateReportId: text("state_report_id"),
   },
   (table) => [
     index("monument_alert_reference_pop_idx").on(table.referencePop),
     index("monument_alert_service_id_idx").on(table.service_id),
+    index("monument_alert_state_report_id_idx").on(table.stateReportId),
   ],
 );
 
