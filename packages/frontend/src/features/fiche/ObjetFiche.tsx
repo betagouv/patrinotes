@@ -16,7 +16,7 @@ import { CorrectionForm } from "./CorrectionForm";
 import { EnsemblePatrimonial } from "./EnsemblePatrimonial";
 import { FicheActions } from "./FicheActions";
 import { buildHistory, FicheHistory, type HistoryItem } from "./FicheHistory";
-import { FicheField, FicheFields, FicheLayout, FicheSectionTitle, getPopUrl, PopReference } from "./FicheLayout";
+import { FicheField, FicheFields, FicheLayout, FicheSectionTitle, getPopUrl, PopReference, underlinedLink } from "./FicheLayout";
 import { useObjetImages } from "./FicheObjets";
 import { countConstatsByUp, useMonumentConstats } from "./useMonumentConstats";
 
@@ -130,7 +130,8 @@ export const ObjetFiche = ({ reference }: { reference: string }) => {
     <FicheLayout
       title={titre}
       actions={<FicheActions context={context} tree={tree} isTreeLoading={false} />}
-      popUrl={getPopUrl(reference, "palissy")}
+      // the band leads to the monument's POP page (the objet's own notice is under « Référence Palissy »)
+      popUrl={referencePop ? getPopUrl(referencePop, "merimee") : null}
     >
       <Stack>
         <Gallery images={images} />
@@ -155,7 +156,7 @@ export const ObjetFiche = ({ reference }: { reference: string }) => {
                 label="Titre courant"
                 value={
                   referencePop && monument ? (
-                    <Link to="/monument/$reference" params={{ reference: referencePop }} search={{}} className="fr-link">
+                    <Link to="/monument/$reference" params={{ reference: referencePop }} search={{}} className="fr-link" style={underlinedLink}>
                       {titreEdifice}
                     </Link>
                   ) : (

@@ -8,6 +8,9 @@ import { ReactNode } from "react";
 
 const colors = fr.colors.decisions;
 
+/** Links that must look like links at rest (DSFR only underlines some of them), without a second underline on hover. */
+export const underlinedLink = { textDecoration: "underline", textUnderlineOffset: "4px", backgroundImage: "none" } as const;
+
 /**
  * Page of a fiche (monument historique, unité patrimoniale or objet mobilier): blue banner with the title,
  * actions on the left (above the content on mobile), information on the right, and a link to the POP notice.
@@ -87,9 +90,9 @@ const PopBand = ({ url }: { url: string }) => (
       href={url}
       target="_blank"
       rel="noopener external"
-      title="En savoir plus sur l’édifice - ouvre une nouvelle fenêtre"
+      title="Consulter la page POP du monument - ouvre une nouvelle fenêtre"
     >
-      En savoir plus sur l’édifice
+      Consulter la page POP du monument
     </a>
   </Box>
 );
@@ -165,6 +168,7 @@ export const PopReference = ({ reference, base }: { reference: string | null | u
         target="_blank"
         rel="noopener external"
         title={`Voir ${reference} sur POP - ouvre une nouvelle fenêtre`}
+        style={underlinedLink}
       >
         voir sur POP
       </a>

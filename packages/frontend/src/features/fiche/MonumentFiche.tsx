@@ -23,6 +23,7 @@ import {
   FicheSectionTitle,
   getPopUrl,
   PopReference,
+  underlinedLink,
 } from "./FicheLayout";
 import { FicheObjets } from "./FicheObjets";
 import { countConstatsByUp, useMonumentConstats } from "./useMonumentConstats";
@@ -285,7 +286,7 @@ const UpInfos = ({
         fullWidth
         label="Nom de l’édifice"
         value={
-          <Link to="/monument/$reference" params={{ reference }} search={{}} className="fr-link">
+          <Link to="/monument/$reference" params={{ reference }} search={{}} className="fr-link" style={underlinedLink}>
             {titre}
           </Link>
         }

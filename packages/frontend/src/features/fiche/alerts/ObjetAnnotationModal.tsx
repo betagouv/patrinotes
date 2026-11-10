@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLiveService, useLiveUser } from "../../../contexts/AuthContext";
 import { db, useDbQuery } from "../../../db/db";
 import { ModalCloseButton } from "../../menu/MenuTitle";
-import { getPopUrl } from "../FicheLayout";
+import { getPopUrl, underlinedLink } from "../FicheLayout";
 import {
   AlertPhotosField,
   CommentairesField,
@@ -205,6 +205,7 @@ const AnnotationForm = ({
           target="_blank"
           rel="noopener external"
           title={`Voir ${context.objetReference} sur POP - ouvre une nouvelle fenêtre`}
+          style={underlinedLink}
         >
           voir sur POP
         </a>
