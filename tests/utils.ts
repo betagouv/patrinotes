@@ -43,6 +43,15 @@ export const mockPopImmeubleComplexe = {
   titre_editorial_de_la_notice: "Château complexe de Test",
 } satisfies Insertable<Database["pop_immeubles"]>;
 
+/** MH complexe with a deep hierarchy of unités patrimoniales (backend UP mock, ids mock-deep-*). */
+export const mockPopImmeubleRemparts = {
+  ...mockPopImmeuble,
+  reference: "TEST00003",
+  id: "TEST00003",
+  titre_editorial_de_la_notice: "Remparts de Test",
+  denomination_de_l_edifice: "Enceinte urbaine",
+} satisfies Insertable<Database["pop_immeubles"]>;
+
 export const mockServices: Insertable<Database["service"]>[] = [
   {
     name: "Service 1",

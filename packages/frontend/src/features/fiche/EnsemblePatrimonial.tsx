@@ -117,10 +117,12 @@ const TreeRow = ({ depth, isCurrent, children }: { depth: number; isCurrent: boo
   <Box
     position="relative"
     display="flex"
-    alignItems="center"
+    // top-aligned: a wrapped label keeps its toggle and branch on its first line
+    alignItems="flex-start"
     gap="8px"
     minHeight={`${ROW_HEIGHT}px`}
     py="4px"
+    sx={{ "& > a, & > p": { pt: "4px" } }}
     pr="12px"
     pl={`${12 + depth * INDENT}px`}
     bgcolor={isCurrent ? "#F5F5FE" : "transparent"}

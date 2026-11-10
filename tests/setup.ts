@@ -1,6 +1,6 @@
 import { exec, execSync, spawnSync } from "child_process";
 import { db, makeDb } from "../packages/backend/src/db/db";
-import { mockClauses, mockPopImmeuble, mockPopImmeubleComplexe, mockPopObjets, mockServiceInstructeur, mockServices, mockUsers } from "./utils";
+import { mockClauses, mockPopImmeuble, mockPopImmeubleComplexe, mockPopImmeubleRemparts, mockPopObjets, mockServiceInstructeur, mockServices, mockUsers } from "./utils";
 import { deleteUserByEmail } from "../packages/backend/src/features/auth/keycloak";
 
 export const resetDatabase = async () => {
@@ -61,11 +61,11 @@ export const resetDatabase = async () => {
 
   await db
     .deleteFrom("pop_immeubles")
-    .where("reference", "in", [mockPopImmeuble.reference, mockPopImmeubleComplexe.reference])
+    .where("reference", "in", [mockPopImmeuble.reference, mockPopImmeubleComplexe.reference, mockPopImmeubleRemparts.reference])
     .execute();
   await db
     .insertInto("pop_immeubles")
-    .values([mockPopImmeuble, mockPopImmeubleComplexe] as any)
+    .values([mockPopImmeuble, mockPopImmeubleComplexe, mockPopImmeubleRemparts] as any)
     .execute();
 
   await db
