@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { mockUsers, signup, login } from "./utils";
+import { mockUsers, signup, login, openMonumentFiche, startConstatFromFiche } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { hasUpLeftForRapport } from "../packages/frontend/src/features/up/rapportGroupe.utils";
@@ -8,23 +8,10 @@ import { hasUpLeftForRapport } from "../packages/frontend/src/features/up/rappor
 // (packages/backend/src/features/up/fixtures/up-mock.json):
 //   Chapelle, Corps de logis (> Aile nord, Aile sud), Jardin
 
-/** Types in the monument search and picks an option; retries while the constat form and monuments are loading. */
-const pickMonument = async (page: Page, search: string, option: RegExp) => {
-  const autocomplete = page.getByLabel("Nom ou référence du monument");
-  await autocomplete.waitFor();
-  await expect(async () => {
-    await autocomplete.fill("");
-    await autocomplete.fill(search);
-    await expect(page.getByRole("option", { name: option })).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 60_000 });
-  await page.getByRole("option", { name: option }).click();
-};
-
+/** From the fiche of the MH complexe, « Créer un constat d'état » asks which part of the monument. */
 const startConstatOnComplexMonument = async (page: Page) => {
-  await page.getByText("Créer un constat d'état").click();
-  await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-
-  await pickMonument(page, "Château complexe", /Château complexe de Test/);
+  await openMonumentFiche(page, "Château complexe", /Château complexe de Test/);
+  await page.getByRole("button", { name: "Créer un constat d’état" }).click();
 
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Créer un constat d’état")).toBeVisible();
@@ -166,9 +153,10 @@ test.describe("Constat d'état sur un MH complexe", () => {
     let dialog = await startConstatOnComplexMonument(page);
     await dialog.getByRole("button", { name: "Annuler" }).click();
     await dialog.waitFor({ state: "hidden" });
-    await expect(page.getByLabel("Nom ou référence du monument")).toBeVisible();
+    // still on the fiche: no constat was created
+    expect(new URL(page.url()).pathname).toBe("/monument/TEST00002");
 
-    await pickMonument(page, "Château complexe", /Château complexe de Test/);
+    await page.getByRole("button", { name: "Créer un constat d’état" }).click();
     dialog = page.getByRole("dialog");
     await dialog.getByRole("radio", { name: "Ensemble du monument" }).check({ force: true });
     await dialog.getByRole("button", { name: "Créer un constat" }).click();
@@ -380,9 +368,7 @@ test.describe("Constat d'état sur un MH complexe", () => {
   test("un MH simple se finalise et s'envoie seul, sans fenêtre de rapport groupé", async ({ page }) => {
     await ensureLoggedIn(page, { signupFirst: false });
 
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-    await pickMonument(page, "Château de Test", /^Château de Test/);
+    await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
     await expect(page.getByRole("heading", { name: "Château de Test", exact: true })).toBeVisible();
     const id = getConstatId(page);
 
@@ -416,9 +402,7 @@ test.describe("Constat d'état sur un MH complexe", () => {
   test("un MH simple ne propose pas d'UP", async ({ page }) => {
     await ensureLoggedIn(page, { signupFirst: false });
 
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-    await pickMonument(page, "Château de Test", /^Château de Test/);
+    await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
     await expect(page.getByRole("heading", { name: "Château de Test", exact: true })).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByText("Changer de monument", { exact: true })).toBeVisible();

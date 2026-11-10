@@ -25,8 +25,9 @@ test.describe("Monument picker map", () => {
     await page.goto("./");
     await signup({ page, user: mockUsers[0] });
 
+    // the map picker of the monument search (first step of a constat)
     await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
+    await page.waitForURL((url) => url.pathname.replace(/\/$/, "") === "/monument");
 
     await page.getByRole("button", { name: "Choisir sur la carte" }).click();
     await expect(page.locator("canvas.maplibregl-canvas")).toBeVisible({ timeout: 15_000 });

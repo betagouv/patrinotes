@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup } from "./utils";
+import { mockUsers, signup, startConstatFromFiche } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
@@ -51,14 +51,7 @@ test.describe("Constat validation flow", () => {
     // 3. Complete the constat flow (same as constat.spec.ts)
     // -------------------------------------------------------------------------
     await page.goto("./");
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-
-    // Step 1: Informations
-    const autocomplete = page.getByLabel("Nom ou référence du monument");
-    await autocomplete.waitFor();
-    await autocomplete.fill("Château de Test");
-    await page.getByRole("option", { name: /Château de Test/ }).click();
+    await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
     await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
     await page.getByRole("button", { name: "Contexte de la visite" }).click();
     await page.waitForURL((url) => url.search.includes("contexte-visite"));
@@ -236,13 +229,7 @@ test.describe("Constat validation flow", () => {
     // Navigate within the SPA to avoid losing in-memory auth state
     await page.locator('a[href="/"]').first().click();
     await page.waitForURL((url) => url.pathname === "/");
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-
-    const autocomplete = page.getByLabel("Nom ou référence du monument");
-    await autocomplete.waitFor();
-    await autocomplete.fill("Château de Test");
-    await page.getByRole("option", { name: /Château de Test/ }).click();
+    await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
     await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
     await page.getByRole("button", { name: "Contexte de la visite" }).click();
     await page.waitForURL((url) => url.search.includes("contexte-visite"));

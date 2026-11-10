@@ -16,6 +16,9 @@ export const resetDatabase = async () => {
   await db.deleteFrom("attachment_redirection").execute();
   await db.deleteFrom("state_report").execute();
   await db.deleteFrom("user_settings").execute();
+  await db.deleteFrom("monument_alert_attachment").execute();
+  await db.deleteFrom("monument_alert").execute();
+  await db.deleteFrom("monument_correction").execute();
 
   await db.deleteFrom("report_attachment").execute();
   await db.deleteFrom("sent_email").execute();

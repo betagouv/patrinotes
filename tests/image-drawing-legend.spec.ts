@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup } from "./utils";
+import { mockUsers, signup, startConstatFromFiche } from "./utils";
 import { resetDatabase } from "./setup";
 import * as fs from "fs";
 import * as path from "path";
@@ -45,16 +45,7 @@ test.describe("Image upload — drawing and légende", () => {
     // Step 3: Create constat
     // ---------------------------------------------------------------------------
     await page.goto("./");
-    await page.getByText("Créer un constat d'état").click();
-    await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-
-    // ---------------------------------------------------------------------------
-    // Step 4: Informations — select monument
-    // ---------------------------------------------------------------------------
-    const autocomplete = page.getByLabel("Nom ou référence du monument");
-    await autocomplete.waitFor();
-    await autocomplete.fill("Château de Test");
-    await page.getByRole("option", { name: /Château de Test/ }).click();
+    await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
     await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
 
     // ---------------------------------------------------------------------------

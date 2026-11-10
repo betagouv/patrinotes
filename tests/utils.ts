@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 import { Database, db } from "../packages/backend/src/db/db";
 import type { Insertable, Selectable } from "kysely";
 
@@ -177,13 +177,7 @@ export const fillMinimalConstat = async (
   page: Page,
   opts?: { proprietaireEmail?: string; visitDate?: string; sectionComment?: string },
 ) => {
-  await page.getByText("Créer un constat d'état").click();
-  await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
-
-  const autocomplete = page.getByLabel("Nom ou référence du monument");
-  await autocomplete.waitFor();
-  await autocomplete.fill("Château de Test");
-  await page.getByRole("option", { name: /Château de Test/ }).click();
+  await startConstatFromFiche(page, "Château de Test", /^Château de Test/);
   await page.waitForFunction(() => document.body.innerText.includes("Château de Test"));
 
   await page.getByRole("button", { name: "Contexte de la visite" }).click();
@@ -245,4 +239,28 @@ export const cleanupDb = async () => {
       result.map((r) => r.id),
     )
     .execute();
+};
+
+/** Home → « Créer un constat d'état » → monument search → the monument's fiche. */
+export const openMonumentFiche = async (page: Page, search: string, option: RegExp) => {
+  await page.getByText("Créer un constat d'état").click();
+  await page.waitForURL((url) => url.pathname.replace(/\/$/, "") === "/monument");
+
+  const autocomplete = page.getByLabel("Nom ou référence du monument");
+  await autocomplete.waitFor();
+  // monuments may still be syncing
+  await expect(async () => {
+    await autocomplete.fill("");
+    await autocomplete.fill(search);
+    await expect(page.getByRole("option", { name: option }).first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+  await page.getByRole("option", { name: option }).first().click();
+  await page.waitForURL((url) => /^\/monument\/[^/]+$/.test(url.pathname));
+};
+
+/** Creates a constat from a monument's fiche (a MH simple: no choice of unité patrimoniale). */
+export const startConstatFromFiche = async (page: Page, search: string, option: RegExp) => {
+  await openMonumentFiche(page, search, option);
+  await page.getByRole("button", { name: "Créer un constat d’état" }).click();
+  await page.waitForURL((url) => url.pathname.startsWith("/constat/"));
 };
