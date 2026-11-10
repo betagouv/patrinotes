@@ -23,6 +23,8 @@ import { Accordion } from "#components/MUIDsfr.tsx";
 import { PlanDeSituationModal } from "./PlanDeSituationModal";
 import { MonumentUpInfos, useIsMonumentComplexe } from "../../up/MonumentUpInfos";
 import { MonumentConstatRow, useMonumentConstats } from "../../fiche/useMonumentConstats";
+import { ObjetAnnotationModal } from "../../fiche/alerts/ObjetAnnotationModal";
+import type { MonumentAlertContext } from "../../fiche/alerts/monumentAlerts";
 // import { PlanDeSituationModal } from "./PlanDeSituationModal";
 
 const routeApi = getRouteApi("/constat/$constatId");
@@ -474,6 +476,18 @@ const MonumentObjets = () => {
 };
 
 const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
+  const form = useStateReportFormContext();
+  const [referencePop, titreEdifice, commune] = useWatch({
+    control: form.control,
+    name: ["reference_pop", "titre_edifice", "commune"],
+  });
+  const [annotated, setAnnotated] = useState<PopObjet | null>(null);
+  // an annotation is about the objet, kept on its fiche: not tied to the constat nor to an UP
+  const context: MonumentAlertContext = {
+    referencePop: (referencePop ?? "").trim(),
+    titreEdifice: titreEdifice ?? null,
+    commune: commune ?? null,
+  };
   const imagesQuery = useQuery({
     queryKey: ["pop-images-for-objets", popObjets.map((o) => o.reference)],
     queryFn: async () => {
@@ -498,6 +512,7 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
               key={obj.id}
               popObjet={obj}
               images={images.filter((img) => img.reference === obj.reference)}
+              onAnnotate={() => setAnnotated(obj)}
             />
           ))}
         </Flex>
@@ -506,54 +521,85 @@ const MonumentObjetPage = ({ popObjets }: { popObjets: PopObjet[] }) => {
           <Typography>Ce monument ne contient pas d’objets mobiliers.</Typography>
         </Flex>
       )}
+      {annotated?.reference ? (
+        <ObjetAnnotationModal
+          open
+          onClose={() => setAnnotated(null)}
+          context={{ ...context, objetReference: annotated.reference, objetTitre: annotated.titre_editorial }}
+        />
+      ) : null}
     </>
   );
 };
 
-const MonumentObjetItem = ({ popObjet, images }: { popObjet: PopObjet; images: PopImage[] }) => {
+const MonumentObjetItem = ({
+  popObjet,
+  images,
+  onAnnotate,
+}: {
+  popObjet: PopObjet;
+  images: PopImage[];
+  onAnnotate: () => void;
+}) => {
   return (
     <Flex
-      component="a"
-      // @ts-ignore mui error
-      href={`https://pop.culture.gouv.fr/notice/palissy/${popObjet.reference}`}
-      target="_blank"
-      title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
-      rel="noopener external"
       flexDirection="column"
       flex="1"
       border="1px solid"
       borderColor={fr.colors.decisions.border.default.grey.default}
-      gap="8px"
       minWidth={{ xs: "100%", lg: "calc(50% - 8px)" }}
       maxWidth={{ xs: "100%", lg: "calc(50% - 8px)" }}
-      sx={{
-        "::after": {
-          display: "none",
-        },
-      }}
     >
-      <Box
-        component="img"
-        height="216px"
-        src={images?.[0]?.url ? images[0].url : "/objet-sans-image.png"}
+      <Flex
+        component="a"
+        // @ts-ignore mui error
+        href={`https://pop.culture.gouv.fr/notice/palissy/${popObjet.reference}`}
+        target="_blank"
+        title="pop.culture.gouv.fr - ouvre une nouvelle fenêtre"
+        rel="noopener external"
+        flexDirection="column"
+        flex="1"
+        gap="8px"
         sx={{
-          objectFit: "cover",
+          "::after": {
+            display: "none",
+          },
         }}
-      />
-      <Flex flexDirection="column" justifyContent="space-between" px="16px" gap={"8px"} py="16px" height="100%">
-        <Typography fontSize="20px" color={fr.colors.decisions.text.actionHigh.blueFrance.default} fontWeight="bold">
-          {popObjet.titre_editorial}
-        </Typography>
-        <Flex alignItems="center" justifyContent="space-between">
-          <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
-            {popObjet.reference}
+      >
+        <Box
+          component="img"
+          height="216px"
+          src={images?.[0]?.url ? images[0].url : "/objet-sans-image.png"}
+          sx={{
+            objectFit: "cover",
+          }}
+        />
+        <Flex flexDirection="column" justifyContent="space-between" px="16px" gap={"8px"} py="16px" height="100%">
+          <Typography fontSize="20px" color={fr.colors.decisions.text.actionHigh.blueFrance.default} fontWeight="bold">
+            {popObjet.titre_editorial}
           </Typography>
-          <Box
-            color={fr.colors.decisions.text.actionHigh.blueFrance.default}
-            className="fr-icon fr-icon-arrow-right-line"
-          />
+          <Flex alignItems="center" justifyContent="space-between">
+            <Typography fontSize="12px" color={fr.colors.decisions.text.mention.grey.default}>
+              {popObjet.reference}
+            </Typography>
+            <Box
+              color={fr.colors.decisions.text.actionHigh.blueFrance.default}
+              className="fr-icon fr-icon-arrow-right-line"
+            />
+          </Flex>
         </Flex>
       </Flex>
+      <Box px="8px" pb="12px">
+        <Button
+          priority="tertiary no outline"
+          size="small"
+          iconId="fr-icon-edit-line"
+          type="button"
+          onClick={onAnnotate}
+        >
+          Annoter
+        </Button>
+      </Box>
     </Flex>
   );
 };
