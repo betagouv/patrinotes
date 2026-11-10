@@ -250,12 +250,9 @@ export const cleanupDb = async () => {
     .execute();
 };
 
-/** Home → « Créer un constat d'état » → monument search → the monument's fiche. */
+/** Home → « Rechercher un monument historique » → the monument's fiche. */
 export const openMonumentFiche = async (page: Page, search: string, option: RegExp) => {
-  await page.getByText("Créer un constat d'état").click();
-  await page.waitForURL((url) => url.pathname.replace(/\/$/, "") === "/monument");
-
-  const autocomplete = page.getByLabel("Nom ou référence du monument");
+  const autocomplete = page.getByLabel("Rechercher un monument historique");
   await autocomplete.waitFor();
   // monuments may still be syncing
   await expect(async () => {

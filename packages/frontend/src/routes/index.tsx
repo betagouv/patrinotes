@@ -24,6 +24,7 @@ import { appDocumentEnum } from "../utils";
 import { SearchModal, searchStore } from "#components/SearchModal.tsx";
 import { useSelector } from "@xstate/store/react";
 import { useServiceType } from "../features/useServiceType";
+import { HomeMonumentSearch } from "../features/fiche/HomeMonumentSearch";
 
 const Index = () => {
   const user = useUser()!;
@@ -53,6 +54,35 @@ const Index = () => {
     },
   });
 
+  const createStateReportMutation = useMutation({
+    mutationFn: async () => {
+      const id = v4();
+      await db
+        .insertInto("state_report")
+        .values({
+          id,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+          disabled: 1,
+          version: 2,
+          service_id: user.service_id,
+          redacted_by: user.name,
+          date_visite: new Date().toISOString(),
+        })
+        .execute();
+
+      return id;
+    },
+    onSuccess: (id) => {
+      id &&
+        navigate({
+          to: "/constat/$constatId",
+          params: { constatId: id },
+          search: { step: "informations", mode: "view" },
+        });
+    },
+  });
+
   return (
     <Flex flexDirection="column" color="text-label-grey">
       <SimpleBanner pb={{ xs: "40px", lg: "72px" }} alignItems="flex-start">
@@ -63,13 +93,13 @@ const Index = () => {
 
           <Flex alignItems="center" width="100%" flexDirection={{ xs: "column", lg: "row" }} mt="32px">
             <Flex width={{ xs: "100%", lg: "588px" }} flexDirection="column" px={{ lg: 0, xs: "16px" }}>
+              <HomeMonumentSearch />
               <Tile
-                sx={{ h3: { margin: "0 !important", fontSize: "18px !important" } }}
+                sx={{ h3: { margin: "0 !important", fontSize: "18px !important" }, mt: "16px" }}
                 small
                 title="Créer un constat d'état"
                 buttonProps={{
-                  // the constat starts from the fiche of its monument
-                  onClick: () => navigate({ to: "/monument" }),
+                  onClick: () => createStateReportMutation.mutate(),
                 }}
                 noIcon
               />
