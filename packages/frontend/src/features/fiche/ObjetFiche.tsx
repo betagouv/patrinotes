@@ -22,12 +22,11 @@ import { countConstatsByUp, useMonumentConstats } from "./useMonumentConstats";
 
 const colors = fr.colors.decisions;
 
-/** First Mérimée reference (PA…) of an objet's monument field, which may hold several references. */
-const getMonumentReference = (value: string | null | undefined) =>
-  value
-    ?.split(/[\s,;]+/)
-    .map((reference) => reference.trim())
-    .find(Boolean) ?? null;
+/**
+ * First Mérimée reference (PA…) of an objet's monument field, which may hold several references
+ * or full POP URLs (https://www.pop.culture.gouv.fr/notice/merimee/PA00088392).
+ */
+const getMonumentReference = (value: string | null | undefined) => value?.match(/\b[A-Z]{2}\d{8}\b/)?.[0] ?? null;
 
 /** Fiche of an objet mobilier: its monument, its POP information and photos, alerts and annotations. */
 export const ObjetFiche = ({ reference }: { reference: string }) => {
@@ -229,13 +228,14 @@ const Gallery = ({ images }: { images: PopImage[] }) => {
       <Box
         display="grid"
         gridTemplateColumns={{ xs: "1fr", lg: small.length ? "2fr 1fr 1fr" : "1fr" }}
-        gridTemplateRows={{ lg: small.length > 2 ? "1fr 1fr" : "1fr" }}
+        // minmax(0, 1fr): a plain 1fr row grows to the photo's natural height and spills over the fields below
+        gridTemplateRows={{ lg: small.length > 2 ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)" }}
         gap="8px"
         height={{ xs: "auto", lg: "266px" }}
       >
-        <GalleryImage image={first!} sx={{ gridRow: { lg: "1 / -1" }, height: { xs: "220px", lg: "100%" } }} />
+        <GalleryImage image={first!} sx={{ gridRow: { lg: "1 / -1" }, height: { xs: "220px", lg: "100%" }, minHeight: 0 }} />
         {small.map((image, index) => (
-          <Box key={image.id} position="relative" display={{ xs: "none", lg: "block" }}>
+          <Box key={image.id} position="relative" minHeight={0} overflow="hidden" display={{ xs: "none", lg: "block" }}>
             <GalleryImage image={image} sx={{ height: "100%" }} />
             {index === small.length - 1 && withUrl.length > 1 ? (
               <Button
