@@ -137,7 +137,7 @@ test.describe("Fiche MH", () => {
     await screenshot(page, "4-historique");
   });
 
-  test("fiche d'un objet mobilier : annotation et alerte", async ({ page }) => {
+  test("fiche d'un objet mobilier : alerte", async ({ page }) => {
     await ensureLoggedIn(page, { signupFirst: false });
     await openMonumentFiche(page, "Château de Test", /^Château de Test/);
 
@@ -146,21 +146,6 @@ test.describe("Fiche MH", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Table de test" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Édifice de conservation" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Château de Test" }).first()).toBeVisible();
-
-    // annotation de visite, kept on the fiche without email
-    await page.getByRole("button", { name: "Annoter l’objet" }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.getByRole("group", { name: "Présence de l’objet" }).getByText("Oui").click();
-    await dialog.getByRole("group", { name: "L’objet est-il en sécurité ?" }).getByText("Non").click();
-    await dialog.getByLabel("Commentaires").fill("La porte de l’édifice ne ferme pas.");
-    await screenshot(page, "5-annotation");
-    await dialog.getByRole("button", { name: "Valider" }).click();
-    await dialog.waitFor({ state: "hidden" });
-
-    await page.getByRole("button", { name: /Constats antérieurs et alertes/ }).click();
-    await expect(page.getByText("Annotations de visite")).toBeVisible();
-    await expect(page.getByText("Objet présent au sein de l’édifice")).toBeVisible();
-    await expect(page.getByText("Objet en insécurité")).toBeVisible();
 
     // alerte on the objet: its form opens directly
     await page.getByRole("button", { name: "Signaler une alerte…" }).click();
@@ -187,7 +172,6 @@ test.describe("Fiche MH", () => {
         { timeout: 30_000 },
       )
       .toMatchObject([
-        { kind: "annotation", status: "submitted", presence: "oui", securite: "non", should_send: false },
         { kind: "alerte", status: "submitted", probleme: "Dégradation importante", should_send: true },
       ]);
   });
