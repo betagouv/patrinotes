@@ -27,7 +27,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 | 11 | [Configuration](11-configuration.md) | Référence exhaustive des variables d'environnement | Exploitation, développeurs |
 | 12 | [Exploitation et supervision](12-exploitation-et-supervision.md) | Journaux, Sentry, supervision, sauvegardes, tâches d'administration, procédures d'incident | Exploitation |
 | 13 | [Tests et qualité](13-tests-et-qualite.md) | Tests e2e, outillage, conventions, installation du poste de développement | Développeurs |
-| 14 | [Migration vers l'infrastructure du ministère](14-migration-vers-infra-ministere.md) | Exigences, dimensionnement, flux réseau, procédure de migration, bascule, retour arrière | **Ministère, exploitation** |
+| 14 | [Migration vers l'infrastructure du ministère](14-migration-vers-infra-ministere.md) | Plan en six phases : cadrage, mise à niveau de l'application, infrastructure cible, répétition générale, bascule, décommissionnement ; exigences, flux réseau, retour arrière | **Ministère, exploitation** |
 | 15 | [Règles implicites et pièges](15-regles-cachees-et-pieges.md) | Tout ce qu'il faut savoir avant de toucher au code | **Développeurs** |
 | 16 | [Risques et dette technique](16-risques-et-dette-technique.md) | Risques classés, recommandations, plan d'action | **Sécurité, direction de produit** |
 | 17 | [Glossaire](17-glossaire.md) | Termes métier et techniques | Tous |
@@ -36,7 +36,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 ## Parcours de lecture conseillés
 
 - **Équipe du ministère qui reprend l'hébergement** : 01 → 02 → 14 → 10 → 11 → 12 → 18.
-- **Homologation** : 02 → 05 → 16 → 14 (§6, flux réseau) → 09 (flux sortants) → 06 (données personnelles).
+- **Homologation** : 02 → 05 → 16 → 14 (§ 4.8, flux réseau) → 09 (flux sortants) → 06 (données personnelles).
 - **Nouveau développeur** : 01 → 02 → 15 → 13 (installation) → 03, 04, 08 selon le sujet.
 - **Interlocuteur métier** : 01 → 02 (§1 à 3) → 16 (§1 et §7).
 
