@@ -6,6 +6,7 @@ import { loginTSchema } from "./authRoutes";
 import { userTSchema } from "../services/authService";
 import { authenticateAdmin } from "./adminMiddleware";
 import { makeDebug } from "../features/debug";
+import { normalizeEmail } from "../features/email";
 
 const debug = makeDebug("admin");
 
@@ -153,9 +154,16 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       preHandler: [authenticateAdmin],
     },
     async (request) => {
-      const { email } = request.body;
+      const email = normalizeEmail(request.body.email);
+      if (!email.includes("@")) {
+        throw new AppError(400, "Le courriel n'est pas valide");
+      }
 
-      const existing = await db.selectFrom("whitelist").where("email", "=", email).selectAll().executeTakeFirst();
+      const existing = await db
+        .selectFrom("whitelist")
+        .where(sql`lower(trim(email))`, "=", email)
+        .selectAll()
+        .executeTakeFirst();
       if (existing) {
         throw new AppError(409, "Cet email est déjà dans la liste d'utilisateurs autorisés");
       }
@@ -178,14 +186,18 @@ export const adminPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
       preHandler: [authenticateAdmin],
     },
     async (request) => {
-      const { email } = request.body;
+      const email = normalizeEmail(request.body.email);
 
-      const existing = await db.selectFrom("whitelist").where("email", "=", email).selectAll().executeTakeFirst();
+      const existing = await db
+        .selectFrom("whitelist")
+        .where(sql`lower(trim(email))`, "=", email)
+        .selectAll()
+        .executeTakeFirst();
       if (!existing) {
         throw new AppError(404, "Email non trouvé dans la liste d'utilisateurs autorisés");
       }
 
-      await db.deleteFrom("whitelist").where("email", "=", email).execute();
+      await db.deleteFrom("whitelist").where(sql`lower(trim(email))`, "=", email).execute();
 
       return { message: "Email supprimé de la liste d'utilisateurs autorisés" };
     },
