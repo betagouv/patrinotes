@@ -19,7 +19,7 @@ import {
   useSendConstatFormContext,
 } from "../features/state-report/pdf/ConstatPdfContext";
 import { ViewConstatPdf } from "../features/state-report/pdf/ConstatPdf.view";
-import { Button, Center } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Center } from "#components/MUIDsfr.tsx";
 import { TextEditorContext, TextEditorContextProvider } from "../features/text-editor/TextEditorContext";
 import { EditConstatPdf } from "../features/state-report/pdf/ConstatPdf.edit";
 import { TextEditorToolbar } from "../features/text-editor/TextEditorToolbar";
@@ -28,7 +28,7 @@ import { SendConstatPdf } from "../features/state-report/pdf/ConstatPdf.send";
 import { EmailInput } from "#components/EmailInput.tsx";
 import { SentConstatPdf } from "../features/state-report/pdf/ConstatPdf.sent";
 import Accordion from "@codegouvfr/react-dsfr/Accordion";
-import { api } from "../api";
+import { api, getErrorMessage } from "../api";
 import { ModalCloseButton } from "../features/menu/MenuTitle";
 import { fr } from "@codegouvfr/react-dsfr";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
@@ -125,16 +125,22 @@ const ConstatPdf = () => {
     if (errors.some((e) => e.email.length > 0)) {
       return;
     }
-    sendConstatMutation.mutateAsync(values, {
-      onError: (e) => console.error(e),
-      onSuccess: () => {
-        navigate({
-          to: "/constat/$constatId/pdf",
-          params: { constatId },
-          search: { mode: "sent" },
-        });
+    const localSettings = userSettings?.userSettings;
+    const validationEmail =
+      localSettings?.validation_enabled && localSettings?.validation_email ? localSettings.validation_email : undefined;
+    sendConstatMutation.mutateAsync(
+      { ...values, validationEmail },
+      {
+        onError: (e) => console.error(e),
+        onSuccess: () => {
+          navigate({
+            to: "/constat/$constatId/pdf",
+            params: { constatId },
+            search: { mode: "sent" },
+          });
+        },
       },
-    });
+    );
   };
 
   const stateReportQuery = useQuery(constatPdfQueries.stateReport({ constatId }));
@@ -163,10 +169,18 @@ const ConstatPdf = () => {
     const emailsArray = Array.from(emails).filter(Boolean);
 
     form.setValue("recipients", emailsArray);
-
-    const needValidation = userSettings?.userSettings.validation_enabled && userSettings?.userSettings.validation_email;
-    form.setValue("needValidation", !!needValidation);
   }, [stateReportQuery.data, userSettings, form]);
+
+  // Default the "Envoi sous-couvert" toggle from the settings, in its own effect: the settings
+  // can load after the recipients are filled, and the toggle must then follow them instead of
+  // staying off. Once the user flips the toggle (dirty field), their choice is kept.
+  const settingsValidationEnabled = !!userSettings?.userSettings.validation_enabled;
+  const settingsValidationEmail = userSettings?.userSettings.validation_email ?? null;
+  useEffect(() => {
+    if (userSettings.isLoading) return;
+    if (form.getFieldState("needValidation").isDirty) return;
+    form.setValue("needValidation", settingsValidationEnabled && !!settingsValidationEmail);
+  }, [userSettings.isLoading, settingsValidationEnabled, settingsValidationEmail, form]);
 
   // sync alerts with form since they can be edited in the alert accordion
   useEffect(() => {
@@ -538,11 +552,13 @@ const SendBannerContent = () => {
     filters: {
       mutationKey: constatPdfMutations.send({ constatId, service: null as any }).mutationKey,
     },
-    select: ({ state }) => state.status,
+    select: ({ state }) => state,
   });
 
-  const currentMutationStatus = last(sendMutationStatus);
+  const currentMutationState = last(sendMutationStatus);
+  const currentMutationStatus = currentMutationState?.status;
   const isPending = currentMutationStatus === "pending";
+  const sendError = currentMutationStatus === "error" ? currentMutationState?.error : null;
 
   const setRecipients = (emails: string[]) => {
     form.setValue("recipients", emails);
@@ -588,6 +604,13 @@ const SendBannerContent = () => {
           onValueChange={setRecipients}
         />
         <ValidationToggle />
+        {sendError ? (
+          <Alert
+            severity="error"
+            sx={{ mt: "16px" }}
+            title={<Typography fontWeight="regular">{getErrorMessage(sendError)}</Typography>}
+          />
+        ) : null}
       </Flex>
       <Box flex="1" display="flex" justifyContent="flex-start" alignItems="flex-start">
         <Button
@@ -681,8 +704,8 @@ const ValidationToggle = () => {
             </Typography>
           </Stack>
         }
-        checked={needValidation}
-        onChange={(checked) => form.setValue("needValidation", checked)}
+        checked={!!needValidation}
+        onChange={(checked) => form.setValue("needValidation", checked, { shouldDirty: true })}
       />
     </Box>
   );

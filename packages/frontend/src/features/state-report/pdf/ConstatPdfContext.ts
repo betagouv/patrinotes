@@ -36,4 +36,6 @@ export type SendConstatForm = {
   pdfBlob: Blob | null;
   pdfSize: number | null;
   needValidation?: boolean;
+  /** Validator address from the local settings, sent so the server can honour validation before they sync. */
+  validationEmail?: string;
 };

@@ -318,6 +318,7 @@ export namespace Endpoints {
     parameters: {
       body: {
         needValidation?: boolean | undefined;
+        validationEmail?: string | undefined;
         pdfPath: string;
         pdfSize?: number | undefined;
         stateReportId: string;

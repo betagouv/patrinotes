@@ -7,7 +7,7 @@ import { generatePresignedUrl } from "../services/uploadService";
 import { Service } from "../../../frontend/src/db/AppSchema";
 import { makeDebug } from "../features/debug";
 import { v4 } from "uuid";
-import { Selectable } from "kysely";
+import { Selectable, sql } from "kysely";
 import { getServices } from "../services/services";
 import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { getStateReportMailName } from "@patrinotes/pdf/constat";
@@ -286,6 +286,28 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       throw new AppError(404, "Constat d'état non trouvé");
     }
 
+    // Several rows may exist for one user and service (created offline on two devices):
+    // prefer the one that enables validation, then the oldest id, so the choice is stable.
+    const userSettingsResult = await db
+      .selectFrom("user_settings")
+      .where("user_id", "=", user.id)
+      .where("service_id", "=", user.service_id)
+      .selectAll()
+      .orderBy(sql`coalesce(validation_enabled, false)`, "desc")
+      .orderBy("id")
+      .executeTakeFirst();
+
+    // The validation choice is made in the browser from its local copy of the settings, which may
+    // not have reached the server yet. Never fall back to a direct send when validation was asked:
+    // use the validator the browser saw, or refuse before anything is sent.
+    const validatorEmail = needValidation ? getValidatorEmail(userSettingsResult, request.body.validationEmail) : null;
+    if (needValidation && !validatorEmail) {
+      throw new AppError(
+        409,
+        "Le constat n'a pas été envoyé : l'adresse du valideur est introuvable. Vérifiez la section « Validation de mes constats » de votre compte, puis réessayez.",
+      );
+    }
+
     await db.transaction().execute(async (tx) => {
       await tx
         .insertInto("state_report_attachment")
@@ -315,13 +337,6 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     if (!recipients.includes(userMail.toLowerCase())) recipients.push(userMail.toLowerCase());
 
     const stateReport = stateReportQuery as Selectable<Database["state_report"]>;
-
-    const userSettingsResult = await db
-      .selectFrom("user_settings")
-      .where("user_id", "=", user.id)
-      .where("service_id", "=", user.service_id)
-      .selectAll()
-      .executeTakeFirst();
 
     const alertsAlreadySent = !!stateReportQuery?.alerts_sent;
 
@@ -370,7 +385,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       await db.updateTable("state_report").set({ alerts_sent: true }).where("id", "=", stateReportId).execute();
     }
 
-    if (needValidation && userSettingsResult?.validation_enabled && userSettingsResult?.validation_email) {
+    if (validatorEmail) {
       const token = v4();
       await db
         .insertInto("constat_validation")
@@ -379,7 +394,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
           state_report_id: stateReportId,
           token,
           token_expires_at: addDays(new Date(), 7).toISOString(),
-          validator_email: userSettingsResult.validation_email,
+          validator_email: validatorEmail,
           status: "pending",
           recipients: recipients.join(","),
           pdf_path: pdfPath,
@@ -395,7 +410,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         .execute();
 
       await sendValidationRequestMail({
-        validatorEmail: userSettingsResult.validation_email,
+        validatorEmail,
         stateReport,
         validationToken: token,
         creatorName: user.name,
@@ -404,7 +419,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       const url = await createAttachmentRedirection({
         s3Key: "attachment/" + pdfPath,
         createdBy: user.id,
-        sentTo: userSettingsResult.validation_email,
+        sentTo: validatorEmail,
         name: getStateReportMailName({ titre_edifice: stateReportQuery.titre_edifice }),
       });
       return url;
@@ -490,9 +505,24 @@ const AlertSchema = Type.Object({
   should_send: Type.Union([Type.Boolean(), Type.Number(), Type.Null()]),
 });
 
+const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+
+const getValidatorEmail = (
+  settings: { validation_enabled: boolean | null; validation_email: string | null } | undefined,
+  browserEmail: string | undefined,
+) => {
+  const serverEmail = settings?.validation_enabled ? settings.validation_email?.trim().toLowerCase() : undefined;
+  if (serverEmail && EMAIL_PATTERN.test(serverEmail)) return serverEmail;
+  const fallback = browserEmail?.trim().toLowerCase();
+  if (fallback && EMAIL_PATTERN.test(fallback)) return fallback;
+  return null;
+};
+
 export const stateReportPdfTSchema = {
   body: Type.Object({
     needValidation: Type.Optional(Type.Boolean()),
+    // validator address from the browser's settings, used when the server copy is not synced yet
+    validationEmail: Type.Optional(Type.String()),
     pdfPath: Type.String(),
     pdfSize: Type.Optional(Type.Number()),
     stateReportId: Type.String(),
