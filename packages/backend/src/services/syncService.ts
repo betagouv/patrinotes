@@ -17,6 +17,85 @@ const getBlackListedTables = () => {
   return base;
 };
 
+// Tables belonging to a state report (constat d'état), with how to reach its state_report_id.
+// Reports (compte-rendus) are intentionally not listed: they stay editable after sending.
+const stateReportChildTables: Record<string, { column: string; parent?: { table: string; column: string } }> = {
+  visited_section: { column: "state_report_id" },
+  state_report_alert: { column: "state_report_id" },
+  state_report_attachment: { column: "state_report_id" },
+  visited_section_attachment: {
+    column: "visited_section_id",
+    parent: { table: "visited_section", column: "state_report_id" },
+  },
+  state_report_alert_attachment: {
+    column: "state_report_alert_id",
+    parent: { table: "state_report_alert", column: "state_report_id" },
+  },
+};
+
+// Fields a client may still change on a sent state report ("disabled" removes it from the list).
+const stateReportFieldsEditableWhenLocked = ["disabled"];
+
+// Same rule as the frontend's getIsStateReportDisabled: once the PDF exists the report is
+// read-only, unless the validator declined it.
+export const isStateReportLocked = (stateReport: {
+  attachment_id: string | null;
+  validation_status: string | null;
+}) => !!stateReport.attachment_id && stateReport.validation_status !== "declined";
+
+const findStateReportId = async (operation: Static<typeof crudTSchema>): Promise<string | null> => {
+  const { type, id, op } = operation;
+  const data = (operation.data ?? {}) as Record<string, unknown>;
+
+  if (type === "state_report") return id;
+
+  const mapping = stateReportChildTables[type];
+  if (!mapping) return null;
+
+  // A PUT carries its foreign key; a PATCH/DELETE must look the existing row up
+  // (a PATCH could also try to move the row to another report: check the stored one).
+  let foreignId: string | null = null;
+  if (op === "PUT") {
+    foreignId = (data[mapping.column] as string | undefined) ?? null;
+  } else {
+    const row = await db
+      .selectFrom(type as any)
+      .select(mapping.column as any)
+      .where("id", "=", id)
+      .executeTakeFirst();
+    foreignId = ((row as any)?.[mapping.column] as string | undefined) ?? null;
+  }
+  if (!foreignId) return null;
+
+  if (!mapping.parent) return foreignId;
+
+  const parentRow = await db
+    .selectFrom(mapping.parent.table as any)
+    .select(mapping.parent.column as any)
+    .where("id", "=", foreignId)
+    .executeTakeFirst();
+  return ((parentRow as any)?.[mapping.parent.column] as string | undefined) ?? null;
+};
+
+const isForbiddenOnLockedStateReport = async (operation: Static<typeof crudTSchema>) => {
+  const stateReportId = await findStateReportId(operation);
+  if (!stateReportId) return false;
+
+  const stateReport = await db
+    .selectFrom("state_report")
+    .select(["attachment_id", "validation_status"])
+    .where("id", "=", stateReportId)
+    .executeTakeFirst();
+  if (!stateReport || !isStateReportLocked(stateReport)) return false;
+
+  if (operation.type === "state_report" && operation.op === "PATCH") {
+    const changedFields = Object.keys((operation.data ?? {}) as object);
+    return changedFields.some((field) => !stateReportFieldsEditableWhenLocked.includes(field));
+  }
+
+  return true;
+};
+
 export class SyncService {
   async applyCrud(operation: Static<typeof crudTSchema>, user: AuthUser) {
     await db
@@ -42,6 +121,13 @@ export class SyncService {
       if (operation.type === "user_settings" && (operation.op === "PUT" || operation.op === "PATCH")) {
         const handled = await applyUserSettingsWrite(operation, user);
         if (handled) return { success: true };
+      }
+
+      if (await isForbiddenOnLockedStateReport(operation)) {
+        debug("Rejecting", operation.op, "on", operation.type, operation.id, ": state report already sent");
+        // Answer 200 so the client drops the operation instead of retrying it forever;
+        // PowerSync then syncs the server state back, undoing the local change.
+        return { success: false, error: "Ce constat d'état a été envoyé et ne peut plus être modifié" };
       }
 
       if (operation.op === "DELETE") {

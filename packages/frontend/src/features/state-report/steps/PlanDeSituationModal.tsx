@@ -1,7 +1,7 @@
 import { Dialog, Box, DialogTitle, Typography } from "@mui/material";
 import { ModalCloseButton } from "../../menu/MenuTitle";
 import { MapLibre } from "../../map/MapLibre";
-import { useStateReportFormContext } from "../utils";
+import { useIsStateReportDisabled, useStateReportFormContext } from "../utils";
 import { useWatch } from "react-hook-form";
 import { db, useDbQuery } from "../../../db/db";
 import { Center } from "#components/MUIDsfr.tsx";
@@ -18,6 +18,7 @@ export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: 
   const referenceCadastrale = useWatch({ name: "reference_cadastrale", control: form.control });
   const popMHQuery = useDbQuery(db.selectFrom("pop_immeubles").selectAll().where("id", "=", referencePop));
   const popMH = popMHQuery.data?.[0];
+  const isDisabled = useIsStateReportDisabled();
 
   if (popMHQuery.isLoading) {
     return (
@@ -49,11 +50,14 @@ export const PlanDeSituationModal = ({ referencePop, onClose }: { referencePop: 
             <MapLibre
               popMH={popMH}
               onClose={onClose}
+              readOnly={isDisabled}
               onSaveCoordinates={(coords) => {
+                if (isDisabled) return;
                 form.setValue("coordonnees", coords);
                 invalidatePlanSituationAttachment(constatId);
               }}
               onSaveReferenceCadastrale={(ref) => {
+                if (isDisabled) return;
                 form.setValue("reference_cadastrale", ref);
                 invalidatePlanSituationAttachment(constatId);
               }}

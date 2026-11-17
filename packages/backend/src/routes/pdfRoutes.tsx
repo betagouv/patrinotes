@@ -323,7 +323,9 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
 
       await tx
         .updateTable("state_report")
-        .set({ attachment_id: pdfPath, pdf_size: request.body.pdfSize ?? null })
+        // Reset a previous "declined" status: a re-sent report must be locked again
+        // (it becomes "pending" below when it needs validation).
+        .set({ attachment_id: pdfPath, pdf_size: request.body.pdfSize ?? null, validation_status: null })
         .where("id", "=", stateReportId)
         .execute();
     });
