@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { mockUsers, signup, startConstatFromFiche } from "./utils";
 import { resetDatabase } from "./setup";
+import { db } from "../packages/backend/src/db/db";
 
 import * as fs from "fs";
 import * as path from "path";
@@ -40,7 +41,16 @@ test.describe("Image upload — constat flow", () => {
     await page.getByLabel("Courriel SRA").fill("sra-alert@test.com");
     const alertesForm = page.locator("form").filter({ has: page.getByLabel("Courriel CRMH") });
     await alertesForm.getByRole("button", { name: "Enregistrer" }).click();
-    await page.waitForResponse((response) => response.url().includes("/upload-data") && response.status() === 200);
+    // Wait for the emails to reach the database: /api/upload-data answers 200 even when it refuses a write,
+    // so its response alone does not prove the save.
+    await expect
+      .poll(
+        async () =>
+          (await db.selectFrom("service").where("id", "=", "service-1").select("courriel_crmh").executeTakeFirst())
+            ?.courriel_crmh,
+        { timeout: 30_000 },
+      )
+      .toBe("crmh-alert@test.com");
 
     // ---------------------------------------------------------------------------
     // Step 3: Create constat
