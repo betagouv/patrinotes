@@ -37,6 +37,7 @@ import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Center } from "#components/MUIDsfr.tsx";
 import { constatPdfQueries } from "../pdf/ConstatPdf.queries";
+import { useIsStateReportDisabled } from "../utils";
 
 const routeApi = getRouteApi("/constat/$constatId");
 
@@ -168,6 +169,7 @@ const AlertSectionsList = ({
   const constatId = routeApi.useParams().constatId;
   const userService = useLiveService()!;
   const isDesktop = useIsDesktop();
+  const isDisabled = useIsStateReportDisabled();
 
   const addAlertMutation = useMutation({
     mutationFn: async (title: string) => {
@@ -195,6 +197,8 @@ const AlertSectionsList = ({
     const sectionExists = fieldArray.fields.find((f) => f.alert === title);
 
     if (!sectionExists) {
+      // A finished report is read-only: never create a new alert.
+      if (isDisabled) return;
       await addAlertMutation.mutateAsync(title);
     }
 

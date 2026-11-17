@@ -123,7 +123,9 @@ export const MonumentHistorique = () => {
             isDisabled={isDisabled}
             renderInput={(props) => <MHAddressAutocomplete {...props} />}
           />
-          {!isCustom ? <EditableField label="Commune" field="commune" isEditing={isEditing} /> : null}
+          {!isCustom ? (
+            <EditableField label="Commune" field="commune" isEditing={isEditing} isDisabled={isDisabled} />
+          ) : null}
         </Flex>
 
         <Flex
