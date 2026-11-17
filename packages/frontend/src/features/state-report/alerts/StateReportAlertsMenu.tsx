@@ -13,7 +13,7 @@ import {
   useWatch,
 } from "react-hook-form";
 import { v7 } from "uuid";
-import { useLiveService } from "../../../contexts/AuthContext";
+import { useLiveService, useUser } from "../../../contexts/AuthContext";
 import { StateReportAlert } from "../../../db/AppSchema";
 import { db } from "../../../db/db";
 import { MenuTitle } from "../../menu/MenuTitle";
@@ -182,13 +182,19 @@ const AlertSectionsList = ({
   fieldArray: AlertSectionFieldArray;
 }) => {
   const constatId = routeApi.useParams().constatId;
-  const userService = useLiveService()!;
+  const user = useUser()!;
+  const userService = useLiveService();
   const isDesktop = useIsDesktop();
   const isDisabled = useIsStateReportDisabled();
 
   const addAlertMutation = useMutation({
     mutationFn: async (title: string) => {
-      const emails = getEmailsForSection(title, userService);
+      // The live query may not have loaded yet when the drawer has just opened: read the service directly,
+      // otherwise the alert would be created without its mandatory recipients (and silently sent to nobody).
+      const service =
+        userService ??
+        (await db.selectFrom("service").where("id", "=", user.service.id).selectAll().executeTakeFirst());
+      const emails = service ? getEmailsForSection(title, service) : [];
       const newAlert = await db
         .insertInto("state_report_alert")
         .values({
@@ -199,7 +205,7 @@ const AlertSectionsList = ({
           mandatory_emails: serializeMandatoryEmails(emails),
           show_in_report: 1,
           should_send: 1,
-          service_id: userService?.id ?? null,
+          service_id: service?.id ?? null,
         })
         .returningAll()
         .execute();
