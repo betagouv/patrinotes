@@ -83,6 +83,8 @@ const SectionsList = ({ visitedSections }: { visitedSections: VisitedSection[] }
         setSelectedSectionId(existing.id);
         return;
       }
+      // A finished report is read-only: never create a new visited section.
+      if (isDisabled) return;
       const newSection = await db
         .insertInto("visited_section")
         .values({
@@ -336,6 +338,7 @@ const SectionForm = ({
         {isCustom ? (
           <Input
             label={<Box className="mandatory-field">Partie visitée</Box>}
+            disabled={isDisabled}
             nativeInputProps={{
               value: values.section || "",
               onChange: (e) => setValues({ ...values, section: e.target.value }),
@@ -482,7 +485,9 @@ const SectionImageUpload = ({ section, isDisabled }: { section: VisitedSection; 
         attachments={displayAttachments}
         multiple
         onClick={(attachment, blobUrl) =>
-          (attachment as { isLocalisation?: boolean }).isLocalisation
+          isDisabled
+            ? null
+            : (attachment as { isLocalisation?: boolean }).isLocalisation
             ? setIsMapOpen(true)
             : setSelected({ attachment, blobUrl })
         }
