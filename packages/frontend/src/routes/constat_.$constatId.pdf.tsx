@@ -510,7 +510,13 @@ const Banner = ({ content }: BannerProps) => {
 const GoBackButton = ({ sx }: { sx?: BoxProps["sx"] } = {}) => {
   const { constatId } = Route.useParams();
   const navigate = useNavigate();
+  const isDisabled = useIsSendConstatFormDisabled();
   const goBack = () => {
+    // A sent report cannot go back to its form: return to the list instead.
+    if (isDisabled) {
+      navigate({ to: "/", search: { document: "constats" } });
+      return;
+    }
     navigate({ to: "/constat/$constatId", params: { constatId }, search: { step: "constat-general", mode: "view" } });
   };
 
