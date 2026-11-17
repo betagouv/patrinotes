@@ -141,6 +141,8 @@ type Props = {
   onClose: () => void;
   onSaveCoordinates?: (coordonnees: string) => void;
   onSaveReferenceCadastrale?: (ref: string) => void;
+  /** Hides the cadastre and pin tools: the map can only be viewed. */
+  readOnly?: boolean;
   initialCoordinates: string | null;
   initialReferenceCadastrale: string | null;
   singleCadastreSelection?: boolean;
@@ -154,6 +156,7 @@ export const MapLibre = ({
   onClose,
   onSaveCoordinates,
   onSaveReferenceCadastrale,
+  readOnly,
   initialCoordinates,
   initialReferenceCadastrale,
   singleCadastreSelection = false,
@@ -433,7 +436,15 @@ export const MapLibre = ({
         </Box>
       </Popover>
 
-      <Box position="absolute" bottom={8} left={8} zIndex={1} display="flex" flexDirection="row" gap={0}>
+      <Box
+        position="absolute"
+        bottom={8}
+        left={8}
+        zIndex={1}
+        display={readOnly ? "none" : "flex"}
+        flexDirection="row"
+        gap={0}
+      >
         <CanvasButton
           onClick={handleActivateCadastre}
           title="Sélectionner un cadastre"

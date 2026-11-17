@@ -13,6 +13,8 @@ import { AuthUser } from "../routes/authMiddleware";
 import { makeDebug } from "../features/debug";
 import { v7 } from "uuid";
 import { omit } from "pastable";
+import { sql } from "kysely";
+import { normalizeEmail } from "../features/email";
 const debug = makeDebug("auth-service");
 const authFullUrl = `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`;
 
@@ -68,7 +70,11 @@ export class AuthService {
 
   async getUserFromToken(token: string) {
     const checked = await this.checkToken(token);
-    const user = await db.selectFrom("user").where("email", "=", checked.email!).selectAll().executeTakeFirst();
+    const user = await db
+      .selectFrom("user")
+      .where("email", "=", normalizeEmail(checked.email!))
+      .selectAll()
+      .executeTakeFirst();
 
     if (!user) return null;
     return populateService(user);
@@ -78,7 +84,8 @@ export class AuthService {
     return getUserCreatedAt(userId);
   }
 
-  async loginUser(userData: Static<typeof loginTSchema.body>) {
+  async loginUser(rawUserData: Static<typeof loginTSchema.body>) {
+    const userData = { ...rawUserData, email: normalizeEmail(rawUserData.email) };
     debug("logging in user", userData.email);
     try {
       const keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
@@ -118,8 +125,10 @@ export class AuthService {
     }
   }
 
-  async createUser(userData: Static<typeof createUserTSchema.body>) {
-    await assertEmailInWhitelist(userData.email);
+  async createUser(rawUserData: Static<typeof createUserTSchema.body>) {
+    const userData = { ...rawUserData, email: normalizeEmail(rawUserData.email) };
+    // pass the raw input so a refusal logs exactly what the user typed
+    await assertEmailInWhitelist(rawUserData.email);
     debug("creating user", userData.email);
     try {
       await adminAuthApi("/users", {
@@ -288,10 +297,15 @@ export const authApi = ofetch.create({
 const assertEmailInWhitelist = async (email: string) => {
   if (isDev) return;
 
-  const whitelistResults = await db.selectFrom("whitelist").where("email", "=", email).selectAll().execute();
+  const whitelistResults = await db
+    .selectFrom("whitelist")
+    .where(sql`lower(trim(email))`, "=", normalizeEmail(email))
+    .selectAll()
+    .execute();
   const whitelist = whitelistResults[0];
 
   if (!whitelist) {
+    console.warn(`[auth] signup refused: email not in whitelist: "${email}"`);
     throw new AppError(
       403,
       "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrinotes.beta.gouv.fr.",

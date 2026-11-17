@@ -1,6 +1,6 @@
 import { MenuTitle } from "./MenuTitle";
-import { clearDb } from "../../db/db";
-import { menuActor } from "./menuMachine";
+import { getPendingLocalChanges, PendingLocalChanges, resetLocalData } from "./resetLocalData";
+import { ConfirmationModal } from "#components/ui/ConfirmationModal.tsx";
 
 import { useState } from "react";
 import { TitleH3 } from "../../routes/compte";
@@ -14,19 +14,28 @@ import { useMutation } from "@tanstack/react-query";
 export const HelpMenu = () => {
   const [showClipboardSuccess, setShowClipboardSuccess] = useState(false);
 
-  const deleteLocalData = useMutation({
+  const [pendingChanges, setPendingChanges] = useState<PendingLocalChanges | null>(null);
+  const [offlineError, setOfflineError] = useState(false);
+
+  // Opens the confirmation, after counting the local changes a reset would destroy.
+  const prepareReset = useMutation({
     mutationFn: async () => {
-      await clearDb();
-      unregisterSWs();
-      localStorage.clear();
-
-      const dbs = await indexedDB.databases();
-      await Promise.all(dbs.map((db) => indexedDB.deleteDatabase(db.name!)));
-
-      localStorage.setItem("crvif/no-report-alert-closed", "true");
-      window.location.reload();
+      // Without network the app can neither download the data again nor reload once
+      // its service worker is gone: the user would be left on a blank page.
+      if (!navigator.onLine) {
+        setOfflineError(true);
+        return;
+      }
+      setOfflineError(false);
+      setPendingChanges(await getPendingLocalChanges());
     },
   });
+
+  const deleteLocalData = useMutation({
+    mutationFn: resetLocalData,
+  });
+
+  const hasPendingChanges = !!pendingChanges && (pendingChanges.changes > 0 || pendingChanges.attachments > 0);
 
   return (
     <>
@@ -89,16 +98,48 @@ export const HelpMenu = () => {
           <Box>
             Vous ne voyez pas vos dernières informations enregistrées ? Essayez de réinitialiser les données locales.
           </Box>
+          {offlineError ? (
+            // @ts-ignore
+            <Alert
+              severity="warning"
+              sx={{ mt: "16px" }}
+              small
+              description="Vous êtes hors connexion. Reconnectez-vous à internet avant de réinitialiser les données locales."
+            />
+          ) : null}
           <Button
             priority="secondary"
             sx={{
               mt: "16px",
             }}
-            disabled={deleteLocalData.isPending}
-            onClick={() => deleteLocalData.mutate()}
+            disabled={prepareReset.isPending || deleteLocalData.isPending}
+            onClick={() => prepareReset.mutate()}
           >
-            Réinitialiser les données locales
+            {deleteLocalData.isPending ? "Réinitialisation en cours…" : "Réinitialiser les données locales"}
           </Button>
+          {pendingChanges && !deleteLocalData.isPending ? (
+            <ConfirmationModal
+              title="Réinitialiser les données locales ?"
+              buttonLabel="Réinitialiser"
+              onClose={() => setPendingChanges(null)}
+              onConfirm={() => deleteLocalData.mutate()}
+              content={
+                <>
+                  {hasPendingChanges ? (
+                    // @ts-ignore
+                    <Alert
+                      severity="warning"
+                      sx={{ mb: "16px" }}
+                      small
+                      description={pendingChangesMessage(pendingChanges)}
+                    />
+                  ) : null}
+                  Les données enregistrées sur cet appareil seront supprimées puis téléchargées à nouveau depuis le
+                  serveur. Vous devrez vous reconnecter.
+                </>
+              }
+            />
+          ) : null}
         </Stack>
 
         <Box px="16px">
@@ -143,11 +184,14 @@ export const HelpMenu = () => {
   );
 };
 
-const unregisterSWs = async () => {
-  if ("serviceWorker" in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-
-    // Unregister all service workers
-    await Promise.all(registrations.map((registration) => registration.unregister()));
-  }
+const pendingChangesMessage = ({ changes, attachments }: PendingLocalChanges) => {
+  const parts = [
+    changes > 0 ? `${changes} modification${changes > 1 ? "s" : ""}` : null,
+    attachments > 0 ? `${attachments} photo${attachments > 1 ? "s" : ""}` : null,
+  ].filter(Boolean);
+  return `${parts.join(" et ")} n'${changes + attachments > 1 ? "ont" : "a"} pas encore été envoyée${
+    changes + attachments > 1 ? "s" : ""
+  } au serveur et ser${changes + attachments > 1 ? "ont" : "a"} définitivement perdue${
+    changes + attachments > 1 ? "s" : ""
+  }. Attendez la fin de la synchronisation avant de réinitialiser.`;
 };

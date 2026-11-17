@@ -246,6 +246,7 @@ export const constatPdfMutations = {
         recipients,
         needValidation,
         stateReportIds,
+        validationEmail,
       }: SendConstatForm) => {
         const alertsToSend = alerts.filter((a) => selectedAlertIds.includes(a.id));
         const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
@@ -269,7 +270,8 @@ export const constatPdfMutations = {
             recipients: recipients.join(","),
             pdfSize: blob.size,
             alerts: alertsToSend,
-            needValidation,
+            needValidation: !!needValidation,
+            validationEmail: needValidation ? validationEmail || undefined : undefined,
             // rapport groupé: the other constats of the rapport are sent in the same PDF
             stateReportIds: stateReportIds?.length ? stateReportIds : undefined,
           },

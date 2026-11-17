@@ -52,7 +52,8 @@ export const StateReportAlertsEmailInput = ({
         {mandatoryEmails.map((e) => e.service).join(", ") || "Non spécifié"}
       </Typography>
 
-      {isEditingEmail ? (
+      {/* the editing flag lives in a global store and may outlive finalisation */}
+      {isEditingEmail && !isFormDisabled ? (
         <Stack mt="16px" gap="8px">
           <MandatoryEmailsForm initialValues={mandatoryEmails} form={form} names={names} errors={errors} />
           <AdditionalEmailsForm initialValues={additionalEmails} form={form} names={names} />

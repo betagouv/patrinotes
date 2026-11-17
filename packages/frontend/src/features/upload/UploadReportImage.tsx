@@ -130,11 +130,17 @@ export const PictureThumbnail = ({
             </Flex>
           ) : blobUrl ? (
             <Box
-              onClick={() => blobUrl && onEdit(picture, blobUrl)}
+              onClick={() => !isDisabled && blobUrl && onEdit(picture, blobUrl)}
               component="img"
               src={blobUrl}
               data-picture-id={picture.id}
-              sx={{ width: "100%", height: "100%", display: "block", objectFit: "cover", cursor: "pointer" }}
+              sx={{
+                width: "100%",
+                height: "100%",
+                display: "block",
+                objectFit: "cover",
+                cursor: isDisabled ? "default" : "pointer",
+              }}
             />
           ) : null}
         </Box>

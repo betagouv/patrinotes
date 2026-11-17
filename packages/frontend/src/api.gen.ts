@@ -12,53 +12,6 @@ export namespace Endpoints {
     parameters: never;
     response: unknown;
   };
-  export type post_Apiauthenticate = {
-    method: "POST";
-    path: "/api/authenticate";
-    parameters: {
-      body: { code: string };
-    };
-    response: {
-      tokens: {
-        access_token: string;
-        expires_in: string;
-        refresh_token: string;
-        refresh_expires_in: string;
-        token_type: string;
-        session_state: string;
-        scope: string;
-        id_token: string;
-      };
-      user: {
-        id: string;
-        name: string;
-        service_id: string;
-        service: {
-          id: string;
-          department: string;
-          completeCoords?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          visible?: boolean | Schemas.null | Array<boolean | Schemas.null> | undefined;
-          name?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          address?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          zipCode?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          city?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          phone?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          email?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          marianne_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          drac_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          dept_numbers?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          service_text?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_crmh?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_caoa?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_dreal?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_sra?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_udap?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-          courriel_ofb?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-        };
-        job: string | Schemas.null | Array<string | Schemas.null>;
-      };
-    };
-  };
   export type post_ApirefreshToken = {
     method: "POST";
     path: "/api/refresh-token";
@@ -318,6 +271,7 @@ export namespace Endpoints {
     parameters: {
       body: {
         needValidation?: boolean | undefined;
+        validationEmail?: string | undefined;
         pdfPath: string;
         pdfSize?: number | undefined;
         stateReportId: string;
@@ -492,7 +446,17 @@ export namespace Endpoints {
     parameters: {
       path: { token: string };
     };
-    response: Partial<{}>;
+    response: {
+      stateReport: Partial<{
+        id: string | Schemas.null | Array<string | Schemas.null>;
+        titre_edifice: string | Schemas.null | Array<string | Schemas.null>;
+        commune: string | Schemas.null | Array<string | Schemas.null>;
+        date_visite: string | Schemas.null | Array<string | Schemas.null>;
+      }>;
+      pdfUrl: string;
+      status?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+      comment?: string | Schemas.null | Array<string | Schemas.null> | undefined;
+    };
   };
   export type get_ApiconstatValidationTokenpdf = {
     method: "GET";
@@ -820,7 +784,6 @@ export type EndpointByMethod = {
     "/attachment/{id}/{filename}?": Endpoints.get_AttachmentIdFilename_;
   };
   post: {
-    "/api/authenticate": Endpoints.post_Apiauthenticate;
     "/api/refresh-token": Endpoints.post_ApirefreshToken;
     "/api/create-user": Endpoints.post_ApicreateUser;
     "/api/login-user": Endpoints.post_ApiloginUser;
@@ -833,9 +796,9 @@ export type EndpointByMethod = {
     "/api/pdf/report": Endpoints.post_Apipdfreport;
     "/api/pdf/state-report": Endpoints.post_ApipdfstateReport;
     "/api/pdf/state-report/upload-url": Endpoints.post_ApipdfstateReportuploadUrl;
+    "/api/monument-alert/send": Endpoints.post_ApimonumentAlertsend;
     "/api/constat-validation/{token}/accept": Endpoints.post_ApiconstatValidationTokenaccept;
     "/api/constat-validation/{token}/decline": Endpoints.post_ApiconstatValidationTokendecline;
-    "/api/monument-alert/send": Endpoints.post_ApimonumentAlertsend;
     "/api/upload-data": Endpoints.post_ApiuploadData;
     "/api/admin/whitelist": Endpoints.post_Apiadminwhitelist;
   };

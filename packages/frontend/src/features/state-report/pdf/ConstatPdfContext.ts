@@ -40,6 +40,8 @@ export type SendConstatForm = {
   stateReportIds: string[];
   /** parts of the rapport groupé, in chapter order (one item for a simple constat) */
   rapportParts: RapportPart[];
+  /** Validator address from the local settings, sent so the server can honour validation before they sync. */
+  validationEmail?: string;
 };
 
 export type RapportPart = Pick<

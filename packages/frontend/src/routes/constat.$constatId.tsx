@@ -8,7 +8,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { attachmentQueue, db, useDbQuery } from "../db/db";
 import { StateReportForm } from "../features/state-report/StateReportForm";
-import { stateReportStepSchema } from "../features/state-report/utils";
+import { getIsStateReportDisabled, stateReportStepSchema } from "../features/state-report/utils";
 import z from "zod";
 import { useSyncStream } from "@powersync/react/lib/hooks/streams";
 import { BackHomeButton } from "#components/BackHomeButton.tsx";
@@ -84,6 +84,12 @@ const WithStateReport = ({ report, isLoading }: { report: StateReport | undefine
 
   if (!report) {
     return <Navigate to="/" />;
+  }
+
+  // A sent report can only be viewed as its PDF: never show the form again
+  // (covers links, typed URLs and the browser's back button).
+  if (getIsStateReportDisabled(report)) {
+    return <Navigate to="/constat/$constatId/pdf" params={{ constatId }} search={{ mode: "view" }} replace />;
   }
 
   return (

@@ -174,6 +174,8 @@ export const PeopleList = ({
           disabled={isDisabled}
           onClick={(e) => {
             e.preventDefault();
+            // A link is not natively disabled: guard the click itself.
+            if (isDisabled) return;
             if (!personnesPresentes?.length) {
               setShowNewInput(true);
               return;

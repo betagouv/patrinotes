@@ -18,6 +18,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { Buffer } from "buffer";
 import { ServiceSelection } from "./features/UdapSelection";
 import { MatomoProvider, createInstance } from "@datapunt/matomo-tracker-react";
+import { listenForLocalDataReset } from "./features/menu/resetLocalData";
 
 globalThis.Buffer = Buffer;
 if ("serviceWorker" in navigator) {
@@ -100,6 +101,9 @@ window.addEventListener("unhandledrejection", (event) => {
     recoverFromStaleChunk();
   }
 });
+
+// Reload this tab when the local data is reset from another tab.
+listenForLocalDataReset();
 
 // force light mode
 localStorage.setItem("scheme", "light");

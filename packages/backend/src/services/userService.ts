@@ -8,6 +8,7 @@ import { sendPasswordResetMail } from "../features/mail";
 import { Selectable } from "kysely";
 import { adminAuthApi } from "../features/auth/keycloak";
 import { transactions } from "../db/schema";
+import { normalizeEmail } from "../features/email";
 
 const debug = makeDebug("user_service");
 export class UserService {
@@ -54,7 +55,11 @@ export class UserService {
   }
 
   async generateResetLink(email: string) {
-    const userResults = await db.selectFrom("internal_user").where("email", "=", email).selectAll().execute();
+    const userResults = await db
+      .selectFrom("internal_user")
+      .where("email", "=", normalizeEmail(email))
+      .selectAll()
+      .execute();
     const user = userResults[0]!;
     assertUserExists(user, "Aucun utilisateur avec ce courriel n'a été trouvé.");
 

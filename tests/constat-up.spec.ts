@@ -325,9 +325,11 @@ test.describe("Constat d'état sur un MH complexe", () => {
       )
       .toEqual(["Constat d'état  : Château complexe de Test (2 parties du monument)"]);
 
-    // the rapport is closed: its constats are read-only
+    // the rapport is closed: a sent constat no longer opens its form, only its PDF preview
     await page.goto(`./constat/${chapelleId}?step=constat-general&mode=view`);
-    await expect(page.getByRole("button", { name: "Voir le constat" })).toBeVisible({ timeout: 30_000 });
+    await page.waitForURL((url) => url.pathname.includes(`/constat/${chapelleId}/pdf`) && url.search.includes("mode=view"), {
+      timeout: 30_000,
+    });
   });
 
   test("rapport groupé : un constat incomplet bloque l'envoi", async ({ page }) => {

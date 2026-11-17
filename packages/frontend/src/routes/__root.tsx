@@ -4,7 +4,7 @@ import type { RouterOutputs } from "../api";
 import { Layout } from "../features/Layout";
 import { MonumentAlertOutbox } from "../features/fiche/alerts/MonumentAlertOutbox";
 
-export const Route = createRootRouteWithContext<Partial<RouterOutputs<"/api/authenticate">>>()({
+export const Route = createRootRouteWithContext<Partial<RouterOutputs<"/api/login-user">>>()({
   beforeLoad: (ctx) => {
     document.title = getTitle(ctx.location.pathname);
   },
