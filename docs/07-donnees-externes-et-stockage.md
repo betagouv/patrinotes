@@ -19,6 +19,7 @@ flowchart LR
         IGN["data.geopf.fr<br/>orthophotos IGN"]
         CAD["openmaptiles.geo.data.gouv.fr<br/>cadastre"]
         OFM["tiles.openfreemap.org<br/>fond de carte"]
+        DS["API Dataspace du ministère<br/>unités patrimoniales"]
     end
 
     subgraph Srv["Hébergement Patrinotes"]
@@ -32,6 +33,7 @@ flowchart LR
     DG -->|"téléchargement CSV, au démarrage si FORCE_REFETCH_POP ou script manuel"| BE
     POP -->|"aspiration HTML, script manuel"| BE
     BE -->|"upsert pop_immeubles, pop_objets, pop_images"| PG
+    DS -->|"arbre des UP, à la demande, cache up_cache"| BE
     NAV -->|"recherche d'adresse"| BAN
     NAV -->|"tuiles"| IGN
     NAV -->|"tuiles"| CAD
@@ -48,6 +50,17 @@ flowchart LR
 | `https://pop.culture.gouv.fr/notice/{merimee\|palissy}/{ref}` | backend | `pnpm backend import-pop` seulement (appel désactivé au démarrage) | URL, légende et crédit de la **première** image de chaque notice | aucune |
 | `https://api-adresse.data.gouv.fr/search/` | **navigateur** | saisie d'adresse (CR, CE), centrage de carte | adresses de la Base adresse nationale | aucune |
 | `https://data.geopf.fr/wmts` (orthophotos IGN), `openmaptiles.geo.data.gouv.fr` (cadastre), `tiles.openfreemap.org` (fond et polices) | **navigateur** | carte du plan de situation et localisation des désordres | tuiles | aucune |
+| `UP_API_URL` (par défaut `https://api-ext.stg.cloud.culture.fr/dataspace/patrinote/up`) | backend | ouverture d'un MH complexe (constat ou fiche), si `UP_API_MODE=live` | unités patrimoniales d'un monument | en-tête `apiKey` (`UP_API_KEY`) |
+
+### 1.1 API Dataspace des unités patrimoniales
+
+Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts). Route : `GET /api/up/monument` ([04 §4.10](04-backend-api.md)).
+
+- L'API reçoit en `POST` un filtre de type MongoDB (`{UPI_REFERENCE_MERIMEE: "PA…"}` pour la racine, `{$or: [{_id: {$in: […]}}]}` pour les enfants, par lots de 50). Elle ne connaît que le lien parent → enfants : l'arbre est lu **niveau par niveau** (10 niveaux et 1 000 UP au plus).
+- Elle répond **404 au lieu d'une liste vide** quand rien ne correspond : le backend le traite comme « aucune UP ». Avant le 29/10/2026, tout monument sans UP renvoyait une 502.
+- Délai de 5 s, une nouvelle tentative. Les réponses sont gardées dans `up_cache` pendant `UP_CACHE_TTL_HOURS` (24 h) ; si l'API ne répond pas, le cache périmé est servi.
+- Elle n'est **joignable que depuis le réseau de production** (filtrage d'adresse IP, *à confirmer pour l'hébergement cible*). En développement et en test, `UP_API_MODE=mock` lit [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json), qui contient des réponses réelles allégées et le monument de test `TEST00003` (hiérarchie profonde).
+- Seule la référence Mérimée est envoyée : aucune donnée personnelle ne sort.
 
 > Le [README](../README.md) parle de fichiers `monuments.csv` et `mobilier.csv` et d'un appel à l'API adresse **par le backend**. Le code est différent : les fichiers s'appellent `merimee.csv` et `palissy.csv`, et l'API adresse est appelée **directement par le navigateur**.
 
@@ -65,7 +78,7 @@ Code : [pop.ts](../packages/backend/src/features/data/pop.ts) et [KyselyBatchWri
 | --- | --- | --- |
 | Au démarrage du backend | variable `FORCE_REFETCH_POP=true` ([index.ts#L16](../packages/backend/src/index.ts#L16)) | `initPopImmeubles()` puis `initPopObjets()`. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. Pas d'images. |
 | Manuel, complet | `pnpm backend import-pop` (= `vite-node ./src/features/data/pop.ts --standalone`) | immeubles, objets, puis rattrapage des images (`initPopImages`), puis `process.exit(0)`. |
-| Planifié | **aucun** | Il n'y a ni cron ni tâche planifiée dans le dépôt. Le rafraîchissement dépend d'une action humaine (*à confirmer* : une tâche planifiée existe-t-elle sur Coolify ?). |
+| Planifié | **aucun** | Il n'y a ni cron ni tâche planifiée, ni dans le dépôt ni dans Coolify (relevé du 17/11/2026). Le dernier import des immeubles est postérieur au 06/05/2026 ; celui des objets ne peut pas être daté. |
 
 Règles cachées :
 
@@ -106,7 +119,7 @@ Limites :
 
 - **Aucune suppression** : une notice retirée de POP (déclassement, fusion) **reste** dans la base et sur les postes.
 - **Aucun filtre** : toute la France est importée. Le tri par département se fait dans les règles PowerSync (`departement_format_numerique` ∈ départements de l'agent).
-- La suppression du fichier utilise `path/win32` ([pop.ts#L6](../packages/backend/src/features/data/pop.ts#L6)), un import probablement accidentel. Sous Linux, `path.win32.resolve("./data/merimee.csv")` produit un chemin avec des barres obliques inverses : l'appel à `unlink` risque d'échouer **après** l'import, ce qui ferait échouer le démarrage (*à confirmer par un essai*).
+- La suppression du fichier utilisait `path/win32` et plantait après l'import des immeubles, si bien que `pop_objets` n'était jamais importée. Corrigé le 21/10/2026 (PR #79).
 - `last_image_check_at` n'est **pas** remis à zéro lors d'un réimport.
 
 ### 2.3 Lien entre immeubles et objets
@@ -158,6 +171,7 @@ POP ne publie pas les URL des images dans ses CSV. Patrinotes **lit la page HTML
 - **Rythme** : environ 10 requêtes par seconde au maximum vers un site du ministère. Il n'y a pas d'accord de service connu ; à valider avec l'équipe POP.
 - **Aspect juridique** : seule l'**URL** de l'image est stockée, **pas le fichier**. Les images sont affichées par **lien direct** depuis les serveurs POP ([MonumentHistorique.tsx#L475](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L475)), avec leur crédit (`copyright`) enregistré mais **pas affiché** dans cette vignette. Les conditions de réutilisation des photographies POP (droits d'auteur des photographes, mentions obligatoires) sont **à confirmer** avec le service juridique avant tout usage plus large (par exemple dans un PDF).
 - Le rattrapage d'images est **désactivé au démarrage** (`// await initPopImages();` dans [index.ts#L21](../packages/backend/src/index.ts#L21)). Seul le script manuel le lance.
+- **En production, la récupération n'a jamais tourné** (relevé du 17/11/2026 : `pop_images` vide, `last_image_check_at` vide partout) : aucune photo d'objet ne s'affiche aujourd'hui.
 - Côté navigateur, la table `pop_images` n'est pas synchronisée. Les images des objets sont demandées en ligne via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)) : **hors ligne, pas d'image**, et une vignette par défaut `/objet-sans-image.png` s'affiche.
 
 ---
@@ -171,6 +185,7 @@ Code : [uploadService.ts](../packages/backend/src/services/uploadService.ts), [u
 | Variable | Rôle |
 | --- | --- |
 | `MINIO_URL` | Point d'accès S3 (ex. `https://s3.exemple.fr`). **Doit être joignable depuis les navigateurs des agents**, car ils y envoient directement les fichiers par URL présignée. |
+| `MINIO_PUBLIC_URL` (facultatif) | Point d'accès utilisé pour **signer** les URL présignées, quand les navigateurs joignent le stockage par une autre adresse que le backend (reverse proxy). |
 | `MINIO_BUCKET` | Nom du bucket unique. |
 | `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY` | Identifiants applicatifs (droit `readwrite` en développement). |
 | `MINIO_USER`, `MINIO_PASSWORD` | Compte administrateur MinIO (docker-compose seulement). |
@@ -198,9 +213,13 @@ Bucket unique, **un seul préfixe racine `attachment/`**, puis l'identifiant du 
     ├── <uuid partie visitée>/
     │   ├── images/<uuidv7>.jpg               photos de la partie visitée
     │   └── localisation/<uuidv7>.jpg         carte de localisation des désordres
-    └── <uuid alerte>/
-        └── images/<uuidv7>.jpg               photos jointes à l'alerte
+    ├── <uuid alerte>/
+    │   └── images/<uuidv7>.jpg               photos jointes à l'alerte
+    └── <uuid alerte de fiche>/              ← monument_alert (alerte ou annotation hors constat)
+        └── images/<uuidv7>.jpg               photos
 ```
+
+Le **premier segment** de la clé désigne le document : depuis le 4/11/2026, c'est lui qui décide de l'accès (service du document, [attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)). Ce format ne doit pas changer.
 
 - Les colonnes `attachment_id` des tables `*_attachment`, `report.attachment_id`, `state_report.attachment_id` et `constat_validation.pdf_path` contiennent la clé **sans** le préfixe `attachment/`. Le backend l'ajoute ([uploadService.ts#L21](../packages/backend/src/services/uploadService.ts#L21)). `attachment_redirection.s3_key` contient la clé **avec** le préfixe.
 - `<epoch>` est en secondes. Chaque envoi produit un **nouveau PDF**. Les anciens restent dans le stockage, et `attachment_id` du document pointe sur le dernier.
@@ -238,19 +257,19 @@ sequenceDiagram
 
 | Route (préfixe `/api`, authentifiée) | Effet |
 | --- | --- |
-| `GET /upload/attachment/presigned-url?filePath=` | URL `PUT` présignée **1 h** pour `attachment/<filePath>`. |
-| `GET /upload/attachment?filePath=[&stateReportId=]` | Le backend lit l'objet et le **renvoie lui-même** (pas de redirection). Si `stateReportId` est fourni, une ligne `constat_pdf_download` est créée. |
-| `GET /upload/attachment/size?filePath=` | Taille de l'objet (`HEAD`). |
-| `POST /pdf/report/upload-url`, `POST /pdf/state-report/upload-url` | URL présignée et chemin du futur PDF. |
-| `POST /pdf/report`, `POST /pdf/state-report` | Enregistre le PDF, envoie les courriels, crée les liens courts. |
-| `GET /pdf/report?reportId=`, `GET /pdf/state-report?stateReportId=` | Renvoie le PDF **encodé en base64** dans le JSON. |
+| `GET /upload/attachment/presigned-url?filePath=` | URL `PUT` présignée **1 h** pour `attachment/<filePath>`. Refusée si le document est d'un autre service. |
+| `GET /upload/attachment?filePath=[&stateReportId=]` | Le backend lit l'objet et le **renvoie lui-même** (pas de redirection), si le document est du service de l'utilisateur. Si `stateReportId` est fourni, une ligne `constat_pdf_download` est créée. |
+| `GET /upload/attachment/size?filePath=` | Taille de l'objet (`HEAD`), même contrôle. |
+| `POST /pdf/report/upload-url`, `POST /pdf/state-report/upload-url` | URL présignée et chemin du futur PDF, si l'utilisateur peut modifier le document. |
+| `POST /pdf/report`, `POST /pdf/state-report` | Enregistre le PDF, envoie les courriels, crée les liens courts. Réservé à qui peut modifier le document. |
+| `GET /pdf/report?reportId=`, `GET /pdf/state-report?stateReportId=` | Renvoie le PDF **encodé en base64** dans le JSON (service du document ; pour un constat, aussi un service couvrant le département du monument). |
 
 Points d'attention :
 
-- **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 4 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L64](../packages/frontend/src/db/db.ts#L64)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
+- **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L64](../packages/frontend/src/db/db.ts#L64)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
 - **Pas de limite de taille côté serveur** pour les envois présignés. La limite de 15 Mo de `@fastify/multipart` ne s'applique à aucune route existante, puisque les fichiers ne transitent plus par le backend.
-- **Aucun contrôle d'appartenance** : tout utilisateur authentifié peut obtenir une URL d'écriture pour **n'importe quelle clé** sous `attachment/` (y compris pour écraser un PDF déjà envoyé) et lire n'importe quel fichier dont il connaît le chemin. Les chemins contiennent des UUID difficiles à deviner, mais ils sont synchronisés vers tous les agents du service. À traiter dans l'analyse de risques.
-- `getReportPDF` prend **le premier** `report_attachment` dont `attachment_id` finit par `.pdf`, **sans tri** : après plusieurs envois, il peut renvoyer un ancien PDF ([uploadService.ts#L97](../packages/backend/src/services/uploadService.ts#L97)).
+- **Contrôle d'appartenance** (depuis le 4/11/2026, PR #86) : lecture et écriture limitées au service du document désigné par le premier segment de la clé. Exception : une URL d'écriture est délivrée pour un document **pas encore en base**, car les photos peuvent partir avant la ligne. Avant cette date, tout utilisateur authentifié pouvait lire ou écraser n'importe quel fichier.
+- `getReportPDF` prend **le premier** `report_attachment` en `.pdf` rangé sous `<reportId>/`, **sans tri** : après plusieurs envois, il peut renvoyer un ancien PDF ([uploadService.ts](../packages/backend/src/services/uploadService.ts)).
 - Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit (`getAttachment`), ce qui échoue s'il est absent.
 - Les URL présignées de lecture (`generatePresignedUrl`) ré-encodent chaque segment du chemin après signature ([uploadService.ts#L125](../packages/backend/src/services/uploadService.ts#L125)) pour gérer les noms avec caractères spéciaux.
 
@@ -317,7 +336,7 @@ Le dossier [crvif-redirection](../crvif-redirection) contient un **mini-site sta
 | [index.html](../crvif-redirection/index.html) | Redirection immédiate (`meta refresh` + JavaScript) vers `https://app.patrinotes.beta.gouv.fr`, après désinscription des *service workers* existants. |
 | [sw.js](../crvif-redirection/sw.js) | **Remplace le service worker de l'ancienne PWA** (même nom de fichier `sw.js`, généré depuis `src/service-worker/sw.ts`). À son activation, il se désinscrit puis renvoie tous les onglets ouverts vers le nouveau domaine. Sans ce fichier, les PWA installées sur l'ancien domaine continueraient d'afficher l'ancienne application en cache. |
 
-Règle liée côté application : si l'URL d'accueil contient `?from=crvif` et que l'utilisateur n'est pas connecté, il est envoyé vers **/inscription** au lieu de /connexion ([EnsureUser.tsx](../packages/frontend/src/components/EnsureUser.tsx)). Le compte doit être recréé (nouveau Keycloak, *à confirmer*). **Les fichiers du dossier redirigent vers l'URL sans ce paramètre** : soit le paramètre est ajouté par une autre configuration (DNS ou proxy, *à confirmer*), soit cette règle n'est jamais déclenchée.
+**La version servie en production est différente** (relevé de production du 17/11/2026, service Coolify `migration-proxy`) : délai de 3 s, puis un script envoie vers `https://app.patrinotes.beta.gouv.fr/inscription?from=crvif` ; le service worker renvoie vers `…?from=crvif`. Le paramètre `?from=crvif` n'est lu par **aucun** code du frontend : il ne sert que de marqueur dans les statistiques. C'est le renvoi direct vers `/inscription` qui fait recréer un compte aux anciens utilisateurs. Les liens profonds de l'ancien domaine (`/constat/…`) répondent 404. Les fichiers de production sont à reverser dans le dépôt.
 
 Les clés de stockage local du navigateur gardent l'ancien préfixe (`crvif/auth`, `crvif-sync.db`, `crvif-attachments`). Il ne faut **pas** les renommer, sinon les données locales non synchronisées des agents seraient perdues.
 
@@ -338,9 +357,9 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 
 | Sujet | Action |
 | --- | --- |
-| Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` et `pop.culture.gouv.fr` (HTTPS) ; à ouvrir sur le pare-feu de l'hébergement cible. |
+| Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net`, `pop.culture.gouv.fr` et l'API Dataspace des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Dataspace filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
 | Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, `pop.culture.gouv.fr` (images), point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
-| API Adresse | Le service `api-adresse.data.gouv.fr` est en cours de reprise par la Géoplateforme de l'IGN (`data.geopf.fr/geocodage`) : vérifier sa date de fin (*à confirmer*) et migrer [address.tsx](../packages/frontend/src/features/address.tsx) et [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx#L114). `searchAddress` n'encode pas la requête dans l'URL (`encodeURIComponent` manquant). |
+| API Adresse | Le service `api-adresse.data.gouv.fr` redirige déjà vers la Géoplateforme de l'IGN (`data.geopf.fr/geocodage`). Le géocodage du plan de situation ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)) l'interroge directement depuis le 10/11/2026 ; reste à migrer [address.tsx](../packages/frontend/src/features/address.tsx), qui n'encode pas la requête dans l'URL (`encodeURIComponent` manquant). |
 | Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées, vider `pop_objets` si Palissy doit être rafraîchi, et corriger le filtre `NULL` des immeubles. |
 | Stockage | Copier le bucket à l'identique, configurer le CORS, définir une durée de conservation, garder le bucket privé. |
 | Liens courts | Maintenir l'ancien `BACKEND_URL` au moins 90 jours après la bascule. |

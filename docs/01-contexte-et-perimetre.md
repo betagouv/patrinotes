@@ -57,7 +57,7 @@ Chaque utilisateur est rattaché à **un seul service** à la fois (table `servi
 
 > Règle cachée : ce type est **déduit d'une sous-chaîne du nom** du service (`includes("crmh")`, puis `"drac"`, puis `"udap"`). Renommer un service peut donc changer les libellés de l'interface.
 
-Un compte créé sans service reçoit la valeur spéciale `service_id = "no-service"`. Une fenêtre bloquante « Sélectionnez votre service » s'affiche alors à chaque chargement, tant qu'aucun service n'est choisi ([UdapSelection.tsx](../packages/frontend/src/features/UdapSelection.tsx#L11-L21)).
+Un compte sans service porte la valeur spéciale `service_id = "no-service"` (anciens comptes créés par une route d'authentification supprimée le 4/11/2026 ; l'inscription actuelle affecte un service). Une fenêtre bloquante « Sélectionnez votre service » s'affiche alors à chaque chargement, tant qu'aucun service n'est choisi ([UdapSelection.tsx](../packages/frontend/src/features/UdapSelection.tsx#L11-L21)).
 
 ### 3.3 Destinataires externes (non utilisateurs)
 
@@ -91,12 +91,12 @@ Le constat d'état est une fiche de **veille sanitaire** d'un **immeuble protég
 
 Les étapes suivent le sommaire latéral ([StateReportSummary.tsx](../packages/frontend/src/features/state-report/StateReportSummary.tsx)) :
 
-1. **Le monument historique — Informations** : recherche du monument (recherche floue, ou sélection sur une carte avec géolocalisation). Les champs sont pré-remplis depuis Mérimée : nature de l'édifice, adresse, commune, commune historique, cadastre, période de construction, nature de la protection, parties protégées, description. La page affiche aussi la liste des objets mobiliers conservés et les **constats antérieurs** sur le même monument. Un monument absent de la base peut être saisi librement (valeur spéciale `reference_pop = "CUSTOM"`).
+1. **Le monument historique — Informations** : recherche du monument (recherche floue, ou sélection sur une carte avec géolocalisation). Les champs sont pré-remplis depuis Mérimée, avec les corrections apportées par le service sur la fiche du monument : nature de l'édifice, adresse, commune, commune historique, cadastre, période de construction, nature de la protection, parties protégées, description. Pour un **MH complexe**, l'agent choisit l'ensemble du monument ou une **unité patrimoniale** (UP), niveau par niveau. La page affiche aussi les objets mobiliers conservés (un clic sur un objet ouvre son **annotation**) et les **constats antérieurs** sur le même monument. Un monument absent de la base peut être saisi librement (valeur spéciale `reference_pop = "CUSTOM"`).
 2. **Contexte de la visite** : nature (complète ou partielle), détails, date, rédacteur, personnes présentes, propriétaire et représentant avec leurs courriels.
 3. **Constat détaillé** : une fiche par **partie visitée**, avec état, dégradation, préconisations, commentaires, photos et localisation sur carte. Huit parties sont proposées par défaut, plus des parties libres (« Autre… »).
 4. **Constat général** : état général (*Bon / Moyen / Mauvais / Péril*), taux et vitesse de dégradation (version 2) ou proportion (version 1), commentaire, plan de l'édifice, vues générales, préconisations (*Études, Travaux d'entretien, de réparation, de restauration, Mesures d'urgence*), chacune avec un commentaire.
 5. **Alertes** (panneau latéral) : signalements thématiques envoyés aux services compétents, par exemple « Édifice en péril » vers la CRMH ou « Objets et mobiliers » vers la CAOA et la CRMH.
-6. **Finalisation** : contrôle des champs obligatoires, prévisualisation du PDF, envoi aux destinataires, avec en option un **envoi « sous couvert »** d'un validateur.
+6. **Finalisation** : contrôle des champs obligatoires, prévisualisation du PDF, envoi aux destinataires, avec en option un **envoi « sous couvert »** d'un validateur. Sur un MH complexe, l'agent peut enchaîner le constat d'une autre UP : les constats forment alors un **rapport groupé**, envoyé en un seul PDF.
 
 Huit parties visitées sont proposées par défaut ([`packages/pdf`](../packages/pdf/src/state-report/state-report.general.tsx#L112-L121)) : Fondations, sols, sous-sols · Maçonnerie, structure · Parements, enduits · Couverture, charpente · Menuiserie, métallerie, vitraux · Cloisonnement, revêtements, décors, objets, mobiliers · Équipements, sécurité, accessibilité · Environnements, abords, voirie et réseaux.
 
@@ -135,7 +135,7 @@ stateDiagram-v2
 Libellés affichés (badges de [StateReportListItem.tsx](../packages/frontend/src/features/state-report/StateReportListItem.tsx#L153-L160)) : « Brouillon », « En attente de validation », « Envoyé », « Refusé ». Le CR n'a que deux statuts, « Brouillon » et « Envoyé ».
 
 > Règles cachées :
-> - Un CE est **en lecture seule** dès qu'un PDF a été produit (`attachment_id` non nul), **sauf** si le validateur l'a refusé (`validation_status = "declined"`). Seul le **créateur** peut le modifier ([utils.ts](../packages/frontend/src/features/state-report/utils.ts#L145-L173)).
+> - Un CE est **en lecture seule** dès qu'un PDF a été produit (`attachment_id` non nul), **sauf** si le validateur l'a refusé (`validation_status = "declined"`). Dans l'interface, seul le **créateur** peut le modifier ([utils.ts](../packages/frontend/src/features/state-report/utils.ts)) ; le serveur accepte aussi les personnes à qui le créateur a donné délégation.
 > - Un CR peut être modifié par son créateur, par la personne indiquée comme rédacteur, ou par tout collègue qui a reçu une **délégation** du créateur ([useCanEditReport.tsx](../packages/frontend/src/hooks/useCanEditReport.tsx)).
 > - La « suppression » est une **suppression logique** (`disabled = 1`), alors que la fenêtre de confirmation annonce une action « irréversible ».
 > - Un nouveau CE est créé **masqué** (`disabled = 1`). Il n'apparaît dans les listes qu'une fois un monument choisi. Un constat abandonné avant ce choix reste invisible dans la base.
@@ -168,20 +168,32 @@ sequenceDiagram
 
 L'envoi nécessite une **connexion réseau** (URL de dépôt signée, appel API). Toute la saisie fonctionne hors ligne.
 
-### 5.2 Parcours : compte-rendu de rendez-vous
+Le bouton « Créer un constat d'état » de l'accueil crée directement le constat. On peut aussi partir d'une **fiche** (§ 5.2).
+
+### 5.2 Parcours : consulter une fiche monument ou objet
+
+Depuis le 10/11/2026, l'accueil propose une **recherche de monument** (édifices, objets mobiliers, ou carte). Elle ouvre :
+
+- la **fiche MH** (`/monument/<référence Mérimée>`) : informations POP corrigées par le service, constats antérieurs (tous services, en ligne), alertes et annotations, objets mobiliers, arbre de l'ensemble patrimonial avec le nombre de constats par UP ;
+- la **fiche UP** (même page, paramètre `up`) pour une unité patrimoniale d'un MH complexe ;
+- la **fiche objet mobilier** (`/objet/<référence Palissy>`) : notice, photos, monument de rattachement, annotations.
+
+Depuis une fiche, l'agent peut **créer un constat** prérempli, **compléter les informations** pour son service, ou **signaler une alerte** hors constat. L'alerte est saisie hors ligne et envoyée par courriel au retour du réseau. L'annotation d'un objet se fait depuis la carte de l'objet dans le constat ; elle reste modifiable jusqu'à son envoi.
+
+### 5.3 Parcours : compte-rendu de rendez-vous
 
 1. Accueil → « Créer un compte-rendu ».
 2. Onglet **RDV** puis onglet **Bilan** (bouton « Rédiger le bilan »).
 3. « Créer le CR » ouvre la **prévisualisation**. L'agent peut « Modifier » la mise en page dans un éditeur riche ; cette mise en page est conservée tant que le formulaire n'est pas modifié.
 4. « Continuer » ouvre l'écran des destinataires, prérempli avec les destinataires par défaut de l'agent, le courriel du service instructeur et celui du demandeur. « Envoyer » génère le PDF et l'envoie.
 
-### 5.3 Parcours : validation d'un constat (validateur externe)
+### 5.4 Parcours : validation d'un constat (validateur externe)
 
 Dans « Mon compte », l'agent active « Envoyer les constats sous couvert de validation » et renseigne le nom, le prénom et le courriel du validateur. À l'envoi, l'interrupteur « Envoi sous-couvert » est activé par défaut. Le validateur reçoit un lien vers `/constat-validation/<jeton>`. Sans se connecter, il y consulte le PDF puis choisit « Oui, envoyer le constat » ou « Non, ne pas envoyer le constat ». Un commentaire est proposé en cas de refus. Un lien expiré renvoie le code HTTP 410 ; un lien inconnu ou déjà traité est rejeté ([constat-validation.$token.tsx](../packages/frontend/src/routes/constat-validation.$token.tsx)).
 
 D'après les tests de bout en bout ([constat-with-alerts.spec.ts](../tests/constat-with-alerts.spec.ts)), les alertes partent **dès la première soumission** et ne sont **pas renvoyées** après un refus du validateur.
 
-### 5.4 Autres parcours
+### 5.5 Autres parcours
 
 | Parcours | Écran | Remarques |
 | --- | --- | --- |
@@ -192,7 +204,7 @@ D'après les tests de bout en bout ([constat-with-alerts.spec.ts](../tests/const
 | Administration | `/admin` | Gestion de la liste blanche et des utilisateurs, avec export. L'accès est vérifié côté serveur (`/api/admin/me`, refus HTTP 403) |
 | Statistiques | `/stats` | Indicateurs publics, plus des indicateurs détaillés pour les administrateurs |
 
-> Point d'attention pour l'homologation : **tout membre d'un service** peut modifier les paramètres du service depuis `/service` (en-têtes PDF, courriels des alertes, clauses, services instructeurs). L'interface ne vérifie aucun rôle. La vérification éventuelle côté serveur est décrite dans le document backend (à confirmer).
+> Point d'attention pour l'homologation : **tout membre d'un service** peut modifier les paramètres du service depuis `/service` (en-têtes PDF, courriels des alertes, clauses, services instructeurs). Ni l'interface ni le serveur ne vérifient de rôle : c'est un choix (décision du 4/11/2026). Le serveur limite la modification au **propre service** de l'agent (voir [05 §8](05-authentification-securite.md)).
 
 ## 6. Fonctionnalités transverses
 
@@ -201,7 +213,7 @@ D'après les tests de bout en bout ([constat-with-alerts.spec.ts](../tests/const
 - **Dictée vocale** : bouton « Dicter » sur les champs longs, via l'API de reconnaissance vocale du navigateur, en français.
 - **Cartes** : localisation du monument, sélection de parcelles cadastrales, plan de situation automatique au 1/5 000, localisation des désordres par partie visitée.
 - **Partage au sein du service** : l'onglet « UDAP / CRMH / Service » de l'accueil montre les documents de tout le service ; « Mes documents » montre ceux de l'agent.
-- **Délégation** : un agent autorise des collègues à créer, modifier et supprimer ses CR. Cela ne concerne pas les CE.
+- **Délégation** : un agent autorise des collègues de son service à créer, modifier et supprimer ses CR. L'interface ne l'applique pas aux CE, mais le serveur l'accepte pour les CE et les alertes de fiche.
 - **Clauses** : textes types (décision, contacts utiles, bonnes pratiques, type d'espace). Ils sont nationaux (`service_id = "ALL"`) ou propres au service ; une clause du service **remplace** la clause nationale de même clé et même intitulé.
 - **Liste blanche** : seuls les courriels préalablement autorisés peuvent créer un compte (modération *a priori* prévue par les CGU).
 
@@ -227,7 +239,7 @@ Les pages légales sont **intégrées au code** de l'application (pas de CMS). L
 
 - le monorepo `patrinotes` : `packages/frontend` (PWA), `packages/backend` (API Node/Fastify, génération et envoi des PDF), `packages/pdf` (gabarits partagés) ;
 - la synchronisation PowerSync ([`powersync/`](../powersync)), la base PostgreSQL et ses migrations ([`db/`](../db)), l'authentification Keycloak ;
-- les dépendances externes appelées (stockage objet, SMTP, données data.gouv.fr et POP, cartographie, Sentry, Matomo) ;
+- les dépendances externes appelées (stockage objet, SMTP, données POP, API Dataspace des unités patrimoniales du ministère, cartographie, Sentry, Matomo) ;
 - le déploiement actuel (VPS + Coolify, [Dockerfile](../Dockerfile), [docker-compose.yaml](../docker-compose.yaml)) et les besoins pour le transfert vers l'infrastructure du ministère ;
 - les éléments utiles à l'homologation de sécurité (données personnelles, flux, comptes, journalisation).
 
@@ -259,6 +271,10 @@ Les pages légales sont **intégrées au code** de l'application (pas de CMS). L
 | **DREAL** | Direction régionale de l'environnement, de l'aménagement et du logement (sites classés et inscrits) |
 | **DSFR** | Système de design de l'État |
 | **Envoi sous couvert** | Envoi d'un constat soumis à l'accord préalable d'un validateur |
+| **Fiche** | Page d'un monument (fiche MH), d'une unité patrimoniale (fiche UP) ou d'un objet mobilier (fiche objet) |
+| **MH complexe** | Monument découpé en unités patrimoniales |
+| **Rapport groupé** | Ensemble des constats de plusieurs UP d'un même monument, envoyés en un seul PDF |
+| **Unité patrimoniale (UP)** | Partie d'un MH complexe (bâtiment, aile, décor…), organisée en arbre, lue dans l'API Dataspace du ministère |
 | **Mérimée / Palissy** | Bases nationales des immeubles (Mérimée) et des objets mobiliers (Palissy) protégés, publiées sur POP |
 | **MH** | Monument historique (immeuble classé ou inscrit) |
 | **OFB** | Office français de la biodiversité |

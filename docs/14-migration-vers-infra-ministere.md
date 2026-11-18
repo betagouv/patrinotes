@@ -3,7 +3,7 @@
 Ce document est le plan de transfert de Patrinotes depuis le VPS actuel (piloté par Coolify) vers l'infrastructure du ministère de la Culture. Le transfert est découpé en **six phases**, chacune avec un objectif, un responsable principal, ses livrables et un critère de sortie. Le contenu technique (exigences, flux réseau, procédures) est rangé dans la phase où il sert. Il s'appuie sur [10 — Infrastructure et déploiement](10-infrastructure-et-deploiement.md) et [11 — Configuration](11-configuration.md).
 
 > [!IMPORTANT]
-> La configuration Coolify actuelle n'est pas versionnée. **Première action du chantier** (phase 1) : exporter depuis Coolify, pour chaque service, l'image et le tag, les variables d'environnement, les volumes, les domaines, les fichiers montés (notamment la configuration PowerSync et le thème Keycloak) et les options du reverse proxy. Tous les points « à confirmer » de ce document en dépendent.
+> La configuration Coolify actuelle n'est pas versionnée. Un relevé en lecture seule a été fait le 17/11/2026 (« relevé de production du 17/11/2026 », synthèse dans [10](10-infrastructure-et-deploiement.md) § 6.0) : images, versions, domaines, fichiers montés, volumétrie. **Première action du chantier** (phase 1) : le compléter par un export complet (variables d'environnement, realm Keycloak, configuration PowerSync, options du reverse proxy).
 
 ## 1. Vue d'ensemble des phases
 
@@ -122,7 +122,7 @@ Déduit de [authService.ts](../packages/backend/src/services/authService.ts), [k
 | Revendications utilisées | `email` (**clé de rattachement** à la table `user`, et filtre de toutes les règles PowerSync via `auth.parameter('email')`), `name` ou `preferred_username` (nom affiché à la création). Aucun rôle ni groupe : le rôle administrateur est en base (`internal_user.role`). | Revendications standard OIDC. |
 | PowerSync | Accepte **le même jeton d'accès** que le backend, vérifié par JWKS. | Nécessite un JWT signé avec JWKS publié. |
 
-Le flux *authorization code* (`/api/authenticate`, redirection vers `${FRONTEND_URL}/auth-callback`) existe côté backend mais **aucune route `auth-callback` n'existe dans le frontend** : il n'est pas utilisé.
+Le flux *authorization code* (`/api/authenticate`) n'existe plus : la route, inutilisée, a été supprimée le 4/11/2026.
 
 Le navigateur n'appelle jamais Keycloak (déduction à confirmer en relevant les journaux d'accès). Keycloak peut donc être déployé **sans exposition publique**, joignable uniquement par le backend et PowerSync. La console d'administration doit rester accessible aux administrateurs (VPN ou réseau d'administration).
 
@@ -142,12 +142,12 @@ Conséquences pour la migration : **Keycloak et sa base ne sont plus transféré
 
 À retenir si la sortie de Keycloak n'est pas terminée (étape 3 du scénario A) avant la date de bascule. **Ne pas** mener les deux chantiers en même temps.
 
-- Déployer Keycloak 26.3.5 en mode **`start`** (et non `start-dev` comme en Compose), derrière TLS ou sur réseau interne, avec `KC_HOSTNAME` fixé.
+- Déployer Keycloak **26.7.2** (version de production) en mode **`start`** (et non `start-dev` comme en Compose), derrière TLS ou sur réseau interne, avec `KC_HOSTNAME` fixé.
 - Restaurer la base `keycloak` (comptes, hachés de mots de passe, clés de signature du realm, sessions *offline*) : voir § 5.4.
 - Copier [keycloak-theme.jar](../keycloak-theme.jar) dans `/opt/keycloak/providers/`, renseigner `DSFR_THEME_*`.
 - Avantage : aucune modification de code, mots de passe conservés.
-- Point dur : l'**émetteur** (`iss`). Si l'URL par laquelle backend et PowerSync joignent Keycloak change (par exemple de `http://keycloak:8080` à une autre URL), l'`iss` des jetons change : tous les jetons en circulation deviennent invalides (reconnexion de tous les utilisateurs) et `VITE_AUTH_URL` **et** `client_auth.issuer`/`jwks_uri` de PowerSync doivent être mis à jour ensemble. Fixer `KC_HOSTNAME` à la valeur actuelle de l'émetteur permet de l'éviter.
-- À vérifier : quel realm est utilisé en production (`VITE_AUTH_REALM`). Les tests et la configuration PowerSync versionnée utilisent **`master`**, ce qui est déconseillé (le realm d'administration sert aussi aux utilisateurs finaux). À corriger éventuellement **après** la migration, pas pendant.
+- Point dur : l'**émetteur** (`iss`). Si l'URL par laquelle backend et PowerSync joignent Keycloak change (par exemple de `http://keycloak:8080` à une autre URL), l'`iss` des jetons change : tous les jetons en circulation deviennent invalides (reconnexion de tous les utilisateurs) et `VITE_AUTH_URL` **et** `client_auth.issuer`/`jwks_uri` de PowerSync doivent être mis à jour ensemble. Fixer `KC_HOSTNAME` à la valeur actuelle de l'émetteur permet de l'éviter. En production, `KC_HOSTNAME=https://auth.patrinotes.beta.gouv.fr` et l'émetteur est `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`.
+- Realm de production : **`patrinotes`** (realm dédié, 216 comptes). Les tests et la configuration PowerSync versionnée utilisent `master` ; la **préproduction** aussi, sur le Keycloak de production : elle devra recevoir son propre Keycloak ou realm sur la cible.
 
 #### 3.3.4 Points communs aux scénarios SSO (ProConnect, Cerbère, autre)
 
@@ -173,28 +173,28 @@ ProConnect (ex-AgentConnect) est une fédération OIDC pour les agents publics ;
 | --- | --- | --- | --- | --- |
 | Frontend | `ghcr.io/betagouv/patrinotes-main:frontend` | Sert la PWA (`vite preview`, port 4173) et génère `env.js` au démarrage. | Aucune (FS inscriptible requis) | Publique |
 | Backend | `ghcr.io/betagouv/patrinotes-main:backend` | API Fastify, migrations au démarrage, envoi de courriels, import POP. | Aucune (FS inscriptible pour l'import POP) | Publique |
-| PowerSync | `journeyapps/powersync-service:latest` (**à épingler**, § 3.2) | Synchronisation PostgreSQL → clients. | Via MongoDB | Publique (WebSocket) |
-| MongoDB 7 en *replica set* | `mongo:7.0` | Stockage des *buckets* PowerSync. | Volume (reconstructible) | Interne |
-| PostgreSQL | `postgres:17-alpine` en dev (version de production **à confirmer**) | Base applicative (+ base Keycloak dans le scénario B). | **Critique** | Interne |
-| Keycloak 26.3.5 (**scénario B uniquement**) | `quay.io/keycloak/keycloak:26.3.5` (+ [keycloak-theme.jar](../keycloak-theme.jar)) | Comptes et mots de passe, émission des jetons. | Dans PostgreSQL (base `keycloak`) | Interne (déduction : le navigateur ne l'appelle pas) ; console d'administration à protéger |
-| Stockage objet S3 | **Scaleway Object Storage** en production (confirmé), MinIO en dev | Pièces jointes, photos, PDF. | **Critique** | Publique (URL présignées) |
-| Relais SMTP | Externe : **Scaleway Transactional Email** (confirmé) | Courriels sortants. | — | Sortant |
-| Site de redirection CR VIF | Fichiers statiques [crvif-redirection/](../crvif-redirection/) | Redirection de l'ancien domaine. | — | Publique (ancien domaine) |
+| PowerSync | `journeyapps/powersync-service:latest`, soit **1.20.5** en production (**à épingler**, § 3.2) | Synchronisation PostgreSQL → clients. | Via MongoDB | Publique (WebSocket) |
+| MongoDB 7 en *replica set* | `mongo:7.0` (7.0.31 en production) | Stockage des *buckets* PowerSync. | Volume (reconstructible) | Interne |
+| PostgreSQL | `postgres:17-alpine`, **17.8** en production | Base applicative. | **Critique** | Interne |
+| Keycloak 26.7.2 (**scénario B uniquement**) | `quay.io/keycloak/keycloak:26.7.2` (+ [keycloak-theme.jar](../keycloak-theme.jar), identique à celui de production) | Comptes et mots de passe, émission des jetons. | Instance PostgreSQL 16 dédiée en production | Interne (le navigateur ne l'appelle pas) ; console d'administration à protéger |
+| Stockage objet S3 | **Scaleway Object Storage** en production (bucket `patrinotes-prod`, région `fr-par`), MinIO en dev | Pièces jointes, photos, PDF. | **Critique** | Publique (URL présignées) |
+| Relais SMTP | Externe : **Scaleway Transactional Email** (`smtp.tem.scw.cloud:465`) | Courriels sortants. | — | Sortant |
+| Site de redirection CR VIF | Fichiers **de production** (`index.html`, `sw.js` du service `migration-proxy`), qui diffèrent de [crvif-redirection/](../crvif-redirection/) | Redirection de l'ancien domaine. | — | Publique (ancien domaine) |
 
 Ne **pas** déployer : Adminer, Mailpit, `mongo-rs-init`/`minio-init` en tant que services permanents (ce sont des tâches ponctuelles), [Procfile](../Procfile) et [scalingo.json](../scalingo.json) (obsolètes).
 
 ### 4.2 Estimation des ressources
 
 > [!NOTE]
-> **Estimations** déduites de la nature des composants et des volumes de données publics (bases Mérimée et Palissy), sans mesure sur la production. À recaler avec les mesures de la phase 1 (§ 2.1) avant dimensionnement définitif.
+> **Mesures de production** (relevé du 17/11/2026) : base applicative de **719 Mo** (dont `pop_objets` 326 Mo, `pop_immeubles` 231 Mo, `transactions` 137 Mo) ; base Keycloak de 70 Mo (216 comptes) ; MongoDB PowerSync de **3,2 Go** de données pour un volume de 5 Go ; 261 utilisateurs, 2 910 comptes-rendus, 1 214 constats. Le serveur actuel (8 vCPU, 31 Go de RAM, disque utilisé à 10 %) héberge aussi la préproduction et des résidus de l'ancienne application. **Le volume du bucket S3 n'a pas pu être mesuré** (console Scaleway). La consommation CPU et mémoire par composant n'a pas été mesurée : les valeurs ci-dessous restent des estimations, recalées sur ces volumes.
 
 | Composant | vCPU | RAM | Disque | Commentaire |
 | --- | --- | --- | --- | --- |
 | Frontend | 0,25–0,5 | 256–512 Mo | < 1 Go (image ~1–2 Go à cause des dépendances) | Fichiers statiques ; Node sert les requêtes. |
 | Backend | 0,5–1 | 512 Mo–1 Go (pic plus élevé pendant un import POP) | 1–2 Go temporaires pour les CSV POP | Une seule réplique recommandée (migrations au démarrage). |
 | PowerSync | 1 | 1–2 Go | — | Plus pendant la réplication initiale. |
-| MongoDB | 0,5–1 | 1–2 Go | 5–20 Go | Les *buckets* contiennent notamment les objets et immeubles POP filtrés par département de chaque utilisateur : volume proportionnel au nombre d'utilisateurs et de départements. |
-| PostgreSQL | 1–2 | 2–4 Go | 10–30 Go + marge WAL | Tables POP (centaines de milliers de lignes) + données métier. **Prévoir de la marge pour la rétention de WAL** liée au slot de réplication. |
+| MongoDB | 0,5–1 | 1–2 Go | 10 Go (5 Go mesurés) | Les *buckets* contiennent notamment les objets et immeubles POP filtrés par département de chaque utilisateur : volume proportionnel au nombre d'utilisateurs et de départements. |
+| PostgreSQL | 1–2 | 2–4 Go | 10 Go + marge WAL (moins de 1 Go mesuré) | Tables POP (335 000 lignes) + données métier. **Prévoir de la marge pour la rétention de WAL** liée au slot de réplication. |
 | Keycloak (scénario B) | 0,5–1 | 1–1,5 Go (JVM) | — | Base dans PostgreSQL. |
 | S3 | — | — | **À mesurer** (photos de terrain, PDF) | Croissance continue ; aucune purge automatique dans le code. |
 
@@ -202,7 +202,7 @@ Ne **pas** déployer : Adminer, Mailpit, `mongo-rs-init`/`minio-init` en tant qu
 
 | Exigence | Valeur | Source |
 | --- | --- | --- |
-| Version | ≥ 14 (testée en 14 par la CI E2E, développée en 17). Version de production à confirmer et à **conserver ou monter**, jamais descendre (un dump d'une version supérieure peut ne pas se restaurer sur une version inférieure). | [docker-compose.test.yaml](../docker-compose.test.yaml), [docker-compose.yaml](../docker-compose.yaml) |
+| Version | ≥ 14 (testée en 14 par la CI E2E, développée en 17). **17.8 en production** : à **conserver ou monter**, jamais descendre (un dump d'une version supérieure peut ne pas se restaurer sur une version inférieure). | [docker-compose.test.yaml](../docker-compose.test.yaml), [docker-compose.yaml](../docker-compose.yaml) |
 | `wal_level` | `logical` | Compose, [README](../README.md#L84-L97) |
 | `max_replication_slots`, `max_wal_senders` | ≥ 1 libre pour PowerSync (≥ 2 conseillé : migration et bascule) | Exigence PowerSync |
 | Rôle de réplication | Attribut `REPLICATION` + `SELECT` sur les tables publiées (utilisé par `PS_DATABASE_URL`) | Exigence PowerSync |
@@ -248,8 +248,8 @@ Dans les deux cas, ce stockage est **reconstructible** : il n'est pas nécessair
 
 | Exigence | Détail |
 | --- | --- |
-| Noms de domaine | `app.patrinotes.beta.gouv.fr` (frontend) **à conserver**. Les noms actuels du backend, de PowerSync et de S3 (relevés en phase 1) sont idéalement à conserver aussi (les liens envoyés par courriel pointent sur `BACKEND_URL`, valables 90 jours). Le domaine `beta.gouv.fr` est géré par la DINUM / beta.gouv : délégation ou enregistrements à demander. |
-| Ancien domaine | `app.compte-rendu-vif.beta.gouv.fr` (et variantes `incubateur.net`) : continuer à servir [crvif-redirection/](../crvif-redirection/) (y compris `/sw.js`) tant que des clients anciens peuvent exister. |
+| Noms de domaine | `app.patrinotes.beta.gouv.fr` (frontend) **à conserver**. Les noms actuels du backend (`api.patrinotes.beta.gouv.fr`), de PowerSync (`sync.patrinotes.beta.gouv.fr`), de Keycloak (`auth.patrinotes.beta.gouv.fr`) et de S3 (`patrinotes-prod.s3.fr-par.scw.cloud`) sont idéalement à conserver aussi (les liens envoyés par courriel pointent sur `BACKEND_URL`, valables 90 jours). Le domaine `beta.gouv.fr` est géré par la DINUM / beta.gouv : délégation ou enregistrements à demander. |
+| Ancien domaine | `app.compte-rendu-vif.beta.gouv.fr` : continuer à servir la redirection (y compris `/sw.js`) tant que des clients anciens peuvent exister. **Reprendre la page réellement servie en production** (service `migration-proxy` : renvoi vers `/inscription?from=crvif`, délai de 3 s), qui diffère de [crvif-redirection/](../crvif-redirection/), et la reverser dans le dépôt. Les domaines `*.compte-rendu-vif.incubateur.net` ne servent plus que des résidus à ne pas reprendre. |
 | Nouveau nom de domaine éventuel (recette ministère) | Doit être ajouté à `preview.allowedHosts` (§ 3.2) **et l'image reconstruite**, sinon le frontend répond 403. |
 | TLS | Terminé par le reverse proxy ; certificats valides (pas de certificat interne non reconnu par les terminaux mobiles des agents). |
 | WebSocket | *Upgrade* `Connection`/`Upgrade` vers PowerSync, délai d'inactivité ≥ 5 min (ou désactivé), pas de mise en mémoire tampon des réponses en flux continu (le client PowerSync peut aussi utiliser du HTTP en *streaming*). |
@@ -294,7 +294,7 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | Backend (scénario A) | ProConnect | 443 | Chaque connexion (jeton, *userinfo*, JWKS) | Oui |
 | Backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` | 443 | Import POP (`FORCE_REFETCH_POP=true` ou `pnpm backend import-pop`) | Ponctuel |
 | Backend | `pop.culture.gouv.fr` | 443 | Récupération des images POP (`import-pop` uniquement ; désactivé au démarrage) | Ponctuel |
-| Backend | Sentry (instance à confirmer) | 443 | Si `SENTRY_DSN` | Optionnel |
+| Backend | Sentry | 443 | Si `SENTRY_DSN` (non défini en production ; le frontend utilise `sentry.incubateur.net`) | Optionnel |
 | PowerSync | Télémétrie JourneyApps | 443 | `disable_telemetry_sharing: false` | **À désactiver** (§ 3.2) |
 | Hôtes d'exécution | Registre d'images (`ghcr.io` aujourd'hui) | 443 | Déploiement | Oui (ou registre du ministère) |
 
@@ -366,7 +366,7 @@ mc mirror --preserve old/<bucket> new/<bucket>      # pré-copie à chaud, puis 
 
 ### 5.4 Keycloak (scénario B uniquement)
 
-- Méthode recommandée : **restauration de la base `keycloak`** (§ 5.1) sur une version identique (26.3.5). Elle conserve comptes, hachés de mots de passe, clients et secrets, clés de signature et sessions *offline* : les utilisateurs restent connectés si l'émetteur est inchangé.
+- Méthode recommandée : **restauration de la base `keycloak`** (§ 5.1) sur une version identique (26.7.2). En production, c'est une instance PostgreSQL 16 dédiée, sauvegardée chaque jour. Elle conserve comptes, hachés de mots de passe, clients et secrets, clés de signature et sessions *offline* : les utilisateurs restent connectés si l'émetteur est inchangé.
 - Alternative : `kc.sh export --realm <realm> --users realm_file` puis `kc.sh import`. Elle conserve les comptes et hachés, mais **pas les sessions *offline*** : tous les utilisateurs devront se reconnecter.
 - Ne pas recréer le realm depuis [tests/realm-template.json](../tests/realm-template.json) : il est destiné aux tests.
 - Vérifier les secrets des clients (`AUTH_CLIENT_SECRET`, `AUTH_ADMIN_CLIENT_SECRET`) côté backend.
@@ -487,6 +487,6 @@ Critères de décision du retour arrière (à valider en phase 4) : impossibilit
 
 - remplacer `vite preview` par un serveur de fichiers statiques (nginx ou le proxy du ministère) ;
 - étudier le stockage PostgreSQL de PowerSync pour supprimer MongoDB (§ 4.4) ;
-- dans le scénario B : sortir de Keycloak (§ 3.3.2) ou, à défaut, quitter le realm `master` ;
+- dans le scénario B : sortir de Keycloak (§ 3.3.2) ;
 - rendre TLS obligatoire vers les bases et ajouter l'authentification à MongoDB, si ce n'est pas fait en phase 2 ;
 - traiter la dette restante de [16](16-risques-et-dette-technique.md).

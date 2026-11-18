@@ -37,7 +37,7 @@ flowchart LR
     end
 
     SMTP["Relais SMTP"]
-    EXT["Services externes<br/>data.gouv.fr, POP, Sentry, Matomo, fonds de carte"]
+    EXT["Services externes<br/>POP, API Dataspace des UP, Sentry, Matomo, fonds de carte"]
 
     UI -->|HTTPS| RP
     RP --> FE
@@ -94,7 +94,7 @@ sequenceDiagram
 Les règles d'accès se trouvent dans [sync-config.yaml](../powersync/sync-config.yaml). Elles reposent sur le claim `email` du jeton. Un agent reçoit :
 
 - les données globales : clauses nationales (`service_id = 'ALL'`), photos POP ;
-- les données de **son service** : service, collègues, clauses, e-mails suggérés, comptes-rendus (`report`), constats (`state_report`) et leurs sous-objets ;
+- les données de **son service** : service, collègues, clauses, e-mails suggérés, comptes-rendus (`report`), constats (`state_report`) et leurs sous-objets, alertes et corrections des fiches monument ;
 - ses données personnelles : délégations, réglages, *snapshots* PDF ;
 - le patrimoine (`pop_immeubles`, `pop_objets`) **de ses départements** (`user_dept`) ;
 - les pièces jointes d'un constat ou d'un compte-rendu, **seulement à l'ouverture** (flux à abonnement explicite).
@@ -117,7 +117,7 @@ sequenceDiagram
     P-->>A: confirme et diffuse aux autres agents du service
 ```
 
-> **Point d'attention.** Le backend n'applique **aucun contrôle de droits ni aucune validation** sur ces écritures : seule la table `internal_user` est interdite. En cas d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
+> **Point d'attention.** Depuis le 4/11/2026, le backend contrôle chaque écriture : table et colonnes autorisées, service de l'utilisateur, auteur du document ou délégation. Mais en cas de refus ou d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
 
 ### 3.3 Documents : PDF et e-mail
 
@@ -129,7 +129,7 @@ sequenceDiagram
 
 ### 3.4 Données patrimoniales
 
-Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). Il récupère aussi les URL des photos par *scraping* de `pop.culture.gouv.fr`. Ces données alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Voir [07](07-donnees-externes-et-stockage.md).
+Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). Il récupère aussi les URL des photos par *scraping* de `pop.culture.gouv.fr`. Ces données alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
 
 ## 4. Organisation du dépôt
 

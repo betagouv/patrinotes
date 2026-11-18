@@ -4,9 +4,10 @@ Ce chapitre décrit la **stratégie de test** (suite Playwright de bout en bout)
 formatage, lint), les **conventions** observées dans le code et l'historique Git, puis une **procédure de prise en main**
 pas à pas pour un nouveau développeur. Il termine par les **zones non couvertes** par les tests.
 
-En résumé : la qualité repose aujourd'hui **presque entièrement sur une suite e2e Playwright** (17 fichiers de specs,
-environ 3 300 lignes avec les utilitaires) qui démarre une pile complète en Docker. Il n'y a **aucun test unitaire**, et
-la CI de test est **manuelle**.
+En résumé : la qualité repose aujourd'hui **surtout sur une suite e2e Playwright** (17 fichiers de specs) qui démarre
+une pile complète en Docker. Elle a été réparée le 4/11/2026 (PR #84 : **72 tests sur 72** passent), puis complétée
+par les specs des fiches. Quelques **tests unitaires** vitest existent côté backend depuis octobre 2026 (§ 4). La CI
+de test reste **manuelle**.
 
 ---
 
@@ -63,6 +64,8 @@ flowchart LR
 | `timeout` | 30 s par test (plusieurs tests le portent à 60 s, 90 s ou 120 s) | — |
 | `forbidOnly` | en CI | Un `test.only` oublié fait échouer la CI. |
 | `trace` | `on-first-retry` | Les traces ne sont produites qu'en CI (seul endroit avec des relances). |
+| `serviceWorkers: "block"` et `storageState` avec `crvif/version = 1` | depuis le 4/11/2026 | L'application se recharge à la première visite et à chaque nouveau service worker, ce qui effaçait la saisie en cours d'un test. Les tests démarrent donc comme un visiteur connu, **sans service worker** : le cache hors ligne n'est pas testé. |
+| `actionTimeout` / `navigationTimeout` | 10 s / 15 s | Une étape bloquée échoue en quelques secondes au lieu d'attendre la fin du test. |
 | Rapporteurs | `html` (sans ouverture) + `list` | Rapport dans `playwright-report/` |
 | Projets | **Chromium desktop uniquement** ; Firefox, WebKit et mobiles en commentaire | Safari iOS et Android, cibles réelles des agents sur le terrain, ne sont **pas testés**. |
 | `baseURL` | `http://localhost:${FRONTEND_PORT}` (3010) | — |
@@ -155,10 +158,12 @@ courant**, c'est-à-dire hors du dépôt quand Playwright tourne depuis la racin
 | [image-drawing-legend.spec.ts](../tests/image-drawing-legend.spec.ts) | UI | Dessin sur une photo (Konva), légende, présence de la légende dans le PDF |
 | [upload-errors.spec.ts](../tests/upload-errors.spec.ts) | UI + API | Fichier non image rejeté avec une erreur visible, suppression d'une photo, aller-retour `/api/upload/attachment` et `/size`, 404 sur un chemin inconnu, authentification obligatoire. Crée `fixtures/not-an-image.txt` à la volée. |
 | [attachment-redirect.spec.ts](../tests/attachment-redirect.spec.ts) | API | `/attachment/:id` : redirection vers une URL S3 présignée, 404, **410 après 90 jours**, toujours valide au 90e jour |
-| [sync.spec.ts](../tests/sync.spec.ts) | API | `/api/upload-data` : authentification obligatoire (**403**, et non 401, par convention de l'application). Écriture refusée sur `internal_user`. Dernier écrit gagnant entre deux écritures concurrentes. |
+| [sync.spec.ts](../tests/sync.spec.ts) | API | `/api/upload-data` : authentification obligatoire (**403**, et non 401, par convention de l'application). Tables non modifiables refusées sans effet, profil limité à soi (jamais l'e-mail), service limité à ses membres, droits auteur, rédacteur et délégation sur les CR et les constats, délégations entre collègues. Dernier écrit gagnant entre deux écritures concurrentes. |
 | [admin.spec.ts](../tests/admin.spec.ts) | API + UI | Liste blanche (pagination, ajout, 409 si doublon, suppression, 404), `/api/admin/me`, exports, recherche utilisateurs, 403 pour un non-admin. Page `/admin` : ajout et suppression, pagination des deux tableaux. Le rôle admin est attribué **en SQL**. |
 | [stats.spec.ts](../tests/stats.spec.ts) | API + UI | `/api/stats/public` (forme, comptages, utilisateurs actifs, exclusion des documents désactivés), `/api/stats/admin` (403, constats abandonnés, envois par service), page `/stats` publique et admin, changement de période |
 | [map-smoke.spec.ts](../tests/map-smoke.spec.ts) | UI | Ouverture et fermeture de la carte MapLibre « Choisir sur la carte » **sans erreur JS**. Test de fumée volontaire : cliquer un marqueur sur un canvas WebGL serait instable. **Dépend d'Internet** (tuiles). |
+| [constat-up.spec.ts](../tests/constat-up.spec.ts) | UI + Mailpit | MH complexe (API des UP en mode `mock`) : constat sur une UP de second niveau ou sur l'ensemble du monument, constats antérieurs filtrés par UP, **rapport groupé** envoyé en un seul PDF et un seul courriel, blocage si un constat est incomplet, MH simple sans UP. |
+| [fiche-mh.spec.ts](../tests/fiche-mh.spec.ts) | UI + Mailpit | Fiche d'un MH simple (informations, objets, corrections reprises par le constat), alerte depuis la fiche envoyée par courriel, fiche objet (annotation depuis le constat, alerte), arbre de l'ensemble patrimonial et fiche d'une UP. Utilise le monument de test `TEST00003` (hiérarchie profonde). |
 
 Fixtures : [tests/fixtures/](../tests/fixtures/) contient `test-image.jpg`, `test-image.png` et `not-an-image.txt`.
 
@@ -212,8 +217,8 @@ Comportements à connaître :
   `compte-rendu-vif`) **ne dépend pas** des tests : une image cassée peut être publiée.
 
 > [!NOTE]
-> `pnpm/action-setup@v4` sans version explicite lit le champ `packageManager` du `package.json`, et ce champ **n'existe
-> pas** ici. La version de pnpm utilisée en CI est donc à confirmer (l'étape peut échouer selon la version de l'action).
+> `pnpm/action-setup@v4` sans version explicite lit le champ `packageManager` du `package.json` : `pnpm@10.12.4`
+> depuis le 4/11/2026 (PR #84).
 
 **Proposition** : déclencher `tests.yml` sur `pull_request` vers `main` et `development`, ajouter un job `tsc --noEmit`
 (scripts `check` du backend et du frontend), et conditionner `main.yml` au succès des tests.
@@ -222,14 +227,21 @@ Comportements à connaître :
 
 ## 4. Tests unitaires
 
-**Il n'y en a pas.** `vitest` (`^2.1.5`) est déclaré dans [packages/backend/package.json](../packages/backend/package.json)
-avec un script `"test": "vitest"`, mais aucun fichier `*.test.ts` ou `*.spec.ts` n'existe dans `packages/`, et il n'y a
-pas de configuration vitest. Le package `pdf` a le script npm par défaut (`echo "Error: no test specified" && exit 1`).
-Le frontend exclut `src/**/*.test.ts(x)` dans son `tsconfig`, mais il n'en contient aucun.
+Backend seulement : `pnpm backend test` (vitest `^2.1.5`, sans configuration particulière). **Non lancés en CI.**
 
-Bons candidats pour de premiers tests unitaires : `syncService.applyCrud` (liste noire, erreurs), `KyselyBatchWriter`
-(déduplication, upsert), le calcul d'échelle et de zoom de `planSituationSnapshot.ts`, la sérialisation des courriels
-obligatoires des alertes, et la composition des PDF du package `pdf` (rendu sans navigateur).
+| Fichier | Couvre |
+| --- | --- |
+| [syncPolicy.test.ts](../packages/backend/src/features/sync/syncPolicy.test.ts) | Règles d'écriture de `/api/upload-data` (tables, colonnes, service, auteur, délégation, alertes de fiche) ; vérifie aussi que les colonnes déclarées correspondent au schéma client |
+| [attachmentAccess.test.ts](../packages/backend/src/features/attachmentAccess.test.ts) | Format des chemins de fichiers |
+| [upService.test.ts](../packages/backend/src/services/upService.test.ts), [upProvider.test.ts](../packages/backend/src/features/up/upProvider.test.ts) | Arbre des unités patrimoniales, cache, réponse 404 de l'API |
+| [monumentAlertRoutes.test.ts](../packages/backend/src/routes/monumentAlertRoutes.test.ts) | Destinataires d'une alerte de fiche |
+
+Le package `pdf` a le script npm par défaut (`echo "Error: no test specified" && exit 1`). Le frontend n'a aucun test
+unitaire.
+
+Autres bons candidats : `KyselyBatchWriter` (déduplication, upsert), le calcul d'échelle et de zoom de
+`planSituationSnapshot.ts`, la sérialisation des courriels obligatoires des alertes, et la composition des PDF du
+package `pdf` (rendu sans navigateur).
 
 ---
 
@@ -337,6 +349,8 @@ gitGraph
 | --- | --- |
 | `main` | Production. Image GHCR `…-main:{backend,frontend}`. Reçoit aussi des **correctifs directs** : à la date de lecture, `main` a 2 commits absents de `development` (`c9896b2`, `36aa251`). |
 | `development` | Intégration et préproduction (image `…-development:*`). À la date de lecture, elle a **11 commits d'avance** sur `main`. |
+
+> Depuis le 17/11/2026, `main` et `development` **divergent** : les correctifs de sécurité des PR #83 et #86 sont sur les deux branches, par des commits différents (repris un à un sur `main`, puis adaptés à son schéma par `559f208`). La prochaine fusion de `development` vers `main` devra en tenir compte.
 | `compte-rendu-vif` | Ancien nom du produit. Toujours dans `main.yml`, dernier commit en **novembre 2025** : branche probablement abandonnée (à confirmer), dont on peut retirer le déclencheur. |
 | `feat/*`, `fix/*`, `refactor/*` | Branches de fonctionnalité |
 | `poc/*` (`electricsql`, `replicache`, `triplit`, `watermelon`, `automerge`, `hocuspocus`), `save/*`, `backup/*` | Essais de moteurs de synchronisation et sauvegardes historiques, **à archiver** |
@@ -354,7 +368,7 @@ Le [README](../README.md) donne la trame, mais il est **incomplet et en partie f
 
 | Le README dit | Réalité |
 | --- | --- |
-| `pnpm = 8.4.0` | Le lockfile est en `lockfileVersion: '9.0'` (pnpm ≥ 9). Le [Dockerfile](../Dockerfile#L16) utilise **pnpm 10.12.4**, et `pnpm.onlyBuiltDependencies` est une option de pnpm 10. **Utiliser pnpm 10.** |
+| `pnpm = 8.4.0` | Le [package.json](../package.json) déclare `"packageManager": "pnpm@10.12.4"` (comme le [Dockerfile](../Dockerfile#L16)). **Utiliser pnpm 10.12.4** (corepack le choisit). |
 | « Copy `.env.dist` to `.env` » | [.env.dist](../.env.dist) est **obsolète** : il contient des variables ElectricSQL et AWS inutilisées et **il manque** `DATAGOUV_API`, `JWT_REFRESH_SECRET`, `BACKEND_URL`, `EMAIL_EMITTER`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_ADMIN_CLIENT_ID`, `AUTH_ADMIN_CLIENT_SECRET`, `KEYCLOAK_*`, `PS_DATABASE_URL`, `POWERSYNC_PORT`, `KEYCLOAK_PORT`, `SMTP_PORT`, `SMTP_WEB_PORT`, `MINIO_SERVER_PORT`, `MINIO_CONSOLE_PORT`, `VITE_POWERSYNC_URL`. **Partir de [.env.test](../.env.test)** est bien plus fiable. |
 | « La whitelist n'est pas active en dev » | Vrai seulement si `process.env.NODE_ENV === "development"` : `isDev` lit la variable **brute**, et le `default("development")` du schéma zod ne s'applique qu'à `ENV.NODE_ENV`. `pnpm backend dev` passe par `vite-node`, et Vite fixe `NODE_ENV=development` quand il est absent (comportement de Vite 5, à confirmer). Un lancement par `node` ou `pnpm backend start` sans `NODE_ENV` est traité **comme la production** (liste blanche active, Sentry actif si un DSN est défini). |
 | `clearDb.sh` | Le fichier s'appelle [scripts/clear-db.sh](../scripts/clear-db.sh) et vise le volume `compte-rendu-vif_pg_data` (ancien nom de projet Compose). |
@@ -447,15 +461,14 @@ Le `.gitignore` exclut aussi `.claude` et `.playwright-mcp` : le développement 
 | **Hors ligne** | Aucun test ne coupe le réseau (`context.setOffline`) pour vérifier la saisie hors ligne puis la resynchronisation, alors que c'est la promesse centrale du produit. | Élevé |
 | Navigateurs | Chromium desktop uniquement. Pas de WebKit/Safari iOS (pas de SharedWorker, OPFS partiel), ni de Firefox, ni de viewport mobile. | Élevé |
 | Synchronisation descendante | Pas de test multi-utilisateurs vérifiant qu'un collègue du même service reçoit les données et qu'un autre service **ne les reçoit pas** (règles `sync-config.yaml`). | Élevé (cloisonnement des données) |
-| Échecs silencieux de `applyCrud` | `sync.spec.ts` teste la liste noire et le dernier écrit gagnant, mais pas une écriture SQL invalide (réponse 200 `success:false`). | Moyen |
-| Sécurité de `/api/upload-data` | Pas de test d'écriture vers une **autre** table sensible (`whitelist`, `user` d'un autre service, `service`…). Seule `internal_user` est sur liste noire. | Élevé (voir le chapitre sécurité) |
+| Échecs silencieux de `applyCrud` | Les refus sont testés côté serveur, mais aucun test ne vérifie ce que voit l'agent quand une écriture est refusée ou en erreur (réponse 200 `success:false`, perte silencieuse). | Moyen |
+| Fichiers et routes PDF | Le contrôle d'accès aux fichiers et aux PDF d'un autre service n'a qu'un test unitaire de format de chemin ; pas de test e2e d'accès croisé. | Moyen |
 | Mise à jour de version (service worker) | Pas de test du mécanisme anti-version périmée (`vite:preloadError`, NetworkFirst). | Moyen |
 | Plan de situation | Aucun test de `generatePlanSituationSnapshot` ni du bandeau hors ligne. Le test de fumée ne fait qu'ouvrir la carte. | Moyen |
 | Contenu du PDF | Les tests vérifient la présence d'éléments (légende…), pas le rendu visuel (pas de comparaison d'images). | Faible à moyen |
 | Pannes de dépendances | Pas de test SMTP ou S3 indisponible, ni Keycloak lent. | Moyen |
 | Import POP | Aucun test de `pop.ts` ni de `KyselyBatchWriter`. | Moyen |
 | Expiration des jetons de validation (7 jours) et des liens de réinitialisation | Testés indirectement au mieux. | Faible |
-| Statuts HTTP des routes de validation | Les routes lèvent des objets bruts `{ statusCode, message }` ([validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts#L28)) que le gestionnaire d'erreurs global traite en **500**, alors que les tests attendent **404** et **410**. Soit Fastify conserve le `statusCode`, soit ces tests échouent : **à confirmer en exécutant la suite**. | À vérifier |
 | Accessibilité (RGAA) | Aucun test automatisé (axe…), bien qu'une page « Accessibilité » existe. | Moyen (obligation légale) |
 | Performance / charge | Aucun | Moyen |
-| Unitaires | Aucun (§ 4) | — |
+| Unitaires | Backend seulement, hors CI (§ 4) | Moyen |

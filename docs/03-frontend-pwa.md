@@ -99,6 +99,8 @@ packages/frontend/
     ├── routes/              # une route par fichier (TanStack Router)
     ├── features/            # code métier par domaine
     │   ├── state-report/    # constat d'état : étapes, alertes, PDF, menu latéral
+│   ├── fiche/           # fiches MH, UP et objet mobilier, recherche, alertes et annotations hors constat
+│   ├── up/              # unités patrimoniales des MH complexes, rapport groupé
     │   ├── report/          # liste et actions des comptes-rendus
     │   ├── upload/          # photos : machines XState, compression, dessin Konva
     │   ├── map/             # MapLibre, cadastre, plan de situation, localisation
@@ -181,7 +183,10 @@ Le routage utilise **TanStack Router** avec des routes basées sur des fichiers 
 
 | Chemin | Fichier | Accès | Rôle |
 | --- | --- | --- | --- |
-| `/` | [index.tsx](../packages/frontend/src/routes/index.tsx) | connecté | Accueil : « Créer un constat d'état », « Créer un compte-rendu », onglets « Mes documents » et service, recherche |
+| `/` | [index.tsx](../packages/frontend/src/routes/index.tsx) | connecté | Accueil : recherche de monument (édifices, objets mobiliers ou carte) vers les fiches, « Créer un constat d'état », « Créer un compte-rendu », onglets « Mes documents » et service, recherche de documents |
+| `/monument` | [monument.index.tsx](../packages/frontend/src/routes/monument.index.tsx) | connecté | Recherche d'un monument (nom, référence ou carte), qui ouvre sa fiche |
+| `/monument/$reference?up=…` | [monument.$reference.tsx](../packages/frontend/src/routes/monument.$reference.tsx) | connecté | **Fiche MH** (référence Mérimée), ou **fiche d'une unité patrimoniale** avec `up` |
+| `/objet/$reference` | [objet.$reference.tsx](../packages/frontend/src/routes/objet.$reference.tsx) | connecté | **Fiche objet mobilier** (référence Palissy) |
 | `/connexion` | [connexion.tsx](../packages/frontend/src/routes/connexion.tsx) | anonyme (redirige si connecté) | Connexion par courriel et mot de passe (`POST /api/login-user`) |
 | `/inscription` | [inscription.tsx](../packages/frontend/src/routes/inscription.tsx) | anonyme | Création de compte (`POST /api/create-user`), liste des services (`GET /api/services`) |
 | `/reset-password/` | [reset-password.index.lazy.tsx](../packages/frontend/src/routes/reset-password.index.lazy.tsx) | anonyme | Demande de lien (`POST /api/send-reset-password`) |
@@ -252,7 +257,7 @@ Défini dans [db.ts](../packages/frontend/src/db/db.ts) :
 - option `useWebWorker` activée si le navigateur fournit **OPFS** (`navigator.storage.getDirectory`) et `crypto.randomUUID` ; option `enableMultiTabs` activée si `SharedWorker` existe (ce n'est **jamais** le cas sur iOS) ;
 - `db` = Kysely branché sur PowerSync : les composants lisent avec `useDbQuery(db.selectFrom(...))`, des requêtes **réactives** qui se rafraîchissent à chaque modification locale ou synchronisée.
 
-Tables locales (24) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`, `service_instructeurs`, `clause_v2`, `pictures`, `transactions`, `sent_email`, `suggested_email`, `user_settings`, `pop_immeubles`, `state_report`, `visited_section`, `visited_section_attachment`, `report_attachment`, `state_report_attachment`, `state_report_sent_email`, `pop_objets`, `pop_images`, `state_report_alert`, `state_report_alert_attachment` et `attachments` (table interne de la file de pièces jointes).
+Tables locales (27) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`, `service_instructeurs`, `clause_v2`, `pictures`, `transactions`, `sent_email`, `suggested_email`, `user_settings`, `pop_immeubles`, `state_report`, `visited_section`, `visited_section_attachment`, `report_attachment`, `state_report_attachment`, `state_report_sent_email`, `pop_objets`, `pop_images`, `state_report_alert`, `state_report_alert_attachment`, `monument_alert`, `monument_alert_attachment`, `monument_correction` et `attachments` (table interne de la file de pièces jointes).
 
 > Règles cachées :
 > - [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts#L490-L525) contient une **vérification à la compilation** : chaque colonne d'une table partagée doit exister dans le schéma backend (`Database` de `packages/backend/src/db/db`). Ajouter une colonne côté frontend sans l'ajouter côté backend fait échouer `pnpm check`. **L'inverse n'est pas vérifié** : une nouvelle colonne backend absente d'AppSchema est simplement ignorée côté client.
@@ -265,12 +270,12 @@ Tables locales (24) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`,
 | Flux | Abonnement | Contenu côté client |
 | --- | --- | --- |
 | `global_stream` | automatique | Clauses nationales (`ALL`), `pictures` |
-| `service_stream` | automatique | Service, collègues (id, nom, service), services instructeurs, clauses du service, courriels envoyés, courriels suggérés |
+| `service_stream` | automatique | Service, collègues (id, nom, service), services instructeurs, clauses du service, courriels envoyés, courriels suggérés, corrections des fiches |
 | `user_stream` | automatique | Délégations, `pdf_snapshot`, `user_settings` de l'utilisateur |
-| `reports_stream` | automatique | Tous les CR, CE, parties visitées et alertes **du service** |
+| `reports_stream` | automatique | Tous les CR, CE, parties visitées, alertes, alertes et annotations des fiches **du service** |
 | `pop_stream` | automatique (priorité 3) | Immeubles et objets POP des **départements de l'utilisateur** (`user_dept`) |
-| `report_attachments_stream` | **à la demande** (`useSyncStream` dans `/edit` et `/pdf`) | Pièces jointes d'**un** CR |
-| `state_report_attachments_stream` | **à la demande** (dans `/constat` et `/constat/.../pdf`) | Pièces jointes d'**un** CE (constat, parties, alertes) |
+| `report_attachments_stream` | **à la demande** (`useSyncStream` dans `/edit` et `/pdf`) | Pièces jointes d'**un** CR du service |
+| `state_report_attachments_stream` | **à la demande** (dans `/constat` et `/constat/.../pdf`) | Pièces jointes d'**un** CE du service (constat, parties, alertes) |
 
 > Règle cachée importante pour le hors ligne : les **lignes de pièces jointes** ne sont synchronisées que pour le document **ouvert pendant que l'appareil est en ligne**. Un document jamais ouvert en ligne sur un appareil n'aura pas ses photos hors ligne. Les écrans de PDF (`/pdf/...`, `/constat/.../pdf`) affichent un indicateur de chargement **tant que le flux n'est pas synchronisé** (`hasSynced`). Hors ligne, ces écrans peuvent donc rester bloqués (à confirmer sur appareil).
 
@@ -301,7 +306,9 @@ Points de code : [SyncForm.tsx](../packages/frontend/src/components/SyncForm.tsx
 > - **Délai de 500 ms** puis écriture locale, avec un dernier envoi forcé au **démontage** du formulaire pour ne rien perdre en quittant la page. Le même mécanisme existe pour la fenêtre d'une partie visitée ([ConstatDetaille.tsx](../packages/frontend/src/features/state-report/steps/ConstatDetaille.tsx#L286-L316)).
 > - `getDiff` ignore les valeurs non primitives (objets, tableaux) : seuls les champs scalaires sont synchronisés.
 > - **Fusion des modifications distantes** ([useFormWithFocus.tsx](../packages/frontend/src/hooks/useFormWithFocus.tsx)) : quand une ligne change en base (autre appareil, collègue), chaque champ modifié est réinjecté dans le formulaire, **sauf** le champ qui a le focus et qui a déjà été modifié localement. Côté serveur, la règle est **le dernier qui écrit gagne**, sans détection de conflit (test `sync.spec.ts`).
-> - `uploadData` envoie les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur sur une opération bloque le lot, que PowerSync réessaiera.
+> - `uploadData` envoie les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur HTTP sur une opération bloque le lot, que PowerSync réessaiera ; un refus du serveur (droits) arrive en HTTP 200 et n'est pas vu (voir [08](08-synchronisation-hors-ligne.md)).
+> - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation puis affiche une erreur au lieu de perdre la modification (corrigé le 4/11/2026, PR #85, dans `development`, pas encore en production).
+> - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées**, et non plus aux alertes chargées à l'ouverture du panneau : une alerte créée pendant la session perdait son commentaire et ses destinataires, et n'était donc pas envoyée (corrigé le 4/11/2026, PR #85, dans `development`, pas encore en production).
 > - Les identifiants sont générés **côté client** : `report-<uuid v4>` pour les CR (le préfixe `report-` est une convention historique), uuid v4 pour les CE et les parties visitées, uuid v7 pour les pièces jointes et les délégations.
 > - Un CE est créé avec `disabled = 1` et `version = 2`. Il ne devient visible (`disabled = 0`) qu'au choix d'un monument ([ImmeubleAutocomplete.tsx](../packages/frontend/src/features/ImmeubleAutocomplete.tsx#L71-L93)). Un CR est créé directement avec `disabled = 0`.
 > - **Suppression = `disabled = 1`** (suppression logique), pour les CR comme pour les CE.
@@ -425,8 +432,32 @@ Le téléchargement local appelle `POST /api/pdf/state-report/log-download` pour
 > - **Dupliquer un constat** copie le constat et ses parties visitées, mais **pas les photos** ni les alertes. La copie conserve `pdf_size` et les données de localisation.
 > - Modifier une photo (dessin ou remplacement) crée **une nouvelle pièce jointe** (`<parent>/images/<uuidv7>.jpg`) et rend l'ancienne obsolète (`is_deprecated = 1`). Les fichiers sont **immuables**.
 > - La génération manuelle du plan de situation (« Générer le plan maintenant ») est **commentée** dans l'interface. Seule la génération automatique à la prévisualisation reste active.
+> - **MH complexe** : si le monument choisi a des unités patrimoniales (`GET /api/up/monument`, en ligne seulement), une fenêtre propose l'ensemble du monument ou une UP, **niveau par niveau** ([UpSelectionModal.tsx](../packages/frontend/src/features/up/UpSelectionModal.tsx)). L'UP choisie est copiée dans les colonnes `up_*` du constat. Hors ligne ou si l'API ne répond pas, le constat porte sur l'ensemble du monument.
+> - **Rapport groupé** ([rapportGroupe.ts](../packages/frontend/src/features/up/rapportGroupe.ts)) : « Finaliser le constat » → « Commencer un nouveau constat » crée le constat d'une autre UP du même monument, avec le même `rapport_id`. Envoyer l'un des constats envoie tous ceux du rapport dans un seul PDF (un chapitre par UP) et un seul courriel.
+> - Sur l'étape Informations, les **objets mobiliers** du monument sont des cartes : un clic ouvre l'**annotation de l'objet** (présence, état, sécurité, commentaires, photos), enregistrée dans `monument_alert` avec `state_report_id`. La carte indique qu'un objet est annoté ; l'annotation reste modifiable jusqu'à son envoi par courriel.
 
-### 11.2 `report/` et routes `/edit`, `/pdf` (compte-rendu)
+### 11.2 `fiche/` (fiches MH, UP et objet mobilier)
+
+Ajoutées le 10/11/2026. Elles lisent surtout la base locale, donc fonctionnent en grande partie hors ligne.
+
+| Fiche | Contenu | Sources |
+| --- | --- | --- |
+| MH ([MonumentFiche.tsx](../packages/frontend/src/features/fiche/MonumentFiche.tsx)) | Informations POP corrigées par le service, constats antérieurs, alertes et annotations, objets mobiliers, arbre « Ensemble patrimonial » avec le nombre de constats par UP | `pop_immeubles`, `monument_correction`, `state_report`, `monument_alert` (locaux) ; `GET /api/state-report/previous` et `GET /api/up/monument` (en ligne) |
+| UP (même écran, `?up=`) | Même chose pour une unité patrimoniale | idem |
+| Objet mobilier ([ObjetFiche.tsx](../packages/frontend/src/features/fiche/ObjetFiche.tsx)) | Notice Palissy, photos, monument de rattachement, annotations | `pop_objets`, `pop_immeubles` (locaux) ; `GET /api/state-report/objets-images` (en ligne) |
+
+Actions depuis une fiche :
+
+- **Créer un constat d'état** prérempli ([createConstat.ts](../packages/frontend/src/features/fiche/createConstat.ts)) : sur un MH complexe, l'utilisateur choisit l'UP ; sur une fiche UP, le constat porte sur cette UP.
+- **Compléter les infos** : correction des champs par le service (`monument_correction`, par cible : monument, UP ou objet). Si deux appareils en créent une hors ligne, la plus récente l'emporte. Les constats suivants du service reprennent ces valeurs.
+- **Signaler une alerte** hors constat ([FicheAlertDrawer.tsx](../packages/frontend/src/features/fiche/alerts/FicheAlertDrawer.tsx)) : brouillon `monument_alert` qui porte les photos, validé puis envoyé par courriel par la boîte d'envoi (voir [08 § 7.5](08-synchronisation-hors-ligne.md)). Hors ligne, l'envoi attend le retour du réseau.
+
+> Règles cachées :
+> - Une référence Mérimée qui n'a pas le format `PA00000000` (monuments de test) est quand même retrouvée depuis une fiche objet, qui accepte aussi une URL POP dans le champ du monument.
+> - Les images des objets d'une fiche ont leur propre **clé de cache** TanStack Query (`fiche-objets-images`). Elles partageaient auparavant celle de l'étape Informations du constat, dont la requête est différente (corrigé le 10/11/2026).
+> - Les unités patrimoniales ne sont **pas disponibles hors ligne** (message dans la fiche).
+
+### 11.3 `report/` et routes `/edit`, `/pdf` (compte-rendu)
 
 - Accueil : listes paginées de **20** éléments, triées par date de rendez-vous puis de création (CR) ou par date de création (CE) ([useDocumentQueries.tsx](../packages/frontend/src/features/useDocumentQueries.tsx)).
 - « Mes documents » : CR dont l'utilisateur est **créateur ou rédacteur** ; CE dont il est **créateur** seulement.
@@ -440,7 +471,7 @@ Le téléchargement local appelle `POST /api/pdf/state-report/log-download` pour
 > - Le rédacteur d'un CR peut être soi-même ou **un collègue qui m'a donné délégation**. Le choisir renseigne aussi `redactedBy` (nom en clair).
 > - La date et l'heure du rendez-vous sont enregistrées en ISO **décalé du fuseau local** (heure locale présentée comme UTC). La date de visite d'un CE est fixée à **12 h locale** pour éviter les changements de jour liés au fuseau.
 
-### 11.3 `upload/` (photos)
+### 11.4 `upload/` (photos)
 
 ```mermaid
 flowchart LR
@@ -452,20 +483,22 @@ flowchart LR
     Watch --> Up["Envoi : GET URL signée puis PUT S3, toutes les 30 s ou immédiat"]
 ```
 
-- [attachmentUploadMachine.ts](../packages/frontend/src/features/upload/machines/attachmentUploadMachine.ts) gère un fichier unique (`idle → compressing → saving → inserting → idle`, ou `failed` avec relance ou abandon). [useBatchUpload.ts](../packages/frontend/src/features/upload/hooks/useBatchUpload.ts) traite plusieurs fichiers en parallèle, avec annulation et relance sans redemander le fichier. [useAttachmentImages.ts](../packages/frontend/src/features/upload/hooks/useAttachmentImages.ts) unifie les quatre tables de pièces jointes.
+- [attachmentUploadMachine.ts](../packages/frontend/src/features/upload/machines/attachmentUploadMachine.ts) gère un fichier unique (`idle → compressing → saving → inserting → idle`, ou `failed` avec relance ou abandon). [useBatchUpload.ts](../packages/frontend/src/features/upload/hooks/useBatchUpload.ts) traite plusieurs fichiers en parallèle, avec annulation et relance sans redemander le fichier. [useAttachmentImages.ts](../packages/frontend/src/features/upload/hooks/useAttachmentImages.ts) unifie les tables de pièces jointes.
 - **Ordre volontaire** : le fichier est écrit localement **avant** l'insertion de la ligne en base, pour que la file de pièces jointes trouve toujours un fichier déjà présent.
 - [pendingUploadsStore.ts](../packages/frontend/src/features/upload/pendingUploadsStore.ts) : registre en mémoire des envois en cours, par document parent. Il bloque « Créer le CR » et « Finaliser le constat ». Un envoi **en échec reste bloquant** jusqu'à ce que l'utilisateur l'abandonne explicitement.
 - **Annotation** ([KonvaDrawingCanvas.tsx](../packages/frontend/src/features/upload/KonvaDrawingCanvas.tsx)) : dessin à main levée en couleurs et épaisseurs au choix, zoom et déplacement, annulation, légende. À l'enregistrement, le tracé est **incrusté** dans une nouvelle image JPEG (qualité 0,9) à la taille d'origine : l'ancienne photo est rendue obsolète et l'opération est **irréversible**. Fermer la fenêtre (Échap, clic à l'extérieur) **enregistre** les modifications en cours.
 - Suppression d'une photo : le fichier local est supprimé et la ligne passe à `is_deprecated = 1`. Le fichier S3 n'est pas supprimé : `deleteFile` de l'adaptateur distant est une fonction vide.
 - Nommage des clés S3 : `<id parent>/images/<uuidv7>.jpg` ; les images de localisation utilisent `<id partie visitée>/localisation/<uuidv7>.jpg`, et ce segment de chemin sert à les **identifier**.
 
-Paramètres de la file de pièces jointes ([db.ts](../packages/frontend/src/db/db.ts#L62-L100)) : synchronisation **toutes les 30 s**, téléchargement automatique des fichiers référencés, conservation de **100** fichiers archivés. L'observation porte sur les quatre tables `*_attachment` avec `is_deprecated = 0`. L'extension est déduite de l'identifiant, avec `jpg` par défaut.
+Paramètres de la file de pièces jointes ([db.ts](../packages/frontend/src/db/db.ts)) : synchronisation **toutes les 30 s**, téléchargement automatique des fichiers référencés, conservation de **100** fichiers archivés. L'observation porte sur les cinq tables `*_attachment` (dont `monument_alert_attachment`) avec `is_deprecated = 0`. L'extension est déduite de l'identifiant, avec `jpg` par défaut.
+
+Le champ fichier est vidé **dès la sélection** : rechoisir le même fichier pendant un envoi ou après un échec ne faisait rien (corrigé le 4/11/2026, PR #85, dans `development`, pas encore en production).
 
 > Pièges :
 > - `getAttachmentUrl` force le type `image/png`, quel que soit le format réel.
-> - La requête des photos d'un CR exclut les identifiants qui se terminent par `.pdf`. Le PDF envoyé d'un CR est donc *a priori* lui aussi rangé dans `report_attachment` et transite par la file de pièces jointes (à confirmer côté backend).
+> - La requête des photos d'un CR exclut les identifiants qui se terminent par `.pdf`. Le PDF envoyé d'un CR est en effet rangé dans `report_attachment` par le backend (`POST /api/pdf/report`) et transite donc par la file de pièces jointes.
 
-### 11.4 `map/` (cartographie)
+### 11.5 `map/` (cartographie)
 
 | Fonction | Fichier | Source de données |
 | --- | --- | --- |
@@ -480,20 +513,21 @@ Paramètres de la file de pièces jointes ([db.ts](../packages/frontend/src/db/d
 > Règles cachées :
 > - Centre par défaut de la carte de choix du monument : géolocalisation (délai de 8 s), sinon le dernier monument de l'utilisateur, sinon le dernier monument du service, sinon **le ministère de la Culture à Paris** (2,3376 ; 48,8637).
 > - Ordre de repli des coordonnées du plan de situation : coordonnées saisies → coordonnées WGS84 de la notice POP → géocodage de l'adresse POP → géocodage de l'adresse saisie ([planSituationAttachment.ts](../packages/frontend/src/features/state-report/planSituationAttachment.ts#L16-L50)).
-> - **Aucune carte ne fonctionne hors ligne** : les tuiles ne sont pas mises en cache. `PlanSituationOfflineError` est levée en l'absence de réseau.
+> - **Aucune carte ne fonctionne hors ligne** : les tuiles ne sont pas mises en cache. `PlanSituationOfflineError` est levée seulement si l'appareil est **réellement** hors ligne. Depuis le 10/11/2026, une tuile IGN en erreur n'interrompt plus la capture, le délai est de 30 s, et les autres échecs ont leur propre message et partent dans Sentry (avant, toute erreur de carte s'affichait comme « hors ligne »).
+> - Le géocodage du plan de situation interroge la Géoplateforme avec une adresse nettoyée : elle refusait les adresses POP de plus de 200 caractères ou commençant par une ponctuation.
 > - [address.tsx](../packages/frontend/src/features/address.tsx) n'encode pas la requête dans l'URL, contrairement à `geocode`.
 
-### 11.5 `text-editor/`
+### 11.6 `text-editor/`
 
 Éditeur TipTap ([TextEditorContext.tsx](../packages/frontend/src/features/text-editor/TextEditorContext.tsx)) : StarterKit, souligné, couleur, taille de police, images, tableaux, colonnes, liens, filet horizontal. La CSS spécifique aux constats (`stateReportExtraCss`) vient du paquet `pdf`. Il sert à la mise en page des CR. Le constat produit son HTML mais n'expose pas d'écran d'édition. [ConstatPdf.edit.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.edit.tsx) existe, mais la table `contentMap` de la route du constat n'a pas d'entrée `edit`. Or `validateSearch` accepte `mode=edit` : une URL `/constat/<id>/pdf?mode=edit` ferait donc planter la page (à confirmer).
 
-### 11.6 `audio-record/` (dictée)
+### 11.7 `audio-record/` (dictée)
 
 [SpeechRecorder.machine.tsx](../packages/frontend/src/features/audio-record/SpeechRecorder.machine.tsx) : **Web Speech API** (`SpeechRecognition` ou `webkitSpeechRecognition`), langue `fr-FR`, `continuous = false` avec **redémarrage automatique** à chaque fin de reconnaissance tant que l'utilisateur n'arrête pas, résultats intermédiaires affichés en direct. Le texte final est ajouté au champ, précédé d'une espace.
 
 > Point d'attention (homologation) : sous Chrome, la reconnaissance vocale est réalisée **par un service distant de Google**. La dictée ne fonctionne donc pas hors ligne et transmet la voix à un tiers (à confirmer et à mentionner dans la politique de confidentialité). Sur les navigateurs sans cette API, le bouton n'est pas utilisable.
 
-### 11.7 `menu/`, `auth/`, `chips/` et composants transverses
+### 11.8 `menu/`, `auth/`, `chips/` et composants transverses
 
 - **Menu** ([menuMachine.tsx](../packages/frontend/src/features/menu/menuMachine.tsx)) : états `closed`, `main`, `help`, `clauses`. L'aide propose « **Réinitialiser les données locales** » ([HelpMenu.tsx](../packages/frontend/src/features/menu/HelpMenu.tsx#L17-L29)) : `disconnectAndClear` de PowerSync, désinscription des SW, `localStorage.clear()`, suppression de **toutes** les bases IndexedDB, puis rechargement.
   > Danger : les modifications **pas encore envoyées** au serveur (file CRUD, photos pas encore téléversées) sont **perdues définitivement**, sans avertissement. La suppression des jetons déconnecte aussi l'utilisateur.
@@ -517,7 +551,7 @@ Paramètres de la file de pièces jointes ([db.ts](../packages/frontend/src/db/d
 
 ## 13. Supervision et mesure d'audience
 
-- **Sentry** : actif seulement en production et si `VITE_SENTRY_DSN` est défini. `tracesSampleRate: 1.0` (**100 % des transactions**), `enableLogs`, et **capture de la console** (`log`, `info`, `warn`, `error`). Le code journalise abondamment en console, par exemple `console.log("applying operation", payload)` dans `uploadData` et `console.log("token expired, refreshing...", { ...apiStore })`. **Des données métier, des données personnelles et des jetons d'accès peuvent donc partir vers Sentry** : point à traiter pour l'homologation (filtrage `beforeSend` ou retrait de `consoleLoggingIntegration`). L'`ErrorBoundary` racine envoie les erreurs React avec la pile des composants.
+- **Sentry** : actif seulement en production et si `VITE_SENTRY_DSN` est défini. Depuis le 4/11/2026 (PR #83) : 10 % des transactions, `sendDefaultPii: false`, ni journaux ni fil d'Ariane console, et `beforeSend` qui retire l'utilisateur et masque les clés de type mot de passe, jeton, courriel ou destinataires. Les `console.log` qui exposaient les jetons et les opérations de synchronisation ont été retirés du connecteur. L'`ErrorBoundary` racine envoie les erreurs React avec la pile des composants.
 - **Matomo** : `stats.beta.gouv.fr`, `siteId` 123, suivi des liens activé par `enableLinkTracking()` à chaque rendu d'`App`. La politique de confidentialité le déclare en mode « exempté ».
 - `TanStackDevtools` est monté dans l'arbre en permanence (sans effet visible en production, à confirmer).
 
@@ -548,6 +582,9 @@ En production, l'étape `frontend` du [Dockerfile](../Dockerfile) construit l'ap
 | Se connecter pour la première fois | non | Appel au backend |
 | Lister, créer et modifier CR et CE | oui | Base locale, synchronisation au retour du réseau |
 | Rechercher un monument | oui, si `pop_stream` a été synchronisé | Données limitées aux départements de l'utilisateur |
+| Consulter une fiche MH ou objet | oui, en partie | Constats des autres services, unités patrimoniales et photos POP en ligne seulement |
+| Choisir une unité patrimoniale | non | `GET /api/up/monument` ; hors ligne, constat sur l'ensemble du monument |
+| Signaler une alerte ou annoter un objet depuis une fiche | oui | Envoi par courriel au retour du réseau |
 | Voir les photos d'un objet POP | non | `GET /api/state-report/objets-images` |
 | Ajouter et annoter des photos | oui | Envoi différé par la file de pièces jointes |
 | Voir les photos d'un document jamais ouvert en ligne | non | Flux de pièces jointes à la demande |
@@ -573,12 +610,13 @@ Récapitulatif des points qui surprennent un nouvel arrivant. Les détails figur
 11. Une **alerte « Sécurité »** a toujours une adresse « Mairie » vide au départ (champ absent du service).
 12. Les **séparateurs dans les colonnes texte** (`/`, `:`, `,`, `;`) ne sont pas échappés (§ 8.4).
 13. L'onglet de l'accueil vaut **`"all"`** par défaut alors que les onglets sont `my` et `service`.
-14. **Sentry à 100 %** avec capture de la console, y compris des journaux contenant jetons et données.
+14. Sentry n'envoie que les exceptions, filtrées (depuis le 4/11/2026).
 15. Les **fichiers S3 ne sont jamais supprimés** par le client (`deleteFile` vide), même quand la photo est supprimée ou remplacée.
 16. Les **en-têtes PDF** sont découpés en lignes selon le nombre de mots.
 17. Les constantes de `/stats` sont **écrites en dur** (1 102 agents, libellés « créés en 2026 », 46 000 immeubles).
-18. **Tout membre d'un service** peut modifier les paramètres du service depuis l'interface.
-19. Un compte avec `service_id = "no-service"` affiche une fenêtre bloquante de choix du service.
+18. **Tout membre d'un service** peut modifier les paramètres du service (interface et serveur, décision du 4/11/2026).
+19. Un compte avec `service_id = "no-service"` affiche une fenêtre bloquante de choix du service (cas des anciens comptes créés par `/api/authenticate`, supprimée).
+20. Le type `AuthUser` est dérivé de `/api/authenticate` dans le client généré, alors que la route n'existe plus côté serveur ([api.ts](../packages/frontend/src/api.ts)).
 
 ## 17. Dette technique relevée
 

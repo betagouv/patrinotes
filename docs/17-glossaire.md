@@ -9,6 +9,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **ABF** | Architecte des bâtiments de France. Agent d'UDAP qui donne des avis sur les travaux en espaces protégés et rédige des comptes-rendus et des constats. |
 | **Agrégée** | Application ministérielle de suivi sanitaire des monuments historiques, citée dans l'application. |
 | **Alerte** (`state_report_alert`) | Signalement issu d'un constat d'état, adressé au service compétent : édifice en péril, abords, objets mobiliers, archéologie, site classé ou inscrit, biodiversité, sécurité. |
+| **Alerte de fiche, annotation** (`monument_alert`) | Alerte saisie depuis une fiche (MH, UP, objet) hors constat, ou annotation de visite d'un objet mobilier (présence, état, sécurité). |
 | **Bilan quinquennal** | Bilan sanitaire d'un monument historique, prévu tous les cinq ans. |
 | **Bordereau** | Corps du courriel d'envoi d'un constat, avec le texte réglementaire. |
 | **CAOA** | Conservateur des antiquités et objets d'art. Suit les objets mobiliers protégés. |
@@ -19,13 +20,15 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Courriels obligatoires / additionnels** | Destinataires imposés d'une alerte (services compétents) et destinataires ajoutés librement. |
 | **CRMH** | Conservation régionale des monuments historiques, service de la DRAC. |
 | **CST** | Contrôle scientifique et technique de l'État sur les monuments historiques. |
-| **Délégation** (`delegation`) | Droit donné par un agent à un collègue de créer, modifier et supprimer ses comptes-rendus. |
+| **Délégation** (`delegation`) | Droit donné par un agent à un collègue de son service de créer, modifier et supprimer ses comptes-rendus (et, côté serveur, ses constats et alertes de fiche). |
 | **Demandeur, pétitionnaire** (`applicant*`) | Personne reçue pour un projet de travaux, destinataire du compte-rendu. |
 | **DGPA** | Direction générale des patrimoines et de l'architecture. Éditrice de l'application et responsable de traitement. |
 | **DRAC** | Direction régionale des affaires culturelles. |
 | **DREAL** | Direction régionale de l'environnement, de l'aménagement et du logement. Compétente pour les sites classés et inscrits. |
 | **Envoi sous-couvert, validation** (`constat_validation`) | Envoi d'un constat soumis à l'accord préalable d'une personne désignée (le **validateur**), qui n'a pas besoin de compte. |
+| **Fiche MH, fiche UP, fiche objet** | Pages d'un monument, d'une unité patrimoniale ou d'un objet mobilier : informations, constats, alertes, objets, ensemble patrimonial. |
 | **Liste blanche** (`whitelist`) | Adresses e-mail autorisées à créer un compte. |
+| **MH complexe** | Monument découpé en unités patrimoniales. |
 | **Mérimée** (`pop_immeubles`) | Base nationale des immeubles protégés au titre des monuments historiques. |
 | **MH classé / inscrit** | Les deux niveaux de protection au titre des monuments historiques. |
 | **OFB** | Office français de la biodiversité. |
@@ -36,10 +39,12 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **POP** | Plateforme ouverte du patrimoine du ministère de la Culture, qui publie Mérimée et Palissy. |
 | **Préconisation** | Intervention recommandée dans un constat : études, entretien, réparation, restauration, mesures d'urgence. |
 | **Référence POP** | Identifiant d'une notice (PA… pour Mérimée, PM… pour Palissy). |
+| **Rapport groupé** (`state_report.rapport_id`) | Constats de plusieurs unités patrimoniales d'un même monument, envoyés ensemble dans un seul PDF. |
 | **Service** (`service`) | Unité de rattachement d'un agent (UDAP, CRMH, etc.), avec ses départements (`dept_numbers`), ses adresses d'alerte et ses en-têtes PDF. |
 | **Service instructeur** (`service_instructeurs`) | Mairie ou intercommunalité qui instruit les autorisations d'urbanisme mentionnées dans un compte-rendu. |
 | **SRA** | Service régional de l'archéologie. |
 | **UDAP** | Unité départementale de l'architecture et du patrimoine. Service déconcentré où travaillent les ABF. |
+| **Unité patrimoniale, UP** (`state_report.up_*`) | Partie d'un MH complexe (bâtiment, aile, décor…), organisée en arbre et lue dans l'API Dataspace du ministère. |
 
 ## 2. Technique
 
@@ -53,6 +58,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Checkpoint** | Point de cohérence que le client PowerSync applique d'un seul bloc. |
 | **Coolify** | PaaS auto-hébergé qui pilote les conteneurs du VPS actuel. |
 | **CORS** | Règles qui autorisent un site web à appeler un autre domaine (ici le navigateur vers S3 et vers l'API). |
+| **Dataspace (API)** | API du ministère qui fournit les unités patrimoniales d'un monument, interrogée par le backend (`UP_API_URL`). |
 | **DSFR** | Système de design de l'État. Police **Marianne**. |
 | **Drizzle** | Outil de définition du schéma et de génération des migrations SQL. |
 | **Émetteur** (`iss`) | Champ d'un jeton qui identifie le fournisseur d'identité qui l'a signé. |
@@ -82,6 +88,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Slot de réplication** | Curseur côté PostgreSQL qui retient le WAL tant que PowerSync ne l'a pas lu. |
 | **Soft delete** | Suppression logique par un drapeau (`disabled`, `is_deprecated`) ; la ligne reste en base. |
 | **Sync stream** | Règle PowerSync qui déclare quelles lignes un client reçoit ([sync-config.yaml](../powersync/sync-config.yaml)). |
+| **Politique d'écriture** (`syncPolicies`) | Liste des tables, colonnes et droits que le backend accepte sur `/api/upload-data` ([syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts)). |
 | **TypeBox** | Bibliothèque de schémas qui valide les requêtes de l'API et produit l'OpenAPI. |
 | **URL pré-signée** | URL S3 temporaire et signée qui autorise une lecture ou une écriture sans identifiants. |
 | **WAL** | *Write-Ahead Log*, journal des écritures de PostgreSQL. |

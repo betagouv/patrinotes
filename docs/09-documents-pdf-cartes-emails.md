@@ -163,7 +163,8 @@ Jusqu'au commit `fd87550` (« 2 last sprints #69 »), le backend générait les 
 | Télécharger l'aperçu (non envoyé) | blob local + `POST /api/pdf/state-report/log-download` | Journalisé aussi |
 | Export ZIP de tous ses documents ([compte.tsx](../packages/frontend/src/routes/compte.tsx#L626)) | `GET /api/pdf/state-report` / `GET /api/pdf/report` (PDF en base64) | ZIP construit côté client (`jszip`) |
 
-> ⚠️ `getReportPDF` ([uploadService.ts](../packages/backend/src/services/uploadService.ts#L99)) prend le **premier** `report_attachment` dont l'identifiant finit par `.pdf`, sans tri. Après plusieurs envois, l'export ZIP peut donc contenir un ancien PDF du CR (à confirmer).
+> ⚠️ `getReportPDF` ([uploadService.ts](../packages/backend/src/services/uploadService.ts)) prend le **premier** `report_attachment` en `.pdf` rangé sous `<reportId>/`, sans tri. Après plusieurs envois, l'export ZIP peut donc contenir un ancien PDF du CR (à confirmer).
+> Depuis le 4/11/2026, ces routes vérifient le service du document (et, pour un constat d'un autre service, que le monument est dans un département du service). Le dépôt et l'envoi d'un PDF sont réservés à qui peut modifier le document.
 > ⚠️ Le nom du constat contient la **date du jour du téléchargement** (`format(new Date())`), et non la date d'envoi.
 
 ---
@@ -179,8 +180,8 @@ Jusqu'au commit `fd87550` (« 2 last sprints #69 »), le backend générait les 
 
 ### 4.2 Mise en page ([images.tsx](../packages/pdf/src/components/images.tsx))
 
-- **Hauteur fixe de 180** (`CELL_HEIGHT`) pour toutes les images. La largeur se calcule à partir du ratio naturel (`width/height × 180`) quand les dimensions sont connues. Ce calage précis contourne une limite de mise en page de `react-pdf-html` : sans largeur explicite, une légende longue décale la cellule suivante au lieu de faire passer la ligne à la suivante.
-- Chaque cellule est enveloppée dans une balise personnalisée `<unbreakable>`, rendue en `View wrap={false}`. **Une photo et sa légende ne sont jamais coupées entre deux pages.** De même, dans le constat, chaque `<tr>` est insécable.
+- **Rangées calculées** (depuis le 4/11/2026) : les photos sont placées par rangées de 480 unités de large, avec une hauteur de **180** quand la place suffit. Une rangée est réduite jusqu'à **110** de haut pour garder les photos côte à côte avant de passer à la ligne. La largeur vient du ratio naturel (4/3 par défaut). Chaque légende est calée sur la largeur de sa photo : `react-pdf-html` ne sait pas dimensionner une cellule d'après sa légende, et une légende longue repoussait la photo suivante à la ligne.
+- Chaque rangée est enveloppée dans une balise personnalisée `<unbreakable>`, rendue en `View wrap={false}`. **Une photo et sa légende ne sont jamais coupées entre deux pages.** De même, dans le constat, chaque `<tr>` est insécable.
 - Légende en 8 pt gris, sous l'image. Dans le CR, une photo sans légende est étiquetée `N°<i>`.
 - Les images sont des `blob:` URL locales au navigateur. Le HTML d'un constat n'est donc **pas réutilisable hors de la session** qui l'a produit. Ces URL ne sont jamais révoquées (`URL.revokeObjectURL`), ce qui provoque une fuite mémoire mineure si l'on ouvre beaucoup d'aperçus.
 
@@ -198,7 +199,7 @@ Jusqu'au commit `fd87550` (« 2 last sprints #69 »), le backend générait les 
 
 ### 5.1 Constat d'état ([`getStateReportHtmlString`](../packages/pdf/src/stateReport.tsx#L282))
 
-Ordre des blocs : titre (« Constat d'état du monument historique » + `titre_edifice` + « Référence POP ») → informations → protection → plans et vues → constat général → constat détaillé → préconisations générales → alertes → « Document créé le … ». Le pied de page contient un texte réglementaire fixe (Code du patrimoine, article R621-63, circulaire du 1er décembre 2009, norme EN 15898) et un lien vers culture.gouv.fr. Ce lien est découpé en segments de mots pour pouvoir passer à la ligne.
+Ordre des blocs : titre (« Constat d'état du monument historique » + `titre_edifice` + « Référence POP », suivie de l'**identifiant AgrÉgée** du monument s'il est connu) → pour un MH complexe, **unité patrimoniale** (intitulé, identifiant AgrÉgée, chemin depuis le monument entre crochets) → informations (date de visite et « Parties visitées : » en gras) → protection → plans et vues → constat général → constat détaillé → préconisations générales → alertes → « Document créé le … ». Le pied de page contient un texte réglementaire fixe (Code du patrimoine, article R621-63, circulaire du 1er décembre 2009, norme EN 15898) et un lien vers culture.gouv.fr. Ce lien est découpé en segments de mots pour pouvoir passer à la ligne.
 
 Règles :
 
@@ -207,7 +208,9 @@ Règles :
 - **Section « visitée »** ([`getIsSectionVisited`](../packages/pdf/src/utils.tsx#L100)) : (`etat_general` **et** `proportion_dans_cet_etat`) **ou** `niveau_degradation` **ou** au moins une pièce jointe **ou** au moins un repère de localisation (`localisation_pins` en JSON non vide).
 - **Visite partielle** : elle est détectée si `nature_visite` contient « partielle ». Les « Parties visitées » prennent alors la valeur de `visite_partielle_details`, sinon « Visite complète de l'édifice ».
 - **Préconisations** : elles sont sérialisées au format `option[:commentaire]/option[:commentaire]`, chaque partie étant encodée en URI ([`serializePreconisations`](../packages/pdf/src/stateReport.tsx#L346-L370)). Ce même format est utilisé au niveau du constat (préconisations générales) et de chaque section.
-- Un caractère `` ` `` parasite est rendu après la ligne « Représentant » ([state-report.info.tsx](../packages/pdf/src/state-report/state-report.info.tsx#L94)). C'est un défaut d'affichage mineur.
+- **Rapport groupé** (MH complexe) : un seul PDF contient les constats de plusieurs UP, chacun en **chapitre** (« Chapitre n / N ») commençant sur une nouvelle page. Le rapport porte le nom du monument seul.
+- Constat détaillé : le bloc « Commentaires » est masqué quand il est vide, et les sections sont espacées de 24 px (depuis le 4/11/2026).
+- Un caractère `` ` `` parasite est rendu après la ligne « Représentant » ([state-report.info.tsx](../packages/pdf/src/state-report/state-report.info.tsx)). C'est un défaut d'affichage mineur.
 
 ### 5.2 Compte-rendu ([`getReportHtmlString`](../packages/pdf/src/report.tsx#L247))
 
@@ -240,7 +243,7 @@ La cartographie utilise **MapLibre GL JS 5** (`maplibre-gl`), sans surcouche Rea
 | Glyphes du fond satellite (étiquettes des parcelles) | `https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf` | OpenFreeMap |
 | Fond « Satellite » (orthophotos) | `https://data.geopf.fr/wmts?…LAYER=ORTHOIMAGERY.ORTHOPHOTOS…TILEMATRIXSET=PM` | IGN, Géoplateforme |
 | Parcelles cadastrales (tuiles vectorielles) | `https://openmaptiles.geo.data.gouv.fr/data/cadastre.json`, puis les tuiles qu'il référence | Etalab, geo.data.gouv.fr |
-| Géocodage d'adresse | `https://api-adresse.data.gouv.fr/search/?q=…&limit=1` (cartes) et `&limit=10` (autocomplétion, [address.tsx](../packages/frontend/src/features/address.tsx)) | Base Adresse Nationale |
+| Géocodage d'adresse | `https://data.geopf.fr/geocodage/search?q=…&limit=1` (cartes et plan de situation, adresse nettoyée et limitée à 200 caractères) et `https://api-adresse.data.gouv.fr/search/?q=…&limit=10` (autocomplétion, [address.tsx](../packages/frontend/src/features/address.tsx)) | Base Adresse Nationale, Géoplateforme IGN |
 
 Tous ces appels partent **du navigateur de l'agent**, jamais du backend. L'attribution MapLibre est masquée par CSS (`.maplibregl-ctrl-attrib { display: none }`). Il faut vérifier que ce masquage est conforme aux licences OpenFreeMap / OpenStreetMap (ODbL) et IGN (à confirmer). Une alternative commentée vers le style `PLAN.IGN` de la Géoplateforme existe dans le code. Elle permettrait de ne plus dépendre d'OpenFreeMap.
 
@@ -272,13 +275,16 @@ flowchart TD
     D -- oui --> E["Carte MapLibre hors écran 640x480, fond satellite IGN"]
     E --> F["Zoom calculé pour l'échelle 1/5000 à 96 DPI"]
     F --> G["Ajout des seules parcelles sélectionnées"]
-    G --> H["Attente idle, 15 s max, sinon erreur hors ligne"]
+    G --> H["Attente idle, 30 s max ; tuiles en erreur ignorées"]
+    H -- "échec, appareil en ligne" --> W["PlanSituationUnavailableError : message propre, envoi à Sentry"]
     H --> I["Copie du canvas + dessin manuel du repère"]
     I --> J["JPEG qualité 0,92"]
     J --> K["Sauvegarde file d'attente + state_report_attachment type plan_situation, label Échelle 1/5000"]
 ```
 
-Constantes : `SNAPSHOT_WIDTH = 640`, `SNAPSHOT_HEIGHT = 480`, `SCALE_DENOMINATOR = 5000`, `DPI = 96`, zoom = `log2(156543.034 × cos(lat) / (5000 × 0,0254 / 96))`, délai `TILE_LOAD_TIMEOUT_MS = 15000` ([waitForIdle.ts](../packages/frontend/src/features/map/waitForIdle.ts)).
+Constantes : `SNAPSHOT_WIDTH = 640`, `SNAPSHOT_HEIGHT = 480`, `SCALE_DENOMINATOR = 5000`, `DPI = 96`, zoom = `log2(156543.034 × cos(lat) / (5000 × 0,0254 / 96))`, délai `TILE_LOAD_TIMEOUT_MS = 30000` ([waitForIdle.ts](../packages/frontend/src/features/map/waitForIdle.ts)).
+
+> Corrigé le 10/11/2026 : toute erreur de carte (une seule tuile IGN en 400 ou 404, ou un chargement de plus de 15 s) était présentée comme une absence de connexion. Seul un appareil réellement hors ligne affiche maintenant ce message.
 
 Règles cachées :
 
@@ -286,7 +292,7 @@ Règles cachées :
 - La carte hors écran est créée avec `preserveDrawingBuffer: true` ; sans cette option, la capture serait noire. `waitForIdle` s'appuie sur `map.loaded()` plutôt que sur `areTilesLoaded()`, qui peut renvoyer vrai avant le moindre chargement de tuile.
 - La capture est faite **au moment de la génération** : si l'agent déplace ensuite le point, `invalidatePlanSituationAttachment` marque l'ancien plan comme déprécié, et la prochaine ouverture de l'aperçu le régénère.
 - **Hors ligne**, le plan n'est pas généré. Un avertissement s'affiche au-dessus de l'aperçu (commit « display error above PDF if any map couldnt be generated », [ConstatPdf.view.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.view.tsx#L65)), et **le constat peut quand même être envoyé sans plan**.
-- ⚠️ **Exactitude de l'échelle** : l'image représente bien 1/5000 si elle est affichée à 640×480 px à 96 DPI. Le PDF l'affiche pourtant à une hauteur fixe de 180 unités (§ 4.2). Si `react-pdf` interprète ces unités comme des points (1/72 de pouce), l'échelle imprimée réelle est d'environ **1/10 000**, alors que la légende indique « Échelle 1/5000 » (à vérifier par une mesure sur un PDF imprimé).
+- ⚠️ **Exactitude de l'échelle** : l'image représente bien 1/5000 si elle est affichée à 640×480 px à 96 DPI. Le PDF l'affiche pourtant à une hauteur de 180 unités au plus, voire 110 si sa rangée est réduite (§ 4.2). Si `react-pdf` interprète ces unités comme des points (1/72 de pouce), l'échelle imprimée réelle est d'environ **1/10 000**, alors que la légende indique « Échelle 1/5000 » (à vérifier par une mesure sur un PDF imprimé).
 
 ### 6.4 Localisation d'une section (constat détaillé)
 
@@ -300,7 +306,7 @@ Règles cachées :
 
 - **Aucune tuile n'est mise en cache.** Le service worker ne gère que le précache de l'application, `env.js` et les navigations ([sw.ts](../packages/frontend/src/service-worker/sw.ts)). Les cartes interactives sont donc **inutilisables hors ligne**.
 - Les images déjà produites (plan de situation, localisations) sont des pièces jointes ordinaires, stockées dans IndexedDB et synchronisées. Elles restent disponibles hors ligne dans le PDF.
-- Dans l'infrastructure du ministère, le **proxy sortant des postes ou des tablettes** doit autoriser les domaines du § 6.1. Sinon, le plan de situation tombera dans le cas « hors ligne », ou dans « erreur » si `navigator.onLine` reste vrai.
+- Dans l'infrastructure du ministère, le **proxy sortant des postes ou des tablettes** doit autoriser les domaines du § 6.1. Sinon, le plan de situation ne sera pas généré (message « indisponible », signalé à Sentry).
 
 ---
 
@@ -385,14 +391,14 @@ Le transport est créé une seule fois avec Nodemailer ([mail.ts](../packages/ba
 - **Production** : Scaleway Transactional Email (TEM), confirmé par l'équipe. La [politique de confidentialité](../packages/frontend/src/routes/politique-confidentialite.tsx) cite pourtant Brevo et OVH parmi les sous-traitants : elle est à corriger.
 - **Développement** : Mailpit ([docker-compose.yaml](../docker-compose.yaml#L159-L170)), port SMTP `${SMTP_PORT}` → 1025 et interface web `${SMTP_WEB_PORT}` → 8025, avec acceptation de toute authentification.
 - ⚠️ Aucune option `secure`/`requireTLS` n'est passée à Nodemailer. Le chiffrement dépend de son comportement par défaut, qui varie selon le port (TLS implicite sur 465 ou STARTTLS opportuniste). Il faut **vérifier le chiffrement effectif** avec le relais SMTP du ministère (à confirmer).
-- Aucune file d'attente ni nouvelle tentative : un échec SMTP fait échouer la requête HTTP, ou est seulement journalisé pour les alertes.
+- Aucune file d'attente ni nouvelle tentative côté serveur : un échec SMTP fait échouer la requête HTTP, ou est seulement journalisé pour les alertes de constat. Seules les alertes de fiche sont réessayées, par la boîte d'envoi du navigateur (`sent_at` est remis à vide en cas d'échec).
 - La **réputation du domaine d'envoi** (SPF, DKIM, DMARC de l'adresse `EMAIL_EMITTER`) est à reconfigurer lors du transfert (hors code).
 
 ### 9.2 Gabarit
 
 Tous les courriels passent par [`wrapWithDsfrMail`](../packages/backend/src/features/mail/dsfrMailWrapper.ts#L150) : un gabarit HTML en tableaux, dans le style DSFR, compatible avec le mode sombre. Il contient le logo Marianne (versions claire et sombre) **en pièces jointes inline** (`cid:marianne-light@patrinotes`, `cid:marianne-dark@patrinotes`, environ 5 Ko chacune, lues dans `process.cwd()/public` puis mises en cache mémoire), le libellé « Ministère de la Culture », un bandeau de titre et le pied de page « Envoi automatique depuis le service numérique Patrinotes ».
 
-- Le titre et le *preheader* sont échappés, mais **le contenu ne l'est pas**. Les champs saisis par les agents y sont injectés bruts : commentaire d'alerte, titre du CR, préconisations, commentaire de refus du valideur. Le risque d'injection HTML dans les courriels est faible, mais il est réel.
+- Le titre et le *preheader* sont échappés, mais **le contenu ne l'est pas**, sauf dans le courriel des alertes de fiche. Les champs saisis par les agents y sont injectés bruts : commentaire d'alerte, titre du CR, préconisations, commentaire de refus du valideur. Le risque d'injection HTML dans les courriels est faible, mais il est réel.
 - ⚠️ Le backend doit être lancé **depuis `packages/backend`**, car le chemin `public/` est relatif au répertoire courant. Sinon, l'envoi échoue sur `readFileSync`. La variable `ASSETS_DIR` est déclarée mais non utilisée.
 - [template-generique.html](../packages/backend/src/features/mail/template-generique.html) (3 252 lignes) et les fichiers du dossier [assets/](../packages/backend/src/features/mail/assets/) ne sont pas référencés : ce sont des modèles de référence ou des doublons.
 
@@ -405,7 +411,8 @@ Tous les courriels passent par [`wrapWithDsfrMail`](../packages/backend/src/feat
 | 3 | Alerte ([`sendAlertEmail`](../packages/backend/src/features/mail.ts#L178), [alertMail.ts](../packages/backend/src/features/mail/alertMail.ts)) | Soumission du constat (une seule fois) | Courriels obligatoires et additionnels de l'alerte | `Alerte <type> - <monument>` | Phrase propre au type d'alerte, commentaire, **photos de l'alerte en pièces jointes inline** (`cid`, affichées avec une largeur maximale de 600 px), coordonnées de l'agent |
 | 4 | Demande de validation ([`sendValidationRequestMail`](../packages/backend/src/features/mail.ts#L112)) | Soumission avec envoi sous-couvert | `user_settings.validation_email` | `[Validation requise] Constat d'état[ : titre]` | Lien `FRONTEND_URL/constat-validation/<token>`, valable 7 jours |
 | 5 | Résultat de validation ([`sendValidationResultMail`](../packages/backend/src/features/mail.ts#L144)) | Acceptation ou refus | Créateur du constat | `Constat d'état[ : titre] — Accepté/Refusé par le validateur` | Lien vers le constat dans l'application, commentaire |
-| 6 | Réinitialisation du mot de passe ([`sendPasswordResetMail`](../packages/backend/src/features/mail.ts#L97)) | `POST /api/send-reset-password` ([userService.ts](../packages/backend/src/services/userService.ts#L37)) | Utilisateur de `internal_user` | `Patrinotes - Réinitialisation de mot de passe` | Lien `FRONTEND_URL/reset-password/<uuid>`, valable 1 jour (jeton stocké sous forme d'empreinte MD5). Probablement un **vestige d'avant Keycloak** (à confirmer) |
+| 6 | Réinitialisation du mot de passe ([`sendPasswordResetMail`](../packages/backend/src/features/mail.ts)) | `POST /api/send-reset-password` ([userService.ts](../packages/backend/src/services/userService.ts)) | Utilisateur de `internal_user` | `Patrinotes - Réinitialisation de mot de passe` | Lien `FRONTEND_URL/reset-password/<uuid>`, valable 1 jour (jeton stocké sous forme d'empreinte MD5). Probablement un **vestige d'avant Keycloak** (à confirmer) |
+| 7 | Alerte ou annotation de fiche ([`sendMonumentAlertEmail`](../packages/backend/src/features/mail.ts), [monumentAlertMail.ts](../packages/backend/src/features/mail/monumentAlertMail.ts)) | `POST /api/monument-alert/send`, appelé par le navigateur une fois l'alerte et ses photos synchronisées | Courriels obligatoires et additionnels | `Alerte <type> - <objet — monument — UP>` ou `Annotations de visite - …` | Monument, UP et objet concernés (référence Palissy), observations, photos inline. **Saisies échappées.** Envoi unique garanti par `sent_at` |
 
 Règles transverses :
 
@@ -413,7 +420,7 @@ Règles transverses :
 - Chaque destinataire est tracé dans `sent_email` (CR) ou `state_report_sent_email` (constat), puis ajouté à `suggested_email` du service pour l'autocomplétion. Les doublons sont ignorés silencieusement (`.catch(() => {})`).
 - **Lien vers le PDF** ([`createAttachmentRedirection`](../packages/backend/src/routes/pdfRoutes.tsx#L25)) : identifiant base62 d'un entier aléatoire compris entre 1 et 2^48, soit environ 48 bits d'entropie. Le lien est **public, sans authentification**, et **expire après 90 jours** ([attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L28)), alors que les courriels indiquent « 1 mois ». Le backend **relaie le fichier** en `Content-Disposition: inline` quand un nom est défini, ce qui est toujours le cas dans le code actuel. Sinon, il redirige vers une URL présignée d'1 h. Pour un constat, deux à trois redirections sont créées par envoi : une pour le courriel, une pour la réponse HTTP (inutilisée par le front) et une pour le valideur.
 - **Taille des courriels** : les courriels 1, 2, 4, 5 et 6 ne pèsent qu'environ 10 Ko de logos. Le courriel d'alerte embarque **toutes** les photos non dépréciées et non ignorées de l'alerte, chacune d'environ 1 Mo au plus si elle n'a pas été redessinée, **sans plafond global**. Une alerte riche en photos peut dépasser la taille maximale acceptée par le relais SMTP ou par les messageries des services destinataires. Le type MIME est forcé à `image/png` alors que les fichiers sont des JPEG.
-- **Données personnelles envoyées à Sentry** : `sentry.captureMessage` est appelé **à chaque envoi** avec, en données additionnelles, les destinataires et l'**objet `report` / `stateReport` complet** (noms, adresses, courriels des propriétaires). C'est un point à traiter pour l'homologation et le RGPD.
+- **Sentry** : depuis le 4/11/2026 (PR #83), aucun message n'est plus envoyé à chaque courriel. Une erreur d'alerte ne transmet que le type d'alerte et l'identifiant du constat. Avant, les destinataires et le document complet partaient à chaque envoi.
 
 ---
 
@@ -439,13 +446,14 @@ Recherche exhaustive des URL `http(s)://`, des appels `fetch` / `ofetch` et des 
 | `VITE_POWERSYNC_URL` | HTTPS / WebSocket | Synchronisation PowerSync | [Connector.ts](../packages/frontend/src/db/Connector.ts) |
 | Keycloak (`VITE_AUTH_URL`) | HTTPS | Authentification OIDC (voir le chapitre consacré) | — |
 | **`MINIO_URL`** (bucket S3) | HTTPS `PUT` présigné | Téléversement **direct** des photos et des PDF | [db.ts](../packages/frontend/src/db/db.ts#L53-L58), [ConstatPdf.queries.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.queries.tsx#L249) |
-| `api-adresse.data.gouv.fr` | HTTPS | Géocodage et autocomplétion d'adresse | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx#L114), [address.tsx](../packages/frontend/src/features/address.tsx) |
+| `api-adresse.data.gouv.fr` | HTTPS | Autocomplétion d'adresse | [address.tsx](../packages/frontend/src/features/address.tsx) |
+| `data.geopf.fr/geocodage` | HTTPS | Géocodage des cartes et du plan de situation | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
 | `tiles.openfreemap.org` | HTTPS | Style vectoriel, tuiles, sprites, glyphes | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx#L14-L21) |
 | `data.geopf.fr` | HTTPS (WMTS) | Orthophotos IGN (fond satellite, plan de situation) | idem |
 | `openmaptiles.geo.data.gouv.fr` | HTTPS | Tuiles vectorielles du cadastre | idem |
 | Hôte(s) des images POP | HTTPS | Vignettes des objets mobiliers. Les URL ont été extraites des notices POP par le backend et sont chargées telles quelles dans un `<img>` (hôte exact à confirmer) | [MonumentHistorique.tsx](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L477) |
 | `stats.beta.gouv.fr` | HTTPS | Mesure d'audience Matomo (`siteId` 123) | [main.tsx](../packages/frontend/src/main.tsx#L132-L135) |
-| Sentry (`VITE_SENTRY_DSN`) | HTTPS | Erreurs et traces (`tracesSampleRate: 1.0`), désactivé en dev | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
+| Sentry (`VITE_SENTRY_DSN`) | HTTPS | Erreurs filtrées et 10 % des traces, désactivé en dev | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 | Service de reconnaissance vocale du navigateur (Google, Microsoft ou Apple) | HTTPS (implicite) | Dictée vocale | § 10 |
 
 Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patrinotes.beta.gouv.fr` (aide et FAQ), formulaire Typeform `adtk8x51mbw.eu.typeform.com`, legifrance, service-public, info.gouv.fr, data.gouv.fr, github.com/betagouv/patrinotes, defenseurdesdroits.fr, cnil.fr.
@@ -461,7 +469,8 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 | `ministere-culture.s3.sbg.io.cloud.ovh.net` | HTTPS | Téléchargement de `merimee.csv` et `palissy.csv` (POP), **uniquement si `FORCE_REFETCH_POP=true`** au démarrage | [pop.ts](../packages/backend/src/features/data/pop.ts#L254-L261), [index.ts](../packages/backend/src/index.ts#L16) |
 | `pop.culture.gouv.fr` | HTTPS | Scraping des images des notices (`initPopImages`, désactivé dans `index.ts`, script `pnpm backend import-pop`) | [pop.ts](../packages/backend/src/features/data/pop.ts#L287) |
 | `collectif-objets-datasette.fly.dev` | HTTPS | **Code mort** : la variable `COLLECTIF_OBJETS_DATASETTE_URL` est commentée | [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) |
-| Sentry (`SENTRY_DSN`) | HTTPS | Erreurs, traces et messages contenant des données personnelles (§ 9.3) | [sentry.ts](../packages/backend/src/features/sentry.ts) |
+| API Dataspace des unités patrimoniales (`UP_API_URL`) | HTTPS | Arbre des UP d'un MH complexe, si `UP_API_MODE=live` ; joignable seulement depuis le réseau de production | [upProvider.ts](../packages/backend/src/features/up/upProvider.ts) |
+| Sentry (`SENTRY_DSN`) | HTTPS | Erreurs filtrées (`beforeSend`) et 10 % des traces | [sentry.ts](../packages/backend/src/features/sentry.ts) |
 
 `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts#L30) mais n'est **utilisée nulle part**.
 
@@ -477,16 +486,15 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 
 | Sujet | Risque | Piste |
 |---|---|---|
-| `GET /api/upload/attachment` et `GET /api/upload/attachment/presigned-url` acceptent n'importe quel `filePath` pour tout utilisateur authentifié ([uploadRoutes.tsx](../packages/backend/src/routes/uploadRoutes.tsx)) | Lecture ou écrasement d'un fichier d'un autre service (IDOR) | Contrôler l'appartenance du chemin au service de l'utilisateur |
+| Fichiers limités au service du document depuis le 4/11/2026 ; URL d'écriture encore délivrée pour un document pas encore en base ([attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)) | Faible : un identifiant de document inconnu est nécessaire | Surveiller ; contrôler taille et type |
 | Liens publics `/attachment` (90 jours) et validation (sans expiration après décision) | Accès au PDF par toute personne qui détient le lien | Durées cohérentes avec le texte des courriels, expiration après décision |
-| Données personnelles dans Sentry | RGPD, homologation | Retirer `extra: { report, stateReport, recipients }` |
 | Contenu des courriels non échappé | Injection HTML | Échapper les champs saisis |
 | Patch `react-pdf-html` orphelin, dépendances mortes (`canvas`, `@rawwee/react-pdf-html`, `jsdom`, backend `@react-pdf/renderer`, `@mikecousins/react-pdf`, `react-pdfobject`) et paquets Cairo/Pango dans le Dockerfile | Dette, image lourde, surface d'attaque | Nettoyage |
 | Alertes envoyées avant validation | Alerte transmise pour un constat ensuite refusé | Décaler l'envoi après acceptation |
 | Courriel d'alerte sans plafond de taille | Rejet SMTP | Limiter, ou passer par des liens |
 | Fournisseur OpenFreeMap hors sphère publique, attribution masquée | Disponibilité, licences | Basculer sur PLAN.IGN (Géoplateforme) |
 | Polices `.ttf` non précachées | PDF impossible hors ligne sur un appareil vierge | Ajouter `ttf` à `globPatterns` |
-| Légende « Échelle 1/5000 » | Échelle imprimée possiblement fausse | Mesurer, ajuster `CELL_HEIGHT` ou la taille de capture |
+| Légende « Échelle 1/5000 » | Échelle imprimée possiblement fausse | Mesurer, fixer la taille d'affichage du plan de situation ou adapter la capture |
 | Alerte « Sécurité » : pas de colonne `courriel_mairie` | Saisie manuelle systématique | Ajouter la colonne, ou documenter ce comportement |
 
 ---
