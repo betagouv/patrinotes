@@ -302,6 +302,8 @@ export const constatValidation = pgTable("constat_validation", {
   pdfPath: text("pdf_path").notNull(),
   createdAt: text("created_at").notNull(),
   serviceId: text("service_id"),
+  // when the validator accepted or declined (null while pending, and for decisions made before 0044 when unknown)
+  decidedAt: text("decided_at"),
 });
 
 export const popObjets = pgTable("pop_objets", {

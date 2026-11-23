@@ -11,17 +11,25 @@ import { publicRateLimit } from "../features/rateLimit";
 
 const optionalString = Type.Optional(Type.Union([Type.String(), Type.Null()]));
 
+/**
+ * Pending: the constat and its PDF, for the validator to decide. Once accepted or declined, only the decision and its
+ * date (SEC-08): the link stays in the validator's mailbox, it must not give access to the constat anymore.
+ */
 const validationInfoTSchema = Type.Object({
-  stateReport: Type.Object({
-    id: optionalString,
-    titre_edifice: optionalString,
-    commune: optionalString,
-    date_visite: optionalString,
-  }),
-  pdfUrl: Type.String(),
+  stateReport: Type.Optional(
+    Type.Object({
+      id: optionalString,
+      titre_edifice: optionalString,
+      commune: optionalString,
+      date_visite: optionalString,
+    }),
+  ),
+  pdfUrl: Type.Optional(Type.String()),
   status: optionalString,
-  comment: optionalString,
+  decidedAt: optionalString,
 });
+
+const isDecided = (validation: { status: string }) => validation.status !== "pending";
 
 export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   // public pages opened from the validator's email: limited per IP
@@ -49,7 +57,11 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         throw new AppError(404, "Lien de validation introuvable");
       }
 
-      if (new Date(validation.token_expires_at) < new Date() && validation.status === "pending") {
+      if (isDecided(validation)) {
+        return { status: validation.status, decidedAt: validation.decided_at };
+      }
+
+      if (new Date(validation.token_expires_at) < new Date()) {
         throw new AppError(410, "Ce lien de validation a expiré");
       }
 
@@ -70,7 +82,6 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         },
         pdfUrl,
         status: validation.status,
-        comment: validation.comment,
       };
     },
   );
@@ -94,7 +105,11 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
       if (!validation) {
         throw new AppError(404, "Lien de validation introuvable");
       }
-      if (new Date(validation.token_expires_at) < new Date() && validation.status === "pending") {
+      // the PDF is only shown to the validator while the decision is pending (SEC-08)
+      if (isDecided(validation)) {
+        throw new AppError(410, "Ce constat a déjà été traité");
+      }
+      if (new Date(validation.token_expires_at) < new Date()) {
         throw new AppError(410, "Ce lien de validation a expiré");
       }
 
@@ -136,7 +151,7 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
       await db.transaction().execute(async (trx) => {
         await trx
           .updateTable("constat_validation")
-          .set({ status: "accepted", comment: comment ?? null })
+          .set({ status: "accepted", comment: comment ?? null, decided_at: new Date().toISOString() })
           .where("token", "=", token)
           .execute();
 
@@ -238,7 +253,7 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
       await db.transaction().execute(async (trx) => {
         await trx
           .updateTable("constat_validation")
-          .set({ status: "declined", comment })
+          .set({ status: "declined", comment, decided_at: new Date().toISOString() })
           .where("token", "=", token)
           .execute();
 

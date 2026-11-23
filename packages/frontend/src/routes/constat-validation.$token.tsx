@@ -13,6 +13,7 @@ import { fr } from "@codegouvfr/react-dsfr";
 import RadioButtons from "@codegouvfr/react-dsfr/RadioButtons";
 import { useState } from "react";
 import { downloadFile } from "../utils";
+import { format } from "date-fns";
 
 export const Route = createFileRoute("/constat-validation/$token")({
   component: ConstatValidationPage,
@@ -29,10 +30,11 @@ function ConstatValidationPage() {
     queryKey: ["constat-validation", token],
     queryFn: () =>
       ofetch<{
-        stateReport: { id: string; titre_edifice: string | null; commune: string | null; date_visite: string | null };
-        pdfUrl: string;
+        // only while the decision is pending
+        stateReport?: { id: string; titre_edifice: string | null; commune: string | null; date_visite: string | null };
+        pdfUrl?: string;
         status: string;
-        comment: string | null;
+        decidedAt?: string | null;
       }>(`${ENV.VITE_BACKEND_URL}/api/constat-validation/${token}`),
     retry: false,
   });
@@ -104,27 +106,17 @@ function ConstatValidationPage() {
     );
   }
 
-  const { stateReport, status, comment } = query.data!;
-  const title = stateReport?.titre_edifice ?? "Constat d'état";
+  const { status, decidedAt } = query.data!;
 
-  if (status === "accepted") {
+  // Already decided: the link no longer shows the constat nor its PDF (SEC-08), only the decision and its date.
+  if (status === "accepted" || status === "declined") {
+    const decision = status === "accepted" ? "accepté" : "refusé";
+    const date = decidedAt ? ` le ${format(new Date(decidedAt), "dd/MM/yyyy")}` : "";
     return (
       <Center mt="40px">
         <Stack maxWidth="600px" textAlign="center" gap="16px">
-          <Typography variant="h4">Constat accepté</Typography>
-          <Typography>Ce constat a été accepté et envoyé aux destinataires.</Typography>
-          {comment && <Typography>Commentaire : {comment}</Typography>}
-        </Stack>
-      </Center>
-    );
-  }
-
-  if (status === "declined") {
-    return (
-      <Center mt="40px">
-        <Stack maxWidth="600px" textAlign="center" gap="16px">
-          <Typography variant="h4">Constat refusé</Typography>
-          {comment && <Typography>Commentaire : {comment}</Typography>}
+          <Typography variant="h4">{status === "accepted" ? "Constat accepté" : "Constat refusé"}</Typography>
+          <Typography>{`Ce constat a déjà été ${decision}${date}.`}</Typography>
         </Stack>
       </Center>
     );

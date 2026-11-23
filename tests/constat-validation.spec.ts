@@ -7,6 +7,7 @@ import { v4 } from "uuid";
 const mailpitPort = process.env.MAILPIT_WEB_PORT ?? "3018";
 const backendPort = process.env.BACKEND_PORT ?? "3011";
 const validatorEmail = "validator@example.com";
+const formatToday = () => new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 test.describe("Constat validation flow", () => {
   test.beforeAll(async () => {
@@ -165,6 +166,21 @@ test.describe("Constat validation flow", () => {
     await page.getByRole("radio", { name: /Oui, envoyer le constat/ }).check({ force: true });
     await page.getByRole("button", { name: "Terminer" }).click();
     await expect(page.getByText("Constat accepté")).toBeVisible();
+
+    // -------------------------------------------------------------------------
+    // 9b. Once decided, the link only shows the decision and its date, no PDF (SEC-08)
+    // -------------------------------------------------------------------------
+    await page.goto(validationUrl);
+    await expect(page.getByText(`Ce constat a déjà été accepté le ${formatToday()}.`)).toBeVisible();
+    await expect(page.locator("canvas[data-test-id='pdf-canvas-1']")).toHaveCount(0);
+    const decidedInfo = await (
+      await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${validationToken}`)
+    ).json();
+    expect(decidedInfo).toEqual({ status: "accepted", decidedAt: expect.any(String) });
+    const decidedPdfResp = await request.get(
+      `http://127.0.0.1:${backendPort}/api/constat-validation/${validationToken}/pdf`,
+    );
+    expect(decidedPdfResp.status()).toBe(410);
 
     // -------------------------------------------------------------------------
     // 10. Verify the constat email was now sent to the original recipient
@@ -366,6 +382,42 @@ test.describe("Constat validation flow", () => {
         { data: { comment: "trying again" } },
       );
       expect(declineResp.status()).toBe(404);
+    } finally {
+      await db.deleteFrom("constat_validation").where("token", "=", token).execute();
+    }
+  });
+
+  test("a declined validation link shows the decision and its date, without the constat", async ({ page, request }) => {
+    const token = "decided-test-" + v4();
+    await db
+      .insertInto("constat_validation")
+      .values({
+        id: v4(),
+        state_report_id: null,
+        token,
+        token_expires_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+        validator_email: validatorEmail,
+        status: "declined",
+        comment: "commentaire du valideur",
+        recipients: "someone@example.com",
+        pdf_path: "dummy/does-not-matter.pdf",
+        created_at: "2026-03-10T09:00:00.000Z",
+        decided_at: "2026-03-12T10:00:00.000Z",
+      })
+      .execute();
+
+    try {
+      // even once the 7 days are over, the decision is shown rather than "expired"
+      const info = await (await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${token}`)).json();
+      expect(info).toEqual({ status: "declined", decidedAt: "2026-03-12T10:00:00.000Z" });
+      expect((await request.get(`http://127.0.0.1:${backendPort}/api/constat-validation/${token}/pdf`)).status()).toBe(
+        410,
+      );
+
+      await page.goto(`./constat-validation/${token}`);
+      await expect(page.getByText("Ce constat a déjà été refusé le 12/03/2026.")).toBeVisible();
+      await expect(page.getByText("commentaire du valideur")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Télécharger le document" })).toHaveCount(0);
     } finally {
       await db.deleteFrom("constat_validation").where("token", "=", token).execute();
     }
