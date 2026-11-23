@@ -1,7 +1,7 @@
 import { TypeBoxValidatorCompiler, TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import fastify, { type FastifyError } from "fastify";
 import { FetchError } from "ofetch";
-import { AppError } from "./features/errors";
+import { AppError, isValidationError, VALIDATION_ERROR_MESSAGE } from "./features/errors";
 import { userPlugin } from "./routes/userRoutes";
 import { getServices } from "./services/services";
 import cors from "@fastify/cors";
@@ -88,6 +88,11 @@ export const initFastify = async () => {
         if (error instanceof RateLimitError) {
           // expected under load or abuse: not an application error, not sent to Sentry
           return reply.status(429).header("Retry-After", String(Math.max(error.retryAfter, 1))).send({ error: error.message });
+        }
+        if (isValidationError(error)) {
+          // malformed request (schema): a client error, not sent to Sentry; the route pattern is enough to debug it
+          console.warn("[validation]", request.method, request.routeOptions?.url, error.message);
+          return reply.status(400).send({ error: VALIDATION_ERROR_MESSAGE });
         }
         if ((error as unknown) instanceof FetchError) {
           // the message holds the full upstream URL, which may contain an email (Keycloak user lookups)
