@@ -5,8 +5,6 @@ Ce document décrit la base PostgreSQL de Patrinotes : les tables et leurs colon
 Source de vérité : [schema.ts](../packages/backend/src/db/schema.ts) (Drizzle). Les types Kysely utilisés à l'exécution sont dérivés de ce fichier dans [db.ts](../packages/backend/src/db/db.ts). Côté navigateur, le schéma SQLite local est déclaré à part dans [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts).
 
 > Les informations ci-dessous viennent de la lecture du code de `development` et du relevé de production du 17/11/2026 (lecture seule de la base de production : publication, migrations, volumétrie). Les points déduits mais non vérifiés sur une base réelle sont signalés par « *à confirmer* ».
->
-> **La production déploie `main`** (migrations 0000 à 0036). Les tables et colonnes des unités patrimoniales et des fiches (migrations 0037 à 0039) sont dans `development`, pas encore déployées en production.
 
 ---
 
@@ -17,22 +15,22 @@ Source de vérité : [schema.ts](../packages/backend/src/db/schema.ts) (Drizzle)
 | Domaine | Tables | Rôle |
 | --- | --- | --- |
 | **Utilisateurs et services** | `user`, `internal_user`, `whitelist`, `service`, `user_dept`, `delegation`, `user_settings`, `service_instructeurs`, `suggested_email`, `clause_v2` | Comptes, rattachement à un service (UDAP, CRMH, DRAC…), départements couverts, partage entre agents, préférences, carnet d'adresses, textes types. |
-| **Compte-rendu de visite (CR)** | `report`, `report_attachment`, `pdf_snapshot`, `sent_email`, `pictures` (historique) | Le compte-rendu (« Compte-rendu VIF » était l'ancien nom du produit), ses photos, son brouillon HTML et les envois par courriel. |
+| **Compte-rendu de visite (CR)** | `report`, `report_attachment`, `pdf_snapshot`, `sent_email` | Le compte-rendu (« Compte-rendu VIF » était l'ancien nom du produit), ses photos, son brouillon HTML et les envois par courriel. |
 | **Constat d'état (CE)** | `state_report`, `visited_section`, `visited_section_attachment`, `state_report_attachment`, `state_report_alert`, `state_report_alert_attachment`, `state_report_sent_email`, `constat_validation`, `constat_pdf_download` | Le constat d'état d'un monument historique, ses parties visitées, ses photos, ses alertes vers des services tiers, son circuit de validation et le suivi des téléchargements. |
 | **Fiches monument** | `monument_alert`, `monument_alert_attachment`, `monument_correction` | Alertes et annotations saisies depuis une fiche (MH, UP, objet) hors constat, leurs photos, et corrections des informations POP par un service (§ 5.7). |
-| **Référentiels patrimoniaux (POP)** | `pop_immeubles`, `pop_objets`, `pop_images`, `merimee` (historique), `up_cache` | Copies locales des bases Mérimée (immeubles) et Palissy (objets mobiliers) de la Plateforme ouverte du patrimoine ; cache des réponses de l'API Dataspace des unités patrimoniales. Voir [07 — Données externes et stockage](07-donnees-externes-et-stockage.md). |
+| **Référentiels patrimoniaux (POP)** | `pop_immeubles`, `pop_objets`, `pop_images`, `up_cache` | Copies locales des bases Mérimée (immeubles) et Palissy (objets mobiliers) de la Plateforme ouverte du patrimoine ; cache des réponses de l'API Dataspace des unités patrimoniales. Voir [07 — Données externes et stockage](07-donnees-externes-et-stockage.md). |
 | **Technique** | `transactions`, `attachment_redirection`, `drizzle.__drizzle_migrations` | Journal des écritures reçues des navigateurs (et des changements de service), liens courts vers les PDF envoyés par courriel, suivi des migrations. |
 
-La base compte **34 tables applicatives** dans le schéma `public`, plus la table de suivi de Drizzle. Une **deuxième base**, `keycloak`, est créée dans la même instance PostgreSQL pour Keycloak (voir § 8.3). Patrinotes n'y accède pas directement.
+La base compte **32 tables applicatives** dans le schéma `public`, plus la table de suivi de Drizzle. Une **deuxième base**, `keycloak`, est créée dans la même instance PostgreSQL pour Keycloak (voir § 8.3). Patrinotes n'y accède pas directement.
 
 ### 1.2 Particularités globales à connaître
 
-- **Presque aucune contrainte d'intégrité.** Seules 15 clés étrangères existent (liste au § 3). La plupart des liens (`report_id`, `state_report_id`, `service_id`, `visited_section_id`…) sont **logiques** : rien n'empêche une ligne orpheline. La cohérence repose sur l'application.
-- **Presque aucun index secondaire** sur les tables métier, hormis les clés primaires, les contraintes d'unicité, 3 index sur `merimee` et 4 sur les tables des fiches (`monument_alert` : `reference_pop`, `service_id`, `state_report_id` ; `monument_correction` : `reference_pop`). Les requêtes par `service_id`, `state_report_id` ou `departement_format_numerique` passent par des parcours séquentiels (voir § 9).
+- **Presque aucune contrainte d'intégrité.** Seules 14 clés étrangères existent (liste au § 3). La plupart des liens (`report_id`, `state_report_id`, `service_id`, `visited_section_id`…) sont **logiques** : rien n'empêche une ligne orpheline. La cohérence repose sur l'application.
+- **Presque aucun index secondaire** sur les tables métier, hormis les clés primaires, les contraintes d'unicité et 4 index sur les tables des fiches (`monument_alert` : `reference_pop`, `service_id`, `state_report_id` ; `monument_correction` : `reference_pop`). Les requêtes par `service_id`, `state_report_id` ou `departement_format_numerique` passent par des parcours séquentiels (voir § 9).
 - **Toutes les clés primaires sont des `text`**, générées par l'application (UUID v4 ou v7, parfois préfixées), jamais par la base (§ 4.1).
 - **Les dates sont des `timestamp without time zone`** lues et écrites en chaîne ISO (`mode: "string"`). Le décalage `Z` envoyé par le client est ignoré par PostgreSQL (§ 4.2).
 - **Pas de type `enum` ni de `jsonb`** : les listes de valeurs et les structures sont stockées en `text` (§ 5 et § 6).
-- **Noms de colonnes hétérogènes** : `camelCase` (`createdBy`, `meetDate`, `temporaryLink`) dans les tables anciennes, `snake_case` ailleurs. Il faut mettre des guillemets en SQL (`"createdBy"`). Les colonnes de `merimee` sont même en MAJUSCULES, avec parenthèses (`"DMAJ(DATE)"`). `pop_immeubles` contient des colonnes accentuées (`"région"`, `"département"`).
+- **Noms de colonnes hétérogènes** : `camelCase` (`createdBy`, `meetDate`, `temporaryLink`) dans les tables anciennes, `snake_case` ailleurs. Il faut mettre des guillemets en SQL (`"createdBy"`). `pop_immeubles` contient des colonnes accentuées (`"région"`, `"département"`).
 
 ---
 
@@ -137,7 +135,6 @@ erDiagram
 ```mermaid
 erDiagram
     user ||--o{ report : "createdBy (FK, set null)"
-    report ||--o{ pictures : "reportId (FK, cascade)"
     report ||--o{ sent_email : "report_id (FK)"
     report ||..o{ report_attachment : "report_id"
     report ||..o{ pdf_snapshot : "report_id"
@@ -194,13 +191,6 @@ erDiagram
         text sent_to
         timestamp sent_at
         text service_id
-    }
-    pictures {
-        text id PK
-        text reportId FK
-        text url
-        text finalUrl
-        timestamp createdAt
     }
 ```
 
@@ -352,29 +342,20 @@ erDiagram
         text titre_editorial_de_la_notice
         text departement_format_numerique
         text coordonnees_au_format_wgs84
-        timestamp last_image_check_at
     }
     pop_objets {
         text reference PK "ex PM01000123"
         text id "copie de reference"
         text reference_a_une_notice_merimee_mh
         text departement_format_numerique
-        timestamp last_image_check_at
     }
     pop_images {
-        text id PK "pop-image-UUIDv7"
+        text id PK
         text reference
         text url "URL POP, non copiee"
         text label
         text copyright
         text dept_number
-    }
-    merimee {
-        text REF PK
-        integer rowid
-        text DPT
-        text INSEE
-        text PRODUCTEUR
     }
     transactions {
         text id PK
@@ -409,7 +390,6 @@ erDiagram
 | `internal_user_userId_fkey` | `internal_user.userId` → `user.id` | `CASCADE` | [schema.ts#L46](../packages/backend/src/db/schema.ts#L46) |
 | `delegation_createdBy_fkey`, `delegation_delegatedTo_fkey` | `delegation` → `user.id` | `CASCADE` | [schema.ts#L62](../packages/backend/src/db/schema.ts#L62) |
 | `report_createdBy_fkey` | `report.createdBy` → `user.id` | `SET NULL` (même incohérence : colonne `NOT NULL`) | [schema.ts#L154](../packages/backend/src/db/schema.ts#L154) |
-| `pictures_reportId_fkey` | `pictures.reportId` → `report.id` | `CASCADE` | [schema.ts#L229](../packages/backend/src/db/schema.ts#L229) |
 | `sent_email_report_id_fkey` | `sent_email.report_id` → `report.id` | aucune action | [schema.ts#L260](../packages/backend/src/db/schema.ts#L260) |
 | `state_report_sent_email_state_report_id_fkey` | → `state_report.id` | aucune action | [schema.ts#L278](../packages/backend/src/db/schema.ts#L278) |
 | `suggested_email_email_key` | `suggested_email.email` unique **pour toute la base** | — | [schema.ts#L293](../packages/backend/src/db/schema.ts#L293) |
@@ -441,7 +421,6 @@ Les identifiants sont générés **par le client** (navigateur, hors ligne) ou p
 | `report_attachment` / `state_report_attachment` du **PDF envoyé** | **l'identifiant est le chemin du PDF** (`<id>/compte_rendu_<epoch>.pdf`) | [pdfRoutes.tsx#L101](../packages/backend/src/routes/pdfRoutes.tsx#L101) |
 | `user` | UUID v7 (backend). Le lien avec Keycloak se fait **par l'adresse électronique**, l'identifiant Keycloak n'est pas stocké | [authService.ts](../packages/backend/src/services/authService.ts#L98) |
 | `pop_immeubles.id`, `pop_objets.id` | copie de `reference` (ajoutée par l'import, nécessaire à PowerSync) | [KyselyBatchWriter.ts#L31](../packages/backend/src/features/data/KyselyBatchWriter.ts#L31) |
-| `pop_images` | `"pop-image-" + UUID v7` | [pop.ts#L210](../packages/backend/src/features/data/pop.ts#L210) |
 | `attachment_redirection` | entier aléatoire de 1 à 2⁴⁸ encodé en base62 (environ 8 caractères) | [pdfRoutes.tsx#L36](../packages/backend/src/routes/pdfRoutes.tsx#L36) |
 | `sent_email` / `suggested_email` | **le même UUID v4** est réutilisé pour les deux lignes | [pdfRoutes.tsx#L136](../packages/backend/src/routes/pdfRoutes.tsx#L136) |
 | `service` | libre (ex. `snum`, `no-service`, identifiants base64 hérités dans [udap.json](../packages/backend/data/udap.json)) | — |
@@ -471,7 +450,7 @@ Les identifiants sont générés **par le client** (navigateur, hors ligne) ou p
 
 Valeurs spéciales :
 
-- `no-service` : service technique créé automatiquement au démarrage du backend s'il n'existe pas ([index.ts#L34](../packages/backend/src/index.ts#L34)), avec `visible = false`. Des comptes anciens n'ont pas de service et y sont rattachés.
+- `no-service` : service technique créé automatiquement au démarrage du backend s'il n'existe pas ([index.ts#L34](../packages/backend/src/index.ts#L33)), avec `visible = false`. Des comptes anciens n'ont pas de service et y sont rattachés.
 - `ALL` (dans `clause_v2.service_id` seulement) : clause nationale, visible par tous les services.
 
 ---
@@ -521,8 +500,6 @@ Un service est une UDAP (unité départementale de l'architecture et du patrimoi
 | Envoi | `attachment_id` (chemin du dernier PDF envoyé), `pdf_size` (octets), `pdf` (colonne historique, *à confirmer* : plus écrite) |
 
 `pdf_snapshot` contient le **brouillon HTML** du PDF modifié par l'utilisateur (`html`) et une copie JSON du CR (`report`). Il y a une ligne par couple (CR, utilisateur), supprimée puis recréée à chaque sauvegarde ([pdf.$reportId.tsx#L168](../packages/frontend/src/routes/pdf.$reportId.tsx#L168)).
-
-`pictures` est l'**ancienne** table des photos de CR, remplacée par `report_attachment`. Elle est toujours synchronisée **en entier vers tous les utilisateurs** (`SELECT * FROM pictures` dans `global_stream`). Elle est vide en production et peut être supprimée.
 
 ### 5.5 `state_report` — constat d'état (CE)
 
@@ -610,7 +587,7 @@ Chaque opération envoyée par un navigateur (`POST /api/upload-data`) est **d'a
 
 ### 7.2 `attachment_redirection` — liens courts des courriels
 
-Voir [07 — Données externes et stockage](07-donnees-externes-et-stockage.md#5-liens-courts-vers-les-pdf-attachment_redirection). Les lignes ne sont jamais purgées. Elles deviennent inutilisables après 90 jours.
+Voir [07 — Données externes et stockage](07-donnees-externes-et-stockage.md#4-liens-courts-vers-les-pdf-attachment_redirection). Les lignes ne sont jamais purgées. Elles deviennent inutilisables après 90 jours.
 
 ---
 
@@ -631,7 +608,6 @@ La publication est créée vide par [0_create-publication.sql](../db/init/0_crea
 | Table | Publication (via migrations) | Flux PowerSync (filtre) | AppSchema | Remarque |
 | --- | :-: | --- | :-: | --- |
 | `clause_v2` | ✅ 0000 | `global_stream` (`service_id='ALL'`) + `service_stream` | ✅ | |
-| `pictures` | ✅ 0000 | `global_stream` (**toutes les lignes**) | ✅ | historique ; **vide en production** (0 ligne au 17/11/2026) : peut être retirée |
 | `service` | ✅ 0000 (sous le nom `udap`) | `service_stream` | ✅ | |
 | `user` | ✅ 0000 | `service_stream` (**`id, name, service_id` seulement**) | ✅ | `job` est déclaré côté navigateur mais jamais reçu ; `email` n'est pas diffusé. |
 | `service_instructeurs`, `sent_email`, `suggested_email` | ✅ 0000 | `service_stream` | ✅ | |
@@ -645,8 +621,8 @@ La publication est créée vide par [0_create-publication.sql](../db/init/0_crea
 | `user_dept` | ✅ 0001 | utilisée comme **paramètre** de `pop_stream` | ❌ | |
 | `constat_validation` | ❌ **absente des migrations et de la publication de production** (relevé du 17/11/2026) | `reports_stream` (`id, state_report_id, status, service_id`) | ❌ | Règle sans effet tant que la table n'est pas répliquée (*à confirmer : ajout manuel à la publication ?*). |
 | `transactions` | ✅ 0000 | — | ✅ | publiée mais lue par aucun flux : chaque écriture passe inutilement dans la réplication ; jamais téléchargée |
-| `state_report_sent_email`, `pop_images` | ❌ | — | ✅ | toujours vides côté navigateur ; les images POP passent par l'API `/api/state-report/objets-images`. |
-| `internal_user`, `whitelist`, `attachment_redirection`, `constat_pdf_download`, `merimee`, `up_cache` | ❌ | — | ❌ | serveur uniquement |
+| `state_report_sent_email`, `pop_images` | ❌ | — | ✅ | toujours vides côté navigateur ; les fiches objet lisent `pop_images` par l'API `/api/state-report/objets-images`. |
+| `internal_user`, `whitelist`, `attachment_redirection`, `constat_pdf_download`, `up_cache` | ❌ | — | ❌ | serveur uniquement |
 
 Les flux identifient l'utilisateur par **l'adresse électronique contenue dans le jeton Keycloak**. Si l'adresse change dans Keycloak sans être modifiée dans `user.email`, l'agent ne reçoit plus rien.
 
@@ -686,7 +662,7 @@ Mesures du relevé de production du 17/11/2026. Base applicative : **719 Mo** (v
 | `state_report` | 1 214 | — | usage |
 | `state_report_attachment` | 952 | — | usage |
 | `user` / `service` | 261 / 118 | — | inscriptions |
-| `pop_images`, `pictures`, `merimee` | **0** | — | vides : la récupération automatique des images POP est abandonnée (l'équipe prévoit d'afficher les images via le protocole IIIF) ; `pictures` et `merimee` peuvent être supprimées |
+| `pop_images` | **0** | — | table des URL de photos POP, lue par les fiches objet ; vide aujourd'hui, l'affichage des images POP passera par le protocole IIIF |
 | Navigateur | — | — | toutes les notices POP des départements de l'agent, téléchargées au premier démarrage |
 
 Qualité des données POP : 42 immeubles et **4 541 objets** ont autre chose qu'une date dans `date_de_la_derniere_mise_a_jour` (texte d'une autre colonne, caractères mal encodés) : décalage de colonnes ou problème d'encodage à l'import (voir [12](12-exploitation-et-supervision.md) § 7.1).
@@ -706,9 +682,9 @@ Requêtes coûteuses à surveiller : le filtre `pop_objets.reference_a_une_notic
 | Générer | `pnpm migration:generate` (= `drizzle-kit generate`) après modification de `schema.ts`. |
 | Prototyper en local | `pnpm backend drizzle push` (applique le schéma sans créer de migration). Il faut générer la migration avant le commit. |
 | Appliquer | `pnpm migration:up` (= `drizzle-kit migrate`) ; `pnpm migration:up-test` avec `NODE_ENV=test` (lit `.env.test`). |
-| Suivi | table `drizzle.__drizzle_migrations` (37 lignes en production : une par migration, avec l'empreinte du fichier et la date `when` du journal, qui est la date de **génération** et non d'application), journal [db/meta/_journal.json](../db/meta/_journal.json) et 40 instantanés `db/meta/00NN_snapshot.json`. |
+| Suivi | table `drizzle.__drizzle_migrations` (une ligne par migration appliquée, avec l'empreinte du fichier et la date `when` du journal, qui est la date de **génération** et non d'application), journal [db/meta/_journal.json](../db/meta/_journal.json) et 41 instantanés `db/meta/00NN_snapshot.json`. |
 | En production | Le conteneur backend exécute `pnpm migration:up; pnpm backend start` ([Dockerfile](../Dockerfile)). ⚠ Le `;` lance le serveur **même si la migration a échoué**. |
-| Typage | Pas de génération de types. Kysely reçoit `Kyselify<typeof table>` ([db.ts](../packages/backend/src/db/db.ts)) : les noms de colonnes SQL (pas les noms de propriétés Drizzle) servent de clés. Une nouvelle table doit être ajoutée **à la main** au type `Database`. `pictures` n'y figure pas. |
+| Typage | Pas de génération de types. Kysely reçoit `Kyselify<typeof table>` ([db.ts](../packages/backend/src/db/db.ts)) : les noms de colonnes SQL (pas les noms de propriétés Drizzle) servent de clés. Une nouvelle table doit être ajoutée **à la main** au type `Database`. |
 
 > **Ne pas modifier une migration déjà appliquée.** Plusieurs migrations contiennent du SQL ajouté à la main (publication PowerSync, reprise de données en 0025/0026). Drizzle ne régénère pas ces ajouts.
 
@@ -716,7 +692,7 @@ Requêtes coûteuses à surveiller : le filtre `pop_objets.reference_a_une_notic
 
 L'image [db-workflow.png](../images/db-workflow.png) décrit **l'ancienne architecture** : PostgreSQL 14 avec deux bases (`/cr-vif-users` pour les utilisateurs et délégations, `/cr-vif` pour les CR et clauses), un proxy **ElectricSQL** qui « électrifiait » les tables, des migrations SQL écrites à la main côté frontend et un client Prisma généré par introspection. **Elle n'est plus d'actualité** : il y a aujourd'hui une seule base, des migrations Drizzle uniques et PowerSync. Le fichier [.env.dist](../.env.dist) contient encore des restes de cette époque (`ELECTRIC_PORT`, `PG_PROXY_*`, `VITE_ELECTRIC_URL`, `AWS_*`).
 
-### 10.2 Historique des 40 migrations
+### 10.2 Historique des 41 migrations
 
 Le journal commence le 6 novembre 2025. Les migrations 0000 et 0001 forment une **ligne de base** issue de l'ancien système (`@databases/pg-migrations`, dont les tables `atdatabases_migrations_*` sont créées puis supprimées en 0001). La migration 0001 ajoute `user.email NOT NULL` sans valeur par défaut, ce qui échouerait sur une table non vide : la production a probablement été « marquée » comme migrée jusqu'à ce point plutôt que réellement migrée. Le relevé du 17/11/2026 ne permet pas de trancher (les tables `atdatabases_*` n'existent plus). Il montre en revanche que **le fichier 0000 a été modifié après son application** : l'empreinte enregistrée en production correspond au fichier du commit `34a34eb` (07/11/2025), reformaté depuis au commit `52842b2` (25/02/2026). Drizzle ne revérifie pas les empreintes, donc sans effet en production, mais une base neuve n'aura pas la même empreinte pour 0000. Ne plus jamais modifier une migration appliquée.
 
@@ -744,9 +720,10 @@ Le journal commence le 6 novembre 2025. Les migrations 0000 et 0001 forment une 
 | 0034 | 2026-06-17 | `pdf_size` sur `report` et `state_report`. |
 | 0035 | 2026-08-05 | Localisation sur carte des parties visitées (`localisation_pins`, `drawings`, `zone`). |
 | 0036 | 2026-09-21 | `constat_pdf_download` (suivi des téléchargements). |
-| 0037 | 2026-10-20 | *(pas encore en production)* **MH complexes** : colonnes `up_*` et `rapport_id` de `state_report` ; table `up_cache`. |
-| 0038 | 2026-11-10 | *(pas encore en production)* **Fiches** : `monument_alert`, `monument_alert_attachment`, `monument_correction`, index, ajout à la publication. |
-| 0039 | 2026-11-10 | *(pas encore en production)* `monument_alert.state_report_id` et son index (annotation depuis un constat). |
+| 0037 | 2026-10-20 | **MH complexes** : colonnes `up_*` et `rapport_id` de `state_report` ; table `up_cache`. |
+| 0038 | 2026-11-10 | **Fiches** : `monument_alert`, `monument_alert_attachment`, `monument_correction`, index, ajout à la publication. |
+| 0039 | 2026-11-10 | `monument_alert.state_report_id` et son index (annotation depuis un constat). |
+| 0040 | 2026-11-23 | Suppression des tables `pictures` et `merimee` (retrait de `pictures` de la publication). |
 
 ---
 

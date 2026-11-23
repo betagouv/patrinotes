@@ -204,7 +204,7 @@ Le routage utilise **TanStack Router** avec des routes basées sur des fichiers 
 | `/accessibilite`, `/mentions-legales`, `/politique-confidentialite`, `/cgu` | fichiers du même nom | public | Pages légales (voir [01](01-contexte-et-perimetre.md#7-pages-légales-et-accessibilité)) |
 
 > Règles cachées :
-> - Les routes `/monument` et `/objet` et la recherche de monument de l'accueil sont présentes dans `development`, pas encore déployées en production.
+> - Les routes `/monument` et `/objet` et la recherche de monument de l'accueil.
 > - Les gardes sont des **composants**, pas des `beforeLoad` : `EnsureUser` redirige vers `/connexion` si `auth.user` est nul ; `RedirectIfUser` redirige vers `?redirect=` ou `/`. Les routes de constat n'ont pas de garde explicite : sans session, la base locale est vide et la page renvoie vers `/`. La sécurité réelle repose sur les règles de synchronisation et sur le backend.
 > - L'URL porte l'état d'écran (`step`, `mode`, `tab`). Une valeur invalide est silencieusement remplacée par la valeur par défaut (`validateSearch`).
 > - L'étape `documents` existe dans le schéma mais n'a **aucun écran** : `ButtonsSwitch` renvoie `null` et le sommaire ne la propose pas.
@@ -258,7 +258,7 @@ Défini dans [db.ts](../packages/frontend/src/db/db.ts) :
 - option `useWebWorker` activée si le navigateur fournit **OPFS** (`navigator.storage.getDirectory`) et `crypto.randomUUID` ; option `enableMultiTabs` activée si `SharedWorker` existe (ce n'est **jamais** le cas sur iOS) ;
 - `db` = Kysely branché sur PowerSync : les composants lisent avec `useDbQuery(db.selectFrom(...))`, des requêtes **réactives** qui se rafraîchissent à chaque modification locale ou synchronisée.
 
-Tables locales (27) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`, `service_instructeurs`, `clause_v2`, `pictures`, `transactions`, `sent_email`, `suggested_email`, `user_settings`, `pop_immeubles`, `state_report`, `visited_section`, `visited_section_attachment`, `report_attachment`, `state_report_attachment`, `state_report_sent_email`, `pop_objets`, `pop_images`, `state_report_alert`, `state_report_alert_attachment`, `monument_alert`, `monument_alert_attachment`, `monument_correction` et `attachments` (table interne de la file de pièces jointes).
+Tables locales (26) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`, `service_instructeurs`, `clause_v2`, `transactions`, `sent_email`, `suggested_email`, `user_settings`, `pop_immeubles`, `state_report`, `visited_section`, `visited_section_attachment`, `report_attachment`, `state_report_attachment`, `state_report_sent_email`, `pop_objets`, `pop_images`, `state_report_alert`, `state_report_alert_attachment`, `monument_alert`, `monument_alert_attachment`, `monument_correction` et `attachments` (table interne de la file de pièces jointes).
 
 > Règles cachées :
 > - [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts#L490-L525) contient une **vérification à la compilation** : chaque colonne d'une table partagée doit exister dans le schéma backend (`Database` de `packages/backend/src/db/db`). Ajouter une colonne côté frontend sans l'ajouter côté backend fait échouer `pnpm check`. **L'inverse n'est pas vérifié** : une nouvelle colonne backend absente d'AppSchema est simplement ignorée côté client.
@@ -270,7 +270,7 @@ Tables locales (27) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`,
 
 | Flux | Abonnement | Contenu côté client |
 | --- | --- | --- |
-| `global_stream` | automatique | Clauses nationales (`ALL`), `pictures` (table vide en production, supprimable) |
+| `global_stream` | automatique | Clauses nationales (`ALL`) |
 | `service_stream` | automatique | Service, collègues (id, nom, service), services instructeurs, clauses du service, courriels envoyés, courriels suggérés, corrections des fiches |
 | `user_stream` | automatique | Délégations, `pdf_snapshot`, `user_settings` de l'utilisateur |
 | `reports_stream` | automatique | Tous les CR, CE, parties visitées, alertes, alertes et annotations des fiches **du service** |
@@ -278,7 +278,7 @@ Tables locales (27) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`,
 | `report_attachments_stream` | **à la demande** (`useSyncStream` dans `/edit` et `/pdf`) | Pièces jointes d'**un** CR du service |
 | `state_report_attachments_stream` | **à la demande** (dans `/constat` et `/constat/.../pdf`) | Pièces jointes d'**un** CE du service (constat, parties, alertes) |
 
-> Règle cachée importante pour le hors ligne : les **lignes de pièces jointes** ne sont synchronisées que pour le document **ouvert pendant que l'appareil est en ligne**. Un document jamais ouvert en ligne sur un appareil n'aura pas ses photos hors ligne. Les écrans de PDF (`/pdf/...`, `/constat/.../pdf`) affichent un indicateur de chargement **tant que le flux n'est pas synchronisé** (`hasSynced`). Hors ligne, ces écrans peuvent donc rester bloqués (à confirmer sur appareil).
+> Règle cachée importante pour le hors ligne : les **lignes de pièces jointes** ne sont synchronisées que pour le document **ouvert pendant que l'appareil est en ligne**. Un document jamais ouvert en ligne sur un appareil n'aura pas ses photos hors ligne. Les écrans de PDF (`/pdf/...`, `/constat/.../pdf`) affichent un indicateur de chargement **tant que le flux n'est pas synchronisé** (`hasSynced`). Hors ligne, ces écrans restent donc bloqués sur un indicateur de chargement pour tout document dont le flux n'a jamais été synchronisé sur l'appareil (constaté en test). Voir aussi le worker pdf.js non précaché ([09](09-documents-pdf-cartes-emails.md) § 12).
 
 ### 8.3 Écriture : sauvegarde automatique et envoi au serveur
 
@@ -310,7 +310,6 @@ Points de code : [SyncForm.tsx](../packages/frontend/src/components/SyncForm.tsx
 > - `uploadData` envoie les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur HTTP sur une opération bloque le lot, que PowerSync réessaiera ; un refus du serveur (droits) arrive en HTTP 200 et n'est pas vu (voir [08](08-synchronisation-hors-ligne.md)).
 > - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation puis affiche une erreur au lieu de perdre la modification.
 > - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées** : une alerte créée pendant la session garde son commentaire et ses destinataires.
-> - Ces deux comportements, comme le champ photo vidé dès la sélection (§ 11.4), sont présents dans `development`, pas encore déployés en production.
 > - Les identifiants sont générés **côté client** : `report-<uuid v4>` pour les CR (le préfixe `report-` est une convention historique), uuid v4 pour les CE et les parties visitées, uuid v7 pour les pièces jointes et les délégations.
 > - Un CE est créé avec `disabled = 1` et `version = 2`. Il ne devient visible (`disabled = 0`) qu'au choix d'un monument ([ImmeubleAutocomplete.tsx](../packages/frontend/src/features/ImmeubleAutocomplete.tsx#L71-L93)). Un CR est créé directement avec `disabled = 0`.
 > - **Suppression = `disabled = 1`** (suppression logique), pour les CR comme pour les CE.
@@ -339,7 +338,7 @@ Plusieurs colonnes stockent des structures sous forme de **chaînes avec sépara
 
 | Élément | Valeur |
 | --- | --- |
-| Manifeste | `id: gouv.beta.patrinotes`, `name/short_name: Patrinotes`, `lang: fr`, `orientation: portrait`, `scope` et `start_url: /`, icônes DSFR 192 et 512 px |
+| Manifeste | `id: gouv.beta.patrinotes`, `name/short_name: Patrinotes`, `lang: fr`, `orientation: portrait`, `scope` et `start_url: /`, icônes `dsfr/favicon/android-chrome-192x192.png` et `-512x512.png`. Ces deux fichiers n'existent pas dans `public/` : l'icône de l'application installée sur Android ne se charge pas |
 | Précache | `**/*.{svg,woff2,js,wasm,css,html,png}`, taille maximale par fichier **16 Mio** (`2097152 * 8`) |
 | Exclus du précache | `**/admin*.js` (chunk de la page admin), `**/env.js`, `**/swEnv.js` |
 | Ressources incluses | `**/*.{svg,woff2,wasm,ttf}`, `marianne_footer.png` |
@@ -440,7 +439,7 @@ Le téléchargement local appelle `POST /api/pdf/state-report/log-download` pour
 
 ### 11.2 `fiche/` (fiches MH, UP et objet mobilier)
 
-Présentes dans `development`, pas encore déployées en production. Elles lisent surtout la base locale, donc fonctionnent en grande partie hors ligne.
+Elles lisent surtout la base locale, donc fonctionnent en grande partie hors ligne.
 
 | Fiche | Contenu | Sources |
 | --- | --- | --- |
@@ -541,8 +540,8 @@ Le champ fichier est vidé **dès la sélection** : on peut rechoisir le même f
 ## 12. Design system (DSFR)
 
 - `@codegouvfr/react-dsfr` : composants DSFR (Header, Footer, Tile, Badge, Alert, RadioButtons, ToggleSwitch, Range…) et **thème MUI DSFR** (`MuiDsfrThemeProvider`). La mise en page utilise MUI (`Box`, `Stack`, `Dialog`, `Autocomplete`) avec des jetons de couleur DSFR (`fr.colors.decisions…`).
-- `react-dsfr update-icons` s'exécute avant `dev` et `build` (`predev`, `prebuild`). Le dossier `public/dsfr/` est **généré et ignoré par Git** ; il contient les favicons référencés par le manifeste (à confirmer : produit par `update-icons` ou par `pnpm dsfr`, `copy-dsfr-to-public`).
-- La CSS DSFR est chargée depuis `node_modules` dans [index.html](../packages/frontend/index.html). Polices Marianne (`public/fonts`) pour les PDF.
+- `react-dsfr update-icons` s'exécute avant `dev` et `build` (`predev`, `prebuild`) : il ne garde dans le CSS d'icônes de `node_modules` que les icônes utilisées par le code.
+- La CSS et les favicons DSFR sont chargés depuis `node_modules` dans [index.html](../packages/frontend/index.html) et mis en bundle par Vite. Polices Marianne (`public/fonts`) pour les PDF.
 - Accessibilité : liens d'évitement (Contenu, Menu, Pied de page), focus déplacé sur le contenu à chaque changement d'étape du constat, liens étirés pour la navigation au clavier dans le sommaire, astérisque rouge (`.mandatory-field::before`) sur les champs obligatoires. **Thème sombre désactivé** (mode clair forcé).
 - Point d'arrêt « bureau » : `lg` du DSFR (`useIsDesktop`). Beaucoup d'écrans ont une variante mobile distincte.
 

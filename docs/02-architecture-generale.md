@@ -93,7 +93,7 @@ sequenceDiagram
 
 Les règles d'accès se trouvent dans [sync-config.yaml](../powersync/sync-config.yaml). Elles reposent sur le claim `email` du jeton. Un agent reçoit :
 
-- les données globales : clauses nationales (`service_id = 'ALL'`) et table `pictures` (vide en production, supprimable) ;
+- les données globales : clauses nationales (`service_id = 'ALL'`) ;
 - les données de **son service** : service, collègues, clauses, e-mails suggérés, comptes-rendus (`report`), constats (`state_report`) et leurs sous-objets, alertes et corrections des fiches monument ;
 - ses données personnelles : délégations, réglages, *snapshots* PDF ;
 - le patrimoine (`pop_immeubles`, `pop_objets`) **de ses départements** (`user_dept`) ;
@@ -129,7 +129,7 @@ sequenceDiagram
 
 ### 3.4 Données patrimoniales
 
-Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images` contient des URL de photos extraites des pages de `pop.culture.gouv.fr`, avec l'accord de l'équipe POP ; ce code d'extraction est inutilisé et l'équipe prévoit d'afficher les images par le protocole IIIF. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
+Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images` contient des URL de photos POP, lues par les fiches objet ; elle est vide aujourd'hui, et l'affichage des images POP passera par le protocole IIIF. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
 
 ## 4. Organisation du dépôt
 
@@ -169,4 +169,4 @@ Taille indicative : environ 35 000 lignes de TypeScript et TSX, hors code géné
 
 Le déploiement actuel (VPS avec Coolify) récupère ces images. Le détail est dans [10 — Infrastructure](10-infrastructure-et-deploiement.md).
 
-La production déploie `main` (relevé de production du 17/11/2026). `development` (préproduction) est en avance sur `main` : il ajoute les fiches monument MH, UP et objet mobilier et la recherche de monument sur l'accueil (migrations 0037 à 0039 et leurs règles de synchronisation), ainsi que des corrections qui évitent des pertes de données côté client.
+La production déploie la branche `main`, la préproduction la branche `development`.

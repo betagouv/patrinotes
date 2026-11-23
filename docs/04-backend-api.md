@@ -27,7 +27,7 @@ Versions effectivement résolues dans [pnpm-lock.yaml](../pnpm-lock.yaml) (les p
 | Supervision | `@sentry/node` | 7.120.4 | Remontée d'erreurs (hors développement) |
 | Variables d'env. | `dotenv`, `dotenv-expand`, `zod` | 16.6.1 / 11.0.7 / 3.25.76 | Chargement et validation au démarrage |
 | Journaux | `debug` | 4.4.3 | Espace de noms `cr-vif:*` |
-| Import POP | `csv-parser`, `linkedom` | 3.2.0 / 0.18.12 | Import des CSV Mérimée/Palissy et extraction des images POP |
+| Import POP | `csv-parser` | 3.2.0 | Import des CSV Mérimée/Palissy |
 | Build | `tsup` | 8.5.1 | Bundle ESM `dist/index.js` |
 | Dév. | `vite-node`, `vitest`, `typescript` | 1.6.1 / 2.1.9 / 5.9.3 | Exécution avec rechargement à chaud, tests unitaires |
 | Partagé | `@patrinotes/pdf` (workspace) | — | Fonctions communes (noms de fichiers PDF, désérialisation des alertes et préconisations) |
@@ -105,7 +105,7 @@ Détails ([index.ts](../packages/backend/src/index.ts)) :
 
 1. **Chargement de l'environnement** ([envVars.ts](../packages/backend/src/envVars.ts#L7-L11)) : charge `../../.env` (ou `../../.env.test` si `NODE_ENV=test`) **relativement au répertoire courant**, c'est-à-dire la racine du dépôt quand on lance depuis `packages/backend`. Si le fichier n'existe pas (production en conteneur), seules les variables du processus comptent.
 2. **Validation zod** ([envVars.ts](../packages/backend/src/envVars.ts#L24-L63)) : toute variable obligatoire absente provoque une exception au chargement du module.
-3. **Service « no-service »** ([index.ts](../packages/backend/src/index.ts#L34-L39)) : une ligne `service` d'identifiant `no-service`, invisible (`visible=false`), est créée si elle manque. Elle sert aux comptes anciens qui n'ont pas de service ; le frontend leur affiche un choix de service obligatoire.
+3. **Service « no-service »** ([index.ts](../packages/backend/src/index.ts#L33-L38)) : une ligne `service` d'identifiant `no-service`, invisible (`visible=false`), est créée si elle manque. Elle sert aux comptes anciens qui n'ont pas de service ; le frontend leur affiche un choix de service obligatoire.
 4. **Import POP optionnel** si `FORCE_REFETCH_POP=true` (voir §8).
 5. **Fastify** écoute sur `0.0.0.0:${PORT}`.
 
@@ -250,7 +250,6 @@ Il n'existe **aucune route** pour promouvoir un administrateur, supprimer un uti
 
 ### 4.10 Fiches monument — [upRoutes.ts](../packages/backend/src/routes/upRoutes.ts), [monumentAlertRoutes.ts](../packages/backend/src/routes/monumentAlertRoutes.ts)
 
-Ces deux routes sont présentes dans `development`, pas encore déployées en production.
 
 | Méthode | Chemin | Auth | Rôle et logique notable |
 | --- | --- | --- | --- |
@@ -488,20 +487,18 @@ Conséquences cachées :
 Il n'existe **aucune tâche planifiée** (ni cron, ni file de tâches) dans le backend. Les données POP sont importées :
 
 - au démarrage si `FORCE_REFETCH_POP=true` ;
-- ou manuellement avec `pnpm backend import-pop` (`vite-node ./src/features/data/pop.ts --standalone`), qui enchaîne immeubles, objets et images.
+- ou manuellement avec `pnpm backend import-pop` (`vite-node ./src/features/data/pop.ts --standalone`), qui enchaîne immeubles et objets.
 
 | Étape | Source | Cible | Règle |
 | --- | --- | --- | --- |
 | Immeubles | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv` (séparateur `|`) | `pop_immeubles` | Upsert par lots de 500 sur `reference` (`id` = `reference`), **toujours exécuté** |
 | Objets | `…/POP/palissy.csv` | `pop_objets` | **Ignoré si la table contient déjà une ligne** : pour réimporter, il faut la vider |
-| Images (abandonné, voir ci-dessous) | Pages HTML `https://pop.culture.gouv.fr/notice/<merimee/palissy>/<référence>` (*scraping*, accepté par l'équipe POP) | `pop_images` | Lots de 50, pause de 100 ms entre notices, **première image seulement** ; HTTP 400 ignoré ; dépend de la structure HTML de POP (`.swiper-slide`) |
 
 Détails cachés de l'import ([pop.ts](../packages/backend/src/features/data/pop.ts), [KyselyBatchWriter.ts](../packages/backend/src/features/data/KyselyBatchWriter.ts)) :
 
 - Les en-têtes CSV sont mis en minuscules et seules les colonnes existant dans la table (introspection) sont conservées.
 - Doublons de référence dans un même lot : seule la première occurrence est gardée.
-- Images : la récupération automatique des photos POP (`last_image_check_at`) est **abandonnée**. Le code reste mais est inutilisé (l'appel `initPopImages()` est commenté au démarrage) ; l'équipe prévoit d'afficher les images par le protocole **IIIF**. L'équipe POP a accepté la récupération de ses pages et l'affichage direct de ses photos.
-- [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) (préfixe `_`) est un ancien import depuis une instance *datasette* de Collectif Objets ; il n'est plus appelé et sa variable `COLLECTIF_OBJETS_DATASETTE_URL` est commentée.
+- Images : `pop_images` (URL de photos POP, lue par les fiches objet) est vide aujourd'hui ; l'affichage des images POP passera par le protocole IIIF. L'équipe POP a accepté l'affichage direct de ses photos.
 
 ---
 

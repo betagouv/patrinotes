@@ -172,7 +172,7 @@ Le bouton « Créer un constat d'état » de l'accueil crée directement le cons
 
 ### 5.2 Parcours : consulter une fiche monument ou objet
 
-L'accueil propose une **recherche de monument** (édifices, objets mobiliers, ou carte). Cette recherche et les fiches sont présentes dans `development`, pas encore déployées en production. Elle ouvre :
+L'accueil propose une **recherche de monument** (édifices, objets mobiliers, ou carte). Elle ouvre :
 
 - la **fiche MH** (`/monument/<référence Mérimée>`) : informations POP corrigées par le service, constats antérieurs (tous services, en ligne), alertes et annotations, objets mobiliers, arbre de l'ensemble patrimonial avec le nombre de constats par UP ;
 - la **fiche UP** (même page, paramètre `up`) pour une unité patrimoniale d'un MH complexe ;

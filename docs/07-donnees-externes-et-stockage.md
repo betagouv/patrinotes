@@ -14,7 +14,7 @@ Voir aussi : [06 — Modèle de données](06-modele-de-donnees.md) pour les tabl
 flowchart LR
     subgraph Ext["Services externes"]
         DG["ministere-culture.s3.sbg.io.cloud.ovh.net<br/>merimee.csv et palissy.csv"]
-        POP["pop.culture.gouv.fr<br/>pages HTML des notices"]
+        POP["pop.culture.gouv.fr<br/>notices"]
         BAN["api-adresse.data.gouv.fr<br/>géocodage"]
         IGN["data.geopf.fr<br/>orthophotos IGN"]
         CAD["openmaptiles.geo.data.gouv.fr<br/>cadastre"]
@@ -31,8 +31,7 @@ flowchart LR
     NAV["Navigateur de l'agent"]
 
     DG -->|"téléchargement CSV, au démarrage si FORCE_REFETCH_POP ou script manuel"| BE
-    POP -->|"aspiration HTML, script manuel"| BE
-    BE -->|"upsert pop_immeubles, pop_objets, pop_images"| PG
+    BE -->|"upsert pop_immeubles, pop_objets"| PG
     DS -->|"arbre des UP, à la demande, cache up_cache"| BE
     NAV -->|"recherche d'adresse"| BAN
     NAV -->|"tuiles"| IGN
@@ -40,14 +39,13 @@ flowchart LR
     NAV -->|"tuiles et polices"| OFM
     NAV -->|"PUT présigné : photos et PDF"| S3
     BE -->|"lecture et URL présignées"| S3
-    NAV -->|"images POP par URL directe"| POP
+    NAV -.->|"liens vers les notices, ouverts par l'agent"| POP
 ```
 
 | Source | Appelée par | Quand | Données | Authentification |
 | --- | --- | --- | --- | --- |
 | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv` | backend | au démarrage si `FORCE_REFETCH_POP=true`, ou par `pnpm backend import-pop` | notices Mérimée (immeubles protégés) | aucune |
 | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/palissy.csv` | backend | idem, **seulement si `pop_objets` est vide** | notices Palissy (objets mobiliers) | aucune |
-| `https://pop.culture.gouv.fr/notice/{merimee\|palissy}/{ref}` | backend | `pnpm backend import-pop` seulement (appel désactivé au démarrage) | URL, légende et crédit de la **première** image de chaque notice | aucune |
 | `https://api-adresse.data.gouv.fr/search/` | **navigateur** | saisie d'adresse (CR, CE), centrage de carte | adresses de la Base adresse nationale | aucune |
 | `https://data.geopf.fr/wmts` (orthophotos IGN), `openmaptiles.geo.data.gouv.fr` (cadastre), `tiles.openfreemap.org` (fond et polices) | **navigateur** | carte du plan de situation et localisation des désordres | tuiles | aucune |
 | `UP_API_URL` (par défaut `https://api-ext.stg.cloud.culture.fr/dataspace/patrinote/up`) | backend | ouverture d'un MH complexe (constat ou fiche), si `UP_API_MODE=live` | unités patrimoniales d'un monument | en-tête `apiKey` (`UP_API_KEY`) |
@@ -76,13 +74,13 @@ Code : [pop.ts](../packages/backend/src/features/data/pop.ts) et [KyselyBatchWri
 
 | Mode | Commande | Ce qui est fait |
 | --- | --- | --- |
-| Au démarrage du backend | variable `FORCE_REFETCH_POP=true` ([index.ts#L16](../packages/backend/src/index.ts#L16)) | `initPopImmeubles()` puis `initPopObjets()`. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. Pas d'images. |
-| Manuel, complet | `pnpm backend import-pop` (= `vite-node ./src/features/data/pop.ts --standalone`) | immeubles, objets, puis rattrapage des images (`initPopImages`), puis `process.exit(0)`. |
+| Au démarrage du backend | variable `FORCE_REFETCH_POP=true` ([index.ts#L16](../packages/backend/src/index.ts#L16)) | `initPopImmeubles()` puis `initPopObjets()`. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. |
+| Manuel, complet | `pnpm backend import-pop` (= `vite-node ./src/features/data/pop.ts --standalone`) | immeubles, objets, puis `process.exit(0)`. |
 | Planifié | **aucun** | Il n'y a ni cron ni tâche planifiée, ni dans le dépôt ni dans Coolify (relevé du 17/11/2026). Le dernier import des immeubles est postérieur au 06/05/2026 ; celui des objets ne peut pas être daté. |
 
 Règles cachées :
 
-- **Les immeubles sont toujours réimportés** (upsert complet). **Les objets ne le sont que si la table `pop_objets` est vide** ([pop.ts#L59](../packages/backend/src/features/data/pop.ts#L59)). Pour rafraîchir Palissy, il faut vider `pop_objets` avant le lancement.
+- **Les immeubles sont toujours réimportés** (upsert complet). **Les objets ne le sont que si la table `pop_objets` est vide** ([pop.ts#L59](../packages/backend/src/features/data/pop.ts#L57)). Pour rafraîchir Palissy, il faut vider `pop_objets` avant le lancement.
 - Si `FORCE_REFETCH_POP` reste à `true`, **chaque redémarrage** retélécharge Mérimée et retarde la mise en service.
 - `FORCE_REFETCH_POP` accepte `true` (insensible à la casse) ; toute autre chaîne vaut `false`.
 
@@ -105,7 +103,7 @@ sequenceDiagram
     BE->>FS: supprime le fichier
 ```
 
-1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`). Le chemin est relatif au répertoire courant, en pratique `packages/backend/data/` ([pop.ts#L253](../packages/backend/src/features/data/pop.ts#L253)). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (plusieurs centaines de Mo pour Palissy, *à confirmer*).
+1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`). Le chemin est relatif au répertoire courant, en pratique `packages/backend/data/` ([pop.ts#L253](../packages/backend/src/features/data/pop.ts#L81)). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (plusieurs centaines de Mo pour Palissy, *à confirmer*).
 2. **Analyse CSV** (`csv-parser`) avec le séparateur `|`. Les en-têtes sont mis en minuscules et débarrassés des espaces. **Les noms de colonnes de la table doivent correspondre exactement aux en-têtes du fichier** (d'où les colonnes `région`, `département`, `emplacement__forme_et_structure_de_l_escalier`, `vocable___pour_les_edifices_cultuels`).
 3. **Écriture par lots de 500** ([KyselyBatchWriter.ts](../packages/backend/src/features/data/KyselyBatchWriter.ts)) :
    - les lignes sans `reference` sont ignorées ;
@@ -119,7 +117,6 @@ Limites :
 
 - **Aucune suppression** : une notice retirée de POP (déclassement, fusion) **reste** dans la base et sur les postes.
 - **Aucun filtre** : toute la France est importée. Le tri par département se fait dans les règles PowerSync (`departement_format_numerique` ∈ départements de l'agent).
-- `last_image_check_at` n'est **pas** remis à zéro lors d'un réimport.
 
 ### 2.3 Lien entre immeubles et objets
 
@@ -139,49 +136,21 @@ Quand l'agent choisit un monument, certains champs POP sont **copiés** dans le 
 | `typologie_de_la_protection` / `precision_de_la_protection` | `nature_protection` / `parties_protegees` |
 | `description_de_l_edifice` | `description` |
 
-### 2.4 Code mort lié à POP
+### 2.4 Photos POP (`pop_images`)
 
-- [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) (`@ts-nocheck`) remplissait la table `merimee` depuis la *datasette* de Collectif Objets (`COLLECTIF_OBJETS_DATASETTE_URL`, variable retirée). Il n'est plus appelé. La table `merimee` (environ 130 colonnes au format POP historique) est vide en production et peut être supprimée.
+La table `pop_images` contient des URL de photos POP (`url`, `label`, `copyright`, `dept_number`). Elle est lue par les fiches objet, la galerie et l'étape « Monument historique » du constat via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)). Elle n'est pas synchronisée : hors ligne, pas d'image, et une vignette par défaut `/objet-sans-image.png` s'affiche. Elle est vide aujourd'hui ; l'affichage des images POP passera par le protocole IIIF.
+
+### 2.5 Code mort lié à POP
+
 - `initPopDatasette` et `fetchPopDatasetteCSV` (table `merimee_to_memoire`, supprimée en migration 0008) sont commentés ou inutilisés.
 
 ---
 
-## 3. Récupération des images POP (« scraping »)
-
-> Cette récupération automatique est **abandonnée** : le code décrit ci-dessous est inutilisé et l'équipe prévoit d'afficher les images POP via le protocole **IIIF**. La description sert à la reprise du code existant.
-
-POP ne publie pas les URL des images dans ses CSV. Patrinotes **lit la page HTML publique** de chaque notice pour en extraire la première image ([pop.ts#L233](../packages/backend/src/features/data/pop.ts#L233)).
-
-### 3.1 Algorithme
-
-1. Sélection d'un **lot de 50** notices sans image (`LEFT JOIN pop_images … IS NULL`) dont `last_image_check_at` est **antérieur à hier 00:00 UTC** :
-   - pour les immeubles, seulement `last_image_check_at < hier` ;
-   - pour les objets, `last_image_check_at < hier` **ou** `NULL`.
-2. Pour chaque notice : `GET https://pop.culture.gouv.fr/notice/merimee/<ref>` (ou `palissy`), analyse avec `linkedom`, lecture des éléments `.swiper-slide`. Dans chacun : l'attribut `src` de `<img>` et, dans le `div[style*="margin-top:5px"]`, le 1er enfant (légende) et le 2e (crédit).
-3. Insertion de la **première image seulement** (`slice(0, 1)`) dans `pop_images` (`id = pop-image-<UUIDv7>`, `url`, `label`, `copyright`, `dept_number`).
-4. **Pause de 100 ms** entre deux notices. Aucun autre limiteur, pas de parallélisme, pas d'en-tête `User-Agent` spécifique.
-5. Mise à jour de `last_image_check_at = maintenant` pour tout le lot, **qu'une image ait été trouvée ou non**. Une notice sans image n'est revérifiée que le lendemain.
-6. Boucle jusqu'à ce qu'il ne reste plus de notice à traiter.
-
-### 3.2 Règles cachées et risques
-
-- **Les immeubles importés après la migration 0007 ne sont jamais traités.** La migration a fixé `last_image_check_at = now()` pour les immeubles existants. Les nouveaux immeubles ont `NULL`, et la requête des immeubles ne retient pas `NULL` (contrairement à celle des objets) ([pop.ts#L147](../packages/backend/src/features/data/pop.ts#L147)).
-- La date de référence « hier 00:00 UTC » est calculée **au chargement du module**. Elle reste figée tant que le processus tourne.
-- Une réponse **HTTP 400** fait passer à la notice suivante. **Toute autre erreur** (404, 429, 5xx, délai dépassé) **arrête tout le traitement**. Le lot en cours n'est alors pas marqué comme vérifié.
-- La méthode dépend de la **structure HTML** de POP (classe `swiper-slide`, style en ligne `margin-top:5px`). Une refonte du site POP casse l'extraction sans erreur explicite : les images ne sont plus trouvées. Le passage prévu à IIIF supprime cette dépendance.
-- **Rythme** : environ 10 requêtes par seconde au maximum vers un site du ministère. L'équipe POP a accepté la récupération de ses pages et l'affichage direct de ses photos.
-- **Aspect juridique** : seule l'**URL** de l'image est stockée, **pas le fichier**. Les images sont affichées par **lien direct** depuis les serveurs POP ([MonumentHistorique.tsx#L475](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L475)), avec leur crédit (`copyright`) enregistré mais **pas affiché** dans cette vignette. L'équipe POP a accepté cet affichage direct. Les conditions de réutilisation des photographies POP (droits d'auteur des photographes, mentions obligatoires) restent **à confirmer** avant tout usage plus large (par exemple dans un PDF).
-- Le rattrapage d'images est **désactivé au démarrage** (`// await initPopImages();` dans [index.ts#L21](../packages/backend/src/index.ts#L21)). Seul le script manuel le lance.
-- **En production, la récupération n'a jamais tourné** (relevé du 17/11/2026 : `pop_images` vide, `last_image_check_at` vide partout) : aucune photo d'objet ne s'affiche aujourd'hui.
-- Côté navigateur, la table `pop_images` n'est pas synchronisée. Les images des objets sont demandées en ligne via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)) : **hors ligne, pas d'image**, et une vignette par défaut `/objet-sans-image.png` s'affiche.
-
----
-
-## 4. Stockage objet (S3 / MinIO)
+## 3. Stockage objet (S3 / MinIO)
 
 Code : [uploadService.ts](../packages/backend/src/services/uploadService.ts), [uploadRoutes.tsx](../packages/backend/src/routes/uploadRoutes.tsx), [pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx), file de pièces jointes du navigateur dans [db.ts](../packages/frontend/src/db/db.ts).
 
-### 4.1 Configuration
+### 3.1 Configuration
 
 | Variable | Rôle |
 | --- | --- |
@@ -198,7 +167,7 @@ Particularités du client S3 ([uploadService.ts#L11](../packages/backend/src/ser
 - une **politique CORS** sur le bucket autorisant `PUT` et `GET` depuis l'origine du frontend. Sans elle, l'envoi des photos et des PDF échoue ;
 - le bucket ne doit **pas** être public : tous les accès passent par le backend ou par une URL présignée. Le code ne pose aucune ACL.
 
-### 4.2 Organisation des clés
+### 3.2 Organisation des clés
 
 Bucket unique, **un seul préfixe racine `attachment/`**, puis l'identifiant du document parent :
 
@@ -229,7 +198,7 @@ Le **premier segment** de la clé désigne le document : c'est lui qui décide d
 - **Pas d'audio, pas de vidéo** : le code ne stocke que des images et des PDF.
 - Fonctions mortes : `getPDFName` (`<id>/compte_rendu.pdf`), `getPictureName`, `uploadAttachment`, `addPDFToReport` (qui construit une URL `https://http…` erronée) ne sont pas appelées.
 
-### 4.3 Flux d'écriture et de lecture
+### 3.3 Flux d'écriture et de lecture
 
 ```mermaid
 sequenceDiagram
@@ -274,7 +243,7 @@ Points d'attention :
 - Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit (`getAttachment`), ce qui échoue s'il est absent.
 - Les URL présignées de lecture (`generatePresignedUrl`) ré-encodent chaque segment du chemin après signature ([uploadService.ts#L125](../packages/backend/src/services/uploadService.ts#L125)) pour gérer les noms avec caractères spéciaux.
 
-### 4.4 Cycle de vie et volumétrie
+### 3.4 Cycle de vie et volumétrie
 
 - **Aucune règle de cycle de vie** dans le code : photos remplacées (`is_deprecated`), PDF successifs, pièces jointes de documents désactivés et anciens plans de situation sont **conservés indéfiniment**. La durée de conservation doit être définie avec le ministère (archivage, RGPD) puis mise en œuvre par une règle de cycle de vie S3 ou un script de purge.
 - **Volumétrie estimée** (*à confirmer*) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (renseignées depuis la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, utiliser `mc du` sur le bucket.
@@ -282,11 +251,11 @@ Points d'attention :
 
 ---
 
-## 5. Liens courts vers les PDF (`attachment_redirection`)
+## 4. Liens courts vers les PDF (`attachment_redirection`)
 
 Les courriels d'envoi de CR et de CE ne contiennent pas de pièce jointe, mais un **lien court** servi par le backend **à la racine** (hors préfixe `/api`, **sans authentification**) : `GET {BACKEND_URL}/attachment/:id/:filename?` ([attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts), monté dans [router.ts](../packages/backend/src/router.ts)).
 
-### 5.1 Création
+### 4.1 Création
 
 `createAttachmentRedirection` ([pdfRoutes.tsx#L25](../packages/backend/src/routes/pdfRoutes.tsx#L25)) :
 
@@ -299,7 +268,7 @@ Les courriels d'envoi de CR et de CE ne contiennent pas de pièce jointe, mais u
 
 Lors de l'envoi d'un CE, **plusieurs lignes** sont créées pour un même PDF : une pour le courriel, une autre renvoyée à l'interface, une pour le valideur si la validation est demandée.
 
-### 5.2 Résolution
+### 4.2 Résolution
 
 ```mermaid
 flowchart TD
@@ -328,7 +297,7 @@ Conséquences pour le transfert :
 
 ---
 
-## 6. Redirection de l'ancien domaine (`crvif-redirection`)
+## 5. Redirection de l'ancien domaine (`crvif-redirection`)
 
 Le dossier [crvif-redirection](../crvif-redirection) contient un **mini-site statique** à déployer sur l'**ancien domaine** de l'application, lorsqu'elle s'appelait « Compte-rendu VIF » (CR-VIF). Ancien domaine probable : `app.compte-rendu-vif.beta.gouv.fr` et `*.compte-rendu-vif.incubateur.net`, encore listés dans `preview.allowedHosts` de [vite.config.ts](../packages/frontend/vite.config.ts#L74). Ajouté par le commit « feat: redirect users from crvif » (mai 2026).
 
@@ -345,7 +314,7 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 
 ---
 
-## 7. Dossier `packages/backend/data`
+## 6. Dossier `packages/backend/data`
 
 | Élément | Statut |
 | --- | --- |
@@ -354,14 +323,14 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 
 ---
 
-## 8. Récapitulatif pour la reprise
+## 7. Récapitulatif pour la reprise
 
 | Sujet | Action |
 | --- | --- |
-| Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net`, `pop.culture.gouv.fr` et l'API Dataspace des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Dataspace filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
-| Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, `pop.culture.gouv.fr` (images), point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
+| Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` et l'API Dataspace des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Dataspace filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
+| Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
 | API Adresse | Le service `api-adresse.data.gouv.fr` redirige déjà vers la Géoplateforme de l'IGN (`data.geopf.fr/geocodage`). Le géocodage du plan de situation ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)) l'interroge directement ; reste à migrer [address.tsx](../packages/frontend/src/features/address.tsx), qui n'encode pas la requête dans l'URL (`encodeURIComponent` manquant). |
-| Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées et vider `pop_objets` si Palissy doit être rafraîchi. Les images POP passeront par IIIF plutôt que par la récupération des pages (§ 3). |
+| Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées et vider `pop_objets` si Palissy doit être rafraîchi. L'affichage des images POP passera par le protocole IIIF (voir § 2.4). |
 | Stockage | Copier le bucket à l'identique, configurer le CORS, définir une durée de conservation, garder le bucket privé. |
 | Liens courts | Maintenir l'ancien `BACKEND_URL` au moins 90 jours après la bascule. |
 | Ancien domaine | Garder ou retirer `crvif-redirection` en connaissance de cause. |

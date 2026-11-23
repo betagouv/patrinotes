@@ -85,7 +85,7 @@ Composants :
 
 **Pourquoi** : `css-tree` est un module CommonJS. Avec un import « namespace » (`import * as`), le bundler (Rollup, lors du build Vite) ne trouvait pas `generate` ni `parse` sur l'objet importé. Le message du commit d'origine (`40a7f8e`, mai 2024) est : *« rollup couldnt find csstree in react-pdf-renderer »*. L'import par défaut récupère l'objet `module.exports` complet.
 
-> ⚠️ **Le patch n'est pas appliqué.** Le [package.json](../package.json) racine ne contient pas de `pnpm.patchedDependencies` et le lockfile résout `react-pdf-html@2.1.5`, alors que le patch cible la 2.0.4. Le fichier est donc **orphelin**. Le build fonctionne vraisemblablement parce que la 2.1.x a corrigé l'import (à confirmer). Les devDependencies `css-tree` et `@types/css-tree` du frontend sont des vestiges de ce contournement. **Recommandation** : supprimer le patch, ou le réenregistrer s'il redevient nécessaire après une montée de version.
+> ⚠️ **Le patch n'est pas appliqué.** Le [package.json](../package.json) racine ne contient pas de `pnpm.patchedDependencies` et le lockfile résout `react-pdf-html@2.1.5`, alors que le patch cible la 2.0.4. Le fichier est donc **orphelin** : la 2.1.5 contient déjà `import cssTree from 'css-tree'`, et les tests de bout en bout du constat et du compte-rendu (génération, dépôt S3, lecture du lien) passent sans lui. Les devDependencies `css-tree` et `@types/css-tree` du frontend sont des vestiges de ce contournement. **Recommandation** : supprimer le patch.
 
 ### 2.4 Polices
 
@@ -150,7 +150,7 @@ flowchart LR
 
 Le backend ne génère plus de PDF. Une ancienne version le faisait avec `renderToBuffer` de `@react-pdf/renderer` et composait les dessins avec `canvas` (`createCanvas`, `loadImage`). Il en reste plusieurs **vestiges** :
 
-- dépendances backend `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, toutes jamais importées. `linkedom` est importé mais inutilisé dans [pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx#L20) ; il n'est réellement utilisé que pour le scraping POP ;
+- dépendances backend `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, toutes jamais importées. `linkedom` est importé mais inutilisé dans [pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx#L20), et n'est utilisé nulle part ailleurs ;
 - [tsup.config.ts](../packages/backend/tsup.config.ts), qui déclare `@react-pdf/renderer`, `@react-pdf/font` et `canvas` en `external` ;
 - **[Dockerfile](../Dockerfile#L5-L16)** : l'image de base installe `build-base g++ cairo-dev jpeg-dev pango-dev giflib-dev pixman-dev pangomm-dev libjpeg-turbo-dev freetype-dev`. Ces paquets servent **uniquement à compiler le module natif `canvas`** (node-gyp sur Alpine/musl, faute de binaire précompilé). `canvas` figure d'ailleurs dans `onlyBuiltDependencies` du [package.json](../package.json). Comme `canvas` n'est plus utilisé, ces dépendances système alourdissent l'image et la surface d'attaque **sans bénéfice**. Elles peuvent être retirées en même temps que la dépendance (à valider par un build).
 - Le plugin multipart (limite 15 Mo) est enregistré dans [uploadRoutes.tsx](../packages/backend/src/routes/uploadRoutes.tsx#L19-L23), mais aucune route n'accepte de fichier en multipart.
@@ -467,9 +467,7 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 | `MINIO_URL` | HTTPS (S3) | GetObject, HeadObject, PutObject, URL présignées | [uploadService.ts](../packages/backend/src/services/uploadService.ts) |
 | `EMAIL_HOST`:`EMAIL_PORT` | SMTP(S), 465 par défaut | Tous les courriels | [mail.ts](../packages/backend/src/features/mail.ts) |
 | Keycloak `VITE_AUTH_URL/realms/<realm>` et `/admin/realms/<realm>` | HTTPS | Vérification des jetons, API d'administration | [authService.ts](../packages/backend/src/services/authService.ts#L17), [keycloak.ts](../packages/backend/src/features/auth/keycloak.ts) |
-| `ministere-culture.s3.sbg.io.cloud.ovh.net` | HTTPS | Téléchargement de `merimee.csv` et `palissy.csv` (POP), **uniquement si `FORCE_REFETCH_POP=true`** au démarrage | [pop.ts](../packages/backend/src/features/data/pop.ts#L254-L261), [index.ts](../packages/backend/src/index.ts#L16) |
-| `pop.culture.gouv.fr` | HTTPS | Scraping des images des notices (`initPopImages`, script `pnpm backend import-pop`). L'équipe POP a accepté cette récupération. La récupération automatique au fil de l'eau (`last_image_check_at`) est abandonnée : ce code est inutilisé (désactivé dans `index.ts`) et l'équipe prévoit d'afficher les images via le protocole IIIF | [pop.ts](../packages/backend/src/features/data/pop.ts#L287) |
-| `collectif-objets-datasette.fly.dev` | HTTPS | **Code mort** : la variable `COLLECTIF_OBJETS_DATASETTE_URL` est commentée | [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) |
+| `ministere-culture.s3.sbg.io.cloud.ovh.net` | HTTPS | Téléchargement de `merimee.csv` et `palissy.csv` (POP), **uniquement si `FORCE_REFETCH_POP=true`** au démarrage | [pop.ts](../packages/backend/src/features/data/pop.ts#L80-L87), [index.ts](../packages/backend/src/index.ts#L16) |
 | API Dataspace des unités patrimoniales (`UP_API_URL`) | HTTPS | Arbre des UP d'un MH complexe, si `UP_API_MODE=live` ; joignable seulement depuis le réseau de production | [upProvider.ts](../packages/backend/src/features/up/upProvider.ts) |
 | Sentry (`SENTRY_DSN`) | HTTPS | Erreurs filtrées (`beforeSend`) et 10 % des traces | [sentry.ts](../packages/backend/src/features/sentry.ts) |
 
@@ -494,7 +492,8 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 | Alertes envoyées avant validation | Alerte transmise pour un constat ensuite refusé | Décaler l'envoi après acceptation |
 | Courriel d'alerte sans plafond de taille | Rejet SMTP | Limiter, ou passer par des liens |
 | Fournisseur OpenFreeMap hors sphère publique, attribution masquée | Disponibilité, licences | Basculer sur PLAN.IGN (Géoplateforme) |
-| Polices `.ttf` non précachées | PDF impossible hors ligne sur un appareil vierge | Ajouter `ttf` à `globPatterns` |
+| Pages PDF bloquées hors ligne : elles attendent la synchronisation du flux de pièces jointes (`hasSynced`) avant d'afficher quoi que ce soit | Aucun PDF hors ligne pour un document jamais ouvert en ligne sur l'appareil (constat créé hors ligne, compte-rendu dont la page PDF n'a jamais été ouverte en ligne) | Ne pas attendre `hasSynced` hors ligne ; travailler avec les pièces jointes locales |
+| Worker pdf.js de l'aperçu (`.mjs`) non précaché (`globPatterns` de [vite.config.ts](../packages/frontend/vite.config.ts)) ; son échec de chargement est pris pour un fichier périmé par la récupération de [main.tsx](../packages/frontend/src/main.tsx) | Hors ligne, si le worker n'est pas dans le cache du navigateur : rechargements, puis désinscription du service worker et vidage des caches : **l'application ne s'ouvre plus hors ligne** | Ajouter `mjs` à `globPatterns` ; ne déclencher la récupération que pour les *chunks* de l'application |
 | Alerte « Sécurité » : pas de colonne `courriel_mairie` | Saisie manuelle systématique | Ajouter la colonne, ou documenter ce comportement |
 
 ---

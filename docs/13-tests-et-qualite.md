@@ -4,7 +4,7 @@ Ce chapitre décrit la **stratégie de test** (suite Playwright de bout en bout)
 formatage, lint), les **conventions** observées dans le code et l'historique Git, puis une **procédure de prise en main**
 pas à pas pour un nouveau développeur. Il termine par les **zones non couvertes** par les tests.
 
-En résumé : la qualité repose aujourd'hui **surtout sur une suite e2e Playwright** (17 fichiers de specs) qui démarre
+En résumé : la qualité repose aujourd'hui **surtout sur une suite e2e Playwright** (17 fichiers de specs, 80 tests) qui démarre
 une pile complète en Docker. Quelques **tests unitaires** vitest existent côté backend (§ 4). La CI de test est
 **manuelle**.
 
@@ -248,7 +248,7 @@ package `pdf` (rendu sans navigateur).
 | Outil | Configuration | État réel |
 | --- | --- | --- |
 | **TypeScript** (backend) | [packages/backend/tsconfig.json](../packages/backend/tsconfig.json) : `strict`, `noUncheckedIndexedAccess`, `module: ESNext`, `moduleResolution: bundler`, décorateurs, `jsx: react-jsx` (PDF côté serveur) | `pnpm backend check` (`tsc --noEmit`), **jamais lancé en CI**. Le build `tsup` ne vérifie pas les types. |
-| **TypeScript** (frontend) | [packages/frontend/tsconfig.json](../packages/frontend/tsconfig.json) : `strict`, `noUnusedParameters`, `allowImportingTsExtensions`, alias `#components/*`, types `vite-plugin-pwa/client`, plus [tsconfig.node.json](../packages/frontend/tsconfig.node.json) pour `vite.config.ts` et `scripts/` | `pnpm frontend check`, jamais lancé en CI. Vite ne vérifie pas les types. Il existe des `// @ts-ignore` et un `// @ts-nocheck -- temporary` ([_merimee.ts](../packages/backend/src/features/data/_merimee.ts)). |
+| **TypeScript** (frontend) | [packages/frontend/tsconfig.json](../packages/frontend/tsconfig.json) : `strict`, `noUnusedParameters`, `allowImportingTsExtensions`, alias `#components/*`, types `vite-plugin-pwa/client`, plus [tsconfig.node.json](../packages/frontend/tsconfig.node.json) pour `vite.config.ts` et `scripts/` | `pnpm frontend check`, jamais lancé en CI. Vite ne vérifie pas les types. Il existe des `// @ts-ignore`. |
 | **TypeScript** (pdf) | [packages/pdf/tsconfig.json](../packages/pdf/tsconfig.json) : `strict`, `noUncheckedIndexedAccess` | Pas de script `check` |
 | **Prettier** 3 | [.prettierrc](../.prettierrc) : guillemets doubles, `printWidth: 120`, `trailingComma: "all"`, `semi`, 2 espaces, `proseWrap: "always"` (Markdown replié à 120 colonnes) | Pas de script `format` ni de contrôle en CI. À appliquer via l'éditeur. |
 | **Biome** 1.6.4 | Déclaré en devDependency racine, **sans fichier `biome.json`** (configuration par défaut). `pnpm.ignoredBuiltDependencies` contient `@biomejs/biome`. | Aucun script ne l'appelle. Il fait doublon avec Prettier et ESLint : choix à arbitrer. |
@@ -346,7 +346,7 @@ gitGraph
 | Branche | Rôle observé |
 | --- | --- |
 | `main` | Production. Image GHCR `…-main:{backend,frontend}`. Reçoit parfois des **correctifs directs**, rapportés ensuite dans `development`. |
-| `development` | Intégration et préproduction (image `…-development:*`). Elle contient tout `main` et est **en avance** sur lui : fiches monument (MH, UP, objet), recherche de monument sur l'accueil et corrections côté client, pas encore déployées en production. |
+| `development` | Intégration et préproduction (image `…-development:*`). Elle est fusionnée dans `main` à chaque mise en production. |
 | `compte-rendu-vif` | Ancien nom du produit. Toujours dans `main.yml`, dernier commit en **novembre 2025** : branche probablement abandonnée (à confirmer), dont on peut retirer le déclencheur. |
 | `feat/*`, `fix/*`, `refactor/*` | Branches de fonctionnalité |
 | `poc/*` (`electricsql`, `replicache`, `triplit`, `watermelon`, `automerge`, `hocuspocus`), `save/*`, `backup/*` | Essais de moteurs de synchronisation et sauvegardes historiques, **à archiver** |

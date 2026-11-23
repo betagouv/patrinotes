@@ -41,7 +41,7 @@ Les phases 2 et 3 se déroulent **en parallèle** : la première est portée par
 2. Mesurer : `pg_database_size` des deux bases, taille du bucket, nombre d'objets, version PostgreSQL, version effective de PowerSync (journal de démarrage), consommation des services (`docker stats`, taille des volumes) pour recaler le dimensionnement du § 4.2.
 3. Relever l'état de la publication : `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';` et des slots : `SELECT * FROM pg_replication_slots;`.
 4. Relever l'émetteur réel des jetons (décoder un jeton d'accès, champ `iss`) et le realm.
-5. Rechercher d'éventuelles URL absolues de l'ancien hébergement stockées en base. Les tables historiques `pictures` et `merimee` sont vides en production et peuvent être supprimées ; `pop_images` est vide aussi.
+5. Rechercher d'éventuelles URL absolues de l'ancien hébergement stockées en base.
 6. Relever la configuration CORS du bucket Scaleway (`aws s3api get-bucket-cors`) et les noms de domaine actuels du backend, de PowerSync et de S3.
 7. Répondre aux [questions ouvertes](18-questions-ouvertes.md) qui dépendent de la production.
 

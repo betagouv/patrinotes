@@ -74,7 +74,7 @@ Points d'attention (règles cachées) :
 4. Le démarrage en mode forme CMD *shell* (`CMD pnpm …`) : le processus PID 1 est `/bin/sh`, les signaux (`SIGTERM`) ne sont pas relayés proprement à Node ; les arrêts se font par `SIGKILL` après le délai de grâce.
 5. Plusieurs répliques du backend lanceraient les migrations en parallèle au démarrage. Drizzle n'utilise pas de verrou consultatif (à confirmer) : **garder une seule réplique**, ou sortir les migrations dans une tâche dédiée.
 6. Les migrations Drizzle exécutent `ALTER PUBLICATION powersync ADD TABLE …` ([db/0000_bright_stone_men.sql#L183](../db/0000_bright_stone_men.sql#L183)) : la publication `powersync` doit exister **avant** la première migration (voir § 4.2).
-7. Au démarrage, le backend insère le service technique `no-service` s'il n'existe pas ([index.ts](../packages/backend/src/index.ts#L34-L39)) ; si `FORCE_REFETCH_POP=true`, il télécharge et importe les CSV POP (Mérimée, Palissy) depuis `ministere-culture.s3.sbg.io.cloud.ovh.net` avant d'ouvrir le port, ce qui retarde fortement le démarrage et écrit des fichiers temporaires dans `packages/backend/data/` (système de fichiers inscriptible requis).
+7. Au démarrage, le backend insère le service technique `no-service` s'il n'existe pas ([index.ts](../packages/backend/src/index.ts#L33-L38)) ; si `FORCE_REFETCH_POP=true`, il télécharge et importe les CSV POP (Mérimée, Palissy) depuis `ministere-culture.s3.sbg.io.cloud.ovh.net` avant d'ouvrir le port, ce qui retarde fortement le démarrage et écrit des fichiers temporaires dans `packages/backend/data/` (système de fichiers inscriptible requis).
 8. Le serveur écoute sur `0.0.0.0:${PORT}` (3001 par défaut). L'image ne déclare pas `EXPOSE`. Sonde de santé : `GET /health` → `{"status":"ok"}` (ne teste ni la base ni S3).
 
 ### 2.4 Cible `frontend`
@@ -171,7 +171,7 @@ Remarques :
 Ces scripts ne s'exécutent **qu'au premier démarrage d'un volume vide** (mécanisme `docker-entrypoint-initdb.d`). Sur une base gérée ou restaurée, ils doivent être rejoués à la main.
 
 > [!WARNING]
-> **Tables synchronisées absentes de la publication.** Les migrations ajoutent à la publication `powersync` : `user`, `delegation`, `service_instructeurs`, `clause_v2`, `pdf_snapshot`, `tmp_pictures`, `picture_lines`, `pictures`, `transactions`, `report`, `sent_email`, `suggested_email`, `udap` (renommée ensuite `service`, ce qui conserve l'appartenance), `user_settings`, `state_report`, `pop_immeubles`, `user_dept`, `visited_section`, `report_attachment`, `state_report_attachment`, `visited_section_attachment`, `pop_objets`, `state_report_alert`, `state_report_alert_attachment`. **`constat_validation`, lue par les règles de synchronisation ([sync-config.yaml](../powersync/sync-config.yaml)), n'est ajoutée par aucune migration** ([db/0019_bouncy_falcon.sql](../db/0019_bouncy_falcon.sql) crée la table sans `ALTER PUBLICATION`). Le relevé de production du 17/11/2026 confirme qu'elle **n'est pas dans la publication de production** (22 tables publiées, voir [08](08-synchronisation-hors-ligne.md) § 2.4). C'est sans effet aujourd'hui, car le frontend ne déclare ni n'utilise cette table. Vérifier tout de même le contenu de la publication avant et après migration avec `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';`.
+> **Tables synchronisées absentes de la publication.** Les migrations ajoutent à la publication `powersync` : `user`, `delegation`, `service_instructeurs`, `clause_v2`, `pdf_snapshot`, `tmp_pictures`, `picture_lines`, `pictures` (retirée en 0040), `transactions`, `report`, `sent_email`, `suggested_email`, `udap` (renommée ensuite `service`, ce qui conserve l'appartenance), `user_settings`, `state_report`, `pop_immeubles`, `user_dept`, `visited_section`, `report_attachment`, `state_report_attachment`, `visited_section_attachment`, `pop_objets`, `state_report_alert`, `state_report_alert_attachment`. **`constat_validation`, lue par les règles de synchronisation ([sync-config.yaml](../powersync/sync-config.yaml)), n'est ajoutée par aucune migration** ([db/0019_bouncy_falcon.sql](../db/0019_bouncy_falcon.sql) crée la table sans `ALTER PUBLICATION`). Le relevé de production du 17/11/2026 confirme qu'elle **n'est pas dans la publication de production** (voir [08](08-synchronisation-hors-ligne.md) § 2.4). C'est sans effet aujourd'hui, car le frontend ne déclare ni n'utilise cette table. Vérifier tout de même le contenu de la publication avant et après migration avec `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';`.
 
 ### 4.3 `docker-compose.test.yaml` (tests E2E)
 
@@ -246,7 +246,7 @@ Un seul serveur porte tout : tous les domaines ci-dessous y pointent. Trois proj
 | Stockage objet | Scaleway Object Storage, bucket **`patrinotes-prod`**, région `fr-par` (`https://patrinotes-prod.s3.fr-par.scw.cloud`) | bucket `patrimoine-embarque-preprod` |
 | SMTP | Scaleway Transactional Email (`smtp.tem.scw.cloud:465`) | idem, même expéditeur |
 | Adminer | présent, protégé par authentification | idem |
-| Sentry | frontend seulement (`sentry.incubateur.net`) ; **aucun DSN côté backend** | — |
+| Sentry | frontend (`sentry.incubateur.net`) ; backend pas encore branché (prévu) | — |
 
 Points notables :
 
@@ -281,7 +281,7 @@ flowchart LR
     end
 
     SMTP["Relais SMTP<br/>:465 ou :587"]
-    DG["ministere-culture.s3.sbg.io.cloud.ovh.net<br/>pop.culture.gouv.fr"]
+    DG["ministere-culture.s3.sbg.io.cloud.ovh.net"]
 
     U -->|"HTTPS"| RP
     RP --> FE
@@ -368,8 +368,8 @@ sequenceDiagram
 ```
 
 - Il n'y a ni numéro de version publié, ni changelog, ni étiquette Git de version. La version déployée ne se retrouve que par recoupement des dates de construction des images. La version visible côté client est `window.APP_VERSION` (version de `packages/frontend/package.json` + horodatage du build).
-- Les modifications de `sync-config.yaml` et `powersync-config.yaml` sont à recopier à la main sur le serveur, puis PowerSync à redémarrer. La livraison des fiches l'exigera (migrations 0037 à 0039, nouvelles tables publiées).
-- `development` est en avance sur `main` : il contient tout `main`, plus les fiches monument MH / UP / objet, la recherche de monument sur l'accueil et des corrections qui évitent des pertes de données côté client.
+- Les modifications de `sync-config.yaml` et `powersync-config.yaml` sont à recopier à la main sur le serveur, puis PowerSync à redémarrer.
+- `development` est fusionnée dans `main` à chaque mise en production.
 - Les clients PWA récupèrent la nouvelle version au chargement suivant en ligne (service worker en `autoUpdate`, navigation *network-first*, rechargement forcé si un *chunk* JS ancien est introuvable).
 - Avant de livrer une migration touchant des tables synchronisées : vérifier la publication `powersync`, le schéma client [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts) et les règles [sync-config.yaml](../powersync/sync-config.yaml) ([README](../README.md#L107-L113)).
 

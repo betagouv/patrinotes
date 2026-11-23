@@ -46,7 +46,7 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 
 | # | Question | Pourquoi on la pose | Bloquante |
 | --- | --- | --- | --- |
-| M16 | Quel est le **calendrier d'homologation** et qui la prononce ? Quel référentiel (RGS, MonServiceSécurisé) ? | L'homologation doit être acquise avant la bascule. L'état des mesures MonServiceSécurisé est suivi par l'équipe. | **Oui** |
+| M16 | Quel est le **calendrier d'homologation** et qui la prononce ? Quel référentiel (RGS, MonServiceSécurisé) ? | L'homologation doit être acquise avant la bascule. Le dossier MonServiceSécurisé est en cours de remplissage par l'équipe ; les échanges avec le RSSI du ministère ont commencé. | **Oui** |
 | M17 | Quelles corrections de la liste des risques ([16](16-risques-et-dette-technique.md)) sont exigées **avant** homologation ? | Le contrôle d'accès côté serveur et le filtrage des données envoyées à Sentry sont en place. La liste contient les points restants, classés par niveau. | **Oui** |
 | M18 | TLS est-il exigé entre l'application et la base de données à l'intérieur du réseau du ministère ? | Le code le désactive aujourd'hui ; l'activer est une petite modification à prévoir. | Non |
 | M19 | Une politique de mot de passe et une protection contre la force brute sont-elles exigées (scénario Keycloak) ? | À définir pour la cible. Sans objet si ProConnect est retenu. | Non |

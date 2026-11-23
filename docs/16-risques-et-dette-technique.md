@@ -4,8 +4,6 @@ Ce document consolide les risques relevés pendant l'analyse du code : sécurit�
 
 **Méthode.** Les constats viennent d'une lecture du code de la branche `development` (état au 23/11/2026) et du relevé de production du 17/11/2026 (lecture seule de Coolify, des bases, de Keycloak et des DNS). Ce que le relevé n'a pas pu mesurer reste marqué « à confirmer ».
 
-> [!NOTE]
-> **Production et `development`.** La production déploie `main`. Le contrôle d'accès côté serveur (écritures, fichiers, PDF, flux de pièces jointes) et le filtrage des données envoyées à Sentry sont en place sur les deux branches. `development` a en plus les fiches monument (migrations 0037 à 0039) et des corrections qui évitent des pertes de données côté client (§3).
 
 **Niveaux.** Critique : exploitable par un agent connecté ou perte de données avérée, à traiter avant homologation. Élevé : à traiter avant ou pendant le transfert. Moyen : à planifier. Faible : nettoyage.
 
@@ -33,6 +31,7 @@ quadrantChart
 | ID | Risque | Niveau | Détail |
 | --- | --- | --- | --- |
 | DAT-01 | Pertes silencieuses d'écritures de synchronisation (erreurs et refus) | **Critique** | §3 |
+| DAT-11 | PDF impossible hors ligne pour un document jamais ouvert en ligne ; worker pdf.js non précaché pouvant rendre l'application inutilisable hors ligne | Élevé | §3 |
 | SEC-06 | Aucune limitation de débit | Élevé | §2 |
 | SEC-19 | Durcissement de Keycloak en production | Élevé | §2 |
 | SEC-20 | Préproduction authentifiée par le Keycloak de production | Élevé | §2 |
@@ -81,9 +80,9 @@ Aucune limitation sur l'API, y compris `/api/login-user`, `/api/create-user`, la
 
 Le détail de ces constats (réglages, noms d'hôte, ports) n'est pas reproduit dans ce dépôt public ; il figure dans le relevé de sécurité transmis au ministère.
 
-- **SEC-19** : réglages de sécurité du Keycloak de production (mots de passe, force brute, durées de session, exposition de l'administration). **Recommandation** : appliquer les durcissements du relevé.
+- **SEC-19** : réglages de sécurité du Keycloak de production (mots de passe, force brute, durées de session, exposition de l'administration). **Prévu par l'équipe avant le transfert** : protection contre la force brute, politique de mot de passe, accès restreint à la console d'administration.
 - **SEC-20** : la préproduction s'authentifie sur le Keycloak de production. Une fausse manipulation en préproduction touche la production. **Recommandation** : Keycloak ou realm dédié à la préproduction.
-- **SEC-21** : des services de l'ancienne application CR VIF tournent encore sur le même serveur, dont certains sont joignables depuis Internet. **Recommandation** : arrêter et supprimer ces services après une dernière sauvegarde. Voir [10](10-infrastructure-et-deploiement.md) § 6.0.
+- **SEC-21** : des services de l'ancienne application CR VIF tournent encore sur le même serveur, dont certains sont joignables depuis Internet. **Prévu par l'équipe avant le transfert** : arrêter et supprimer ces services après une dernière sauvegarde. Voir [10](10-infrastructure-et-deploiement.md) § 6.0.
 
 ### SEC-07 — Dépendances (élevé)
 
@@ -116,9 +115,9 @@ Le détail de ces constats (réglages, noms d'hôte, ports) n'est pas reproduit 
 | DAT-07 | Lignes avec `is_deprecated` NULL jamais synchronisées. (`constat_validation` est absente de la publication de production, ce qui est confirmé, mais sans effet car le frontend ne l'utilise pas.) | Photos invisibles côté client. | Migration corrective ; retirer la requête inutile de `sync-config.yaml`. |
 | DAT-08 | Alertes marquées envoyées même en cas d'échec SMTP ; aucun réessai ni file d'envoi. | Alerte patrimoniale jamais reçue. | File d'envoi avec réessais. |
 | DAT-09 | `ON DELETE SET NULL` sur des colonnes `NOT NULL` (`user.service_id`, `report.createdBy`). | Suppressions en échec. | Revoir les contraintes. |
+| DAT-11 | PDF impossible hors ligne pour un document jamais ouvert en ligne (pages PDF qui attendent `hasSynced`) ; worker pdf.js non précaché, dont l'échec déclenche le vidage des caches et rend l'application inutilisable hors ligne. | Agent bloqué sur le terrain, application à recharger en ligne. | Précacher les `.mjs`, restreindre la récupération des *chunks* périmés, ne pas attendre la synchronisation hors ligne. Voir [09](09-documents-pdf-cartes-emails.md) § 12. |
 | DAT-10 | Alerte de fiche validée hors ligne : envoyée seulement par le navigateur de son auteur, au retour du réseau. | Alerte jamais envoyée si l'appareil ne revient pas en ligne. | Envoi côté serveur après synchronisation. |
 
-**Écart entre production et `development`.** Trois cas de perte côté client sont traités dans `development` mais pas encore en production : le commentaire et les destinataires d'une alerte créée pendant la session peuvent ne pas être enregistrés (l'alerte n'est alors pas envoyée) ; une modification du profil ou du service faite juste après l'inscription peut être perdue ; une photo rechoisie (même fichier) est ignorée. Ils disparaîtront au prochain déploiement de `development`. Voir [03](03-frontend-pwa.md) et [08](08-synchronisation-hors-ligne.md).
 
 ## 4. Données personnelles (RGPD)
 
@@ -145,7 +144,7 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 | OPS-07 | Aucune tâche planifiée, ni dans le code ni dans Coolify : imports POP (dernier import des immeubles après le 06/05/2026), purge, compaction PowerSync manuels ou absents. | Planificateur (cron, tâche Kubernetes). |
 | OPS-11 | Sauvegardes (relevé du 17/11/2026) : base de production sauvegardée chaque jour (7 jours en local, 90 jours sur S3) ; **aucune restauration testée** ; bucket de fichiers `patrinotes-prod` sans sauvegarde visible ; sauvegardes stockées dans le **même compte et la même région Scaleway** que les données ; thème et configurations PowerSync hors sauvegarde. | Tester une restauration complète, sauvegarder ou versionner le bucket, copier les sauvegardes hors du compte. |
 | OPS-12 | Déploiements lancés à la main dans Coolify, sans trace de la version (`commit = HEAD`) ; `sync-config.yaml` et `powersync-config.yaml` déposés à la main sur le serveur ; image PowerSync en `latest`. | Tag par commit, déploiement déclenché par la CI, configuration PowerSync versionnée et déployée avec l'application. |
-| OPS-13 | 4 541 objets POP avec un champ date invalide (colonnes décalées ou encodage) ; `pop_images` vide (la récupération des photos POP n'a jamais tourné ; elle est abandonnée au profit d'IIIF, voir §6) ; `shared_buffers` à 128 Mo (défaut) sur un serveur de 31 Go ; empreinte de la migration 0000 différente du fichier du dépôt. | Contrôler l'import, régler PostgreSQL, ne plus modifier une migration appliquée. |
+| OPS-13 | 4 541 objets POP avec un champ date invalide (colonnes décalées ou encodage) ; `pop_images` vide (l'affichage des images POP passera par le protocole IIIF) ; `shared_buffers` à 128 Mo (défaut) sur un serveur de 31 Go ; empreinte de la migration 0000 différente du fichier du dépôt. | Contrôler l'import, régler PostgreSQL, ne plus modifier une migration appliquée. |
 | OPS-09 | Rechargement silencieux à la mise à jour, possible pendant une saisie. | Inviter l'utilisateur à recharger. |
 | OPS-10 | L'API Dataspace des unités patrimoniales n'est joignable que depuis le réseau de production (filtrage IP) ; `UP_API_MODE` vaut `mock` par défaut. | Faire autoriser l'adresse de sortie de l'hébergement cible ; vérifier `UP_API_MODE=live` après la bascule. Le cache `up_cache` sert de secours. |
 
@@ -153,15 +152,16 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 
 | Sujet | Constat |
 | --- | --- |
-| Code mort | `relations.ts` (ne compile pas), `_merimee.ts` et les tables `merimee` et `pictures` (vides en production, donc supprimables ; `pictures` est pourtant synchronisée à tous), la récupération des photos POP par lecture des pages de `pop.culture.gouv.fr` (jamais lancée en production ; l'affichage des images passera par le protocole IIIF), `udap.json`, `addPDFToReport` (construit `https://https://…`), `SpeechRecorder.tsx`, `template-generique.html`, plugin *multipart* sans route, `swEnv.js` jamais chargé, `public/pdfjs`, `wa-sqlite-async`. |
-| Dépendances inutiles | Backend : `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `@keycloak/keycloak-admin-client`, `@fastify/swagger-ui`. Frontend : `npm`, `install`, `@rawwee/react-pdf-html`. |
-| Correctif orphelin | [patches/react-pdf-html@2.0.4.patch](../patches/react-pdf-html@2.0.4.patch) n'est plus appliqué (pas de `patchedDependencies`, version résolue 2.1.5). |
+| Code mort | `relations.ts` (ne compile pas), `udap.json`, `addPDFToReport` (construit `https://https://…`), `SpeechRecorder.tsx`, `template-generique.html`, plugin *multipart* sans route, `swEnv.js` jamais chargé, `public/pdfjs`, `wa-sqlite-async`. |
+| Dépendances inutiles | Backend : `linkedom`, `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `@keycloak/keycloak-admin-client`, `@fastify/swagger-ui`. Frontend : `npm`, `install`, `@rawwee/react-pdf-html`. |
+| Manifeste PWA | Les icônes `dsfr/favicon/android-chrome-192x192.png` et `-512x512.png` déclarées dans [vite.config.ts](../packages/frontend/vite.config.ts) n'existent pas : l'icône de l'application installée sur Android ne se charge pas. |
+| Correctif orphelin | [patches/react-pdf-html@2.0.4.patch](../patches/react-pdf-html@2.0.4.patch) n'est plus appliqué (version résolue 2.1.5, qui contient déjà la correction) : à supprimer. |
 | Configuration | `.env.dist` obsolète (variables ElectricSQL, AWS, proxy PG) et incomplet (une quinzaine de variables obligatoires manquantes) ; variables obligatoires inutilisées. `.env.test` est la vraie référence. |
 | Documentation | README : pnpm 8.4.0 au lieu de 10.12.4 (le `package.json` déclare bien `packageManager: pnpm@10.12.4`), noms de fichiers CSV erronés, `clearDb.sh` au lieu de `clear-db.sh`. [db-workflow.png](../images/db-workflow.png) montre l'ancienne architecture ElectricSQL/Prisma. |
 | Hébergement historique | [Procfile](../Procfile) et [scalingo.json](../scalingo.json) obsolètes ; branche `compte-rendu-vif` inactive mais encore construite par la CI. |
 | Erreurs HTTP | Erreurs de validation TypeBox renvoyées en 500 (les routes de validation renvoient bien 404 et 410). |
 | Modèle de données | Peu de clés étrangères et d'index ; formats sérialisés sans échappement ; type Kysely `Database` maintenu à la main. |
-| Tests | e2e complets (72 tests) mais lancés à la main, Chromium seul, sans service worker, pas de test hors ligne ni iOS. Tests unitaires backend (règles d'écriture, UP) non lancés en CI. PostgreSQL 14 en test, 17 en développement. Biome, Prettier, ESLint et `tsc` jamais lancés en CI. Voir [13](13-tests-et-qualite.md). |
+| Tests | 80 tests e2e, lancés à la main, Chromium seul, sans service worker, pas de test hors ligne ni iOS. Tests unitaires backend (règles d'écriture, UP) non lancés en CI. PostgreSQL 14 en test, 17 en développement. Biome, Prettier, ESLint et `tsc` jamais lancés en CI. Voir [13](13-tests-et-qualite.md). |
 | Bugs fonctionnels | Question « bilan quinquennal » jamais affichée ; alerte Sécurité sans adresse ; duplication d'un CR envoyé ; `?mode=edit` sans écran ; onglet par défaut `"all"` ; CR PDF non trié. |
 | Valeurs codées en dur | Statistiques publiques (1 102 agents, « 2026 », 46 000), Matomo `siteId` 123, codes région, centre de carte par défaut, région S3. |
 
@@ -169,11 +169,12 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 
 | Priorité | Action | Risques traités |
 | --- | --- | --- |
-| **Immédiat** | Restreindre la console Keycloak ; supprimer les résidus CR VIF et fermer les ports hors Traefik | SEC-19, SEC-21 |
-| **Immédiat** | Plafonner `max_slot_wal_keep_size`, supprimer le slot inactif CR VIF ; tester une restauration ; sauvegarder le bucket hors du compte | OPS-01, OPS-11 |
-| **Immédiat** | Déployer `development` en production (fiches, corrections de pertes de données) | §3 |
+| **Immédiat (prévu)** | Régler Keycloak (force brute, politique de mot de passe, console d'administration restreinte) ; supprimer les résidus CR VIF et fermer les ports hors Traefik ; tester une restauration de la base | SEC-19, SEC-21, OPS-11 |
+| **Immédiat (prévu)** | Brancher le backend sur Sentry (DSN backend) | — |
+| **Immédiat** | Plafonner `max_slot_wal_keep_size`, supprimer le slot inactif CR VIF ; sauvegarder le bucket hors du compte | OPS-01, OPS-11 |
+| **Immédiat** | Précacher le worker pdf.js, restreindre la récupération des *chunks* périmés, pages PDF utilisables hors ligne | DAT-11 |
 | Avant homologation | Correction des erreurs et refus silencieux de synchro et de dépôt S3 | DAT-01 à 04 |
-| Avant homologation | Durcissement de Keycloak, Keycloak dédié à la préproduction, DMARC en `reject` | SEC-19, SEC-20, SEC-22 |
+| Avant homologation | Keycloak dédié à la préproduction, DMARC en `reject` | SEC-20, SEC-22 |
 | Avant homologation | Limitation de débit ; même règle de délégation côté serveur et interface | SEC-06, SEC-17 |
 | Pendant le transfert | `max_slot_wal_keep_size`, supervision du slot, TLS PostgreSQL, MongoDB authentifié, versions épinglées ; ouverture de l'API Dataspace à la nouvelle adresse de sortie | OPS-01, SEC-11, OPS-10 |
 | Pendant le transfert | Serveur statique pour le frontend, migration séparée du démarrage, images allégées et étiquetées par commit, déploiement tracé avec la configuration PowerSync | OPS-02, 03, 05, 06, 12 |

@@ -88,7 +88,7 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 | --- | --- | --- | --- | --- | --- |
 | `FORCE_REFETCH_POP` | Non | `false` | Si `true` (chaîne insensible à la casse), au démarrage : téléchargement de `merimee.csv` et `palissy.csv` depuis `ministere-culture.s3.sbg.io.cloud.ovh.net`, import dans `pop_immeubles` (toujours) et `pop_objets` (**seulement si la table est vide**). Bloque l'ouverture du port pendant l'import. À remettre à `false` ensuite. | `false` | Non |
 | `SENTRY_DSN` | Non | — | DSN Sentry du backend. Absent → Sentry désactivé. **Absent en production** : seul le frontend remonte ses erreurs. `tracesSampleRate: 0.1` en dur, données personnelles filtrées par `beforeSend` ([sentry.ts](../packages/backend/src/features/sentry.ts)). | — | Sensible |
-| `UP_API_MODE` | Non | `mock` | `live` : appel réel de l'API Dataspace des unités patrimoniales ; `mock` : données de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json). Cette fonction est présente dans `development`, pas encore déployée en production : à poser à `live` lors de sa livraison. | `live` | Non |
+| `UP_API_MODE` | Non | `mock` | `live` : appel réel de l'API Dataspace des unités patrimoniales ; `mock` : données de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json). Doit valoir `live` en production. | `live` | Non |
 | `UP_API_URL` | Non | `https://api-ext.stg.cloud.culture.fr/dataspace/patrinote/up` | Point d'accès de l'API Dataspace. Joignable seulement depuis le réseau de production. | idem | Non |
 | `UP_API_KEY` | Si `UP_API_MODE=live` | — | Clé de l'API Dataspace (en-tête `apiKey`). Le démarrage échoue si elle manque en mode `live`. | — | **Oui** |
 | `UP_CACHE_TTL_HOURS` | Non | `24` | Durée de fraîcheur du cache `up_cache`. Au-delà, l'API est rappelée ; le cache périmé sert de secours si elle ne répond pas. | `24` | Non |
@@ -98,7 +98,7 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 | `TOKEN_LIFETIME` | Non | `60m` | Inutilisée. Reliquat. | — | Non |
 | `ASSETS_DIR` | Non | — | Inutilisée (les images des courriels sont lues dans `process.cwd()/public`). | — | Non |
 
-`COLLECTIF_OBJETS_DATASETTE_URL` est commentée dans le schéma mais encore référencée par le fichier mort [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) (importé nulle part).
+`COLLECTIF_OBJETS_DATASETTE_URL` est commentée dans le schéma ; seul du code commenté de [pop.ts](../packages/backend/src/features/data/pop.ts) la cite.
 
 ## 3. Frontend (`packages/frontend`)
 
@@ -230,11 +230,11 @@ Paramètres qui ne passent par aucune variable et dont un changement impose une 
 | Validité des liens de pièces jointes envoyés par courriel | 90 jours | [attachmentRedirectRoutes.ts#L27](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L27) |
 | Validité d'un lien de réinitialisation de mot de passe | 1 jour (stocké en MD5) | [userService.ts#L42-L45](../packages/backend/src/services/userService.ts#L42-L45) |
 | Audience attendue des jetons | `account` | [authService.ts#L54](../packages/backend/src/services/authService.ts#L54) |
-| Sources POP | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv`, `…/palissy.csv`, `https://pop.culture.gouv.fr/notice/…` | [pop.ts](../packages/backend/src/features/data/pop.ts) |
+| Sources POP | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv`, `…/palissy.csv` | [pop.ts](../packages/backend/src/features/data/pop.ts) |
 | Fonds de carte | `tiles.openfreemap.org`, `openmaptiles.geo.data.gouv.fr` (cadastre), `data.geopf.fr` (orthophotos IGN) | [MapLibre.tsx#L14-L26](../packages/frontend/src/features/map/MapLibre.tsx#L14-L26) |
 | Géocodage | `https://api-adresse.data.gouv.fr/search/` (autocomplétion), `https://data.geopf.fr/geocodage/search` (cartes) | [address.tsx](../packages/frontend/src/features/address.tsx), [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
 | Adresse de contact | `contact@patrinotes.beta.gouv.fr` | message d'erreur de liste blanche, pages légales |
-| Service technique créé au démarrage | `no-service` | [index.ts#L34-L39](../packages/backend/src/index.ts#L34-L39) |
+| Service technique créé au démarrage | `no-service` | [index.ts#L33-L38](../packages/backend/src/index.ts#L33-L38) |
 | Taux d'échantillonnage Sentry | `0.1` (10 %) | [sentry.ts](../packages/backend/src/features/sentry.ts) (backend et frontend) |
 | API des unités patrimoniales | délai 5 s, une nouvelle tentative, lots de 50 identifiants, 10 niveaux et 1 000 UP au plus | [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts) |
 
@@ -304,6 +304,6 @@ Relevé de production du 17/11/2026 (aucun secret relevé ni reproduit).
 | `NODE_ENV` | non défini ; `production` posé par `cross-env` (script `start`) | idem |
 | SMTP | `EMAIL_HOST=smtp.tem.scw.cloud`, `EMAIL_PORT=465`, `EMAIL_EMITTER=noreply@patrinotes.beta.gouv.fr` | idem |
 | Stockage objet | `MINIO_URL=https://patrinotes-prod.s3.fr-par.scw.cloud`, `MINIO_BUCKET=patrinotes-prod` ; restes `AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod` | bucket `patrimoine-embarque-preprod` |
-| Sentry | `VITE_SENTRY_DSN` (hôte `sentry.incubateur.net`) ; **pas de `SENTRY_DSN` backend** | — |
+| Sentry | `VITE_SENTRY_DSN` (hôte `sentry.incubateur.net`) ; pas encore de `SENTRY_DSN` backend (branchement prévu) | — |
 | PowerSync | `POWERSYNC_CONFIG_PATH=/config/config.yaml`, `PS_PORT=3003`, `NODE_ENV=production` ; connexion avec l'utilisateur `postgres` | `auth.user_id()` au lieu de `auth.parameter('email')` dans les règles |
-| Unités patrimoniales | sans objet : fonction pas encore déployée en production | — |
+| Unités patrimoniales | `UP_API_MODE=live` | — |

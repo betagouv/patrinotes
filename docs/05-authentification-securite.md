@@ -208,7 +208,7 @@ Chaque utilisateur appartient à **un** service (`user.service_id`) : UDAP, CRMH
 
 | Flux PowerSync | Données | Filtre |
 | --- | --- | --- |
-| `global_stream` | `clause_v2` communes, `pictures` | `service_id = 'ALL'` ; `pictures` **sans filtre** |
+| `global_stream` | `clause_v2` communes | `service_id = 'ALL'` |
 | `service_stream` | Service, membres du service (id, nom), services instructeurs, clauses, courriels envoyés et suggérés, corrections des fiches (`monument_correction`) | Service de l'utilisateur |
 | `user_stream` | Délégations, `pdf_snapshot`, `user_settings` | Utilisateur |
 | `reports_stream` | Comptes-rendus, constats, sections visitées, alertes, état des validations (sans le jeton) | Service de l'utilisateur |
@@ -218,13 +218,12 @@ Chaque utilisateur appartient à **un** service (`user.service_id`) : UDAP, CRMH
 
 Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans [08 — Synchronisation](08-synchronisation-hors-ligne.md).
 
-> **Production** : le `sync-config.yaml` de production contient le contrôle d'appartenance au service sur les quatre requêtes de pièces jointes (version de `main`). Il est **déposé à la main** dans Coolify et n'est pas déployé avec l'application.
+> **Production** : le `sync-config.yaml` est **déposé à la main** dans Coolify et n'est pas déployé avec l'application ; il doit être recopié à chaque modification.
 
 ### 5.2 Limites du cloisonnement
 
 1. **Le service n'est pas une frontière de sécurité.** `/api/change-service` permet à tout utilisateur connecté de rejoindre **n'importe quel service** existant, sans validation. Il reçoit alors toutes les données de ce service. C'est un **choix assumé** : chaque changement est tracé dans `transactions` (`op = CHANGE_SERVICE`, ancien et nouveau service).
 2. Les écritures, les fichiers et les routes PDF sont cloisonnés par service : voir §7 et §8. Exception voulue : `GET /api/pdf/state-report` et `/api/state-report/previous` donnent accès aux constats envoyés d'**autres services** sur un monument situé dans un département du service (historique des fiches).
-3. `pictures` reste synchronisée à tous, sans filtre.
 
 ---
 
@@ -345,11 +344,11 @@ Autres emplacements : la base MongoDB interne de PowerSync (copie des données s
 
 | Source | Contenu | Fichier |
 | --- | --- | --- |
-| Sentry backend (**non configuré en production**, aucun DSN) | Exceptions avec méthode et modèle de route ; message de refus d'écriture de synchronisation (table, opération, identifiants, motif). `beforeSend` retire corps, cookies, chaîne de requête et utilisateur, et masque les clés de type mot de passe, jeton, secret, courriel, destinataires | [sentry.ts](../packages/backend/src/features/sentry.ts), [router.ts](../packages/backend/src/router.ts) |
+| Sentry backend (pas encore branché en production ; branchement prévu) | Exceptions avec méthode et modèle de route ; message de refus d'écriture de synchronisation (table, opération, identifiants, motif). `beforeSend` retire corps, cookies, chaîne de requête et utilisateur, et masque les clés de type mot de passe, jeton, secret, courriel, destinataires | [sentry.ts](../packages/backend/src/features/sentry.ts), [router.ts](../packages/backend/src/router.ts) |
 | Sentry frontend | Exceptions seulement : plus de journaux console ni de fil d'Ariane console ; `beforeSend` retire l'utilisateur et masque les mêmes clés | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 | Journaux backend (`debug`, actifs par défaut) | Courriel à la connexion et à l'inscription, destinataires des alertes, URL des requêtes (chemins de fichiers) ; `console.log` du détail des erreurs Keycloak | [authService.ts](../packages/backend/src/services/authService.ts) |
 
-Sentry ne reçoit ni corps de requête, ni cookies, ni jetons, ni journaux console. En production, aucun DSN backend n'est défini (relevé de production du 17/11/2026) : seul le frontend envoie des événements. Le masquage repose sur les **noms de clés** : une donnée personnelle rangée sous une autre clé (un titre, un nom) n'est pas masquée.
+Sentry ne reçoit ni corps de requête, ni cookies, ni jetons, ni journaux console. En production, seul le frontend envoie aujourd'hui des événements. Le masquage repose sur les **noms de clés** : une donnée personnelle rangée sous une autre clé (un titre, un nom) n'est pas masquée.
 
 ---
 
