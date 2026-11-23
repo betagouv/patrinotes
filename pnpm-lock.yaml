@@ -135,8 +135,8 @@ importers:
         specifier: ^0.27.4
         version: 0.27.6
       nodemailer:
-        specifier: ^6.9.13
-        version: 6.10.1
+        specifier: ^10.6.1
+        version: 10.6.1
       ofetch:
         specifier: ^1.4.1
         version: 1.5.1
@@ -181,8 +181,8 @@ importers:
         specifier: ^22.20.5
         version: 22.20.5
       '@types/nodemailer':
-        specifier: ^6.4.14
-        version: 6.4.23
+        specifier: ^8.0.2
+        version: 8.0.2
       '@types/react':
         specifier: ^18.2.64
         version: 18.3.28
@@ -419,7 +419,7 @@ importers:
         version: 13.0.2
       wa-sqlite:
         specifier: github:rhashimoto/wa-sqlite
-        version: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/c4d54d3ac3bdb99a01cc41a62eac28803661bd35
+        version: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/205eed588e60ac43401292df6583dbdc7c7fe966
       web-locks-polyfill:
         specifier: ^0.0.13
         version: 0.0.13
@@ -3509,8 +3509,8 @@ packages:
   '@types/node@22.20.5':
     resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
-  '@types/nodemailer@6.4.23':
-    resolution: {integrity: sha512-aFV3/NsYFLSx9mbb5gtirBSXJnAlrusoKNuPbxsASWc7vrKLmIrTQRpdcxNcSFL3VW2A2XpeLEavwb2qMi6nlQ==}
+  '@types/nodemailer@8.0.2':
+    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
 
   '@types/parse-json@4.0.2':
     resolution: {integrity: sha512-dISoDXWWQwUquiKsyZ4Ng+HX2KsPL7LyHKHQwgGFEA3IaKac4Obd+h2a/a6waisAoepJlBcx9paWqjA8/HVjCw==}
@@ -5625,9 +5625,9 @@ packages:
     resolution: {integrity: sha512-PfvofsGQ+MiOQIPkX9fU8ELUWmy5zL74CdQaph/ismKszfFkfwXaw0cGiwbwym2hT9k5+mdyl8O5WQ1MD8EHmA==}
     engines: {node: '>=18'}
 
-  nodemailer@6.10.1:
-    resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
-    engines: {node: '>=6.0.0'}
+  nodemailer@10.6.1:
+    resolution: {integrity: sha512-d7kfFfS/tR4Aca+SBvRaQ+MXKNv7d2JiRe5TxaRcFT/kYMh4GGPnW9aKksTIEvyEbA7d/7HYWE4YPDEHxzJj/g==}
+    engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -7041,9 +7041,9 @@ packages:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
 
-  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/c4d54d3ac3bdb99a01cc41a62eac28803661bd35:
-    resolution: {tarball: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/c4d54d3ac3bdb99a01cc41a62eac28803661bd35}
-    version: 1.1.1
+  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/205eed588e60ac43401292df6583dbdc7c7fe966:
+    resolution: {tarball: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/205eed588e60ac43401292df6583dbdc7c7fe966}
+    version: 1.2.0
 
   warning@4.0.3:
     resolution: {integrity: sha512-rpJyN222KWIvHJ/F53XSZv0Zl/accqHR8et1kpaMTD/fLCRxtV8iX8czMzY7sVZupTI3zcUTg8eycS2kNF9l6w==}
@@ -10384,7 +10384,7 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/nodemailer@6.4.23':
+  '@types/nodemailer@8.0.2':
     dependencies:
       '@types/node': 22.20.5
 
@@ -12656,7 +12656,7 @@ snapshots:
 
   node-releases@2.0.65: {}
 
-  nodemailer@6.10.1: {}
+  nodemailer@10.6.1: {}
 
   normalize-path@3.0.0: {}
 
@@ -14211,7 +14211,7 @@ snapshots:
       xml-name-validator: 5.0.0
     optional: true
 
-  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/c4d54d3ac3bdb99a01cc41a62eac28803661bd35: {}
+  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/205eed588e60ac43401292df6583dbdc7c7fe966: {}
 
   warning@4.0.3:
     dependencies:
