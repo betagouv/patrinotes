@@ -59,7 +59,7 @@
     "fastify": "^5.12.8",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
-    "kysely": "^0.27.4",
+    "kysely": "^0.28.17",
     "nodemailer": "^10.6.1",
     "ofetch": "^1.4.1",
     "pastable": "^2.2.1",
