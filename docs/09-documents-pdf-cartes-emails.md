@@ -73,21 +73,7 @@ Composants :
 | `@rawwee/react-pdf-html` | déclarée dans pdf et frontend | **Jamais importée** (dépendance morte) |
 | `pdfjs-dist` 4.3.136 | frontend | Affichage du PDF généré, page par page ([PDFViewerPaginated](../packages/frontend/src/components/PDFViewerPaginated.tsx)). Le worker est empaqueté avec l'application (`?url`), sans CDN |
 
-### 2.3 Le patch `patches/react-pdf-html@2.0.4.patch`
-
-[Le patch](../patches/react-pdf-html@2.0.4.patch) modifie une seule ligne de `dist/esm/parse.js` de `react-pdf-html` :
-
-```diff
--import * as cssTree from 'css-tree';
-+import cssTree from 'css-tree';
- const { generate, parse: cssParse } = cssTree;
-```
-
-**Pourquoi** : `css-tree` est un module CommonJS. Avec un import « namespace » (`import * as`), le bundler (Rollup, lors du build Vite) ne trouvait pas `generate` ni `parse` sur l'objet importé. Le message du commit d'origine (`40a7f8e`, mai 2024) est : *« rollup couldnt find csstree in react-pdf-renderer »*. L'import par défaut récupère l'objet `module.exports` complet.
-
-> ⚠️ **Le patch n'est pas appliqué.** Le [package.json](../package.json) racine ne contient pas de `pnpm.patchedDependencies` et le lockfile résout `react-pdf-html@2.1.5`, alors que le patch cible la 2.0.4. Le fichier est donc **orphelin** : la 2.1.5 contient déjà `import cssTree from 'css-tree'`, et les tests de bout en bout du constat et du compte-rendu (génération, dépôt S3, lecture du lien) passent sans lui. Les devDependencies `css-tree` et `@types/css-tree` du frontend sont des vestiges de ce contournement. **Recommandation** : supprimer le patch.
-
-### 2.4 Polices
+### 2.3 Polices
 
 - Famille unique **Marianne** (charte de l'État), en 4 variantes : Regular, Bold, Italic, BoldItalic. Elles sont déclarées par [`initFonts(folder = "")`](../packages/pdf/src/utils.tsx#L16), qui charge `${folder}/fonts/Marianne-*.ttf`.
 - Côté frontend, `initFonts()` est appelée au démarrage ([main.tsx](../packages/frontend/src/main.tsx#L108)). Les fichiers sont servis depuis [packages/frontend/public/fonts/](../packages/frontend/public/fonts/), en chemin relatif à l'origine du site.
@@ -492,8 +478,6 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 | Alertes envoyées avant validation | Alerte transmise pour un constat ensuite refusé | Décaler l'envoi après acceptation |
 | Courriel d'alerte sans plafond de taille | Rejet SMTP | Limiter, ou passer par des liens |
 | Fournisseur OpenFreeMap hors sphère publique, attribution masquée | Disponibilité, licences | Basculer sur PLAN.IGN (Géoplateforme) |
-| Pages PDF bloquées hors ligne : elles attendent la synchronisation du flux de pièces jointes (`hasSynced`) avant d'afficher quoi que ce soit | Aucun PDF hors ligne pour un document jamais ouvert en ligne sur l'appareil (constat créé hors ligne, compte-rendu dont la page PDF n'a jamais été ouverte en ligne) | Ne pas attendre `hasSynced` hors ligne ; travailler avec les pièces jointes locales |
-| Worker pdf.js de l'aperçu (`.mjs`) non précaché (`globPatterns` de [vite.config.ts](../packages/frontend/vite.config.ts)) ; son échec de chargement est pris pour un fichier périmé par la récupération de [main.tsx](../packages/frontend/src/main.tsx) | Hors ligne, si le worker n'est pas dans le cache du navigateur : rechargements, puis désinscription du service worker et vidage des caches : **l'application ne s'ouvre plus hors ligne** | Ajouter `mjs` à `globPatterns` ; ne déclencher la récupération que pour les *chunks* de l'application |
 | Alerte « Sécurité » : pas de colonne `courriel_mairie` | Saisie manuelle systématique | Ajouter la colonne, ou documenter ce comportement |
 
 ---

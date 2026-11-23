@@ -1,3 +1,4 @@
+import { useIsOnline } from "../hooks/useIsOnline";
 import { SimpleBanner } from "#components/Banner.tsx";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Box, BoxProps, Dialog, Popover, Portal, Stack, styled, Typography } from "@mui/material";
@@ -76,6 +77,7 @@ function RouteComponent() {
   const { constatId } = Route.useParams();
 
   const stream = useSyncStream({ name: "state_report_attachments_stream", parameters: { state_report_id: constatId } });
+  const isOnline = useIsOnline();
 
   // Once the attachment records for this constat have synced down, force an immediate
   // download pass instead of waiting for the queue's periodic 30s retry poll.
@@ -85,7 +87,8 @@ function RouteComponent() {
     }
   }, [stream?.subscription.hasSynced, constatId]);
 
-  if (!stream?.subscription.hasSynced)
+  // Offline, a new subscription never syncs: render with the local data instead of waiting forever.
+  if (!stream?.subscription.hasSynced && isOnline)
     return (
       <Center mt="100px" mb="160px">
         <Spinner />

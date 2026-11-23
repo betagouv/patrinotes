@@ -278,7 +278,7 @@ Tables locales (26) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`,
 | `report_attachments_stream` | **à la demande** (`useSyncStream` dans `/edit` et `/pdf`) | Pièces jointes d'**un** CR du service |
 | `state_report_attachments_stream` | **à la demande** (dans `/constat` et `/constat/.../pdf`) | Pièces jointes d'**un** CE du service (constat, parties, alertes) |
 
-> Règle cachée importante pour le hors ligne : les **lignes de pièces jointes** ne sont synchronisées que pour le document **ouvert pendant que l'appareil est en ligne**. Un document jamais ouvert en ligne sur un appareil n'aura pas ses photos hors ligne. Les écrans de PDF (`/pdf/...`, `/constat/.../pdf`) affichent un indicateur de chargement **tant que le flux n'est pas synchronisé** (`hasSynced`). Hors ligne, ces écrans restent donc bloqués sur un indicateur de chargement pour tout document dont le flux n'a jamais été synchronisé sur l'appareil (constaté en test). Voir aussi le worker pdf.js non précaché ([09](09-documents-pdf-cartes-emails.md) § 12).
+> Règle cachée importante pour le hors ligne : les **lignes de pièces jointes** ne sont synchronisées que pour le document **ouvert pendant que l'appareil est en ligne**. Un document jamais ouvert en ligne sur un appareil n'aura pas ses photos hors ligne. Les écrans de PDF (`/pdf/...`, `/constat/.../pdf`) affichent un indicateur de chargement **tant que le flux n'est pas synchronisé** (`hasSynced`). Hors ligne, ils n'attendent pas : ils s'affichent avec les données présentes sur l'appareil (une photo pas encore téléchargée est laissée de côté). Le worker pdf.js de l'aperçu est précaché, et la récupération des *chunks* périmés ([main.tsx](../packages/frontend/src/main.tsx)) ne s'enclenche qu'en ligne.
 
 ### 8.3 Écriture : sauvegarde automatique et envoi au serveur
 
@@ -338,7 +338,7 @@ Plusieurs colonnes stockent des structures sous forme de **chaînes avec sépara
 
 | Élément | Valeur |
 | --- | --- |
-| Manifeste | `id: gouv.beta.patrinotes`, `name/short_name: Patrinotes`, `lang: fr`, `orientation: portrait`, `scope` et `start_url: /`, icônes `dsfr/favicon/android-chrome-192x192.png` et `-512x512.png`. Ces deux fichiers n'existent pas dans `public/` : l'icône de l'application installée sur Android ne se charge pas |
+| Manifeste | `id: gouv.beta.patrinotes`, `name/short_name: Patrinotes`, `lang: fr`, `orientation: portrait`, `scope` et `start_url: /`, icônes `icons/android-chrome-192x192.png` et `-512x512.png` (copiées du DSFR dans `public/icons/`) |
 | Précache | `**/*.{svg,woff2,js,wasm,css,html,png}`, taille maximale par fichier **16 Mio** (`2097152 * 8`) |
 | Exclus du précache | `**/admin*.js` (chunk de la page admin), `**/env.js`, `**/swEnv.js` |
 | Ressources incluses | `**/*.{svg,woff2,wasm,ttf}`, `marianne_footer.png` |

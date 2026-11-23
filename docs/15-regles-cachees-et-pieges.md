@@ -96,7 +96,7 @@ Ce document rassemble les **règles qu'on ne voit pas en lisant les noms des fic
 | R5 | `GET /api/pdf/report` renvoie le **premier** PDF trouvé, sans tri : l'export ZIP peut contenir une ancienne version. Le nom de fichier d'un constat utilise la date du téléchargement. | [09](09-documents-pdf-cartes-emails.md) |
 | R6 | Lignes d'en-tête du PDF découpées **par nombre de mots** (Marianne : 1/3/reste, DRAC : 4/reste, service : 3/reste). Le téléphone d'un CR est formaté en supposant 9 chiffres sans le 0 initial. | [03](03-frontend-pwa.md), [09](09-documents-pdf-cartes-emails.md) |
 | R7 | Photos compressées à 1 Mo et 1920 px, **EXIF et GPS retirés**. Un dessin est incrusté dans un nouveau JPEG ; l'original est marqué obsolète mais conservé. | [09](09-documents-pdf-cartes-emails.md) |
-| R8 | Hors ligne, les pages PDF attendent la synchronisation du flux de pièces jointes du document : un document jamais ouvert en ligne sur l'appareil n'a pas de PDF. Le worker pdf.js de l'aperçu n'est pas précaché : s'il manque, la récupération des *chunks* périmés vide les caches et l'application ne s'ouvre plus hors ligne. Les polices et logos, eux, sont précachés. | [09](09-documents-pdf-cartes-emails.md) |
+| R8 | Hors ligne, les pages PDF n'attendent pas la synchronisation du flux de pièces jointes : elles utilisent les données locales. Une photo d'un autre appareil pas encore téléchargée n'apparaît pas dans le PDF. Polices, logos et worker pdf.js sont précachés ; la récupération des *chunks* périmés ne s'enclenche qu'en ligne. | [09](09-documents-pdf-cartes-emails.md) |
 
 ## 7. Exécution, configuration et déploiement
 

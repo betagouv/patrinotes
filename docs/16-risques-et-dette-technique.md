@@ -31,7 +31,6 @@ quadrantChart
 | ID | Risque | Niveau | Détail |
 | --- | --- | --- | --- |
 | DAT-01 | Pertes silencieuses d'écritures de synchronisation (erreurs et refus) | **Critique** | §3 |
-| DAT-11 | PDF impossible hors ligne pour un document jamais ouvert en ligne ; worker pdf.js non précaché pouvant rendre l'application inutilisable hors ligne | Élevé | §3 |
 | SEC-06 | Aucune limitation de débit | Élevé | §2 |
 | SEC-19 | Durcissement de Keycloak en production | Élevé | §2 |
 | SEC-20 | Préproduction authentifiée par le Keycloak de production | Élevé | §2 |
@@ -115,7 +114,6 @@ Le détail de ces constats (réglages, noms d'hôte, ports) n'est pas reproduit 
 | DAT-07 | Lignes avec `is_deprecated` NULL jamais synchronisées. (`constat_validation` est absente de la publication de production, ce qui est confirmé, mais sans effet car le frontend ne l'utilise pas.) | Photos invisibles côté client. | Migration corrective ; retirer la requête inutile de `sync-config.yaml`. |
 | DAT-08 | Alertes marquées envoyées même en cas d'échec SMTP ; aucun réessai ni file d'envoi. | Alerte patrimoniale jamais reçue. | File d'envoi avec réessais. |
 | DAT-09 | `ON DELETE SET NULL` sur des colonnes `NOT NULL` (`user.service_id`, `report.createdBy`). | Suppressions en échec. | Revoir les contraintes. |
-| DAT-11 | PDF impossible hors ligne pour un document jamais ouvert en ligne (pages PDF qui attendent `hasSynced`) ; worker pdf.js non précaché, dont l'échec déclenche le vidage des caches et rend l'application inutilisable hors ligne. | Agent bloqué sur le terrain, application à recharger en ligne. | Précacher les `.mjs`, restreindre la récupération des *chunks* périmés, ne pas attendre la synchronisation hors ligne. Voir [09](09-documents-pdf-cartes-emails.md) § 12. |
 | DAT-10 | Alerte de fiche validée hors ligne : envoyée seulement par le navigateur de son auteur, au retour du réseau. | Alerte jamais envoyée si l'appareil ne revient pas en ligne. | Envoi côté serveur après synchronisation. |
 
 
@@ -154,8 +152,6 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 | --- | --- |
 | Code mort | `relations.ts` (ne compile pas), `udap.json`, `addPDFToReport` (construit `https://https://…`), `SpeechRecorder.tsx`, `template-generique.html`, plugin *multipart* sans route, `swEnv.js` jamais chargé, `public/pdfjs`, `wa-sqlite-async`. |
 | Dépendances inutiles | Backend : `linkedom`, `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `@keycloak/keycloak-admin-client`, `@fastify/swagger-ui`. Frontend : `npm`, `install`, `@rawwee/react-pdf-html`. |
-| Manifeste PWA | Les icônes `dsfr/favicon/android-chrome-192x192.png` et `-512x512.png` déclarées dans [vite.config.ts](../packages/frontend/vite.config.ts) n'existent pas : l'icône de l'application installée sur Android ne se charge pas. |
-| Correctif orphelin | [patches/react-pdf-html@2.0.4.patch](../patches/react-pdf-html@2.0.4.patch) n'est plus appliqué (version résolue 2.1.5, qui contient déjà la correction) : à supprimer. |
 | Configuration | `.env.dist` obsolète (variables ElectricSQL, AWS, proxy PG) et incomplet (une quinzaine de variables obligatoires manquantes) ; variables obligatoires inutilisées. `.env.test` est la vraie référence. |
 | Documentation | README : pnpm 8.4.0 au lieu de 10.12.4 (le `package.json` déclare bien `packageManager: pnpm@10.12.4`), noms de fichiers CSV erronés, `clearDb.sh` au lieu de `clear-db.sh`. [db-workflow.png](../images/db-workflow.png) montre l'ancienne architecture ElectricSQL/Prisma. |
 | Hébergement historique | [Procfile](../Procfile) et [scalingo.json](../scalingo.json) obsolètes ; branche `compte-rendu-vif` inactive mais encore construite par la CI. |
@@ -172,7 +168,6 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 | **Immédiat (prévu)** | Régler Keycloak (force brute, politique de mot de passe, console d'administration restreinte) ; supprimer les résidus CR VIF et fermer les ports hors Traefik ; tester une restauration de la base | SEC-19, SEC-21, OPS-11 |
 | **Immédiat (prévu)** | Brancher le backend sur Sentry (DSN backend) | — |
 | **Immédiat** | Plafonner `max_slot_wal_keep_size`, supprimer le slot inactif CR VIF ; sauvegarder le bucket hors du compte | OPS-01, OPS-11 |
-| **Immédiat** | Précacher le worker pdf.js, restreindre la récupération des *chunks* périmés, pages PDF utilisables hors ligne | DAT-11 |
 | Avant homologation | Correction des erreurs et refus silencieux de synchro et de dépôt S3 | DAT-01 à 04 |
 | Avant homologation | Keycloak dédié à la préproduction, DMARC en `reject` | SEC-20, SEC-22 |
 | Avant homologation | Limitation de débit ; même règle de délégation côté serveur et interface | SEC-06, SEC-17 |

@@ -1,4 +1,5 @@
 import "@ungap/with-resolvers";
+import { useIsOnline } from "../hooks/useIsOnline";
 import { PDFViewerPaginated } from "#components/PDFViewerPaginated";
 import { Banner } from "../components/Banner";
 import { EnsureUser } from "../components/EnsureUser";
@@ -688,6 +689,7 @@ const SendReportPage = ({ children }: PropsWithChildren) => {
 const WithReportAttachments = ({ children }: PropsWithChildren) => {
   const { reportId } = Route.useParams();
   const stream = useSyncStream({ name: "report_attachments_stream", parameters: { report_id: reportId } });
+  const isOnline = useIsOnline();
 
   // Once the attachment records for this report have synced down, force an immediate
   // download pass instead of waiting for the queue's periodic 30s retry poll.
@@ -697,7 +699,8 @@ const WithReportAttachments = ({ children }: PropsWithChildren) => {
     }
   }, [stream?.subscription.hasSynced, reportId]);
 
-  if (!stream?.subscription.hasSynced) {
+  // Offline, a new subscription never syncs: render with the local data instead of waiting forever.
+  if (!stream?.subscription.hasSynced && isOnline) {
     return (
       <Center>
         <Spinner />

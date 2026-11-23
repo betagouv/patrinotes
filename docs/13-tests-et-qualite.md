@@ -265,8 +265,7 @@ Fichiers **générés et versionnés** (ne pas modifier à la main) :
 - [db/*.sql](../db/) et [db/meta/](../db/meta/) : migrations drizzle-kit (`pnpm migration:generate` après modification de
   [schema.ts](../packages/backend/src/db/schema.ts)).
 
-Patch de dépendance : [patches/react-pdf-html@2.0.4.patch](../patches/react-pdf-html@2.0.4.patch). Le Dockerfile copie
-`patches/` avant `pnpm install`. Override : `restructure` figé en `3.0.0`.
+Aucun patch de dépendance. Override : `restructure` figé en `3.0.0`.
 
 ---
 

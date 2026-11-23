@@ -36,12 +36,12 @@ export default defineConfig({
         lang: "fr",
         icons: [
           {
-            src: "dsfr/favicon/android-chrome-192x192.png",
+            src: "icons/android-chrome-192x192.png",
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "dsfr/favicon/android-chrome-512x512.png",
+            src: "icons/android-chrome-512x512.png",
             sizes: "512x512",
             type: "image/png",
           },
@@ -52,8 +52,8 @@ export default defineConfig({
       injectManifest: {
         maximumFileSizeToCacheInBytes: 2097152 * 8,
         // globPatterns: ["**/*.{svg,woff2,js,wasm,css,html,png}"],
-        globPatterns: ["**/*.{svg,woff2,js,wasm,css,html,png}"],
-        globIgnores: ["**/admin*.js", "**/env.js", "**/swEnv.js"],
+        globPatterns: ["**/*.{svg,woff2,js,mjs,wasm,css,html,png}"],
+        globIgnores: ["**/admin*.js", "**/env.js", "**/swEnv.js", "pdfjs/**", "wa-sqlite-async.mjs"],
         rollupFormat: "es",
       },
       includeAssets: ["**/*.{svg,woff2,wasm,ttf}", "**/marianne_footer.png"],

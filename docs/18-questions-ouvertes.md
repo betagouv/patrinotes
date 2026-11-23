@@ -57,6 +57,6 @@ Ces questions relèvent du ministère. Elles sont reformulées pour lui dans [19
 
 | # | Question | Réponse |
 | --- | --- | --- |
-| T3 | `react-pdf-html` 2.1.5 fonctionne-t-il sans le correctif de [patches/](../patches/) ? | Oui : la 2.1.5 contient la correction et les tests e2e de génération PDF passent. Le patch est à supprimer. |
-| T4 | Peut-on générer un PDF hors ligne sur un appareil neuf ? | Non, pour un document jamais ouvert en ligne : la page PDF attend une synchronisation qui n'arrive pas. Et le worker pdf.js non précaché peut rendre l'application inutilisable hors ligne. Voir [16](16-risques-et-dette-technique.md) DAT-11. |
+| T3 | `react-pdf-html` 2.1.5 fonctionne-t-il sans le correctif de l'ancien patch ? | Oui : la 2.1.5 contient la correction ; le patch a été retiré. |
+| T4 | Peut-on générer un PDF hors ligne sur un appareil neuf ? | Oui, avec les données présentes sur l'appareil (vérifié en test : constat et compte-rendu créés hors ligne). Le plan de situation IGN est omis hors ligne, avec un avertissement. |
 | T7 | Une photo dont la ligne arrive avant le fichier finit-elle par s'afficher ? | Oui : nouvel essai toutes les 30 s, affichage sans action dès que le fichier est en S3. |

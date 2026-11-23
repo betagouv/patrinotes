@@ -22,7 +22,6 @@ FROM with-pnpm AS with-deps
 WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches ./patches/
 
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/pdf/package.json ./packages/pdf/

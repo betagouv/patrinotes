@@ -41,6 +41,10 @@ if ("serviceWorker" in navigator) {
 const CHUNK_RELOAD_KEY = "chunk-reload-attempt";
 
 const recoverFromStaleChunk = async () => {
+  // Offline, a missing chunk is just not cached: reloading or clearing the caches would
+  // make the app unusable until the network comes back.
+  if (!navigator.onLine) return;
+
   let attempt = 0;
   try {
     attempt = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || "0");

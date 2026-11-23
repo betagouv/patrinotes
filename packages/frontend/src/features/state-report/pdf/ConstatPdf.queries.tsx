@@ -80,7 +80,8 @@ export const constatPdfQueries = {
           .execute();
 
         const attachmentsWithFiles = await Promise.all(
-          attachmentQuery.map(async (attachment) => {
+          // A photo synced from another device may not be downloaded yet: leave it out rather than fail.
+          attachmentQuery.filter((attachment) => !!attachment.local_uri).map(async (attachment) => {
             const file = await attachmentLocalStorage.readFile(attachment.local_uri!);
             const url = URL.createObjectURL(new Blob([file], { type: attachment.media_type || undefined }));
             const dimensions = await getImageDimensions(url);

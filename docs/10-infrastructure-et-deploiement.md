@@ -48,7 +48,7 @@ flowchart TD
 
 ### 2.2 Étape `with-deps` (installation)
 
-- Copie des manifestes (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), du dossier [patches/](../patches/) (correctif de `react-pdf-html@2.0.4`) et des `package.json` des trois paquets ([Dockerfile#L24-L33](../Dockerfile#L24-L33)).
+- Copie des manifestes (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`) et des `package.json` des trois paquets ([Dockerfile#L24-L33](../Dockerfile#L24-L33)).
 - Pour le frontend, copie aussi `public/`, `scripts/` et `vite.config.ts` **avant** l'installation : ils sont nécessaires aux scripts de cycle de vie.
 - `pnpm install --frozen-lockfile` installe **toutes** les dépendances, y compris de développement : `drizzle-kit`, `vite`, `vite-node` et `tsup` sont nécessaires à l'exécution (migrations au démarrage, `vite preview`, génération de `env.js`).
 - [.dockerignore](../.dockerignore) n'exclut que `dsfr/*` et `node_modules` : le contexte de build envoyé au démon Docker contient notamment le `.git`, le jar Keycloak (6,7 Mo) et un éventuel `.env` local. Le `.env` racine n'est pas copié dans l'image (seuls des sous-dossiers ciblés le sont), mais un `packages/*/.env` le serait. À durcir (ajouter `.git`, `.env*`, `*.jar`).
