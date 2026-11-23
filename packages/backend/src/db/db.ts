@@ -8,7 +8,8 @@ import * as tables from "./schema";
 export const makeDb = ({ connectionString }: { connectionString: string }) => {
   const pool = new pg.Pool({
     connectionString,
-    ssl: false,
+    // DATABASE_SSL=true: TLS verified against the system CAs. sslmode / sslrootcert in DATABASE_URL take precedence.
+    ssl: ENV.DATABASE_SSL,
   });
   // An idle client losing its connection (PostgreSQL restart, failover) emits "error" on the pool:
   // without a listener the whole process crashes. The pool drops that client and reconnects on the next query.

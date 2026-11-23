@@ -28,6 +28,8 @@ const envSchema = z.object({
   POSTGRES_PASSWORD: z.string(),
   POSTGRES_DB: z.string(),
   DATABASE_URL: z.string(),
+  // TLS towards PostgreSQL (backend and drizzle-kit); false keeps the current unencrypted connection
+  DATABASE_SSL: anythingAsBoolean.default(false),
   DATAGOUV_API: z.string(),
   TOKEN_LIFETIME: z.string().default("60m"),
   JWT_SECRET: z.string(),
