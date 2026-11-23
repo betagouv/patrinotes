@@ -14,6 +14,7 @@ import { useStatus } from "@powersync/react";
 import { Header } from "#components/MUIDsfr.tsx";
 import { menuActor } from "./menu/menuMachine";
 import { useServiceType } from "./useServiceType";
+import { UpdateBanner } from "./update/UpdateBanner";
 import { RejectedWritesBanner } from "./sync/RejectedWritesBanner";
 
 export const Layout = ({ children }: PropsWithChildren) => {
@@ -32,6 +33,7 @@ export const Layout = ({ children }: PropsWithChildren) => {
         ]}
       />
       <AppHeader noProvider={noProvider} />
+      <UpdateBanner />
       {isLoggedIn ? <RejectedWritesBanner /> : null}
       <Box component="main" id="content" flex={shouldFooterTakeFullheight ? undefined : "1"}>
         {children}

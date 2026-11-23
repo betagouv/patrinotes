@@ -25,7 +25,7 @@ export default defineConfig({
     VitePWA({
       devOptions: { enabled: true, type: "module" },
 
-      registerType: "autoUpdate",
+      registerType: "prompt",
       manifest: {
         id: "gouv.beta.patrinotes",
         orientation: "portrait",

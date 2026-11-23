@@ -19,13 +19,15 @@ import { Buffer } from "buffer";
 import { ServiceSelection } from "./features/UdapSelection";
 import { MatomoProvider, createInstance } from "@datapunt/matomo-tracker-react";
 import { listenForLocalDataReset } from "./features/menu/resetLocalData";
+import { setPendingUpdate } from "./features/update/appUpdate";
 
 globalThis.Buffer = Buffer;
 if ("serviceWorker" in navigator) {
-  registerSW({
+  const updateSW = registerSW({
     onNeedRefresh() {
-      // Automatically reload when a new version is available
-      window.location.reload();
+      // The new version waits until this page lets it take over: UpdateBanner reloads right away on pages
+      // where nothing is being typed, and asks the agent everywhere else.
+      setPendingUpdate(() => updateSW(true));
     },
     onOfflineReady() {
       console.log("App ready for offline use");

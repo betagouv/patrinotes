@@ -5,8 +5,10 @@ import { isDev } from "../envVars";
 
 declare let self: ServiceWorkerGlobalScope;
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+// A new version waits until the page asks it to take over (vite-plugin-pwa `prompt` mode, see UpdateBanner):
+// activating it under a page being edited would reload that page and lose what is being typed.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
