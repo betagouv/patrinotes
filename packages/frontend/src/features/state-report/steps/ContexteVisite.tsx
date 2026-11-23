@@ -61,7 +61,6 @@ export const ContexteVisite = () => {
         }}
         label="Détails de la visite"
       />
-      <BilanQuinquennalRadioButtons isDisabled={isDisabled} />
 
       <Divider mb="16px" />
       <DateInput
@@ -265,32 +264,6 @@ const NatureVisiteRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
         />
       ) : null}
     </Stack>
-  );
-};
-
-const BilanQuinquennalRadioButtons = ({ isDisabled }: { isDisabled: boolean }) => {
-  const form = useStateReportFormContext();
-  const value = useWatch({ control: form.control, name: "bilan_quinquennal" });
-  const nature = useWatch({ control: form.control, name: "nature_visite" });
-
-  const options = ["Oui", "Non"].map((label) => ({
-    label,
-    nativeInputProps: {
-      checked: value === label,
-      onChange: () => form.setValue("bilan_quinquennal", label),
-    },
-  }));
-
-  if (nature !== "Partielle (préciser)") {
-    return null;
-  }
-
-  return (
-    <RadioButtons
-      disabled={isDisabled}
-      legend="Ce constat doit-il être pris en compte pour le bilan quinquennal de l'édifice ?"
-      options={options}
-    />
   );
 };
 

@@ -46,7 +46,6 @@ export const rapportContextFields = [
   "proprietaire_email",
   "proprietaire_representant",
   "proprietaire_representant_email",
-  "bilan_quinquennal",
 ] as const satisfies readonly (keyof StateReport)[];
 
 /** Constats of a rapport (deleted ones excluded), in creation order, which is the order of the PDF chapters. */

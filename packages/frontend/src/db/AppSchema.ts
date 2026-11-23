@@ -257,6 +257,7 @@ const state_report = new Table({
   pdf_size: column.integer,
   attachment_id: column.text,
 
+  // no longer asked (the question never showed); kept so the local schema matches the server sync policy
   bilan_quinquennal: column.text,
   service_id: column.text,
   created_by: column.text,
