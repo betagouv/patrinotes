@@ -302,6 +302,13 @@
       "when": 1795442305125,
       "tag": "0042_fk_restrict_colonnes_obligatoires",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795442306195,
+      "tag": "0043_attachments_is_deprecated_defaut",
+      "breakpoints": true
     }
   ]
 }

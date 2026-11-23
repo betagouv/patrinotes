@@ -65,7 +65,6 @@ streams:
       - SELECT * FROM state_report WHERE service_id IN current_service
       - SELECT * FROM visited_section WHERE service_id IN current_service
       - SELECT * FROM state_report_alert WHERE service_id IN current_service
-      - SELECT id, state_report_id, status, service_id FROM constat_validation WHERE service_id IN current_service
       # alerts and annotations made from a fiche (MH, UP, objet), outside constats; drafts included, the client hides them
       - SELECT * FROM monument_alert WHERE service_id IN current_service
       - SELECT * FROM monument_alert_attachment WHERE service_id IN current_service AND is_deprecated = 0

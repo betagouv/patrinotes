@@ -165,7 +165,7 @@ export const report = pgTable(
 
 export const reportAttachment = pgTable("report_attachment", {
   id: text().primaryKey().notNull(),
-  isDeprecated: boolean("is_deprecated"),
+  isDeprecated: boolean("is_deprecated").default(false),
   isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   label: text(),
@@ -176,7 +176,7 @@ export const reportAttachment = pgTable("report_attachment", {
 
 export const stateReportAttachment = pgTable("state_report_attachment", {
   id: text().primaryKey().notNull(),
-  isDeprecated: boolean("is_deprecated"),
+  isDeprecated: boolean("is_deprecated").default(false),
   isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   stateReportId: text("state_report_id").notNull(),
@@ -203,7 +203,7 @@ export const stateReportAlert = pgTable("state_report_alert", {
 
 export const stateReportAlertAttachment = pgTable("state_report_alert_attachment", {
   id: text().primaryKey().notNull(),
-  isDeprecated: boolean("is_deprecated"),
+  isDeprecated: boolean("is_deprecated").default(false),
   isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   stateReportAlertId: text("state_report_alert_id").notNull(),
@@ -577,7 +577,7 @@ export const visitedSection = pgTable(
 
 export const visitedSectionAttachment = pgTable("visited_section_attachment", {
   id: text().primaryKey().notNull(),
-  isDeprecated: boolean("is_deprecated"),
+  isDeprecated: boolean("is_deprecated").default(false),
   isIgnored: boolean("is_ignored").default(false),
   attachmentId: text("attachment_id").notNull(),
   visitedSectionId: text("visited_section_id").notNull(),
@@ -696,7 +696,7 @@ export const monumentAlert = pgTable(
 
 export const monumentAlertAttachment = pgTable("monument_alert_attachment", {
   id: text().primaryKey().notNull(),
-  isDeprecated: boolean("is_deprecated"),
+  isDeprecated: boolean("is_deprecated").default(false),
   attachmentId: text("attachment_id").notNull(),
   monumentAlertId: text("monument_alert_id").notNull(),
   label: text(),
