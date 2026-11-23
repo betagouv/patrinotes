@@ -89,7 +89,7 @@ export const UploadImageButton = ({ addImage, multiple, isDisabled }: UploadImag
           Ajouter photo
         </Button>
         <Typography color={fr.colors.decisions.text.mention.grey.default} fontSize="12px" minWidth={0}>
-          Taille maximale : 5 Mo. Formats supportés : jpg, png.{multiple ? " Plusieurs fichiers possibles" : ""}
+          Taille maximale : 20 Mo. Formats acceptés : jpg, png, webp, heic.{multiple ? " Plusieurs fichiers possibles" : ""}
         </Typography>
       </Flex>
       <input

@@ -94,7 +94,7 @@ export const PictureThumbnail = ({
 
   return (
     <Stack gap="4px" width={{ xs: "100%", sm: "100%", md: "calc(50% - 8px)" }}>
-      <ReportStatus status={badgeStatus as any} />
+      {picture.error ? <FailedStatus /> : <ReportStatus status={badgeStatus as any} />}
       <Flex flexDirection="column" justifyContent="flex-end" width="100%" maxWidth="480px">
         <Box position="relative" width="100%" sx={{ height: "160px", overflow: "hidden", bgcolor: "#f0f0f0" }}>
           {picture.error ? (
@@ -217,8 +217,19 @@ export const PictureThumbnail = ({
   );
 };
 
-const ReportStatus = ({ status }: { status: AttachmentState }) => {
-  const { color, bgColor, label, icon } = statusData[status];
+const ReportStatus = ({ status }: { status: AttachmentState }) => <StatusBadge {...statusData[status]} />;
+
+/** Badge of a photo refused or not sent (see useBatchUpload): its error message is shown in the thumbnail. */
+const FailedStatus = () => (
+  <StatusBadge
+    label="Échec"
+    bgColor={fr.colors.decisions.background.contrast.error.default}
+    color={fr.colors.decisions.text.default.error.default}
+    icon="fr-icon-error-warning-line"
+  />
+);
+
+const StatusBadge = ({ color, bgColor, label, icon }: { color: string; bgColor: string; label: string; icon: string }) => {
 
   return (
     <Badge
