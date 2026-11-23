@@ -9,6 +9,8 @@ import { db } from "./db/db";
 
 const debug = makeDebug("index");
 
+let server: Awaited<ReturnType<typeof initFastify>> | undefined;
+
 const start = async () => {
   await registerViteHmrServerRestart();
   await initEmptyService();
@@ -21,6 +23,7 @@ const start = async () => {
   debug("Starting fastify server in", ENV.NODE_ENV, "mode");
 
   const fastifyInstance = await initFastify();
+  server = fastifyInstance;
   await fastifyInstance.listen({ port: ENV.PORT, host: "0.0.0.0" });
 
   debug(`Server listening on ${ENV.PORT}`);
@@ -52,3 +55,13 @@ if (shouldCreateOnly) {
 const onSIGINT = () => process.exit();
 process.on("SIGINT", onSIGINT);
 onHmr(() => process.off("SIGINT", onSIGINT));
+
+// In the container node is PID 1: without a handler SIGTERM is ignored and the orchestrator has to SIGKILL it.
+// Stop accepting connections, let in-flight requests finish (8 s at most, under the 10 s default of docker stop), then exit.
+const onSIGTERM = () => {
+  debug("SIGTERM received, closing server");
+  setTimeout(() => process.exit(1), 8_000).unref();
+  Promise.resolve(server?.close()).finally(() => process.exit(0));
+};
+process.on("SIGTERM", onSIGTERM);
+onHmr(() => process.off("SIGTERM", onSIGTERM));

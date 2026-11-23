@@ -37,7 +37,8 @@ COPY db/ ./db/
 COPY --from=with-deps /usr/src/app/packages/backend/node_modules ./packages/backend/node_modules
 
 RUN pnpm backend build
-CMD pnpm migration:up;pnpm backend start
+# Migration puis serveur ; le conteneur s'arrête si la migration échoue (voir docker-start.sh)
+CMD ["sh", "/usr/src/app/packages/backend/docker-start.sh"]
 
 
 ################################
