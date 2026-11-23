@@ -139,7 +139,7 @@ export const searchStore = createStore(
     search: "",
     modalOpen: false,
     document: (storedDocument ?? "compte-rendus") as "compte-rendus" | "constats",
-    scope: (storedScope ?? "all") as "service" | "my",
+    scope: (storedScope ?? "my") as "service" | "my",
   },
   {
     setSearch: (ctx, event: { search: string }) => ({
