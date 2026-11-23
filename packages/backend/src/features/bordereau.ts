@@ -49,13 +49,13 @@ export const createBordereauMailContent = ({
   const intro = isGrouped
     ? `<p>Veuillez trouver le rapport établi à la suite de la visite de votre monument historique ${
         visitDates.length ? `réalisée le${visitDates.length > 1 ? "s" : ""} ${visitDates.join(", ")} ` : ""
-      }en cliquant sur le lien suivant : <a href="${escapeHtml(pdfUrl)}">Télécharger le constat d'état</a> (lien valable 1 mois).
+      }en cliquant sur le lien suivant : <a href="${escapeHtml(pdfUrl)}">Télécharger le constat d'état</a> (lien valable 90 jours).
 Il réunit les constats des parties suivantes du monument :</p>
 <p>${groupedReports.map((r) => `- ${escapeHtml(getStateReportUpLabel(r))}<br />`).join("")}</p>
 `
     : `<p>Veuillez trouver le rapport établi à la suite de la visite de votre monument historique réalisée le ${formatVisitDate(
         stateReport.date_visite,
-      )} en cliquant sur le lien suivant : <a href="${escapeHtml(pdfUrl)}">Télécharger le constat d'état</a> (lien valable 1 mois).
+      )} en cliquant sur le lien suivant : <a href="${escapeHtml(pdfUrl)}">Télécharger le constat d'état</a> (lien valable 90 jours).
 </p>
 `;
 
