@@ -1,22 +1,16 @@
-import Color from "@tiptap/extension-color";
-import { HardBreak } from "@tiptap/extension-hard-break";
+import { Color, FontSize, TextStyle } from "@tiptap/extension-text-style";
+import HardBreak from "@tiptap/extension-hard-break";
 import Placeholder from "@tiptap/extension-placeholder";
-import TextStyle from "@tiptap/extension-text-style";
-import { Underline } from "@tiptap/extension-underline";
-import { Editor, mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
+import Underline from "@tiptap/extension-underline";
+import { Editor, Node, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { PropsWithChildren, createContext } from "react";
 import Image from "@tiptap/extension-image";
 import { Box, BoxProps } from "@mui/material";
-import FontSize from "@tiptap/extension-font-size";
 
-import { Table } from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableHeader from "@tiptap/extension-table-header";
-import TableCell from "@tiptap/extension-table-cell";
+import { TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { stateReportExtraCss } from "@patrinotes/pdf/constat";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
-import { ColumnExtension } from "@gocapsule/column-extension";
 import Link from "@tiptap/extension-link";
 
 export const TextEditorContext = createContext<{ editor: Editor | null }>({
@@ -25,6 +19,8 @@ export const TextEditorContext = createContext<{ editor: Editor | null }>({
 
 export const TextEditorContextProvider = ({ children, ...props }: PropsWithChildren<BoxProps>) => {
   const editor = useEditor({
+    // TipTap 2 behaviour: the toolbar (active marks) and the PDF preview (editor.getHTML()) re-render on each change
+    shouldRerenderOnTransaction: true,
     autofocus: false,
     editable: true,
     parseOptions: {
@@ -33,6 +29,14 @@ export const TextEditorContextProvider = ({ children, ...props }: PropsWithChild
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        // added below with their own configuration, as with TipTap 2
+        hardBreak: false,
+        horizontalRule: false,
+        // new in the TipTap 3 starter kit: kept off so that the document (and the PDF) stays the same
+        link: false,
+        underline: false,
+        listKeymap: false,
+        trailingNode: false,
         code: {
           HTMLAttributes: {
             class: "inline",
@@ -70,7 +74,8 @@ export const TextEditorContextProvider = ({ children, ...props }: PropsWithChild
       TableHeader,
       TableCell,
       HorizontalRule,
-      ColumnExtension,
+      // The column extension of TipTap 2 (@gocapsule/column-extension) is gone: it could not read columns back from
+      // HTML and no command created any. Column blocks of the templates are kept as is by CustomHTML.
     ],
     content: "",
   });
@@ -125,7 +130,8 @@ export const CustomHTML = Node.create({
   renderHTML({ node }) {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = node.attrs.html;
-    return wrapper.firstChild!;
+    // the stored HTML starts with an element (div.column-block)
+    return wrapper.firstChild as HTMLElement;
   },
 
   addNodeView() {
