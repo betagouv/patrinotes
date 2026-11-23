@@ -15,6 +15,7 @@ import { v7 } from "uuid";
 import { omit } from "pastable";
 import { sql } from "kysely";
 import { maskEmail, normalizeEmail } from "../features/email";
+import { assertPasswordIsStrongEnough } from "../features/passwordPolicy";
 const debug = makeDebug("auth-service");
 const authFullUrl = `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`;
 
@@ -128,6 +129,7 @@ export class AuthService {
     const userData = { ...rawUserData, email: normalizeEmail(rawUserData.email) };
     // pass the raw input so a refusal logs exactly what the user typed
     await assertEmailInWhitelist(rawUserData.email);
+    assertPasswordIsStrongEnough(userData.password);
     try {
       await adminAuthApi("/users", {
         method: "POST",

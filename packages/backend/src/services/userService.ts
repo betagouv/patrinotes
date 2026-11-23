@@ -9,6 +9,7 @@ import { Selectable } from "kysely";
 import { adminAuthApi } from "../features/auth/keycloak";
 import { transactions } from "../db/schema";
 import { normalizeEmail } from "../features/email";
+import { assertPasswordIsStrongEnough } from "../features/passwordPolicy";
 
 const debug = makeDebug("user_service");
 export class UserService {
@@ -66,7 +67,7 @@ export class UserService {
     const temporaryLink = crypto.randomUUID();
     const temporaryLinkExpiresAt = addDays(new Date(), 1).toISOString();
 
-    const encryptedLink = md5(temporaryLink);
+    const encryptedLink = sha256(temporaryLink);
 
     await db
       .updateTable("internal_user")
@@ -83,20 +84,26 @@ export class UserService {
   }
 
   async resetPassword({ temporaryLink, newPassword }: { temporaryLink: string; newPassword: string }) {
-    const encryptedLink = md5(temporaryLink);
+    assertPasswordIsStrongEnough(newPassword);
+
+    // Links sent before the switch to SHA-256 were stored as MD5: still accepted while they are valid (24 h).
+    // The MD5 fallback can be removed one day after this version is deployed.
+    const acceptedHashes = [sha256(temporaryLink), md5(temporaryLink)];
 
     const userResults = await db
       .selectFrom("internal_user")
-      .where("temporaryLink", "=", encryptedLink)
+      .where("temporaryLink", "in", acceptedHashes)
       .selectAll()
       .execute();
     const user = userResults[0];
 
-    await assertLinkIsValid(user, encryptedLink);
+    await assertLinkIsValid(user, acceptedHashes);
 
-    const userKeycloakId = await adminAuthApi("/users?email=" + user!.email, { method: "GET" }).then(
-      (res) => res[0]?.id,
-    );
+    // exact: Keycloak's email search is a substring search otherwise, and could return another account first
+    const userKeycloakId = await adminAuthApi<Array<{ id: string }>>("/users", {
+      method: "GET",
+      query: { email: user!.email, exact: true },
+    }).then((res) => res[0]?.id);
     if (!userKeycloakId) {
       throw new AppError(403, "Le lien est invalide");
     }
@@ -122,8 +129,12 @@ const assertUserExists = (user: any, errorDescription?: string) => {
 };
 
 const md5 = (data: string) => crypto.createHash("md5").update(data).digest("hex");
+const sha256 = (data: string) => crypto.createHash("sha256").update(data).digest("hex");
 
-const assertLinkIsValid = async (user: Selectable<Database["internal_user"]> | undefined, encryptedLink: string) => {
+const assertLinkIsValid = async (
+  user: Selectable<Database["internal_user"]> | undefined,
+  acceptedHashes: string[],
+) => {
   if (!user) {
     throw new AppError(403, "Le lien est invalide");
   }
@@ -137,7 +148,7 @@ const assertLinkIsValid = async (user: Selectable<Database["internal_user"]> | u
     throw new AppError(403, "Le lien est expiré");
   }
 
-  if (user.temporaryLink !== encryptedLink) {
+  if (!acceptedHashes.includes(user.temporaryLink)) {
     throw new AppError(403, "Le lien est invalide");
   }
 };
