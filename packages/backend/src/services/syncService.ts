@@ -7,6 +7,7 @@ import { Decision, evaluateWrite, Row, syncPolicies } from "../features/sync/syn
 import { sentry } from "../features/sentry";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/db";
+import { maskEmail } from "../features/email";
 
 const debug = makeDebug("sync-service");
 
@@ -119,10 +120,12 @@ export class SyncService {
     const refuse = (reason: string) => {
       // Refused writes are answered with 200, like other failures: a 4xx would block the client's upload queue.
       // The client gets the stored row back at its next sync.
-      debug("Refused", op, "on", table, id, "for user", user.id, ":", reason);
+      // Row ids are uuids, except on whitelist where the id is an email address: mask it in logs.
+      const loggedId = maskEmail(id);
+      debug("Refused", op, "on", table, loggedId, "for user", user.id, ":", reason);
       sentry?.captureMessage("Écriture de synchronisation refusée", {
         level: "warning",
-        extra: { table, op, id, userId: user.id, reason },
+        extra: { table, op, id: loggedId, userId: user.id, reason },
       });
       // The reason names a table, an operation or columns, never row data: the client shows it to the agent.
       return { success: false, error: "Forbidden", reason };
