@@ -25,7 +25,8 @@ export const user = pgTable(
       columns: [table.serviceId],
       foreignColumns: [service.id],
       name: "user_service_id_fkey",
-    }).onDelete("set null"),
+      // service_id is NOT NULL: a service still holding users cannot be deleted
+    }).onDelete("restrict"),
     unique("user_email_key").on(table.email),
   ],
 );
@@ -157,7 +158,8 @@ export const report = pgTable(
       columns: [table.createdBy],
       foreignColumns: [user.id],
       name: "report_createdBy_fkey",
-    }).onDelete("set null"),
+      // createdBy is NOT NULL: a user who wrote compte-rendus cannot be deleted (no cascade: they are service data)
+    }).onDelete("restrict"),
   ],
 );
 
