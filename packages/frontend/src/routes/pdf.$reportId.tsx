@@ -19,7 +19,7 @@ import { EmailInput } from "../components/EmailInput";
 import { getDiff } from "../components/SyncForm";
 import { useUser } from "../contexts/AuthContext";
 import { Clause_v2, Report, Service } from "../db/AppSchema";
-import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../db/db";
+import { attachmentLocalStorage, attachmentQueue, db, useDbQuery, waitForUploadQueueEmpty } from "../db/db";
 import { getImageDimensions } from "../utils";
 import { useChipOptions } from "../features/chips/useChipOptions";
 import { transformBold } from "../features/menu/ClauseMenu";
@@ -72,6 +72,9 @@ export const PDF = () => {
       });
       // Never send a mail whose PDF link would be broken: fail the send, as when the route itself fails.
       if (!uploadResponse.ok) throw new Error(`PDF upload failed: HTTP ${uploadResponse.status}`);
+
+      // The server reads the report from PostgreSQL: let this device's pending writes reach it first.
+      await waitForUploadQueueEmpty();
 
       await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients, pdfSize: blob.size } });
     },

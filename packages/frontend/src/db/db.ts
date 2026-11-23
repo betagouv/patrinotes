@@ -140,6 +140,27 @@ export const updateSyncedRow = async <T extends "service" | "user">(
     .execute();
 };
 
+/**
+ * Waits until the local writes have been uploaded, so that a server route reading PostgreSQL (sending a PDF) sees the
+ * document as it is on this device. Gives up after `timeoutMs`, or right away when offline, and lets the caller go on:
+ * the route then behaves as before.
+ */
+export const waitForUploadQueueEmpty = async (timeoutMs = 30_000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    try {
+      const { count } = await powerSyncDb.getUploadQueueStats();
+      if (count === 0) return;
+    } catch (e) {
+      console.error("Could not read the upload queue", e);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  console.warn("Upload queue still not empty after", timeoutMs, "ms, sending anyway");
+};
+
 export const setupPowersync = async () => {
   const connector = new Connector();
   await powerSyncDb.init();

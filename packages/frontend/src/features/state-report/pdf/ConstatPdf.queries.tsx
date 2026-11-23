@@ -1,5 +1,5 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
-import { attachmentLocalStorage, db } from "../../../db/db";
+import { attachmentLocalStorage, db, waitForUploadQueueEmpty } from "../../../db/db";
 import { SendConstatForm } from "./ConstatPdfContext";
 import { api } from "../../../api";
 import { StateReportPDFDocument } from "@patrinotes/pdf/constat";
@@ -269,6 +269,9 @@ export const constatPdfMutations = {
         });
         // Never send a mail whose PDF link would be broken: fail the send, the screen shows its generic error.
         if (!uploadResponse.ok) throw new Error(`PDF upload failed: HTTP ${uploadResponse.status}`);
+
+        // The server reads the constat from PostgreSQL: let this device's pending writes reach it first.
+        await waitForUploadQueueEmpty();
 
         await api.post("/api/pdf/state-report", {
           body: {
