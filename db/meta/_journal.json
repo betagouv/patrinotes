@@ -288,6 +288,13 @@
       "when": 1795435962779,
       "tag": "0040_suppression_pictures_merimee",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795442304030,
+      "tag": "0041_cgu_accepted_at",
+      "breakpoints": true
     }
   ]
 }

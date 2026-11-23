@@ -41,6 +41,8 @@ export const internalUser = pgTable(
     userId: text().notNull(),
     newsletter: boolean().default(false),
     createdAt: timestamp({ mode: "string" }).defaultNow(),
+    // when the terms of use (CGU) were accepted at signup: proof of consent
+    cguAcceptedAt: timestamp("cgu_accepted_at", { mode: "string" }),
   },
   (table) => [
     foreignKey({

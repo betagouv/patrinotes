@@ -181,6 +181,8 @@ export class AuthService {
           email: userData.email,
           newsletter: userData.newsletter,
           role: "user",
+          // proof of consent (RGPD): when the terms of use were accepted
+          ...(userData.cgu ? { cgu_accepted_at: new Date().toISOString() } : {}),
         };
 
         if (existingUser) {

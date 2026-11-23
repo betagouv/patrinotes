@@ -1,0 +1,1 @@
+ALTER TABLE "internal_user" ADD COLUMN "cgu_accepted_at" timestamp;
