@@ -6,10 +6,8 @@ import { KyselyBatchWriter } from "./KyselyBatchWriter";
 import path from "path";
 import { db } from "../../db/db";
 import { ENV } from "../../envVars";
-import { FetchError, ofetch } from "ofetch";
+import { ofetch } from "ofetch";
 import { Readable } from "stream";
-import { v7 } from "uuid";
-import { parseHTML, Element } from "linkedom";
 
 const debug = makeDebug("sync-pop");
 
@@ -78,178 +76,6 @@ export const initPopObjets = async () => {
   await fs.promises.unlink(path.resolve(objetsCsvPath.dest));
 };
 
-export const initPopImages = async () => {
-  let missingCount = 0;
-  // immeubles
-  do {
-    const currentMissingCount = await missingImmeubleCountQuery.executeTakeFirstOrThrow();
-    missingCount = parseInt(currentMissingCount.count);
-    debug(`${missingCount} POP images remaining, fetching next ${batchSize}`);
-
-    const batch = await firstMissingImmeubleBatchQuery.execute();
-    const imagesToFetch = batch.map((immeuble) => ({
-      reference: immeuble.reference,
-      db: "merimee" as const,
-      dept_number: immeuble.departement_format_numerique!,
-    }));
-    await fetchBatchPopImages({ images: imagesToFetch });
-
-    await db.transaction().execute(async (trx) => {
-      const now = new Date().toISOString();
-      for (const immeuble of batch) {
-        await trx
-          .updateTable("pop_immeubles")
-          .set({ last_image_check_at: now })
-          .where("id", "=", immeuble.id)
-          .execute();
-      }
-    });
-
-    debug(`Fetched batch of ${imagesToFetch.length} POP images`);
-  } while (missingCount > 0);
-
-  // objets
-  missingCount = 0;
-  do {
-    const currentMissingCount = await missingObjetCountQuery.executeTakeFirstOrThrow();
-    missingCount = parseInt(currentMissingCount.count);
-    debug(`${missingCount} POP objet images remaining, fetching next ${batchSize}`);
-
-    const batch = await firstMissingObjetBatchQuery.execute();
-    const imagesToFetch = batch.map((objet) => ({
-      reference: objet.reference,
-      db: "palissy" as const,
-      dept_number: objet.departement_format_numerique!,
-    }));
-    await fetchBatchPopImages({ images: imagesToFetch });
-
-    await db.transaction().execute(async (trx) => {
-      const now = new Date().toISOString();
-      for (const objet of batch) {
-        await trx.updateTable("pop_objets").set({ last_image_check_at: now }).where("id", "=", objet.id).execute();
-      }
-    });
-
-    debug(`Fetched batch of ${imagesToFetch.length} POP objet images`);
-  } while (missingCount > 0);
-};
-
-const delay = 100;
-const batchSize = 50;
-
-const today = new Date();
-const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 1, 0, 0, 0, 0));
-
-const missingImmeubleCountQuery = db
-  .selectFrom("pop_immeubles")
-  .select(db.fn.count<string>("pop_immeubles.id").as("count"))
-  .leftJoin("pop_images", "pop_images.reference", "pop_immeubles.reference")
-  .where("pop_immeubles.last_image_check_at", "<", todayUTC.toISOString())
-  .where("pop_images.reference", "is", null);
-
-const missingObjetCountQuery = db
-  .selectFrom("pop_objets")
-  .select(db.fn.count<string>("pop_objets.reference").as("count"))
-  .leftJoin("pop_images", "pop_images.reference", "pop_objets.reference")
-  .where((eb) =>
-    eb.or([
-      eb("pop_objets.last_image_check_at", "<", todayUTC.toISOString()),
-      eb("pop_objets.last_image_check_at", "is", null),
-    ]),
-  )
-  .where("pop_images.reference", "is", null);
-
-const firstMissingImmeubleBatchQuery = db
-  .selectFrom("pop_immeubles")
-  .selectAll("pop_immeubles")
-  .leftJoin("pop_images", "pop_images.reference", "pop_immeubles.reference")
-  .orderBy("pop_immeubles.last_image_check_at", "asc")
-  .orderBy("pop_immeubles.reference", "asc")
-  .where("pop_images.reference", "is", null)
-  .where("pop_immeubles.last_image_check_at", "<", todayUTC.toISOString())
-  .limit(batchSize);
-
-const firstMissingObjetBatchQuery = db
-  .selectFrom("pop_objets")
-  .selectAll("pop_objets")
-  .leftJoin("pop_images", "pop_images.reference", "pop_objets.reference")
-  .orderBy("pop_objets.last_image_check_at", "asc")
-  .orderBy("pop_objets.reference", "asc")
-  .where("pop_images.reference", "is", null)
-  .where((eb) =>
-    eb.or([
-      eb("pop_objets.last_image_check_at", "<", todayUTC.toISOString()),
-      eb("pop_objets.last_image_check_at", "is", null),
-    ]),
-  )
-  .limit(batchSize);
-
-export const fetchBatchPopImages = async ({
-  images,
-}: {
-  images: { reference: string; db: "merimee" | "palissy"; dept_number: string }[];
-}) => {
-  for (const image of images) {
-    const existing = await db
-      .selectFrom("pop_images")
-      .selectAll()
-      .where("reference", "=", image.reference)
-      .executeTakeFirst();
-    if (existing) {
-      debug(`POP image for reference ${image.reference} already exists, skipping`);
-      continue;
-    }
-
-    try {
-      debug(`Fetching POP images for reference ${image.reference}`);
-      const popImages = await getPopImages({ reference: image.reference, db: image.db });
-      for (const popImage of popImages.slice(0, 1)) {
-        await db
-          .insertInto("pop_images")
-          .values({
-            id: `pop-image-${v7()}`,
-            reference: image.reference,
-            url: popImage.url,
-            label: popImage.label,
-            copyright: popImage.copyright,
-            dept_number: image.dept_number,
-          })
-          .execute();
-      }
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    } catch (error) {
-      debug(`Error fetching POP images for reference ${image.reference}:`, error);
-      if (error instanceof FetchError) {
-        if (error.response?.status === 400) {
-          continue;
-        }
-      }
-
-      throw error;
-    }
-  }
-};
-
-const getPopImages = async ({ reference, db }: { reference: string; db: "merimee" | "palissy" }) => {
-  const htmlRaw = await fetchNoticePop({ reference, db });
-  const html = parseHTML(htmlRaw);
-
-  const slideNodes = html.document.querySelectorAll(".swiper-slide");
-
-  const slidesArray = Array.from(slideNodes);
-  return slidesArray.map((slide) => getImageFromElement(slide));
-};
-
-const getImageFromElement = (el: Element) => {
-  const imgEl = el.querySelector("img");
-  const textContainer = el.querySelector('div[style*="margin-top:5px"]');
-
-  const label = textContainer?.children[0]?.textContent;
-  const copyright = textContainer?.children[1]?.textContent;
-
-  return { url: imgEl!.getAttribute("src"), label, copyright };
-};
-
 const immeublesCsvPath = {
   origin: `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv`,
   dest: "./data/merimee.csv",
@@ -283,11 +109,6 @@ export const fetchPopDatasetteCSV = async ({ origin, dest }: { origin: string; d
   debug("Done");
 };
 // https://collectif-objets-datasette.fly.dev
-
-export const fetchNoticePop = async ({ reference, db }: { reference: string; db: "merimee" | "palissy" }) => {
-  const html = await ofetch("https://pop.culture.gouv.fr/notice/" + db + "/" + reference);
-  return html;
-};
 
 export interface PopImmeublesResult {
   total_count: number;
@@ -381,7 +202,6 @@ export interface Coordonnees {
 const standalone = async () => {
   await initPopImmeubles();
   await initPopObjets();
-  await initPopImages();
   debug("Done fetching POP data");
   process.exit(0);
 };

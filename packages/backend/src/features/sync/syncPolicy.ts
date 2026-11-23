@@ -474,7 +474,6 @@ export const syncPolicies: Record<string, TablePolicy> = {
 /** Tables of the client schema that are read-only for clients (filled by the backend or by imports). */
 export const readOnlyClientTables = [
   "clause_v2",
-  "pictures",
   "transactions",
   "sent_email",
   "state_report_sent_email",
