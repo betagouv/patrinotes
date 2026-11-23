@@ -162,8 +162,8 @@ importers:
         specifier: ^13.0.2
         version: 13.0.2
       zod:
-        specifier: ^3.22.4
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@patrinotes/pdf':
         specifier: workspace:*
@@ -427,8 +427,8 @@ importers:
         specifier: ^5.19.0
         version: 5.29.0
       zod:
-        specifier: ^3.22.4
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@react-pdf/types':
         specifier: ^2.7.0
@@ -7235,6 +7235,9 @@ packages:
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
 snapshots:
 
@@ -14459,3 +14462,5 @@ snapshots:
   yoga-layout@3.2.1: {}
 
   zod@3.25.76: {}
+
+  zod@4.6.7: {}
