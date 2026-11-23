@@ -155,7 +155,10 @@ export class SyncService {
           debug("Ignored server-owned columns", decision.dropped, "on", table, id, "for user", user.id);
         }
 
-        if (await isForbiddenOnLockedStateReport(trx, operation)) {
+        // A PUT replayed on an existing row is applied, and checked, as a PATCH of that row.
+        const effectiveOp = decision.update ? "PATCH" : op;
+
+        if (await isForbiddenOnLockedStateReport(trx, { ...operation, op: effectiveOp })) {
           debug("Rejecting", op, "on", table, id, ": state report already sent");
           // Answer 200 so the client drops the operation instead of retrying it forever;
           // PowerSync then syncs the server state back, undoing the local change.
@@ -174,22 +177,22 @@ export class SyncService {
           if (handled) return { success: true };
         }
 
-        if (op === "DELETE") {
+        if (effectiveOp === "DELETE") {
           debug("Deleting row on table", table, "with id", id);
           await trx
             .deleteFrom(table as any)
             .where("id", "=", id)
             .execute();
         }
-        if (op === "PATCH" && Object.keys(decision.values).length) {
-          debug("Patching row on table", table, "with id", id);
+        if (effectiveOp === "PATCH" && Object.keys(decision.values).length) {
+          debug(decision.update ? "Replayed PUT, updating" : "Patching", "row on table", table, "with id", id);
           await trx
             .updateTable(table as any)
             .set(decision.values as any)
             .where("id", "=", id)
             .execute();
         }
-        if (op === "PUT") {
+        if (effectiveOp === "PUT") {
           debug("Inserting row on table", table);
           await trx
             .insertInto(table as any)

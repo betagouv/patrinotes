@@ -203,15 +203,58 @@ describe("evaluateWrite", () => {
     expect(other.allowed).toBe(false);
   });
 
-  it("refuses replaying a PUT on an existing row", async () => {
+  it("applies a PUT replayed on an existing row as an update, with the checks of a PATCH", async () => {
+    // the creation reached the server but its answer was lost: the device sends the row again, with later edits
+    const replayed = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "service_instructeurs",
+      op: "PUT",
+      id: "si-1",
+      data: { full_name: "DDT 75 (modifié)", email: "ddt@example.fr", service_id: "service-a" },
+      existing: { id: "si-1", full_name: "DDT 75", email: null, service_id: "service-a" },
+    });
+    expect(replayed).toEqual({
+      allowed: true,
+      update: true,
+      values: { full_name: "DDT 75 (modifié)", email: "ddt@example.fr", service_id: "service-a" },
+      dropped: [],
+    });
+
+    // server-owned columns of the stored row are kept, as for a PATCH
+    const moved = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "service_instructeurs",
+      op: "PUT",
+      id: "si-1",
+      data: { full_name: "DDT 75", service_id: "service-b" },
+      existing: { id: "si-1", full_name: "DDT 75", service_id: "service-a" },
+    });
+    expect(moved).toEqual({ allowed: true, update: true, values: { full_name: "DDT 75" }, dropped: ["service_id"] });
+
+    // a row the user may not edit stays refused
+    const foreign = await evaluateWrite({
+      trx: noDb,
+      user,
+      table: "service_instructeurs",
+      op: "PUT",
+      id: "si-2",
+      data: { full_name: "Pirate" },
+      existing: { id: "si-2", full_name: "DDT 92", service_id: "service-b" },
+    });
+    expect(foreign.allowed).toBe(false);
+  });
+
+  it("refuses a PUT replayed on an existing row of a table that cannot be updated", async () => {
     const decision = await evaluateWrite({
       trx: noDb,
       user,
-      table: "state_report",
+      table: "delegation",
       op: "PUT",
-      id: "constat-1",
-      data: {},
-      existing: { id: "constat-1", service_id: "service-a", created_by: "user-a" },
+      id: "delegation-1",
+      data: { createdBy: "user-a", delegatedTo: "user-b" },
+      existing: { id: "delegation-1", createdBy: "user-a", delegatedTo: "user-b" },
     });
     expect(decision.allowed).toBe(false);
   });

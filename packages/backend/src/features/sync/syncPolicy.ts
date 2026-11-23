@@ -484,7 +484,10 @@ export const readOnlyClientTables = [
 
 // --- evaluation ---------------------------------------------------------------------------------------------------
 
-export type Decision = { allowed: true; values: Row; dropped: string[] } | { allowed: false; reason: string };
+/** `update`: a PUT replayed on a row that already exists, to apply as an update of that row. */
+export type Decision =
+  | { allowed: true; values: Row; dropped: string[]; update?: true }
+  | { allowed: false; reason: string };
 
 /**
  * Checks one client operation and returns the values to write.
@@ -525,8 +528,15 @@ export const evaluateWrite = async ({
   const dropped: string[] = [];
   let values: Row;
 
+  // A PUT replayed after a lost response (the row was created, the device never knew) carries the row's current
+  // local values: apply it as an update, with the same checks as a PATCH, instead of losing those values.
+  const isReplayedPut = op === "PUT" && !!existing;
+  if (isReplayedPut) {
+    if (!policy.ops.includes("PATCH")) return { allowed: false, reason: "la ligne existe déjà" };
+    op = "PATCH";
+  }
+
   if (op === "PUT") {
-    if (existing) return { allowed: false, reason: "la ligne existe déjà" };
     values = { ...data };
     for (const column of serverColumns) values[column] = null;
     Object.assign(values, policy.forced?.(user));
@@ -549,7 +559,7 @@ export const evaluateWrite = async ({
   const allowed = await policy.canWrite({ trx, user, op: op as CrudOp, id, existing, next });
   if (!allowed) return { allowed: false, reason: `droits insuffisants sur ${table}` };
 
-  return { allowed: true, values, dropped };
+  return isReplayedPut ? { allowed: true, values, dropped, update: true } : { allowed: true, values, dropped };
 };
 
 /** SQLite stores booleans and dates differently from PostgreSQL: compare loosely. */
