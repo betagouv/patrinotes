@@ -63,7 +63,8 @@ export const Route = createFileRoute("/constat_/$constatId/pdf")({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => {
     const mode = search?.mode as PageMode;
-    const isModeValid = ["view", "edit", "send", "sent"].includes(mode);
+    // The constat PDF has no edit mode (contentMap has view, send and sent): an old ?mode=edit link shows the preview.
+    const isModeValid = ["view", "send", "sent"].includes(mode);
 
     return {
       mode: isModeValid ? mode : "view",
