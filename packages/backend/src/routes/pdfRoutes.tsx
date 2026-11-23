@@ -14,7 +14,6 @@ import { getGroupedStateReportMailName, getStateReportMailName } from "@patrinot
 import { AppError } from "../features/errors";
 import { sentry } from "../features/sentry";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { parseHTML } from "linkedom";
 import { getPDFInMailName } from "@patrinotes/pdf";
 import { createAttachmentRedirection } from "../features/attachmentRedirection";
 import { canEditReport, canEditStateReport, findReport, findStateReport } from "../features/sync/syncPolicy";

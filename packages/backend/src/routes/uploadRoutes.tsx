@@ -1,5 +1,4 @@
 import { FastifyPluginAsyncTypebox, Type } from "@fastify/type-provider-typebox";
-import multipart, { MultipartFile } from "@fastify/multipart";
 import { AppError } from "../features/errors";
 import util from "node:util";
 import { pipeline } from "node:stream";
@@ -17,11 +16,6 @@ const debug = makeDebug("upload");
 const pump = util.promisify(pipeline);
 
 export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
-  fastify.register(multipart, {
-    limits: {
-      fileSize: 15 * 1024 * 1024, // 15 mo,
-    },
-  });
   fastify.addHook("preHandler", authenticate);
 
   fastify.get(

@@ -47,7 +47,6 @@
     "onlyBuiltDependencies": [
       "@journeyapps/wa-sqlite",
       "arktype",
-      "canvas",
       "core-js",
       "es5-ext",
       "esbuild"

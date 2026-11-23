@@ -21,7 +21,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@rawwee/react-pdf-html": "^1.0.2",
     "@react-pdf/renderer": "^4.1.5",
     "buffer": "^6.0.3",
     "date-fns": "^3.6.0",
