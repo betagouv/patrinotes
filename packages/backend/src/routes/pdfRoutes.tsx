@@ -413,6 +413,9 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         .where("is_ignored", "=", false)
         .execute();
 
+      // A constat whose alert failed to send keeps alerts_sent false, so a later send of it retries its alerts.
+      const reportIdsWithFailedAlert = new Set<string>();
+
       for (const alert of unsentAlerts) {
         if (!alert.should_send) continue;
         const alertStateReport = getAlertReport(alert.id)! as Selectable<Database["state_report"]>;
@@ -440,14 +443,16 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         } catch (alertError) {
           sentry?.captureException(alertError, { extra: { alertId: alert.id } });
           console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
+          reportIdsWithFailedAlert.add(alertStateReport.id);
         }
       }
 
-      await db
-        .updateTable("state_report")
-        .set({ alerts_sent: true })
-        .where("id", "in", Array.from(new Set(unsentAlerts.map((a) => getAlertReport(a.id)!.id))))
-        .execute();
+      const sentReportIds = Array.from(new Set(unsentAlerts.map((a) => getAlertReport(a.id)!.id))).filter(
+        (id) => !reportIdsWithFailedAlert.has(id),
+      );
+      if (sentReportIds.length > 0) {
+        await db.updateTable("state_report").set({ alerts_sent: true }).where("id", "in", sentReportIds).execute();
+      }
     }
 
     if (validatorEmail) {
