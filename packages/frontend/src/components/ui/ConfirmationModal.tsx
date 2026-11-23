@@ -8,12 +8,14 @@ export const ConfirmationModal = ({
   title,
   content,
   buttonLabel = "Confirmer",
+  cancelLabel = "Annuler",
   onClose,
   onConfirm,
 }: {
   title: ReactNode;
   content: ReactNode;
   buttonLabel?: string;
+  cancelLabel?: string;
   onClose: () => void;
   onConfirm: () => void;
 }) => {
@@ -37,7 +39,7 @@ export const ConfirmationModal = ({
 
         <Flex justifyContent="flex-end" gap="16px" px="24px" pb="16px">
           <Button priority="secondary" onClick={onClose} type="button">
-            Annuler
+            {cancelLabel}
           </Button>
           <Button onClick={() => onConfirm()} type="button">
             {buttonLabel}

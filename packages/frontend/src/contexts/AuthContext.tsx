@@ -3,13 +3,12 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import { AuthUser, type RouterOutputs } from "../api";
 import { apiStore } from "../ApiStore";
 import { db, powerSyncDb, useDbQuery } from "../db/db";
-import { menuActor } from "../features/menu/menuMachine";
 import { Center } from "#components/MUIDsfr.tsx";
 import { Spinner } from "#components/Spinner.tsx";
 import { Service } from "../db/AppSchema";
-import { useNavigate } from "@tanstack/react-router";
 import { onSessionExpired } from "../features/auth/sessionExpired";
 import { SessionExpiredModal } from "../features/auth/SessionExpiredModal";
+import { LogoutDialogs, requestLogout } from "../features/auth/LogoutDialogs";
 
 const emptyAuth = {
   accessToken: null,
@@ -92,6 +91,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <LogoutDialogs />
       {sessionExpired ? (
         <SessionExpiredModal
           onReconnect={() => {
@@ -110,16 +110,8 @@ export const useIsLoggedIn = () => {
   return auth.accessToken && auth.user;
 };
 
-export const useLogout = () => {
-  const { auth, setAuth } = useAuthContext();
-  const navigate = useNavigate();
-
-  return () => {
-    menuActor.send({ type: "CLOSE" });
-    setAuth({ ...auth, accessToken: null, user: null, refreshToken: null, expiresAt: null });
-    navigate({ to: "/connexion" });
-  };
-};
+/** Logs out and empties the device, after a warning when changes are not sent yet (see LogoutDialogs). */
+export const useLogout = () => requestLogout;
 
 export const useUser = () => {
   const { auth } = useAuthContext();

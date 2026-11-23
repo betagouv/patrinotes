@@ -32,7 +32,7 @@ export const HelpMenu = () => {
   });
 
   const deleteLocalData = useMutation({
-    mutationFn: resetLocalData,
+    mutationFn: () => resetLocalData(),
   });
 
   const hasPendingChanges = !!pendingChanges && (pendingChanges.changes > 0 || pendingChanges.attachments > 0);

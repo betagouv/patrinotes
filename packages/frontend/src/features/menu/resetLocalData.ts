@@ -29,7 +29,9 @@ export const getPendingLocalChanges = async (): Promise<PendingLocalChanges> => 
 };
 
 /**
- * Wipes every local copy of the user data, then reloads the app.
+ * Wipes every local copy of the user data, then reloads the app on `redirectTo`.
+ * `keepAppCache` keeps the service worker and its caches, which hold the app code only (no user data): the
+ * logout uses it so that the sign-in page still loads offline.
  *
  * Each step is bounded by a timeout and failures do not stop the next steps: once the
  * reset has started, the app must reload no matter what, otherwise it stays on a
@@ -40,7 +42,10 @@ export const getPendingLocalChanges = async (): Promise<PendingLocalChanges> => 
  * pending delete queues every later `open` of that database — including the ones the
  * reloaded app makes at boot, which then waits forever.
  */
-export const resetLocalData = async () => {
+export const resetLocalData = async ({
+  redirectTo = "/",
+  keepAppCache = false,
+}: { redirectTo?: string; keepAppCache?: boolean } = {}) => {
   await step("stop attachment sync", () => attachmentQueue.stopSync(), 5000);
 
   const cleared = await step("clear PowerSync database", () => powerSyncDb.disconnectAndClear(), 15000);
@@ -67,8 +72,10 @@ export const resetLocalData = async () => {
   );
 
   await step("clear localStorage", async () => clearLocalStorage(), 1000);
-  await step("unregister service workers", unregisterServiceWorkers, 5000);
-  await step("clear caches", clearCaches, 5000);
+  if (!keepAppCache) {
+    await step("unregister service workers", unregisterServiceWorkers, 5000);
+    await step("clear caches", clearCaches, 5000);
+  }
 
   // Other open tabs still hold connections and an old in-memory state: reload them too.
   try {
@@ -77,7 +84,7 @@ export const resetLocalData = async () => {
     channel.close();
   } catch {}
 
-  window.location.replace("/");
+  window.location.replace(redirectTo);
 };
 
 /** Reloads this tab when another tab resets the local data. */
