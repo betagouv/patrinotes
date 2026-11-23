@@ -1,2 +1,13 @@
-dsfr/*
+# The Dockerfile only copies package manifests, packages/*, db/ and the frontend build scripts:
+# nothing below is needed by the build, and none of it must end up in the published images.
+.git
+.github
+.env*
+**/.env*
 node_modules
+**/node_modules
+test-results
+playwright-report
+.scratch
+docs
+tests
