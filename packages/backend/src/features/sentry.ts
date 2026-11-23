@@ -12,7 +12,13 @@ const scrub = (value: unknown, depth = 0): unknown => {
   );
 };
 
+// Error messages can embed an address (Keycloak lookups put "?email=..." in the URL of a FetchError).
+const EMAIL = /[^\s@"'<>/?=&]+@[^\s@"'<>/?&]+\.[a-z]{2,}/gi;
+const redactEmails = (text: string | undefined) => text?.replace(EMAIL, "[email]");
+
 const beforeSend = <T extends Sentry.Event>(event: T): T => {
+  if (event.message) event.message = redactEmails(event.message);
+  for (const exception of event.exception?.values ?? []) exception.value = redactEmails(exception.value);
   if (event.request) {
     delete event.request.data;
     delete event.request.cookies;

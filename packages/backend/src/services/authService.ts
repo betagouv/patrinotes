@@ -14,7 +14,7 @@ import { makeDebug } from "../features/debug";
 import { v7 } from "uuid";
 import { omit } from "pastable";
 import { sql } from "kysely";
-import { normalizeEmail } from "../features/email";
+import { maskEmail, normalizeEmail } from "../features/email";
 const debug = makeDebug("auth-service");
 const authFullUrl = `${ENV.VITE_AUTH_URL}/realms/${ENV.VITE_AUTH_REALM}`;
 
@@ -86,7 +86,6 @@ export class AuthService {
 
   async loginUser(rawUserData: Static<typeof loginTSchema.body>) {
     const userData = { ...rawUserData, email: normalizeEmail(rawUserData.email) };
-    debug("logging in user", userData.email);
     try {
       const keycloakTokens = await authApi<Static<typeof keycloakTokenResponseTSchema>>(
         "/protocol/openid-connect/token",
@@ -117,8 +116,8 @@ export class AuthService {
       };
     } catch (error) {
       if (error instanceof FetchError) {
-        console.log(error.message, error.cause, error.data);
-        console.log(error.data?.error_description);
+        // the error carries the request options (password): log only Keycloak's answer
+        console.log("[auth] login refused by Keycloak", error.status, error.data?.error, error.data?.error_description);
         throw convertFetchErrorToAppError(error);
       }
       throw error;
@@ -129,7 +128,6 @@ export class AuthService {
     const userData = { ...rawUserData, email: normalizeEmail(rawUserData.email) };
     // pass the raw input so a refusal logs exactly what the user typed
     await assertEmailInWhitelist(rawUserData.email);
-    debug("creating user", userData.email);
     try {
       await adminAuthApi("/users", {
         method: "POST",
@@ -150,7 +148,7 @@ export class AuthService {
           ],
         },
       });
-      debug("user created in keycloak, creating in local db", userData.email);
+      debug("user created in keycloak, creating in local db");
 
       const keycloakUser = await adminAuthApi<Array<{ id: string }>>("/users", {
         method: "GET",
@@ -159,7 +157,7 @@ export class AuthService {
         },
       }).then((users) => users[0]);
 
-      debug("fetched keycloak user", keycloakUser);
+      debug("fetched keycloak user", keycloakUser?.id);
 
       const existingUser = await db
         .selectFrom("user")
@@ -208,14 +206,15 @@ export class AuthService {
         return u;
       });
 
-      debug("user created in local db", user);
+      debug("user created in local db", user.id);
 
       await getServices().user.changeService(user.id, user.service_id);
       debug("user service changed", user.id, user.service_id);
       return this.loginUser({ email: userData.email, password: userData.password });
     } catch (error) {
       if (error instanceof FetchError) {
-        console.log(error);
+        // the error carries the request options (password, email): log only Keycloak's answer
+        console.log("[auth] user creation refused by Keycloak", error.status, error.data?.errorMessage ?? error.data?.error);
         throw new AppError(error.status || 500, `Authentication error: ${error.data?.errorMessage || error.message}`);
       }
       throw error;
@@ -305,7 +304,8 @@ const assertEmailInWhitelist = async (email: string) => {
   const whitelist = whitelistResults[0];
 
   if (!whitelist) {
-    console.warn(`[auth] signup refused: email not in whitelist: "${email}"`);
+    // masked: enough to spot a typo, a stray space or a wrong domain without writing the address in the logs
+    console.warn(`[auth] signup refused: email not in whitelist: "${maskEmail(email)}"`);
     throw new AppError(
       403,
       "Votre courriel n'est pas autorisé à accéder à cette application.\nVous pouvez écrire à contact@patrinotes.beta.gouv.fr.",

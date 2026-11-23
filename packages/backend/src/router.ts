@@ -1,5 +1,6 @@
 import { TypeBoxValidatorCompiler, TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import fastify from "fastify";
+import { FetchError } from "ofetch";
 import { AppError } from "./features/errors";
 import { userPlugin } from "./routes/userRoutes";
 import { getServices } from "./services/services";
@@ -56,7 +57,8 @@ export const initFastify = async () => {
   registerSecurityHeaders(fastifyInstance, { hsts: isProd });
 
   fastifyInstance.addHook("onRequest", async (request) => {
-    debug(request.method, request.url);
+    // route pattern only: the URL may hold validation tokens, attachment ids, reset links or query parameters
+    debug(request.method, request.routeOptions?.url ?? "(unknown route)");
     request.services = getServices();
   });
 
@@ -73,7 +75,14 @@ export const initFastify = async () => {
   fastifyInstance.register(
     async (instance) => {
       instance.setErrorHandler((error, request, reply) => {
-        console.error(error);
+        if ((error as unknown) instanceof FetchError) {
+          // the message holds the full upstream URL, which may contain an email (Keycloak user lookups)
+          const fetchError = error as unknown as FetchError;
+          const upstream = String(fetchError.request ?? "").split("?")[0];
+          console.error("[fetch]", fetchError.status, upstream, fetchError.data?.error ?? "");
+        } else {
+          console.error(error);
+        }
         // route pattern only: the body may hold passwords or document data, params may hold tokens
         sentry?.captureException(error, { extra: { method: request.method, route: request.routeOptions?.url } });
         if (error instanceof AppError) {

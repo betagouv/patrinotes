@@ -76,7 +76,7 @@ export const monumentAlertPlugin: FastifyPluginAsyncTypebox = async (fastify, _)
 
     try {
       await sendMonumentAlertEmail({ to: recipients.join(","), alert: { ...alert, sent_at: sentAt }, attachments, user });
-      debug(`Monument alert ${id} sent to ${recipients.join(",")}`);
+      debug(`Monument alert ${id} sent to ${recipients.length} recipient(s)`);
     } catch (error) {
       await db.updateTable("monument_alert").set({ sent_at: null }).where("id", "=", id).execute();
       sentry?.captureException(error, { extra: { monumentAlertId: id } });

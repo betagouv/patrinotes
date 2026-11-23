@@ -98,7 +98,8 @@ export class UploadService {
   }
 
   async addPDFToReport({ reportId, buffer, name }: { reportId: string; buffer: Buffer; name: string }) {
-    debug("Uploading PDF to S3", name);
+    // the object name may contain the applicant name
+    debug("Uploading PDF to S3 for report", reportId);
     const command = new PutObjectCommand({
       Bucket: bucketUrl,
       Body: buffer,
@@ -112,7 +113,6 @@ export class UploadService {
     }
 
     const url = `https://${bucketUrl}/${name}`;
-    debug(url);
     return url;
   }
 

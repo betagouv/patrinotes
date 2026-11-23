@@ -439,7 +439,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
             user,
           });
 
-          debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.join(",")}`);
+          debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.length} recipient(s)`);
         } catch (alertError) {
           sentry?.captureException(alertError, { extra: { alertId: alert.id } });
           console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
