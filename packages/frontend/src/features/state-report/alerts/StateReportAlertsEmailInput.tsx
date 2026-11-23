@@ -1,6 +1,6 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import { Stack, Typography } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertErrors } from "./StateReportAlert.utils";
 import { Flex } from "#components/ui/Flex.tsx";
 import { useIsStateReportDisabled } from "../utils";
@@ -10,6 +10,10 @@ import { useDebounce } from "react-use";
 import { AlertSectionName, AlertSectionsForm } from "./StateReportAlertsMenu";
 import { addSIfPlural, deserializeMandatoryEmails, serializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { useWatch } from "react-hook-form";
+import { capRecipients, countRecipients, MAX_RECIPIENTS, TOO_MANY_RECIPIENTS_MESSAGE } from "../../recipientLimit";
+
+/** Addresses of the additional fields, split like the server does ("a@x.fr,b@x.fr" typed in one field gives two). */
+const splitAdditional = (values: readonly string[]) => values.flatMap((value) => value.split(","));
 
 export const StateReportAlertsEmailInput = ({
   mandatory_emails,
@@ -91,6 +95,12 @@ const MandatoryEmailsForm = ({
   errors: AlertErrors | null;
 }) => {
   const [values, setValues] = useState(initialValues);
+  const [limitHitIndex, setLimitHitIndex] = useState<number | null>(null);
+  const additionalEmails = useWatch({ control: form.control, name: `${names[0]}.additional_emails` }) ?? "";
+  const count = countRecipients([...values.map((v) => v.email), ...additionalEmails.split(",")]);
+  useEffect(() => {
+    if (count < MAX_RECIPIENTS) setLimitHitIndex(null);
+  }, [count]);
 
   useDebounce(
     () => {
@@ -107,7 +117,12 @@ const MandatoryEmailsForm = ({
     <Stack>
       {values.map((val, index) => {
         const inputErrors = errors?.email.filter((e) => e.service === val.service);
-        const error = inputErrors && inputErrors.length > 0 ? inputErrors[0] : null;
+        const error =
+          limitHitIndex === index
+            ? { error: TOO_MANY_RECIPIENTS_MESSAGE }
+            : inputErrors && inputErrors.length > 0
+              ? inputErrors[0]
+              : null;
 
         return (
           <Input
@@ -120,8 +135,13 @@ const MandatoryEmailsForm = ({
               type: "text",
               value: val.email,
               onChange: (e) => {
-                const newValues = [...values];
-                newValues[index].email = e.target.value;
+                const newValues = values.map((v, i) => (i === index ? { ...v, email: e.target.value } : v));
+                const nextCount = countRecipients([...newValues.map((v) => v.email), ...additionalEmails.split(",")]);
+                // same limit as the server: an address that would be the 21st is not taken
+                if (nextCount > MAX_RECIPIENTS && nextCount > count) {
+                  setLimitHitIndex(index);
+                  return;
+                }
                 setValues(newValues);
               },
             }}
@@ -142,6 +162,18 @@ const AdditionalEmailsForm = ({
   names: AlertSectionName[];
 }) => {
   const [values, setValues] = useState(initialValues);
+  // an address was refused because the alert already has MAX_RECIPIENTS: the message stays
+  // under the fields until an address is removed
+  const [limitHit, setLimitHit] = useState(false);
+  const mandatoryEmails = deserializeMandatoryEmails(
+    useWatch({ control: form.control, name: `${names[0]}.mandatory_emails` }) ?? "",
+  ).map((e) => e.email);
+  const count = countRecipients([...mandatoryEmails, ...splitAdditional(values)]);
+  const showLimitError = limitHit && count >= MAX_RECIPIENTS;
+  useEffect(() => {
+    if (count < MAX_RECIPIENTS) setLimitHit(false);
+  }, [count]);
+
   useDebounce(
     () => {
       const additional_emails = values.join(",");
@@ -165,14 +197,25 @@ const AdditionalEmailsForm = ({
             type: "text",
             value: val,
             onChange: (e) => {
+              // the other fields count first; in this one, the addresses beyond the limit are not taken
+              const others = [...mandatoryEmails, ...splitAdditional(values.filter((_, i) => i !== index))];
+              const { kept, dropped } = capRecipients(e.target.value.split(","), others);
+              if (dropped) setLimitHit(true);
               const newValues = [...values];
-              newValues[index] = e.target.value;
+              newValues[index] = kept.join(",");
               setValues(newValues);
             },
           }}
         />
       ))}
-      <LinkButton sx={{ mt: "16px" }} onClick={() => setValues([...values, ""])}>
+      {showLimitError ? <p className="fr-error-text">{TOO_MANY_RECIPIENTS_MESSAGE}</p> : null}
+      <LinkButton
+        sx={{ mt: "16px" }}
+        onClick={() => {
+          if (count >= MAX_RECIPIENTS) return setLimitHit(true);
+          setValues([...values, ""]);
+        }}
+      >
         + Ajouter un destinataire
       </LinkButton>
     </Stack>

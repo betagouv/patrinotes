@@ -1,7 +1,7 @@
 import { InputProps } from "@codegouvfr/react-dsfr/Input";
 import Tag from "@codegouvfr/react-dsfr/Tag";
 import { useMutation } from "@tanstack/react-query";
-import { HTMLAttributes, useCallback, useMemo, useRef, useState } from "react";
+import { HTMLAttributes, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useStyles } from "tss-react";
 import {
   Autocomplete,
@@ -16,6 +16,7 @@ import { useUser } from "../contexts/AuthContext";
 import { db, useDbQuery } from "../db/db";
 import { Button } from "./MUIDsfr";
 import { Flex } from "./ui/Flex";
+import { capRecipients, countRecipients, MAX_RECIPIENTS, TOO_MANY_RECIPIENTS_MESSAGE } from "../features/recipientLimit";
 
 export const EmailInput = ({
   label,
@@ -38,6 +39,15 @@ export const EmailInput = ({
 
   const [inputValue, setInputValue] = useState(single ? value[0] ?? "" : "");
   const [statusMessage, setStatusMessage] = useState("");
+  // an address was refused because the list already holds MAX_RECIPIENTS: the message stays
+  // under the field until an address is removed
+  const [limitHit, setLimitHit] = useState(false);
+  const recipientCount = countRecipients(value);
+  const showLimitError = !single && limitHit && recipientCount >= MAX_RECIPIENTS;
+  useEffect(() => {
+    if (recipientCount < MAX_RECIPIENTS) setLimitHit(false);
+  }, [recipientCount]);
+  const limitErrorId = useId();
 
   const suggestionsQuery = useDbQuery(
     db
@@ -65,10 +75,27 @@ export const EmailInput = ({
     },
   });
 
+  /**
+   * Stores the list, one address per entry (a pasted "a@x.fr, b@x.fr" gives two), without exceeding
+   * MAX_RECIPIENTS distinct addresses: the first ones are kept. Returns the refused addresses.
+   */
   const commitEmails = (next: readonly string[]) => {
-    const cleaned = next.map((email) => email.trim()).filter(Boolean);
-    onValueChange(Array.from(new Set(cleaned)));
+    const cleaned = next.flatMap((entry) => entry.split(/[,;\s]+/)).filter(Boolean);
+    const { kept, refused } = capRecipients(Array.from(new Set(cleaned)));
+    onValueChange(kept);
+    if (refused.length) {
+      setLimitHit(true);
+      setStatusMessage(TOO_MANY_RECIPIENTS_MESSAGE);
+    }
+    return refused;
   };
+
+  // a list filled beyond the limit from elsewhere (default copies, owners...) is cut to the limit too
+  const isOverLimit = !single && recipientCount > MAX_RECIPIENTS;
+  useEffect(() => {
+    if (isOverLimit) commitEmails(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOverLimit]);
 
   const addFromInput = () => {
     const email = inputValue.trim();
@@ -76,7 +103,9 @@ export const EmailInput = ({
     if (value.includes(email)) {
       setStatusMessage(`${email} est déjà dans la liste`);
     } else {
-      commitEmails([...value, email]);
+      // the addresses refused (limit reached) stay in the input
+      const refused = commitEmails([...value, email]);
+      if (refused.length) return setInputValue(refused.join(", "));
       setStatusMessage(`${email} ajoutée`);
     }
     setInputValue("");
@@ -94,7 +123,7 @@ export const EmailInput = ({
   }, []);
 
   const renderInput = (params: AutocompleteRenderInputParams) => (
-    <div className="fr-input-group">
+    <div className={cx("fr-input-group", showLimitError && "fr-input-group--error")}>
       {label ? (
         <label className="fr-label" htmlFor={params.id}>
           {label}
@@ -112,9 +141,20 @@ export const EmailInput = ({
           data-lpignore="true"
           data-form-type="other"
           style={{ ...params.inputProps.style, ...nativeInputProps?.style }}
-          className={cx(nativeInputProps?.className, params.inputProps.className, "fr-input")}
+          className={cx(
+            nativeInputProps?.className,
+            params.inputProps.className,
+            "fr-input",
+            showLimitError && "fr-input--error",
+          )}
+          aria-describedby={showLimitError ? limitErrorId : nativeInputProps?.["aria-describedby"]}
         />
       </Box>
+      {showLimitError ? (
+        <p id={limitErrorId} className="fr-error-text">
+          {TOO_MANY_RECIPIENTS_MESSAGE}
+        </p>
+      ) : null}
     </div>
   );
 
@@ -214,9 +254,10 @@ export const EmailInput = ({
             onInputChange={(_e, next, reason) => {
               if (reason !== "reset") setInputValue(next);
             }}
-            onChange={(_e, next) => {
-              commitEmails(next as string[]);
-              setInputValue("");
+            onChange={(_e, next, reason) => {
+              const refused = commitEmails(next as string[]);
+              // the typed addresses refused (limit reached) stay in the input
+              setInputValue(reason === "createOption" ? refused.join(", ") : "");
             }}
           />
         )}
@@ -253,7 +294,11 @@ export const EmailInput = ({
                 nativeButtonProps={{
                   type: "button",
                   "aria-label": `Retirer ${email}`,
-                  onClick: () => onValueChange(value.filter((v) => v !== email)),
+                  onClick: () => {
+                    onValueChange(value.filter((v) => v !== email));
+                    setLimitHit(false);
+                    setStatusMessage("");
+                  },
                 }}
               >
                 {email}

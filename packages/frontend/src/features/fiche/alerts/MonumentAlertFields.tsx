@@ -5,13 +5,14 @@ import ToggleSwitch from "@codegouvfr/react-dsfr/ToggleSwitch";
 import { fr } from "@codegouvfr/react-dsfr";
 import { addSIfPlural, deserializeMandatoryEmails, serializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { Box, Stack, Typography } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DictationTextArea } from "../../audio-record/DictationTextArea";
 import { useSpeechToTextV2 } from "../../audio-record/SpeechRecorder.hook";
 import { MinimalAttachment, UploadImage } from "../../upload/UploadImage";
 import { UploadImageModal } from "../../upload/UploadImageButton";
 import { useAttachmentImages } from "../../upload/hooks/useAttachmentImages";
 import { checkEmailValid } from "../../state-report/alerts/StateReportAlert.utils";
+import { capRecipients, MAX_RECIPIENTS, TOO_MANY_RECIPIENTS_MESSAGE } from "../../recipientLimit";
 
 const mentionColor = fr.colors.decisions.text.mention.grey.default;
 
@@ -90,8 +91,8 @@ export const getRecipientsError = (value: RecipientsValue) => {
   if (!recipients.length) return "Renseignez au moins un courriel destinataire.";
   const invalid = recipients.filter((email) => !checkEmailValid(email));
   if (invalid.length) return `Courriel invalide : ${invalid.join(", ")}`;
-  // same limit as the server (one email sent to at most 20 recipients)
-  if (recipients.length > 20) return "20 destinataires au maximum par envoi.";
+  // same limit as the server; the fields below already stop at it, this is a safeguard
+  if (recipients.length > MAX_RECIPIENTS) return TOO_MANY_RECIPIENTS_MESSAGE;
   return null;
 };
 
@@ -110,6 +111,12 @@ export const RecipientsField = ({
   const [isEditing, setIsEditing] = useState(false);
   const mandatory = deserializeMandatoryEmails(value.mandatory_emails);
   const recipients = getRecipients(value);
+  // an address was refused because the alert already has MAX_RECIPIENTS (same count as the server):
+  // the message stays under the field until an address is removed
+  const [limitHit, setLimitHit] = useState<"mandatory" | "additional" | null>(null);
+  useEffect(() => {
+    if (recipients.length < MAX_RECIPIENTS) setLimitHit(null);
+  }, [recipients.length]);
   const serviceSuffix = addSIfPlural(mandatory.length);
 
   return (
@@ -152,12 +159,18 @@ export const RecipientsField = ({
             <Input
               key={entry.service + index}
               label={`Courriel ${entry.service}`}
+              state={limitHit === "mandatory" ? "error" : undefined}
+              stateRelatedMessage={limitHit === "mandatory" ? TOO_MANY_RECIPIENTS_MESSAGE : undefined}
               nativeInputProps={{
                 type: "email",
                 value: entry.email,
                 onChange: (e) => {
                   const next = mandatory.map((m, i) => (i === index ? { ...m, email: e.target.value.trim() } : m));
-                  onChange({ ...value, mandatory_emails: serializeMandatoryEmails(next) });
+                  const nextValue = { ...value, mandatory_emails: serializeMandatoryEmails(next) };
+                  const nextCount = getRecipients(nextValue).length;
+                  // an address that would be the 21st is not taken
+                  if (nextCount > MAX_RECIPIENTS && nextCount > recipients.length) return setLimitHit("mandatory");
+                  onChange(nextValue);
                 },
               }}
             />
@@ -165,10 +178,20 @@ export const RecipientsField = ({
           <Input
             label="Autres destinataires"
             hintText="Courriels séparés par des virgules"
+            state={limitHit === "additional" ? "error" : undefined}
+            stateRelatedMessage={limitHit === "additional" ? TOO_MANY_RECIPIENTS_MESSAGE : undefined}
             nativeInputProps={{
               type: "text",
               value: value.additional_emails,
-              onChange: (e) => onChange({ ...value, additional_emails: e.target.value }),
+              onChange: (e) => {
+                // the mandatory emails count first; the addresses beyond the limit are not taken (a paste keeps the first ones)
+                const { kept, dropped } = capRecipients(
+                  e.target.value.split(","),
+                  mandatory.map((m) => m.email),
+                );
+                if (dropped) setLimitHit("additional");
+                onChange({ ...value, additional_emails: kept.join(",") });
+              },
             }}
           />
         </Stack>

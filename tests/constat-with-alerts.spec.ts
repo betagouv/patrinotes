@@ -117,7 +117,23 @@ test.describe("Constat with alerts flow", () => {
 
     // Fill the last "additional-email" input that appeared
     const additionalEmailInputs = drawer.locator('input[autocomplete^="additional-email"]');
+
+    // an alert goes to 20 addresses at most, its services' ones included: a paste of too many
+    // keeps the first ones, the message shows under the fields and no field can be added
+    const limitMessage = drawer.getByText("20 destinataires au maximum par envoi.");
+    const mandatoryValues = await drawer.locator('input[autocomplete^="mandatory-email"]').evaluateAll((inputs) =>
+      inputs.map((input) => (input as HTMLInputElement).value.trim().toLowerCase()).filter(Boolean),
+    );
+    const mandatoryCount = new Set(mandatoryValues).size;
+    const tooMany = Array.from({ length: 25 }, (_, i) => `limite${i + 1}@test.com`);
+    await additionalEmailInputs.last().fill(tooMany.join(","));
+    await expect(limitMessage).toBeVisible();
+    await expect(additionalEmailInputs.last()).toHaveValue(tooMany.slice(0, 20 - mandatoryCount).join(","));
+    await drawer.getByRole("button", { name: /Ajouter un destinataire/ }).click();
+    await expect(additionalEmailInputs).toHaveCount(1);
+    // replacing them hides the message
     await additionalEmailInputs.last().fill("extra-alert@test.com");
+    await expect(limitMessage).toHaveCount(0);
 
     // the recipients are saved after a debounce too
     await expect

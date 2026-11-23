@@ -105,6 +105,17 @@ test.describe("Fiche MH", () => {
     await expect(drawer.getByText("Alerte : Abords de l'édifice")).toBeVisible();
     await expect(drawer.getByText("udap@test.fr")).toBeVisible();
     await drawer.getByLabel("Commentaires").fill("Fissure sur le mur d'enceinte");
+
+    // 20 addresses at most, the service's one included: a paste of too many keeps the first ones
+    // and the message shows under the field; emptying the field hides it
+    await drawer.getByRole("button", { name: "modifier" }).click();
+    const others = drawer.getByLabel(/Autres destinataires/);
+    const tooMany = Array.from({ length: 25 }, (_, i) => `limite${i + 1}@test.fr`);
+    await others.fill(tooMany.join(","));
+    await expect(drawer.getByText("20 destinataires au maximum par envoi.")).toBeVisible();
+    await expect(others).toHaveValue(tooMany.slice(0, 19).join(","));
+    await others.fill("");
+    await expect(drawer.getByText("20 destinataires au maximum par envoi.")).toHaveCount(0);
     await screenshot(page, "2-alerte-formulaire");
     await drawer.getByRole("button", { name: "Valider" }).click();
     await expect(drawer.getByText("Alerte signalée")).toBeVisible();

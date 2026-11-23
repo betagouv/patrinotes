@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup, fillMinimalConstat, finalizeConstat } from "./utils";
+import { login, mockUsers, signup, fillMinimalConstat, finalizeConstat } from "./utils";
 import { resetDatabase } from "./setup";
 
 test.describe("Constat d'état flow", () => {
@@ -145,6 +145,50 @@ test.describe("Constat d'état flow", () => {
     await emailInput.press("Enter");
     await page.getByText(recipientEmail).waitFor();
 
+    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=sent"));
+    await expect(page.getByText("Votre constat d'état a bien été envoyé !")).toBeVisible();
+  });
+  test("le champ des destinataires s'arrête à 20 adresses", async ({ page }) => {
+    test.setTimeout(90_000);
+    await login({ page, user: mockUsers[0] });
+    await fillMinimalConstat(page);
+    await finalizeConstat(page);
+    await page.getByRole("button", { name: "Continuer" }).click();
+    await page.waitForURL((url) => url.search.includes("mode=send"));
+
+    const mailId = new Date().getTime();
+    const address = (i: number) => `constat-dest${i}+${mailId}@example.com`;
+    const tags = page.getByRole("button", { name: /^Retirer .+@/ });
+    // under the field (the same text is also announced to screen readers)
+    const limitMessage = page.locator(".fr-error-text", { hasText: "20 destinataires au maximum par envoi." });
+
+    const emailInput = page.locator('input[type="text"]').first();
+    await emailInput.waitFor();
+    // whatever the field already holds (owners, default copies) counts too
+    const prefilled = await tags.count();
+
+    // a paste of too many addresses: the first ones are added up to 20, then the message shows
+    await emailInput.fill(Array.from({ length: 25 }, (_, i) => address(i + 1)).join(", "));
+    await emailInput.press("Enter");
+    await expect(tags).toHaveCount(20);
+    await expect(limitMessage).toBeVisible();
+    await expect(page.getByText(address(20 - prefilled), { exact: true })).toBeVisible();
+    await expect(page.getByText(address(21 - prefilled), { exact: true })).toHaveCount(0);
+    // the refused ones stay in the input
+    await expect(emailInput).toHaveValue(
+      Array.from({ length: 25 - (20 - prefilled) }, (_, i) => address(21 - prefilled + i)).join(", "),
+    );
+
+    // one more typed address is not added either
+    await emailInput.fill(`encore+${mailId}@example.com`);
+    await emailInput.press("Enter");
+    await expect(tags).toHaveCount(20);
+    await expect(limitMessage).toBeVisible();
+
+    // removing an address hides the message, and the send goes through
+    await page.getByRole("button", { name: `Retirer ${address(1)}` }).click();
+    await expect(limitMessage).toHaveCount(0);
     await page.getByRole("button", { name: "Envoyer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=sent"));
     await expect(page.getByText("Votre constat d'état a bien été envoyé !")).toBeVisible();
