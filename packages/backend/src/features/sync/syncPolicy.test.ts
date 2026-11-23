@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { evaluateWrite, readOnlyClientTables, syncPolicies } from "./syncPolicy";
+import { canEditReport, canEditStateReport, evaluateWrite, readOnlyClientTables, syncPolicies } from "./syncPolicy";
 
 /** Tables and columns of the PowerSync client schema, read from its source. */
 const readClientSchema = () => {
@@ -382,5 +382,51 @@ describe("fiche alerts and corrections", () => {
       existing: { id: "correction-2", target: "mh", reference_pop: "PA1", service_id: "service-b" },
     });
     expect(other.allowed).toBe(false);
+  });
+});
+
+describe("delegation (SEC-17)", () => {
+  /** A database holding one delegation: user-b delegated their documents to user-a. */
+  const dbWithDelegation = {
+    selectFrom: () => {
+      const filters: Record<string, unknown> = {};
+      const query = {
+        select: () => query,
+        where: (column: string, _op: string, value: unknown) => {
+          filters[column] = value;
+          return query;
+        },
+        executeTakeFirst: async () =>
+          filters.createdBy === "user-b" && filters.delegatedTo === "user-a" ? { id: "delegation-1" } : undefined,
+      };
+      return query;
+    },
+  } as any;
+
+  const colleagueConstat = { id: "constat-b", created_by: "user-b", service_id: "service-a" };
+
+  it("lets only the author edit a constat, even with a delegation", async () => {
+    expect(await canEditStateReport(dbWithDelegation, user, { ...colleagueConstat, created_by: "user-a" })).toBe(true);
+    expect(await canEditStateReport(dbWithDelegation, user, colleagueConstat)).toBe(false);
+    expect(await canEditStateReport(dbWithDelegation, user, { ...colleagueConstat, created_by: "user-a", service_id: "service-b" })).toBe(false);
+  });
+
+  it("refuses a delegate's sync write on a colleague's constat", async () => {
+    const decision = await evaluateWrite({
+      trx: dbWithDelegation,
+      user,
+      table: "state_report",
+      op: "PATCH",
+      id: colleagueConstat.id,
+      data: { commentaires: "modifié par le délégataire" },
+      existing: { ...colleagueConstat, attachment_id: null, validation_status: null },
+    });
+    expect(decision.allowed).toBe(false);
+  });
+
+  it("keeps the delegation on compte-rendus", async () => {
+    const report = { id: "report-b", createdBy: "user-b", redactedById: null, service_id: "service-a" };
+    expect(await canEditReport(dbWithDelegation, user, report)).toBe(true);
+    expect(await canEditReport(dbWithDelegation, user, { ...report, createdBy: "user-c" })).toBe(false);
   });
 });

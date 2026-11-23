@@ -12,8 +12,9 @@ import type { Database } from "../../db/db";
  * - `immutableColumns`: set by the client on PUT, never changed afterwards (parent document, service departments);
  * - `canWrite`: who may write the row, checked against the stored row (PATCH, DELETE) or the new one (PUT).
  *
- * Edit rights follow the frontend (useCanEditReport, useIsStateReportDisabled), plus delegation:
- * a user who received a delegation from a colleague may create, edit and delete that colleague's documents.
+ * Edit rights follow the frontend (useCanEditReport, useIsStateReportDisabled). Delegation: a user who received a
+ * delegation from a colleague may edit that colleague's compte-rendus and fiche alerts; constats stay editable by their
+ * author only, as in the interface (SEC-17).
  */
 
 export type CrudOp = "PUT" | "PATCH" | "DELETE";
@@ -72,11 +73,13 @@ export const canEditReport = async (trx: Trx, user: SyncUser, report: Row | null
   return hasDelegation(trx, report.createdBy, user.id);
 };
 
-/** Constat d'état: its creator or someone the creator delegated to, within the creator's service. */
-export const canEditStateReport = async (trx: Trx, user: SyncUser, stateReport: Row | null | undefined) => {
+/**
+ * Constat d'état: its creator only, within the creator's service. A delegation does not extend to constats: the
+ * interface (useIsStateReportDisabled) lets only the author edit one, the server applies the same rule (SEC-17).
+ */
+export const canEditStateReport = async (_trx: Trx, user: SyncUser, stateReport: Row | null | undefined) => {
   if (!stateReport || !isInUserService(stateReport, user)) return false;
-  if (stateReport.created_by === user.id) return true;
-  return hasDelegation(trx, stateReport.created_by, user.id);
+  return stateReport.created_by === user.id;
 };
 
 const findById = async (trx: Trx, table: keyof Database, id: unknown): Promise<Row | null> => {

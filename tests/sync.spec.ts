@@ -251,7 +251,7 @@ test.describe.serial("Sync (upload-data) access control", () => {
     expect(otherService.error).toBe("Forbidden");
   });
 
-  test("constats: only the creator or a delegate may edit them and their sections", async ({ request }) => {
+  test("constats: only the creator may edit them and their sections, even with a delegation", async ({ request }) => {
     const constatId = "constat-sync-" + Date.now();
     const created = await upload(request, a.token, {
       id: constatId,
@@ -290,11 +290,12 @@ test.describe.serial("Sync (upload-data) access control", () => {
       op: "PUT",
       data: { createdBy: a.id, delegatedTo: b.id },
     });
-    expect((await section(b.token, "section-b2-" + Date.now())).success).toBe(true);
+    // a delegation does not extend to constats: only their author edits them, as in the interface (SEC-17)
+    expect((await section(b.token, "section-b2-" + Date.now())).error).toBe("Forbidden");
     expect(
       (await upload(request, b.token, { id: constatId, type: "state_report", op: "PATCH", data: { notes: "B" } }))
-        .success,
-    ).toBe(true);
+        .error,
+    ).toBe("Forbidden");
     await upload(request, a.token, { id: delegationId, type: "delegation", op: "DELETE" });
   });
 });
