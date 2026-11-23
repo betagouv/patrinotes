@@ -13,7 +13,7 @@ import {
   SITE_CLASSE_OU_INSCRIT_SECTION,
 } from "@patrinotes/pdf/utils";
 import { AuthUser } from "../../routes/authMiddleware";
-import { getServices } from "../../services/services";
+import { buildAlertPhotos } from "./alertPhotos";
 
 export const getProblemDescription = ({ alert, user }: { alert: MinimalAlert; user: AuthUser }) => {
   if (alert.alert === EDIFICE_EN_PERIL_SECTION) {
@@ -40,26 +40,20 @@ export const createAlertEmailContent = async ({
   stateReport,
   alert,
   user,
+  to,
 }: {
   stateReport: Selectable<Database["state_report"]>;
   alert: MinimalAlert;
   user: AuthUser;
+  /** recipients, recorded on the photo links when the photos are too heavy to be attached */
+  to: string;
 }) => {
-  const uploadService = getServices().upload;
-
   const alertAttachments = alert.attachments.filter((att) => !att.is_deprecated);
-  const mailAttachments = await Promise.all(
-    alertAttachments.map(async (attachment) => {
-      const buffer = await uploadService.getAttachment({ filePath: attachment.attachment_id! });
-
-      return {
-        filename: attachment.label || "Photo",
-        content: buffer,
-        cid: attachment.id,
-        contentType: "image/png",
-      };
-    }),
-  );
+  const photos = await buildAlertPhotos({
+    photos: alertAttachments.map((att) => ({ id: att.id, attachment_id: att.attachment_id!, label: att.label })),
+    createdBy: user.id,
+    sentTo: to,
+  });
 
   const innerHtml = `
     <p>Madame, Monsieur,</p>
@@ -67,13 +61,7 @@ export const createAlertEmailContent = async ({
   ${getProblemDescription({ alert, user })} l’agent ${escapeHtml(getServicePronom(user.service.name!))}, en charge du contrôle scientifique et technique, ${escapeHtml(user.name)} :</p>
 
   ${alert.commentaires ? `<p>${escapeMultiline(alert.commentaires)}</p>` : ""}
-    ${
-      mailAttachments.length
-        ? `<p>
-        ${mailAttachments.map((att) => `<img src="cid:${att.cid}" alt="${escapeHtml(att.filename)}" style="max-width: 600px; max-height: 400px; display: block; margin: 10px 0;" />`).join("")}
-    </p>`
-        : ""
-    }
+    ${photos.html}
 
   <p>Pour toute information complémentaire, ou pour communiquer l’éventuelle suite donnée à cette alerte, merci de contacter : <br/>
   <b>${escapeHtml(user.name)} - ${escapeHtml(user.service.name)}</b><br/>
@@ -87,7 +75,7 @@ export const createAlertEmailContent = async ({
     content: innerHtml,
   });
 
-  return { html, attachments: [...dsfrAttachments, ...mailAttachments] };
+  return { html, attachments: [...dsfrAttachments, ...photos.attachments] };
 };
 
 export const getServicePronom = (serviceName: string) => {

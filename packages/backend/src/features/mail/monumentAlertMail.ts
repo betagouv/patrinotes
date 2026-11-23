@@ -2,7 +2,7 @@ import { Selectable } from "kysely";
 import { Database } from "../../db/db";
 import { getObjetAnnotationSummary } from "@patrinotes/pdf/utils";
 import { AuthUser } from "../../routes/authMiddleware";
-import { getServices } from "../../services/services";
+import { buildAlertPhotos } from "./alertPhotos";
 import { wrapWithDsfrMail } from "./dsfrMailWrapper";
 import { getProblemDescription, getServicePronom, uppercaseFirstLetter } from "./alertMail";
 import { escapeHtml } from "./escapeHtml";
@@ -27,21 +27,15 @@ export const createMonumentAlertEmailContent = async ({
   alert,
   attachments,
   user,
+  to,
 }: {
   alert: MonumentAlert;
   attachments: MonumentAlertAttachment[];
   user: AuthUser;
+  /** recipients, recorded on the photo links when the photos are too heavy to be attached */
+  to: string;
 }) => {
-  const uploadService = getServices().upload;
-
-  const mailAttachments = await Promise.all(
-    attachments.map(async (attachment) => ({
-      filename: attachment.label || "Photo",
-      content: await uploadService.getAttachment({ filePath: attachment.attachment_id }),
-      cid: attachment.id,
-      contentType: "image/png",
-    })),
-  );
+  const photos = await buildAlertPhotos({ photos: attachments, createdBy: user.id, sentTo: to });
 
   const monument = `<b>${escapeHtml(getMonumentLabel(alert))}</b>${
     alert.commune ? `, situé à ${escapeHtml(alert.commune)}` : ""
@@ -69,16 +63,7 @@ export const createMonumentAlertEmailContent = async ({
     <p>Madame, Monsieur,</p>
     ${intro}
     ${alert.commentaires ? `<p>${escapeHtml(alert.commentaires).replaceAll("\n", "<br/>")}</p>` : ""}
-    ${
-      mailAttachments.length
-        ? `<p>${mailAttachments
-            .map(
-              (att) =>
-                `<img src="cid:${att.cid}" alt="${escapeHtml(att.filename)}" style="max-width: 600px; max-height: 400px; display: block; margin: 10px 0;" />`,
-            )
-            .join("")}</p>`
-        : ""
-    }
+    ${photos.html}
     <p>Pour toute information complémentaire, ou pour communiquer l’éventuelle suite donnée à ce signalement, merci de contacter : <br/>
     <b>${escapeHtml(user.name ?? "")} - ${escapeHtml(user.service.name ?? "")}</b><br/>
     <b>${escapeHtml(user.email ?? "")}</b>
@@ -91,5 +76,5 @@ export const createMonumentAlertEmailContent = async ({
     content: innerHtml,
   });
 
-  return { html, attachments: [...dsfrAttachments, ...mailAttachments] };
+  return { html, attachments: [...dsfrAttachments, ...photos.attachments] };
 };

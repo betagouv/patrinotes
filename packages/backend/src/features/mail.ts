@@ -206,7 +206,7 @@ export const sendAlertEmail = async ({
   user: AuthUser;
 }) => {
   try {
-    const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user });
+    const { html, attachments } = await createAlertEmailContent({ stateReport, alert, user, to });
     const subject = getAlertMailSubject(alert.alert!, getStateReportTitle(stateReport));
 
     return await transporter.sendMail({
@@ -236,7 +236,7 @@ export const sendMonumentAlertEmail = async ({
   attachments: Selectable<Database["monument_alert_attachment"]>[];
   user: AuthUser;
 }) => {
-  const { html, attachments: mailAttachments } = await createMonumentAlertEmailContent({ alert, attachments, user });
+  const { html, attachments: mailAttachments } = await createMonumentAlertEmailContent({ alert, attachments, user, to });
 
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
