@@ -2,6 +2,7 @@ import { Selectable } from "kysely";
 import { Database } from "../../db/db";
 import { getStateReportTitle, MinimalAlert } from "@patrinotes/pdf/constat";
 import { wrapWithDsfrMail } from "./dsfrMailWrapper";
+import { escapeHtml, escapeMultiline } from "./escapeHtml";
 import {
   ABORDS_DE_L_EDIFICE_SECTION,
   ARCHEOLOGIE_SECTION,
@@ -23,7 +24,7 @@ export const getProblemDescription = ({ alert, user }: { alert: MinimalAlert; us
     return `une potentielle atteinte à un enjeu archéologique a été relevée par`;
   }
 
-  const natureDescription = alertNatureMap[alert.alert as keyof typeof alertNatureMap] || "relatif à " + alert.alert;
+  const natureDescription = alertNatureMap[alert.alert as keyof typeof alertNatureMap] || "relatif à " + escapeHtml(alert.alert);
   return `un potentiel problème ${natureDescription} qui pourrait relever de votre compétence, a été identifié par`;
 };
 
@@ -62,21 +63,21 @@ export const createAlertEmailContent = async ({
 
   const innerHtml = `
     <p>Madame, Monsieur,</p>
-    <p>Dans le cadre d’un constat d’état réalisé sur le monument historique <b>${getStateReportTitle(stateReport) ? uppercaseFirstLetter(getStateReportTitle(stateReport)) : ""}</b>${stateReport.commune ? `, situé à ${stateReport.commune}` : ``},
-  ${getProblemDescription({ alert, user })} l’agent ${getServicePronom(user.service.name!)}, en charge du contrôle scientifique et technique, ${user.name} :</p>
+    <p>Dans le cadre d’un constat d’état réalisé sur le monument historique <b>${getStateReportTitle(stateReport) ? escapeHtml(uppercaseFirstLetter(getStateReportTitle(stateReport))) : ""}</b>${stateReport.commune ? `, situé à ${escapeHtml(stateReport.commune)}` : ``},
+  ${getProblemDescription({ alert, user })} l’agent ${escapeHtml(getServicePronom(user.service.name!))}, en charge du contrôle scientifique et technique, ${escapeHtml(user.name)} :</p>
 
-  ${alert.commentaires ? `<p>${alert.commentaires}</p>` : ""}
+  ${alert.commentaires ? `<p>${escapeMultiline(alert.commentaires)}</p>` : ""}
     ${
       mailAttachments.length
         ? `<p>
-        ${mailAttachments.map((att) => `<img src="cid:${att.cid}" alt="${att.filename}" style="max-width: 600px; max-height: 400px; display: block; margin: 10px 0;" />`).join("")}
+        ${mailAttachments.map((att) => `<img src="cid:${att.cid}" alt="${escapeHtml(att.filename)}" style="max-width: 600px; max-height: 400px; display: block; margin: 10px 0;" />`).join("")}
     </p>`
         : ""
     }
 
   <p>Pour toute information complémentaire, ou pour communiquer l’éventuelle suite donnée à cette alerte, merci de contacter : <br/>
-  <b>${user.name} - ${user.service.name!}</b><br/>
-  <b>${user.email}</b>
+  <b>${escapeHtml(user.name)} - ${escapeHtml(user.service.name)}</b><br/>
+  <b>${escapeHtml(user.email)}</b>
   </p>
   <p>Merci,</p>
   `;

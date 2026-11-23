@@ -445,7 +445,7 @@ Tous les courriels passent par `nodemailer` ([mail.ts](../packages/backend/src/f
 | Réinitialisation de mot de passe | `/api/send-reset-password` | Demandeur | Lien `FRONTEND_URL/reset-password/<lien>` |
 | Alerte ou annotation depuis une fiche | `POST /api/monument-alert/send` | Adresses obligatoires et complémentaires | Monument, unité patrimoniale et objet mobilier concernés, photos en ligne ([monumentAlertMail.ts](../packages/backend/src/features/mail/monumentAlertMail.ts)) |
 
-Point d'attention : les contenus saisis (titre de l'édifice, commentaires, commentaire du validateur, préconisations) sont **interpolés sans échappement HTML** dans les courriels. Seul le courriel des alertes de fiche les échappe.
+Les contenus saisis (titre de l'édifice, commentaires, commentaire du validateur, préconisations) sont échappés avant d'être insérés dans le HTML des courriels ([escapeHtml.ts](../packages/backend/src/features/mail/escapeHtml.ts)).
 
 Il n'y a **ni file d'attente ni nouvelle tentative** : l'envoi est synchrone dans la requête HTTP. Un échec SMTP sur le courriel principal fait échouer la requête **après** l'écriture en base (le document est alors marqué comme envoyé alors que le courriel n'est pas parti).
 

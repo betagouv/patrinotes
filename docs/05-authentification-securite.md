@@ -233,7 +233,7 @@ Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans 
 | --- | --- |
 | Validation des schémas | TypeBox sur la plupart des routes (types simples, pas de format `email`, pas de longueur maximale). Les routes `/api/upload/attachment*` lisent `request.query` sans schéma, mais le chemin est contrôlé (format, pas de `..`). `/api/upload-data` accepte `data: Any`, dont seuls les noms de colonnes sont vérifiés |
 | Injection SQL | Kysely paramètre les valeurs et échappe les identifiants. Les seules chaînes SQL brutes (`sql\`…\``) des statistiques interpolent des paramètres liés. Pas d'injection SQL identifiée |
-| Injection HTML dans les courriels | **Non protégée** : titres, commentaires, préconisations et commentaire du validateur sont insérés tels quels dans le HTML. Seul le courriel des alertes de fiche échappe les saisies |
+| Injection HTML dans les courriels | Protégée : toutes les saisies insérées dans le HTML des courriels sont échappées ([escapeHtml.ts](../packages/backend/src/features/mail/escapeHtml.ts)) |
 | CORS | `origin: "*"` ([router.ts](../packages/backend/src/router.ts#L43-L45)), sans cookies. L'authentification par en-tête limite le risque CSRF, mais n'importe quel site peut appeler l'API avec un jeton volé |
 | Limitation de débit | **Aucune** (`@fastify/rate-limit` absent). Les routes publiques (connexion, inscription, réinitialisation, validation, liens courts, statistiques publiques) sont exposées sans limite. La protection contre la force brute dépend de Keycloak |
 | En-têtes de sécurité | Aucun (`helmet` absent) côté backend. À traiter au niveau du proxy inverse (Traefik en production, configuration des en-têtes non relevée) |
@@ -403,7 +403,7 @@ La CI ([.github/workflows](../.github/workflows)) construit et publie les images
 | Moyenne | Pas de rôle de réplication dédié pour PowerSync ; MongoDB sans authentification dans la configuration fournie | Rôle de réplication dédié, limité aux tables publiées ; authentification MongoDB |
 | Moyenne | Liens courts publics de 90 jours (48 bits d'aléa), page de validation consultable sans limite après décision | Raccourcir la durée, augmenter l'aléa, limiter le débit, expirer les jetons de validation traités |
 | Moyenne | Écritures refusées ou en erreur perdues sans message pour l'agent (§8) | Répondre en erreur, afficher l'échec |
-| Moyenne | Contenus utilisateur insérés sans échappement dans les courriels officiels (sauf alertes de fiche) ; un utilisateur peut envoyer des courriels à des destinataires arbitraires depuis l'adresse de l'application | Échapper le HTML ; journaliser et limiter les envois |
+| Moyenne | Un utilisateur peut envoyer des courriels à des destinataires arbitraires depuis l'adresse de l'application | Journaliser et limiter les envois |
 | Moyenne | Déconnexion sans révocation du jeton hors ligne ; données locales conservées | Appeler le *logout* / la révocation Keycloak ; purger la base locale à la déconnexion |
 | Moyenne | Retrait de la liste blanche sans effet sur les comptes existants | Désactiver le compte Keycloak en même temps |
 | Moyenne | Aucune purge RGPD, CGU non enregistrées, sous-traitants incomplets (Sentry, SMTP) | Tâche de purge, enregistrement du consentement, mise à jour de la politique |

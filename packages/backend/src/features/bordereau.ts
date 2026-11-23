@@ -2,14 +2,7 @@ import { Selectable } from "kysely";
 import { Database } from "../db/db";
 import { deserializePreconisations, getStateReportTitle, getStateReportUpLabel } from "@patrinotes/pdf/constat";
 import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
-
-const escapeHtml = (value: unknown) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+import { escapeHtml } from "./mail/escapeHtml";
 
 const formatVisitDate = (date: string | null) =>
   date ? new Date(date).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" }) : "";

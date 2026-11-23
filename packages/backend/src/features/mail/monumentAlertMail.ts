@@ -5,12 +5,10 @@ import { AuthUser } from "../../routes/authMiddleware";
 import { getServices } from "../../services/services";
 import { wrapWithDsfrMail } from "./dsfrMailWrapper";
 import { getProblemDescription, getServicePronom, uppercaseFirstLetter } from "./alertMail";
+import { escapeHtml } from "./escapeHtml";
 
 type MonumentAlert = Selectable<Database["monument_alert"]>;
 type MonumentAlertAttachment = Selectable<Database["monument_alert_attachment"]>;
-
-const escapeHtml = (value: string) =>
-  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
 /** "Remparts… (Chemin de ronde)" : the monument, and the unité patrimoniale when the alert is about one. */
 const getMonumentLabel = (alert: MonumentAlert) =>

@@ -10,6 +10,7 @@ import { createBordereauMailContent } from "./bordereau";
 import { getAlertMailSubject, createAlertEmailContent } from "./mail/alertMail";
 import { createMonumentAlertEmailContent, getMonumentAlertTitle } from "./mail/monumentAlertMail";
 import { wrapWithDsfrMail } from "./mail/dsfrMailWrapper";
+import { escapeHtml, escapeMultiline } from "./mail/escapeHtml";
 import { AuthUser } from "../routes/authMiddleware";
 
 const transporter = createTransport({
@@ -80,7 +81,7 @@ export const sendReportMail = async ({
             day: "numeric",
           })
         : ""
-    } pour échanger sur votre projet ${report.title || ""}, veuillez trouver le rapport établi en cliquant sur le lien suivant : <a href="${pdfUrl}">Télécharger le compte-rendu</a> (lien valable 90 jours).</p>
+    } pour échanger sur votre projet ${escapeHtml(report.title)}, veuillez trouver le rapport établi en cliquant sur le lien suivant : <a href="${escapeHtml(pdfUrl)}">Télécharger le compte-rendu</a> (lien valable 90 jours).</p>
 
 <p>
 <b>Rappel important :</b> Ce compte-rendu ne remplace pas la demande d’autorisation de travaux.
@@ -93,7 +94,7 @@ export const sendReportMail = async ({
 <li>Entreprendre des travaux en sites protégés : <a href="https://www.culture.gouv.fr/catalogue-des-demarches-et-subventions/mes-travaux-en-site-protege">En savoir plus</a></li>
 </ul>
 
-Cordialement, ${report.redactedBy}
+Cordialement, ${escapeHtml(report.redactedBy)}
     `,
   });
 
@@ -110,7 +111,7 @@ export const sendPasswordResetMail = ({ email, temporaryLink }: { email: string;
   const resetLink = `${ENV.FRONTEND_URL}/reset-password/${temporaryLink}`;
   const { html: resetHtml, attachments: resetAttachments } = wrapWithDsfrMail({
     title: "Réinitialisation de mot de passe",
-    content: `<p>Voici le lien de réinitialisation de votre mot de passe :</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+    content: `<p>Voici le lien de réinitialisation de votre mot de passe :</p><p><a href="${escapeHtml(resetLink)}">${escapeHtml(resetLink)}</a></p>`,
   });
   return transporter.sendMail({
     from: ENV.EMAIL_EMITTER,
@@ -141,9 +142,9 @@ export const sendValidationRequestMail = ({
   const { html: validationReqHtml, attachments: validationReqAttachments } = wrapWithDsfrMail({
     title: `Validation requise — Constat d'état${title}`,
     content: `<p>Bonjour,</p>
-<p>${creatorName} vous soumet un constat d'état pour validation${title}.</p>
+<p>${escapeHtml(creatorName)} vous soumet un constat d'état pour validation${escapeHtml(title)}.</p>
 <p>Veuillez consulter le document et l'accepter ou le refuser en cliquant sur le lien ci-dessous :</p>
-<p><a href="${link}">${link}</a></p>
+<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>
 <p>Ce lien est valable 7 jours.</p>`,
   });
 
@@ -180,8 +181,8 @@ export const sendValidationResultMail = ({
   const { html: validationResHtml, attachments: validationResAttachments } = wrapWithDsfrMail({
     title: `Constat d'état${title} — ${accepted ? "Accepté" : "Refusé"}`,
     content: `<p>Bonjour,</p>
-<p>Votre <a href="${stateReportLink}">constat d'état${title}</a> a été <strong>${decision}</strong> par ${validatorEmail}.</p>
-${comment ? `<p>Commentaire : ${comment}</p>` : ""}`,
+<p>Votre <a href="${escapeHtml(stateReportLink)}">constat d'état${escapeHtml(title)}</a> a été <strong>${decision}</strong> par ${escapeHtml(validatorEmail)}.</p>
+${comment ? `<p>Commentaire : ${escapeMultiline(comment)}</p>` : ""}`,
   });
 
   return transporter.sendMail({

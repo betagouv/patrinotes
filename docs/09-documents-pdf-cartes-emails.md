@@ -385,7 +385,7 @@ Le transport est créé une seule fois avec Nodemailer ([mail.ts](../packages/ba
 
 Tous les courriels passent par [`wrapWithDsfrMail`](../packages/backend/src/features/mail/dsfrMailWrapper.ts#L150) : un gabarit HTML en tableaux, dans le style DSFR, compatible avec le mode sombre. Il contient le logo Marianne (versions claire et sombre) **en pièces jointes inline** (`cid:marianne-light@patrinotes`, `cid:marianne-dark@patrinotes`, environ 5 Ko chacune, lues dans `process.cwd()/public` puis mises en cache mémoire), le libellé « Ministère de la Culture », un bandeau de titre et le pied de page « Envoi automatique depuis le service numérique Patrinotes ».
 
-- Le titre et le *preheader* sont échappés, mais **le contenu ne l'est pas**, sauf dans le courriel des alertes de fiche. Les champs saisis par les agents y sont injectés bruts : commentaire d'alerte, titre du CR, préconisations, commentaire de refus du valideur. Le risque d'injection HTML dans les courriels est faible, mais il est réel.
+- Le titre, le *preheader* et tous les champs saisis par les agents (commentaires, titres, préconisations, commentaire du valideur) sont échappés ([escapeHtml.ts](../packages/backend/src/features/mail/escapeHtml.ts)) ; les commentaires gardent leurs retours à la ligne.
 - ⚠️ Le backend doit être lancé **depuis `packages/backend`**, car le chemin `public/` est relatif au répertoire courant. Sinon, l'envoi échoue sur `readFileSync`. La variable `ASSETS_DIR` est déclarée mais non utilisée.
 - [template-generique.html](../packages/backend/src/features/mail/template-generique.html) (3 252 lignes) et les fichiers du dossier [assets/](../packages/backend/src/features/mail/assets/) ne sont pas référencés : ce sont des modèles de référence ou des doublons.
 
@@ -473,7 +473,6 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 |---|---|---|
 | Fichiers limités au service du document ; URL d'écriture encore délivrée pour un document pas encore en base ([attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)) | Faible : un identifiant de document inconnu est nécessaire | Surveiller ; contrôler taille et type |
 | Liens publics `/attachment` (90 jours) et validation (sans expiration après décision) | Accès au PDF par toute personne qui détient le lien | Expiration du lien de validation après décision |
-| Contenu des courriels non échappé | Injection HTML | Échapper les champs saisis |
 | Dépendances mortes (`canvas`, `@rawwee/react-pdf-html`, `jsdom`, backend `@react-pdf/renderer` et `react-pdf-html`, `@mikecousins/react-pdf`, `react-pdfobject`) et paquets Cairo/Pango dans le Dockerfile | Dette, image lourde, surface d'attaque | Nettoyage |
 | Alertes envoyées avant validation | Alerte transmise pour un constat ensuite refusé | Décaler l'envoi après acceptation |
 | Courriel d'alerte sans plafond de taille | Rejet SMTP | Limiter, ou passer par des liens |

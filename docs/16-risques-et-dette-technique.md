@@ -46,7 +46,7 @@ quadrantChart
 | SEC-17 | Serveur et interface n'appliquent pas la même règle de délégation sur les constats | Faible | §2 |
 | OPS-10 | API Dataspace des UP filtrée par adresse IP, mode `mock` par défaut | Moyen | §5 |
 | SEC-08 | Liens publics de 90 jours et jetons de validation lisibles indéfiniment | Moyen | §2 |
-| SEC-09 | Injection HTML dans les e-mails officiels | Moyen | §2 |
+| SEC-09 | Envoi de courriels officiels à n'importe quelle adresse | Moyen | §2 |
 | SEC-10 | Confidentialité sur poste partagé | Moyen | §2 |
 | SEC-11 | Transport non chiffré vers PostgreSQL, MongoDB sans authentification | Moyen | §2 |
 | OPS-03 | `vite preview` en production | Moyen | §5 |
@@ -92,7 +92,7 @@ Le détail de ces constats (réglages, noms d'hôte, ports) n'est pas reproduit 
 | ID | Constat | Recommandation |
 | --- | --- | --- |
 | SEC-08 | Liens `/attachment/:id` publics pendant 90 jours ; nom du fichier de CR contenant le nom du demandeur. Jeton de validation lisible sans limite après décision. | Durée plus courte si le métier l'accepte, nom de fichier neutre, expiration après décision. |
-| SEC-09 | Textes saisis (titres, commentaires, motif de refus) insérés **sans échappement** dans le HTML des courriels de compte-rendu, de demande et de décision de validation, et des courriels d'alerte de constat ([mail.ts](../packages/backend/src/features/mail.ts), [alertMail.ts](../packages/backend/src/features/mail/alertMail.ts)) ; le bordereau du constat ([bordereau.ts](../packages/backend/src/features/bordereau.ts)) et les alertes de fiche ([monumentAlertMail.ts](../packages/backend/src/features/mail/monumentAlertMail.ts)) sont échappés ; tout agent peut envoyer un e-mail officiel à n'importe quelle adresse. | Échapper, limiter le nombre de destinataires, journaliser. |
+| SEC-09 | Tout agent peut envoyer un e-mail officiel à n'importe quelle adresse (les saisies insérées dans le HTML des courriels sont échappées, [escapeHtml.ts](../packages/backend/src/features/mail/escapeHtml.ts)). | Limiter le nombre de destinataires, journaliser. |
 | SEC-10 | La déconnexion ne vide pas la base locale ni la file d'écritures et ne révoque pas le jeton hors ligne. Jetons stockés en IndexedDB, lisibles par un script injecté. | Purge locale à la déconnexion (après envoi des écritures), révocation, CSP. |
 | SEC-11 | `ssl:false` en dur vers PostgreSQL, `sslmode: disable` pour PowerSync, MongoDB sans authentification et port publié dans le Compose de développement ; pas de rôle de réplication dédié pour PowerSync. | Paramétrer TLS, authentifier MongoDB, rôle de réplication dédié, ne rien publier hors réseau interne. |
 | SEC-12 | CORS `*`, pas d'en-têtes de sécurité, pas de CSP. | Restreindre l'origine, ajouter les en-têtes au reverse proxy. |
