@@ -55,7 +55,12 @@ export const attachmentRemoteStorage = {
     const { url } = await api.get("/api/upload/attachment/presigned-url", {
       query: { filePath: attachment.id },
     });
-    await fetch(url, { method: "PUT", body: new Blob([data]) });
+    const response = await fetch(url, { method: "PUT", body: new Blob([data]) });
+    // Throwing keeps the attachment queued for upload: the attachment queue retries it on its next pass
+    // instead of marking a file that never reached S3 as synced.
+    if (!response.ok) {
+      throw new Error(`Attachment upload failed for ${attachment.id}: HTTP ${response.status}`);
+    }
   },
 } satisfies RemoteStorageAdapter;
 

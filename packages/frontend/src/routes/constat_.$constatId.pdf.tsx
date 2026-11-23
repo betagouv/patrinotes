@@ -446,7 +446,13 @@ const DownloadMenu = ({
       const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
         body: { stateReportId: constatId },
       });
-      await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        body: blob,
+        headers: { "Content-Type": "application/pdf" },
+      });
+      // a link to a PDF that never reached the storage would be broken: show the existing copy error instead
+      if (!uploadResponse.ok) throw new Error(`PDF upload failed: HTTP ${uploadResponse.status}`);
       const { url } = await api.post("/api/pdf/state-report/share-link", {
         body: { stateReportId: constatId, pdfPath },
       });

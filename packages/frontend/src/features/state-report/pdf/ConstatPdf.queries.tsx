@@ -262,7 +262,13 @@ export const constatPdfMutations = {
           }) as any,
         ).toBlob();
 
-        await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          body: blob,
+          headers: { "Content-Type": "application/pdf" },
+        });
+        // Never send a mail whose PDF link would be broken: fail the send, the screen shows its generic error.
+        if (!uploadResponse.ok) throw new Error(`PDF upload failed: HTTP ${uploadResponse.status}`);
 
         await api.post("/api/pdf/state-report", {
           body: {

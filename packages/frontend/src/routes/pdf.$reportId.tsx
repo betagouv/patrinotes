@@ -65,7 +65,13 @@ export const PDF = () => {
         ) as any,
       ).toBlob();
 
-      await fetch(uploadUrl, { method: "PUT", body: blob, headers: { "Content-Type": "application/pdf" } });
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        body: blob,
+        headers: { "Content-Type": "application/pdf" },
+      });
+      // Never send a mail whose PDF link would be broken: fail the send, as when the route itself fails.
+      if (!uploadResponse.ok) throw new Error(`PDF upload failed: HTTP ${uploadResponse.status}`);
 
       await api.post("/api/pdf/report", { body: { reportId, pdfPath, recipients, pdfSize: blob.size } });
     },
