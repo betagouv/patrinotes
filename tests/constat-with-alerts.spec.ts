@@ -440,14 +440,18 @@ test.describe("Alerts with validation flow", () => {
     // -------------------------------------------------------------------------
     await request.delete(`http://localhost:${mailpitPort}/api/v1/messages`);
 
+    // The decline happened on the server: wait until PowerSync brings it to the browser before opening the form.
+    // Until then the local constat is still "sent", and the form page sends a sent constat to its PDF preview.
+    await page.goto("./?document=constats");
+    // ("Mes documents" tab; the "Service" tab lists it too)
+    await expect(page.getByRole("tabpanel", { name: "Mes documents" }).getByText("Refusé", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
     // Navigate to constat-general directly (reference_pop exists → home list also lands here)
     await page.goto(`${constatBaseUrl}?step=constat-general&mode=view`);
     await page.waitForURL((url) => url.search.includes("constat-general"));
-    // the decline happened on the server: wait until PowerSync brings it to the browser, the constat is read-only
-    // ("constat envoyé") until then
-    await expect(page.getByText("Vous ne pouvez pas modifier les informations d'un constat envoyé.")).toHaveCount(0, {
-      timeout: 30_000,
-    });
+    await expect(page.getByText("Vous ne pouvez pas modifier les informations d'un constat envoyé.")).toHaveCount(0);
 
     const finalizeButton = page.getByRole("button", { name: "Finaliser le constat" });
     await finalizeButton.waitFor();
