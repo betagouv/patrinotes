@@ -46,21 +46,18 @@ graph TD
 graph LR
     Backend[Patrinotes Backend]
     DataGouv[data.gouv.fr]
-    POP[POP]
 
     DataGouv -->|monuments.csv| Backend
     DataGouv -->|mobilier.csv| Backend
     DataGouv -->|api-adresse| Backend
-
-    POP -->|scrap pictures| Backend
 
     Backend -->|structured data| PatrinotesDB[Patrinotes Database]
     Backend -->|pictures and pdf| PatrinotesS3[Patrinotes S3]
 ```
 
 Les données patrimoniales proviennent de deux sources externes : **data.gouv.fr**, qui fournit les fichiers CSV des
-monuments historiques et du mobilier, ainsi que l'API d'adresse ; et **POP** (Plateforme Ouverte du Patrimoine), dont
-les images sont récupérées par scraping. Le backend agrège et structure ces données avant de les persister dans la base
+monuments historiques et du mobilier, ainsi que l'API d'adresse ; et **POP** (Plateforme Ouverte du Patrimoine).
+Les images POP ne sont plus récupérées par scraping (elles passeront par IIIF). Le backend agrège et structure ces données avant de les persister dans la base
 de données Postgres.
 
 # Framework et dépendances
