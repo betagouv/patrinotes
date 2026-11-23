@@ -13,7 +13,64 @@ env:
   IMAGE_NAME: ${{ github.repository }}-${{ github.ref_name }}
 
 jobs:
+  # Backend unit tests (vitest): the images are only published if they pass.
+  unit-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Run backend unit tests
+        run: pnpm --filter @patrinotes/backend exec vitest run
+
+  # Dependency audit: report only, never blocks the publication.
+  audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Audit production dependencies
+        run: |
+          {
+            echo "## pnpm audit --prod"
+            echo '```'
+            pnpm audit --prod 2>&1 | tail -n 40 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          pnpm audit --prod
+
   build-and-push-backend:
+    needs: unit-tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,15 +86,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # `:backend` stays the tag deployments pull; `:backend-<sha>` pins the exact commit (traceability, rollback).
       - name: Build and push Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
           push: true
           target: backend
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:backend
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:backend
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:backend-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
   build-and-push-frontend:
+    needs: unit-tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,4 +123,9 @@ jobs:
           context: .
           push: true
           target: frontend
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:frontend
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:frontend
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:frontend-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
