@@ -8,10 +8,12 @@ import * as path from "path";
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures");
 const TEST_IMAGE_PATH = path.join(FIXTURE_DIR, "test-image.jpg");
+const NON_IMAGE_PATH = path.join(FIXTURE_DIR, "not-an-image.txt");
 
 test.describe("Image upload — constat flow", () => {
   test.beforeAll(async () => {
     fs.mkdirSync(FIXTURE_DIR, { recursive: true });
+    fs.writeFileSync(NON_IMAGE_PATH, "this is definitely not an image");
     await resetDatabase();
   });
 
@@ -149,6 +151,17 @@ test.describe("Image upload — constat flow", () => {
     // The plan de situation is no longer uploaded: it is generated from the map ("Générer le plan maintenant").
 
     // ---- PlanEdifice (multiple=false) ----
+    // a refused file shows the same message as the photos, and can be removed
+    fcPromise = page.waitForEvent("filechooser");
+    await planEdificeSection.getByRole("button", { name: "Ajouter photo" }).click();
+    await (await fcPromise).setFiles(NON_IMAGE_PATH);
+    await expect(planEdificeSection.getByText(/n'est pas une image valide|Format de fichier non accepté/)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(planEdificeSection.getByRole("button", { name: "Réessayer" })).toBeVisible();
+    await planEdificeSection.getByRole("button", { name: "Supprimer la photo" }).click();
+    await expect(planEdificeSection.getByText(/n'est pas une image valide|Format de fichier non accepté/)).toHaveCount(0);
+
     fcPromise = page.waitForEvent("filechooser");
     await planEdificeSection.getByRole("button", { name: "Ajouter photo" }).click();
     await (await fcPromise).setFiles(TEST_IMAGE_PATH);

@@ -43,19 +43,36 @@ export function useBatchUpload(
   // Keeps the original File around per pending item id, so a failed upload can be retried
   // without asking the user to re-pick the file.
   const filesRef = useRef<Map<string, File>>(new Map());
+  // Pending item id -> attachment id of its failed attempt, still registered as a pending upload (it keeps
+  // "Finaliser" blocked) until the item is retried or removed.
+  const failedRef = useRef<Map<string, string>>(new Map());
+
+  const releaseFailedAttempt = useCallback(
+    (id: string) => {
+      const failedAttachmentId = failedRef.current.get(id);
+      if (!failedAttachmentId) return false;
+      failedRef.current.delete(id);
+      unregisterPendingUpload(parentId, failedAttachmentId);
+      return true;
+    },
+    [parentId],
+  );
 
   const cancel = useCallback((id: string) => {
-    cancelledRef.current.add(id);
+    // a failed item has nothing in flight: release it now instead of waiting for a step that will not come
+    if (!releaseFailedAttempt(id)) cancelledRef.current.add(id);
     filesRef.current.delete(id);
     setPendingUploads((prev) => {
       const item = prev.find((p) => p.id === id);
       if (item?.blobUrl) URL.revokeObjectURL(item.blobUrl);
       return prev.filter((p) => p.id !== id);
     });
-  }, []);
+  }, [releaseFailedAttempt]);
 
   const runUpload = useCallback(
     async (file: File, item: MinimalAttachment) => {
+      // a retry replaces the failed attempt, which gets a new attachment id
+      releaseFailedAttempt(item.id);
       const attachmentId = `${parentId}/images/${v7()}.jpg`;
       registerPendingUpload(parentId, attachmentId);
 
@@ -94,12 +111,13 @@ export function useBatchUpload(
         // Surface the failure so the user can see it and retry, instead of a thumbnail stuck
         // pending forever with no explanation.
         console.error("Error uploading image:", error);
+        failedRef.current.set(item.id, attachmentId);
         setPendingUploads((prev) =>
           prev.map((p) => (p.id === item.id ? { ...p, error: errorMessageFor(error) } : p)),
         );
       }
     },
-    [parentId, insertRecord],
+    [parentId, insertRecord, releaseFailedAttempt],
   );
 
   const uploadFiles = useCallback(

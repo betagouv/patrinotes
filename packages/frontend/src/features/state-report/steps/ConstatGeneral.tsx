@@ -197,21 +197,26 @@ const PlanEdifice = ({
 }) => {
   const { constatId } = routeApi.useParams();
 
-  const { attachments, addMutation, deleteMutation } = useAttachmentImages(
+  // same upload path as the photos: a refused or failed file stays as a thumbnail with its message,
+  // "Réessayer" and delete, instead of failing silently. While it is being processed nothing is shown, as before.
+  const { attachments, deleteMutation, batchUpload } = useAttachmentImages(
     { table: "state_report_attachment", fkColumn: "state_report_id", fkValue: constatId, type: "plan_edifice" },
     constatId,
   );
-  const attachment = attachments[0] ?? null;
+  const isPending = (id: string) => batchUpload.pendingUploads.some((pending) => pending.id === id);
+  const attachment =
+    attachments.find((a) => !isPending(a.id)) ?? batchUpload.pendingUploads.find((pending) => pending.error) ?? null;
 
   return (
     <Box flex="1">
       <Typography mb="8px">Plan de l'édifice</Typography>
       <UploadImage
-        onFiles={async (files) => addMutation.mutateAsync(files[0])}
+        onFiles={(files) => batchUpload.uploadFiles(Array.from(files).slice(0, 1))}
         attachments={attachment ? [attachment] : []}
         multiple={false}
         onClick={(attachment, blobUrl) => setSelectedAttachment(attachment, blobUrl)}
-        onDelete={() => deleteMutation.mutate({ id: attachment!.id })}
+        onDelete={({ id }) => deleteMutation.mutate({ id })}
+        onRetry={({ id }) => batchUpload.retry(id)}
         isDisabled={isDisabled}
       />
     </Box>
