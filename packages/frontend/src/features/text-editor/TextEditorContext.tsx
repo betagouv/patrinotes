@@ -134,7 +134,8 @@ export const CustomHTML = Node.create({
       dom.innerHTML = node.attrs.html;
 
       return {
-        dom: dom.firstChild!,
+        // prosemirror-view >= 1.42 types NodeView.dom as HTMLElement; the stored HTML starts with an element
+        dom: dom.firstChild as HTMLElement,
         contentDOM: null,
       };
     };

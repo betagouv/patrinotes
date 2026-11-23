@@ -1,7 +1,7 @@
 ################################
 # BASE IMAGE FOR EVERY SERVICE #
 ################################
-FROM node:20.11-alpine AS with-pnpm
+FROM node:22.23-alpine AS with-pnpm
 RUN npm i -g pnpm@10.12.4
 
 ################################

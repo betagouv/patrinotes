@@ -1,5 +1,5 @@
 import { TypeBoxValidatorCompiler, TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import fastify from "fastify";
+import fastify, { type FastifyError } from "fastify";
 import { FetchError } from "ofetch";
 import { AppError } from "./features/errors";
 import { userPlugin } from "./routes/userRoutes";
@@ -29,7 +29,7 @@ import { checkReadiness } from "./features/health";
 const debug = makeDebug("fastify");
 
 export const initFastify = async () => {
-  const fastifyInstance = fastify({ maxParamLength: 5000 })
+  const fastifyInstance = fastify({ routerOptions: { maxParamLength: 5000 } })
     .setValidatorCompiler(TypeBoxValidatorCompiler)
     .withTypeProvider<TypeBoxTypeProvider>();
 
@@ -52,6 +52,8 @@ export const initFastify = async () => {
   });
   fastifyInstance.register(cors, {
     origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
+    // @fastify/cors >= 10 only allows GET, HEAD and POST by default; keep the methods the frontend uses
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   });
 
   registerSecurityHeaders(fastifyInstance, { hsts: isProd });
@@ -74,7 +76,7 @@ export const initFastify = async () => {
 
   fastifyInstance.register(
     async (instance) => {
-      instance.setErrorHandler((error, request, reply) => {
+      instance.setErrorHandler((error: FastifyError, request, reply) => {
         if ((error as unknown) instanceof FetchError) {
           // the message holds the full upstream URL, which may contain an email (Keycloak user lookups)
           const fetchError = error as unknown as FetchError;

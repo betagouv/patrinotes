@@ -261,7 +261,7 @@ export namespace Endpoints {
     parameters: {
       query: { reportId: string };
     };
-    response: Partial<{}>;
+    response: unknown;
   };
   export type get_ApipdfstateReport = {
     method: "GET";
@@ -269,7 +269,7 @@ export namespace Endpoints {
     parameters: {
       query: { stateReportId: string };
     };
-    response: Partial<{}>;
+    response: unknown;
   };
   export type post_ApipdfstateReport = {
     method: "POST";

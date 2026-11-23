@@ -1,5 +1,24 @@
-import Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node";
 import { ENV, isDev } from "../envVars";
+
+// Since SDK v11, leaving `dataCollection` unset collects users, cookies, request bodies, query data and local
+// variables. This keeps the restrictive behaviour we had with `sendDefaultPii: false` (v7), everything off.
+export const restrictiveDataCollection = {
+  userInfo: false,
+  cookies: false,
+  httpHeaders: {
+    request: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+    response: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+  },
+  httpBodies: [],
+  urlQueryParams: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+  genAI: { inputs: false, outputs: false },
+  mcp: { inputs: false, outputs: false },
+  databaseQueryData: false,
+  queues: false,
+  graphQL: { document: false, variables: false },
+  stackFrameVariables: false,
+} satisfies Sentry.NodeOptions["dataCollection"];
 
 // Keys whose values must never reach Sentry: credentials and personal data.
 const SENSITIVE_KEY = /pass(word)?|token|secret|authorization|cookie|e-?mail|recipients?|^to$|^body$|^data$/i;
@@ -50,7 +69,9 @@ isDev
         environment: ENV.SENTRY_ENVIRONMENT ?? ENV.NODE_ENV,
         release: getRelease(),
         tracesSampleRate: 0.1,
-        sendDefaultPii: false,
+        dataCollection: restrictiveDataCollection,
+        // "static" keeps transactions (and beforeSendTransaction below); the v11 default streams spans and skips it
+        traceLifecycle: "static",
         // console breadcrumbs would carry our debug logs (emails, Keycloak errors) into every event
         integrations: (defaults) => defaults.filter((integration) => integration.name !== "Console"),
         beforeSend,

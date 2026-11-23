@@ -21,9 +21,28 @@ isDev
         // version.js, written at build time (scripts/setVersion.ts)
         release: typeof window !== "undefined" && window.APP_VERSION ? `patrinotes-frontend@${window.APP_VERSION}` : undefined,
         tracesSampleRate: 0.1,
-        sendDefaultPii: false,
+        // Since SDK v11, leaving `dataCollection` unset collects users, cookies, bodies and local variables:
+        // keep the restrictive behaviour we had with `sendDefaultPii: false`.
+        dataCollection: {
+          userInfo: false,
+          cookies: false,
+          httpHeaders: {
+            request: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+            response: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+          },
+          httpBodies: [],
+          urlQueryParams: { deny: ["forwarded", "-ip", "remote-", "via", "-user"] },
+          genAI: { inputs: false, outputs: false },
+          mcp: { inputs: false, outputs: false },
+          databaseQueryData: false,
+          queues: false,
+          graphQL: { document: false, variables: false },
+          stackFrameVariables: false,
+        },
+        traceLifecycle: "static",
         // no console logs or console breadcrumbs: they used to carry tokens and synced data
-        integrations: [Sentry.breadcrumbsIntegration({ console: false })],
+        // (since SDK v11 console breadcrumbs come from the separate default "Console" integration)
+        integrations: (defaults) => defaults.filter((integration) => integration.name !== "Console"),
         beforeSend: (event) => {
           delete event.user;
           if (event.extra) event.extra = scrub(event.extra) as Record<string, unknown>;
