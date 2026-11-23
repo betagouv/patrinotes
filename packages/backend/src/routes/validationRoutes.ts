@@ -2,6 +2,8 @@ import { type FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { db } from "../db/db";
 import { generatePresignedUrl } from "../services/uploadService";
+import { createAttachmentRedirection } from "../features/attachmentRedirection";
+import { getGroupedStateReportMailName } from "@patrinotes/pdf/constat";
 import { sendStateReportMail, sendValidationResultMail } from "../features/mail";
 import { v4 } from "uuid";
 import { AppError } from "../features/errors";
@@ -154,7 +156,13 @@ export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) =>
         .executeTakeFirst();
 
       if (stateReport) {
-        const pdfUrl = await generatePresignedUrl("attachment/" + validation.pdf_path, 7 * 24 * 3600);
+        // Same 90-day short link as a direct send, as announced in the email.
+        const pdfUrl = await createAttachmentRedirection({
+          s3Key: "attachment/" + validation.pdf_path,
+          createdBy: stateReport.created_by ?? "",
+          sentTo: validation.recipients,
+          name: getGroupedStateReportMailName(groupedReports ?? [stateReport]),
+        });
 
         await sendStateReportMail({
           recipients: validation.recipients,

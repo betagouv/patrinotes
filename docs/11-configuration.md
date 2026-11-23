@@ -93,9 +93,9 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 | `UP_API_KEY` | Si `UP_API_MODE=live` | — | Clé de l'API Dataspace (en-tête `apiKey`). Le démarrage échoue si elle manque en mode `live`. | — | **Oui** |
 | `UP_CACHE_TTL_HOURS` | Non | `24` | Durée de fraîcheur du cache `up_cache`. Au-delà, l'API est rappelée ; le cache périmé sert de secours si elle ne répond pas. | `24` | Non |
 | `DATAGOUV_API` | **Oui** | — | **Obligatoire dans le schéma mais jamais utilisée** par le code. À renseigner avec n'importe quelle valeur (le test utilise `https://data.culture.gouv.fr/api/explore/v2.1/catalog/datasets`). | idem | Non |
-| `JWT_SECRET` | **Oui** | — | **Obligatoire mais inutilisée par le backend** (reliquat de l'ancienne authentification maison). En Compose, sa valeur est transmise à PowerSync sous le nom `PS_JWT_SECRET`, que la configuration PowerSync n'utilise pas non plus. | — | Oui (par prudence) |
-| `JWT_REFRESH_SECRET` | **Oui** | — | **Obligatoire mais inutilisée.** Reliquat. | — | Oui (par prudence) |
-| `TOKEN_LIFETIME` | Non | `60m` | Inutilisée. Reliquat. | — | Non |
+| `JWT_SECRET` | **Oui** | — | **Obligatoire mais inutilisée par le backend**. En Compose, sa valeur est transmise à PowerSync sous le nom `PS_JWT_SECRET`, que la configuration PowerSync n'utilise pas non plus. | — | Oui (par prudence) |
+| `JWT_REFRESH_SECRET` | **Oui** | — | **Obligatoire mais inutilisée.** | — | Oui (par prudence) |
+| `TOKEN_LIFETIME` | Non | `60m` | Inutilisée. | — | Non |
 | `ASSETS_DIR` | Non | — | Inutilisée (les images des courriels sont lues dans `process.cwd()/public`). | — | Non |
 
 `COLLECTIF_OBJETS_DATASETTE_URL` est commentée dans le schéma ; seul du code commenté de [pop.ts](../packages/backend/src/features/data/pop.ts) la cite.
@@ -185,17 +185,17 @@ Variables utilisées dans [docker-compose.yaml](../docker-compose.yaml) (mode d�
 
 ## 7. Écarts entre `.env.dist` et le code
 
-[.env.dist](../.env.dist) est le modèle censé être copié en `.env`. Il est **obsolète et incomplet**.
+[.env.dist](../.env.dist) est le modèle censé être copié en `.env`. Il est **incomplet** et contient des variables sans usage.
 
 ### 7.1 Présentes dans `.env.dist` mais inutilisées
 
-| Variable | Origine probable |
+| Variable | Remarque |
 | --- | --- |
-| `ELECTRIC_PORT`, `VITE_ELECTRIC_URL` | Ancien moteur de synchronisation **ElectricSQL**, remplacé par PowerSync (voir aussi `.electric_migrations_*` dans [.gitignore](../.gitignore)). |
-| `PG_PROXY_PORT`, `PG_PROXY_PASSWORD` | Proxy PostgreSQL d'ElectricSQL. |
-| `KEYCLOAK_CLIENT_SECRET` | Remplacée par `AUTH_CLIENT_SECRET`. |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`, `AWS_REGION`, `AWS_ENDPOINT` | Remplacées par `MINIO_*`, mais **encore définies en production** (`AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod`, `AWS_ENDPOINT` = `MINIO_URL`), sans effet. Le SDK AWS pourrait lire `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` par défaut, mais le client reçoit ses identifiants explicitement ([uploadService.ts#L11-L17](../packages/backend/src/services/uploadService.ts#L11-L17)). |
-| `HTTP_PORT` | Remplacée par `PORT`. |
+| `ELECTRIC_PORT`, `VITE_ELECTRIC_URL` | Variables du moteur **ElectricSQL**, sans usage (voir aussi `.electric_migrations_*` dans [.gitignore](../.gitignore)). |
+| `PG_PROXY_PORT`, `PG_PROXY_PASSWORD` | Proxy PostgreSQL d'ElectricSQL, sans usage. |
+| `KEYCLOAK_CLIENT_SECRET` | Équivalent : `AUTH_CLIENT_SECRET`. |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`, `AWS_REGION`, `AWS_ENDPOINT` | Équivalent : `MINIO_*`. **Définies en production** (`AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod`, `AWS_ENDPOINT` = `MINIO_URL`), sans effet. Le SDK AWS pourrait lire `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` par défaut, mais le client reçoit ses identifiants explicitement ([uploadService.ts#L11-L17](../packages/backend/src/services/uploadService.ts#L11-L17)). |
+| `HTTP_PORT` | Équivalent : `PORT`. |
 | `COMPOSE_PROFILES` | Aucun profil n'est défini dans les fichiers Compose. |
 | `FRONTEND_PORT` | Utilisée seulement par Playwright. |
 | `JWT_SECRET` | Exigée par le schéma, mais sans usage fonctionnel (voir § 2.6). |
@@ -304,6 +304,6 @@ Relevé de production du 17/11/2026 (aucun secret relevé ni reproduit).
 | `NODE_ENV` | non défini ; `production` posé par `cross-env` (script `start`) | idem |
 | SMTP | `EMAIL_HOST=smtp.tem.scw.cloud`, `EMAIL_PORT=465`, `EMAIL_EMITTER=noreply@patrinotes.beta.gouv.fr` | idem |
 | Stockage objet | `MINIO_URL=https://patrinotes-prod.s3.fr-par.scw.cloud`, `MINIO_BUCKET=patrinotes-prod` ; restes `AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod` | bucket `patrimoine-embarque-preprod` |
-| Sentry | `VITE_SENTRY_DSN` (hôte `sentry.incubateur.net`) ; pas encore de `SENTRY_DSN` backend (branchement prévu) | — |
+| Sentry | `VITE_SENTRY_DSN` (hôte `sentry.incubateur.net`) ; pas de `SENTRY_DSN` backend | — |
 | PowerSync | `POWERSYNC_CONFIG_PATH=/config/config.yaml`, `PS_PORT=3003`, `NODE_ENV=production` ; connexion avec l'utilisateur `postgres` | `auth.user_id()` au lieu de `auth.parameter('email')` dans les règles |
 | Unités patrimoniales | `UP_API_MODE=live` | — |

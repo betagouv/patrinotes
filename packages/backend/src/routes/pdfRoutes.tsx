@@ -12,13 +12,11 @@ import { getServices } from "../services/services";
 import { deserializeMandatoryEmails } from "@patrinotes/pdf/utils";
 import { getGroupedStateReportMailName, getStateReportMailName } from "@patrinotes/pdf/constat";
 import { AppError } from "../features/errors";
-import { randomInt } from "crypto";
-import base62 from "base62";
-import { ENV } from "../envVars";
 import { sentry } from "../features/sentry";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseHTML } from "linkedom";
 import { getPDFInMailName } from "@patrinotes/pdf";
+import { createAttachmentRedirection } from "../features/attachmentRedirection";
 import { canEditReport, canEditStateReport, findReport, findStateReport } from "../features/sync/syncPolicy";
 
 const debug = makeDebug("pdf-plugin");
@@ -40,25 +38,6 @@ const assertCanEditStateReportIfStored = async (user: { id: string; service_id: 
 const assertPdfPathOf = (pdfPath: string, documentId: string) => {
   if (!pdfPath.startsWith(documentId + "/") || pdfPath.includes(".."))
     throw new AppError(400, "Chemin du PDF invalide");
-};
-
-const createAttachmentRedirection = async ({
-  s3Key,
-  createdBy,
-  sentTo,
-  name,
-}: {
-  s3Key: string;
-  createdBy: string;
-  sentTo: string;
-  name?: string;
-}) => {
-  const id = base62.encode(randomInt(1, 281474976710655));
-  await db
-    .insertInto("attachment_redirection")
-    .values({ id, s3_key: s3Key, created_at: new Date().toISOString(), created_by: createdBy, sent_to: sentTo, name })
-    .execute();
-  return `${ENV.BACKEND_URL}/attachment/${id}${name ? `/${name}` : ""}`;
 };
 
 export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {

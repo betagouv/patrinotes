@@ -47,7 +47,7 @@ Le package `@patrinotes/pdf` ([package.json](../packages/pdf/package.json)) n'a 
 
 | Export | Fichier | Rôle |
 |---|---|---|
-| `@patrinotes/pdf` | [index.ts](../packages/pdf/src/index.ts), [report.tsx](../packages/pdf/src/report.tsx) | Modèle du compte-rendu, génération du HTML du CR (`getReportHtmlString`), nom du fichier, liste `serviceInstructeurs` (JSON statique, [serviceInstructeur.json](../packages/pdf/src/serviceInstructeur.json), aujourd'hui **non utilisée** : l'import est commenté dans [ServiceInstructeurSelect.tsx](../packages/frontend/src/features/ServiceInstructeurSelect.tsx)) |
+| `@patrinotes/pdf` | [index.ts](../packages/pdf/src/index.ts), [report.tsx](../packages/pdf/src/report.tsx) | Modèle du compte-rendu, génération du HTML du CR (`getReportHtmlString`), nom du fichier, liste `serviceInstructeurs` (JSON statique, [serviceInstructeur.json](../packages/pdf/src/serviceInstructeur.json), **non utilisée** : l'import est commenté dans [ServiceInstructeurSelect.tsx](../packages/frontend/src/features/ServiceInstructeurSelect.tsx)) |
 | `@patrinotes/pdf/constat` | [stateReport.tsx](../packages/pdf/src/stateReport.tsx) | Modèle du constat, génération du HTML du constat, (dé)sérialisation des préconisations, sections par défaut, correspondance alerte → services destinataires |
 | `@patrinotes/pdf/utils` | [utils.tsx](../packages/pdf/src/utils.tsx) | Enregistrement des polices, post-traitement du HTML, règles « section visitée » et « alerte renseignée », (dé)sérialisation des courriels obligatoires, constantes des types d'alerte |
 
@@ -71,16 +71,16 @@ Composants :
 | `pastable` | `groupBy` | Regroupe les alertes par type |
 | `date-fns` | `format` | Dates des noms de fichiers |
 | `@rawwee/react-pdf-html` | déclarée dans pdf et frontend | **Jamais importée** (dépendance morte) |
-| `pdfjs-dist` 4.3.136 | frontend | Affichage du PDF généré, page par page ([PDFViewerPaginated](../packages/frontend/src/components/PDFViewerPaginated.tsx)). Le worker est empaqueté avec l'application (`?url`), sans CDN |
+| `pdfjs-dist` 4.3.136 | frontend | Affichage du PDF généré, page par page ([PDFViewerPaginated](../packages/frontend/src/components/PDFViewerPaginated.tsx)). Le worker est empaqueté avec l'application (`?url`), sans CDN, et précaché par le service worker (motif `mjs`) |
 
 ### 2.3 Polices
 
 - Famille unique **Marianne** (charte de l'État), en 4 variantes : Regular, Bold, Italic, BoldItalic. Elles sont déclarées par [`initFonts(folder = "")`](../packages/pdf/src/utils.tsx#L16), qui charge `${folder}/fonts/Marianne-*.ttf`.
-- Côté frontend, `initFonts()` est appelée au démarrage ([main.tsx](../packages/frontend/src/main.tsx#L108)). Les fichiers sont servis depuis [packages/frontend/public/fonts/](../packages/frontend/public/fonts/), en chemin relatif à l'origine du site.
-- ⚠️ Le service worker ne précache que `svg, woff2, js, wasm, css, html, png` ([vite.config.ts](../packages/frontend/vite.config.ts#L55)). **Les `.ttf` ne sont pas précachés.** Hors ligne, la génération du PDF dépend donc du cache HTTP du navigateur pour obtenir les polices (à confirmer par un test hors ligne sur un appareil vierge).
-- [packages/backend/public/fonts/](../packages/backend/public/fonts/), `marianne.png` et `marianne_footer.png` côté backend sont des **vestiges** de l'ancienne génération serveur (voir § 3.3). Seuls `Marianne-Light@2x.png` et `Marianne-Dark@2x.png` y sont encore utilisés, par les courriels.
+- Côté frontend, `initFonts()` est appelée au démarrage ([main.tsx](../packages/frontend/src/main.tsx#L116)). Les fichiers sont servis depuis [packages/frontend/public/fonts/](../packages/frontend/public/fonts/), en chemin relatif à l'origine du site.
+- Le service worker précache `svg, woff2, js, mjs, wasm, css, html, png` ([vite.config.ts](../packages/frontend/vite.config.ts#L55)), ainsi que les fichiers déclarés dans `includeAssets`, dont les polices `.ttf` et `marianne_footer.png` ([vite.config.ts](../packages/frontend/vite.config.ts#L59)). **La génération du PDF fonctionne donc hors ligne.**
+- [packages/backend/public/fonts/](../packages/backend/public/fonts/), `marianne.png` et `marianne_footer.png` côté backend ne sont pas utilisés par le code (voir § 3.3). Seuls `Marianne-Light@2x.png` et `Marianne-Dark@2x.png` servent, aux courriels.
 
-### 2.5 En-tête institutionnel
+### 2.4 En-tête institutionnel
 
 Les deux modèles construisent un en-tête HTML à partir de trois champs de la table `service` : `marianne_text` (bloc « marque État », à gauche), `drac_text` et `service_text` (à droite). La fonction [`transformHeaderText`](../packages/pdf/src/stateReport.tsx#L246) normalise le texte (NFC, suppression des sauts de ligne et des doubles espaces) puis **insère des `<br/>` selon des règles codées en dur** :
 
@@ -97,7 +97,7 @@ Un service dont l'intitulé ne suit pas ces formes aura un en-tête sur une seul
 
 ## 3. Où et comment le PDF est rendu
 
-### 3.1 Rendu côté client (seul mode actuel)
+### 3.1 Rendu côté client (seul mode)
 
 ```mermaid
 flowchart LR
@@ -113,7 +113,7 @@ flowchart LR
 
 **Constat d'état** ([constat_.$constatId.pdf.tsx](../packages/frontend/src/routes/constat_.$constatId.pdf.tsx)) :
 
-1. La page attend que le flux PowerSync `state_report_attachments_stream` soit synchronisé, puis force un passage de téléchargement des pièces jointes (`attachmentQueue.syncStorage()`) au lieu d'attendre le cycle automatique de 30 s.
+1. En ligne, la page attend que le flux PowerSync `state_report_attachments_stream` soit synchronisé, puis force un passage de téléchargement des pièces jointes (`attachmentQueue.syncStorage()`) au lieu d'attendre le cycle automatique de 30 s. Hors ligne, elle s'affiche tout de suite avec les données locales ; une photo pas encore téléchargée sur l'appareil est ignorée. Le compte-rendu se comporte de la même façon.
 2. Les requêtes de [ConstatPdf.queries.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.queries.tsx) lisent le constat, les sections visitées, les alertes et leurs pièces jointes non dépréciées. Chaque image est lue dans IndexedDB, convertie en `blob:` URL et mesurée (`getImageDimensions`).
 3. **Effet de bord** : avant de lire les pièces jointes, la requête du constat appelle `ensurePlanSituationAttachment`, qui **génère et enregistre le plan de situation** s'il n'existe pas encore (voir § 6.3). La simple ouverture de l'aperçu peut donc créer une ligne `state_report_attachment`, synchronisée ensuite vers le serveur.
 4. Le HTML est généré **une seule fois** par chargement de page (`isSetRef`), car le rendu est coûteux.
@@ -132,13 +132,13 @@ flowchart LR
 - Le backend enregistre ensuite une ligne `report_attachment` / `state_report_attachment` (dont l'`id` est le `pdfPath`), puis met à jour `attachment_id` et `pdf_size` sur le document.
 - Chaque nouvel envoi crée un **nouveau fichier**. Les anciens PDF restent dans le bucket : aucune suppression n'est implémentée (`deleteFile` est un *no-op* dans [db.ts](../packages/frontend/src/db/db.ts#L44)).
 
-### 3.3 Rendu côté serveur : supprimé, mais des vestiges subsistent
+### 3.3 Dépendances serveur inutilisées
 
-Le backend ne génère plus de PDF. Une ancienne version le faisait avec `renderToBuffer` de `@react-pdf/renderer` et composait les dessins avec `canvas` (`createCanvas`, `loadImage`). Il en reste plusieurs **vestiges** :
+Le backend ne génère aucun PDF. Plusieurs dépendances et réglages liés au rendu PDF y restent sans usage :
 
 - dépendances backend `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, toutes jamais importées. `linkedom` est importé mais inutilisé dans [pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx#L20), et n'est utilisé nulle part ailleurs ;
 - [tsup.config.ts](../packages/backend/tsup.config.ts), qui déclare `@react-pdf/renderer`, `@react-pdf/font` et `canvas` en `external` ;
-- **[Dockerfile](../Dockerfile#L5-L16)** : l'image de base installe `build-base g++ cairo-dev jpeg-dev pango-dev giflib-dev pixman-dev pangomm-dev libjpeg-turbo-dev freetype-dev`. Ces paquets servent **uniquement à compiler le module natif `canvas`** (node-gyp sur Alpine/musl, faute de binaire précompilé). `canvas` figure d'ailleurs dans `onlyBuiltDependencies` du [package.json](../package.json). Comme `canvas` n'est plus utilisé, ces dépendances système alourdissent l'image et la surface d'attaque **sans bénéfice**. Elles peuvent être retirées en même temps que la dépendance (à valider par un build).
+- **[Dockerfile](../Dockerfile#L5-L16)** : l'image de base installe `build-base g++ cairo-dev jpeg-dev pango-dev giflib-dev pixman-dev pangomm-dev libjpeg-turbo-dev freetype-dev`. Ces paquets servent **uniquement à compiler le module natif `canvas`** (node-gyp sur Alpine/musl, faute de binaire précompilé). `canvas` figure d'ailleurs dans `onlyBuiltDependencies` du [package.json](../package.json). Comme `canvas` n'est pas utilisé, ces dépendances système alourdissent l'image et la surface d'attaque **sans bénéfice**. Elles peuvent être retirées en même temps que la dépendance (à valider par un build).
 - Le plugin multipart (limite 15 Mo) est enregistré dans [uploadRoutes.tsx](../packages/backend/src/routes/uploadRoutes.tsx#L19-L23), mais aucune route n'accepte de fichier en multipart.
 
 ### 3.4 Téléchargements ultérieurs
@@ -221,7 +221,7 @@ Règles :
 
 ### 6.1 Bibliothèque et fournisseurs
 
-La cartographie utilise **MapLibre GL JS 5** (`maplibre-gl`), sans surcouche React ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)). Le contexte d'origine est décrit dans [MAP_PLAN.md](../MAP_PLAN.md) : la carte MapLibre a remplacé une iframe OpenStreetMap. **Aucune clé d'API n'est utilisée.**
+La cartographie utilise **MapLibre GL JS 5** (`maplibre-gl`), sans surcouche React ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)). Le contexte est décrit dans [MAP_PLAN.md](../MAP_PLAN.md). **Aucune clé d'API n'est utilisée.**
 
 | Usage | URL | Opérateur |
 |---|---|---|
@@ -242,7 +242,7 @@ Tous ces appels partent **du navigateur de l'agent**, jamais du backend. L'attri
 | [`MonumentPickerMap`](../packages/frontend/src/features/map/MonumentPickerMap.tsx) dans [MonumentMapModal](../packages/frontend/src/features/map/MonumentMapModal.tsx) | Recherche de monument | — | Choix d'un immeuble POP sur une carte de marqueurs regroupés (données `pop_immeubles` locales) |
 | [`LocalisationMap`](../packages/frontend/src/features/map/LocalisationMap.tsx) dans [SectionLocalisationModal](../packages/frontend/src/features/state-report/steps/SectionLocalisationModal.tsx) | Constat détaillé, par section | fond satellite | Repères numérotés, traits libres, zone d'export, image recadrée |
 
-Le paramètre `initialMode` (commit « add map "initial mode" ») permet d'ouvrir directement la carte en mode sélection cadastrale. Les trois modes sont `move` (navigation), `pin` (placement du point au centre de la carte, avec Valider ou Annuler) et `cadastre` (clic sur les parcelles, visibles à partir du zoom 14 et étiquetées à partir du zoom 16).
+Le paramètre `initialMode` permet d'ouvrir directement la carte en mode sélection cadastrale. Les trois modes sont `move` (navigation), `pin` (placement du point au centre de la carte, avec Valider ou Annuler) et `cadastre` (clic sur les parcelles, visibles à partir du zoom 14 et étiquetées à partir du zoom 16).
 
 > ⚠️ **Formats de coordonnées** : la chaîne stockée est `"lat,lng"`, alors que MapLibre et la BAN utilisent `[lng, lat]`. Les conversions sont faites à la main à chaque endroit. Le centre par défaut est Paris (`[2.3488, 48.8534]`, zoom 13).
 
@@ -277,7 +277,7 @@ Règles cachées :
 - Le repère MapLibre est un élément DOM et n'apparaît donc pas dans le canvas. Il est **redessiné à la main** en SVG bleu France `#000091`.
 - La carte hors écran est créée avec `preserveDrawingBuffer: true` ; sans cette option, la capture serait noire. `waitForIdle` s'appuie sur `map.loaded()` plutôt que sur `areTilesLoaded()`, qui peut renvoyer vrai avant le moindre chargement de tuile.
 - La capture est faite **au moment de la génération** : si l'agent déplace ensuite le point, `invalidatePlanSituationAttachment` marque l'ancien plan comme déprécié, et la prochaine ouverture de l'aperçu le régénère.
-- **Hors ligne**, le plan n'est pas généré. Un avertissement s'affiche au-dessus de l'aperçu (commit « display error above PDF if any map couldnt be generated », [ConstatPdf.view.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.view.tsx#L65)), et **le constat peut quand même être envoyé sans plan**.
+- **Hors ligne**, le plan n'est pas généré. Un avertissement s'affiche au-dessus de l'aperçu ([ConstatPdf.view.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.view.tsx#L65)), et **le constat peut quand même être envoyé sans plan**.
 - **Échelle** : la capture est calculée pour le 1/5000 à 640×480 px et 96 DPI. Le PDF l'affiche à une hauteur de 180 unités au plus, voire 110 si sa rangée est réduite (§ 4.2). L'équipe considère la légende « Échelle 1/5000 » comme correcte ; elle n'a pas été mesurée sur un PDF imprimé.
 
 ### 6.4 Localisation d'une section (constat détaillé)
@@ -353,7 +353,7 @@ stateDiagram-v2
 - **Activation** : la bascule « Envoi sous-couvert » n'apparaît que si `user_settings.validation_enabled` **et** `validation_email` sont renseignés. Elle est activée par défaut dans ce cas.
 - **Soumission** ([pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx#L318-L356)) : création d'une ligne `constat_validation` avec un jeton UUID v4, une expiration à **J+7**, le statut `pending`, les destinataires et le `pdf_path`. Le constat passe en `validation_status = pending`, puis le valideur reçoit le lien `FRONTEND_URL/constat-validation/<token>`.
 - **Routes publiques, sans authentification** ([validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts)) : `GET /api/constat-validation/:token` (renvoie une URL S3 présignée d'1 h), `GET …/pdf`, `POST …/accept`, `POST …/decline`. La sécurité repose entièrement sur le secret du jeton.
-- **Accepter** : le statut passe à `accepted`, le PDF est envoyé aux destinataires mémorisés (l'auteur fait partie de la liste, puisqu'il y est ajouté d'office), les envois sont tracés dans `state_report_sent_email` et l'auteur reçoit un courriel « Accepté ». ⚠️ Le lien du courriel destinataire est ici une **URL S3 présignée directe valable 7 jours**, et non l'URL courte `/attachment` de 90 jours. Le texte du courriel indique « lien valable 1 mois » (en cours de correction pour « 90 jours », ce qui ne correspondra pas non plus à ces 7 jours). Le domaine S3 doit donc être joignable depuis Internet par les destinataires.
+- **Accepter** : le statut passe à `accepted`, le PDF est envoyé aux destinataires mémorisés (l'auteur fait partie de la liste, puisqu'il y est ajouté d'office), les envois sont tracés dans `state_report_sent_email` et l'auteur reçoit un courriel « Accepté ». Comme pour un envoi direct, le courriel aux destinataires contient un lien court `BACKEND_URL/attachment/<id>/<nom>.pdf` valable 90 jours ([validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts#L160)), conforme au texte « lien valable 90 jours ».
 - **Refuser** : le commentaire est obligatoire, le statut passe à `declined` et l'auteur reçoit le commentaire. Le constat redevient modifiable.
 - **Expiration** : elle n'est contrôlée que tant que la demande est `pending`. Une fois la demande acceptée ou refusée, le lien de consultation reste valable **indéfiniment** et donne toujours accès au PDF.
 - **Verrouillage** ([utils.ts](../packages/frontend/src/features/state-report/utils.ts#L45-L50)) : un constat est en lecture seule dès qu'il a un `attachment_id` (PDF envoyé ou en attente de validation), **sauf** si `validation_status = declined`. De plus, seul son **créateur** (ou un délégataire) peut le modifier. Le serveur applique la même règle : `POST /api/upload-data` refuse toute modification d'un constat verrouillé et de ses sections, alertes et pièces jointes, sauf le champ `disabled` ([syncService.ts](../packages/backend/src/services/syncService.ts)). Un nouvel envoi après refus remet `validation_status` à vide, ce qui reverrouille le constat.
@@ -393,7 +393,7 @@ Tous les courriels passent par [`wrapWithDsfrMail`](../packages/backend/src/feat
 
 | # | Courriel | Déclencheur | Destinataires | Objet | Contenu et pièces jointes |
 |---|---|---|---|---|---|
-| 1 | Compte-rendu ([`sendReportMail`](../packages/backend/src/features/mail.ts#L47)) | `POST /api/pdf/report` | Liste saisie (préremplie avec `user_settings.default_emails` + courriel du service instructeur + `applicantEmail`) **+ l'agent émetteur**, ajouté d'office | `Compte-rendu UDAP[ : titre]` | Lien `BACKEND_URL/attachment/<id>/<nom>.pdf` (« valable 1 mois » dans le texte, en cours de correction pour « 90 jours ») et liens culture.gouv.fr. **Pas de PDF joint.** Signature `redactedBy`, qui peut afficher « null » si le champ est vide |
+| 1 | Compte-rendu ([`sendReportMail`](../packages/backend/src/features/mail.ts#L47)) | `POST /api/pdf/report` | Liste saisie (préremplie avec `user_settings.default_emails` + courriel du service instructeur + `applicantEmail`) **+ l'agent émetteur**, ajouté d'office | `Compte-rendu UDAP[ : titre]` | Lien `BACKEND_URL/attachment/<id>/<nom>.pdf` (« lien valable 90 jours ») et liens culture.gouv.fr. **Pas de PDF joint.** Signature `redactedBy`, qui peut afficher « null » si le champ est vide |
 | 2 | Constat d'état ([`sendStateReportMail`](../packages/backend/src/features/mail.ts#L23) / [bordereau](../packages/backend/src/features/bordereau.ts)) | `POST /api/pdf/state-report` sans validation, ou acceptation par le valideur | Liste saisie (préremplie avec `proprietaire_email` + `proprietaire_representant_email` + `default_emails`) + l'agent, en minuscules | `Constat d'état [ : titre]` | Lien vers le PDF, texte réglementaire, liste des préconisations, liens Légifrance et culture.gouv.fr |
 | 3 | Alerte ([`sendAlertEmail`](../packages/backend/src/features/mail.ts#L178), [alertMail.ts](../packages/backend/src/features/mail/alertMail.ts)) | Soumission du constat (une seule fois) | Courriels obligatoires et additionnels de l'alerte | `Alerte <type> - <monument>` | Phrase propre au type d'alerte, commentaire, **photos de l'alerte en pièces jointes inline** (`cid`, affichées avec une largeur maximale de 600 px), coordonnées de l'agent |
 | 4 | Demande de validation ([`sendValidationRequestMail`](../packages/backend/src/features/mail.ts#L112)) | Soumission avec envoi sous-couvert | `user_settings.validation_email` | `[Validation requise] Constat d'état[ : titre]` | Lien `FRONTEND_URL/constat-validation/<token>`, valable 7 jours |
@@ -405,7 +405,7 @@ Règles transverses :
 
 - Les destinataires sont séparés par `,` ou `;`, puis nettoyés. L'agent émetteur est **toujours** ajouté. La comparaison avec son adresse est sensible à la casse pour le CR, mais pas pour le constat.
 - Chaque destinataire est tracé dans `sent_email` (CR) ou `state_report_sent_email` (constat), puis ajouté à `suggested_email` du service pour l'autocomplétion. Les doublons sont ignorés silencieusement (`.catch(() => {})`).
-- **Lien vers le PDF** ([`createAttachmentRedirection`](../packages/backend/src/routes/pdfRoutes.tsx#L25)) : identifiant base62 d'un entier aléatoire compris entre 1 et 2^48, soit environ 48 bits d'entropie. Le lien est **public, sans authentification**, et **expire après 90 jours** ([attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L28)). Les courriels indiquent encore « 1 mois » ; ce texte est en cours de correction pour « 90 jours ». Le backend **relaie le fichier** en `Content-Disposition: inline` quand un nom est défini, ce qui est toujours le cas dans le code actuel. Sinon, il redirige vers une URL présignée d'1 h. Pour un constat, deux à trois redirections sont créées par envoi : une pour le courriel, une pour la réponse HTTP (inutilisée par le front) et une pour le valideur.
+- **Lien vers le PDF** ([`createAttachmentRedirection`](../packages/backend/src/features/attachmentRedirection.ts#L7)) : identifiant base62 d'un entier aléatoire compris entre 1 et 2^48, soit environ 48 bits d'entropie. Le lien est **public, sans authentification**, et **expire après 90 jours** ([attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L28)). Les courriels l'indiquent (« lien valable 90 jours »). Le backend **relaie le fichier** en `Content-Disposition: inline` quand un nom est défini, ce qui est toujours le cas dans le code actuel. Sinon, il redirige vers une URL présignée d'1 h. Pour un constat, deux à trois redirections sont créées par envoi : une pour le courriel, une pour la réponse HTTP (inutilisée par le front) et une pour le valideur ; une dernière est créée pour le courriel aux destinataires après acceptation.
 - **Taille des courriels** : les courriels 1, 2, 4, 5 et 6 ne pèsent qu'environ 10 Ko de logos. Le courriel d'alerte embarque **toutes** les photos non dépréciées et non ignorées de l'alerte, chacune d'environ 1 Mo au plus si elle n'a pas été redessinée, **sans plafond global**. Une alerte riche en photos peut dépasser la taille maximale acceptée par le relais SMTP ou par les messageries des services destinataires. Le type MIME est forcé à `image/png` alors que les fichiers sont des JPEG.
 - **Sentry** : aucun message n'est envoyé à chaque courriel. Une erreur d'alerte ne transmet que le type d'alerte et l'identifiant du constat.
 
@@ -417,7 +417,7 @@ Règles transverses :
 - Elle sert à dicter dans les champs de notes du CR ([NotesForm](../packages/frontend/src/features/NotesForm.tsx), [InfoForm](../packages/frontend/src/features/InfoForm.tsx)) et dans les commentaires du constat (constat général, constat détaillé, alertes, menu latéral).
 - **Aucun fichier audio n'est enregistré ni envoyé au backend Patrinotes.** Seul le texte transcrit est inséré dans le champ.
 - ⚠️ **Flux implicite vers un tiers** : dans Chrome/Android (et Edge), l'API Web Speech envoie l'audio aux **serveurs de reconnaissance vocale de Google** (Microsoft pour Edge, Apple pour Safari). Ce flux ne figure pas dans le code, mais il est réel. Il doit être déclaré dans l'analyse de risques et, si nécessaire, autorisé par le proxy (domaines Google, à confirmer selon les navigateurs déployés). Si le navigateur ne prend pas en charge l'API, la fonction est désactivée (état `unsupported`).
-- [SpeechRecorder.tsx](../packages/frontend/src/features/audio-record/SpeechRecorder.tsx) est une ancienne implémentation, remplacée par le hook `useSpeechToTextV2` mais encore importée dans `NotesForm`.
+- [SpeechRecorder.tsx](../packages/frontend/src/features/audio-record/SpeechRecorder.tsx) est une seconde implémentation, doublon du hook `useSpeechToTextV2`, encore importée dans `NotesForm` (sans y être utilisée).
 
 ---
 
@@ -432,13 +432,13 @@ Recherche exhaustive des URL `http(s)://`, des appels `fetch` / `ofetch` et des 
 | `VITE_BACKEND_URL` | HTTPS | API Patrinotes, liens PDF | [api.ts](../packages/frontend/src/api.ts) |
 | `VITE_POWERSYNC_URL` | HTTPS / WebSocket | Synchronisation PowerSync | [Connector.ts](../packages/frontend/src/db/Connector.ts) |
 | Keycloak (`VITE_AUTH_URL`) | HTTPS | Authentification OIDC (voir le chapitre consacré) | — |
-| **`MINIO_URL`** (bucket S3) | HTTPS `PUT` présigné | Téléversement **direct** des photos et des PDF | [db.ts](../packages/frontend/src/db/db.ts#L53-L58), [ConstatPdf.queries.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.queries.tsx#L249) |
+| **`MINIO_URL`** (bucket S3) | HTTPS `PUT` présigné | Téléversement **direct** des photos et des PDF | [db.ts](../packages/frontend/src/db/db.ts#L53-L58), [ConstatPdf.queries.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.queries.tsx#L265) |
 | `api-adresse.data.gouv.fr` | HTTPS | Autocomplétion d'adresse | [address.tsx](../packages/frontend/src/features/address.tsx) |
 | `data.geopf.fr/geocodage` | HTTPS | Géocodage des cartes et du plan de situation | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
 | `tiles.openfreemap.org` | HTTPS | Style vectoriel, tuiles, sprites, glyphes | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx#L14-L21) |
 | `data.geopf.fr` | HTTPS (WMTS) | Orthophotos IGN (fond satellite, plan de situation) | idem |
 | `openmaptiles.geo.data.gouv.fr` | HTTPS | Tuiles vectorielles du cadastre | idem |
-| Hôte(s) des images POP | HTTPS | Vignettes des objets mobiliers. Les URL ont été extraites des notices POP par le backend et sont chargées telles quelles dans un `<img>` (hôte exact à confirmer). L'équipe POP a accepté cet affichage direct de ses photos | [MonumentHistorique.tsx](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L477) |
+| Hôte(s) des images POP | HTTPS | Vignettes des objets mobiliers. Les URL sont lues dans la table `pop_images` via `GET /api/state-report/objets-images` et chargées telles quelles dans un `<img>`. La table est vide : la vignette par défaut `/objet-sans-image.png` s'affiche. L'affichage des photos POP par le protocole IIIF est prévu | [MonumentHistorique.tsx](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L598) |
 | `stats.beta.gouv.fr` | HTTPS | Mesure d'audience Matomo (`siteId` 123) | [main.tsx](../packages/frontend/src/main.tsx#L132-L135) |
 | Sentry (`VITE_SENTRY_DSN`) | HTTPS | Erreurs filtrées et 10 % des traces, désactivé en dev | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 | Service de reconnaissance vocale du navigateur (Google, Microsoft ou Apple) | HTTPS (implicite) | Dictée vocale | § 10 |
@@ -455,7 +455,7 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 | Keycloak `VITE_AUTH_URL/realms/<realm>` et `/admin/realms/<realm>` | HTTPS | Vérification des jetons, API d'administration | [authService.ts](../packages/backend/src/services/authService.ts#L17), [keycloak.ts](../packages/backend/src/features/auth/keycloak.ts) |
 | `ministere-culture.s3.sbg.io.cloud.ovh.net` | HTTPS | Téléchargement de `merimee.csv` et `palissy.csv` (POP), **uniquement si `FORCE_REFETCH_POP=true`** au démarrage | [pop.ts](../packages/backend/src/features/data/pop.ts#L80-L87), [index.ts](../packages/backend/src/index.ts#L16) |
 | API Dataspace des unités patrimoniales (`UP_API_URL`) | HTTPS | Arbre des UP d'un MH complexe, si `UP_API_MODE=live` ; joignable seulement depuis le réseau de production | [upProvider.ts](../packages/backend/src/features/up/upProvider.ts) |
-| Sentry (`SENTRY_DSN`) | HTTPS | Erreurs filtrées (`beforeSend`) et 10 % des traces | [sentry.ts](../packages/backend/src/features/sentry.ts) |
+| Sentry (`SENTRY_DSN`) | HTTPS | Erreurs filtrées (`beforeSend`) et 10 % des traces ; non branché en production (pas de DSN) | [sentry.ts](../packages/backend/src/features/sentry.ts) |
 
 `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts#L30) mais n'est **utilisée nulle part**.
 
@@ -463,7 +463,7 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 
 - `GET BACKEND_URL/attachment/:id/:filename` : liens PDF des courriels, sans authentification, pendant 90 jours.
 - `GET/POST BACKEND_URL/api/constat-validation/:token[...]` : validation, sans authentification.
-- URL S3 présignées (constat accepté, 7 jours) : le **domaine S3 doit être joignable depuis Internet** par les destinataires externes, comme les propriétaires.
+- URL S3 présignées d'1 h (page de validation, consultation par le valideur) : le **domaine S3 doit être joignable depuis Internet** par le valideur.
 
 ---
 
@@ -472,9 +472,9 @@ Simples liens hypertextes, sans appel automatique : `pop.culture.gouv.fr`, `patr
 | Sujet | Risque | Piste |
 |---|---|---|
 | Fichiers limités au service du document ; URL d'écriture encore délivrée pour un document pas encore en base ([attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)) | Faible : un identifiant de document inconnu est nécessaire | Surveiller ; contrôler taille et type |
-| Liens publics `/attachment` (90 jours) et validation (sans expiration après décision) | Accès au PDF par toute personne qui détient le lien | Texte des courriels aligné sur 90 jours (en cours), expiration après décision |
+| Liens publics `/attachment` (90 jours) et validation (sans expiration après décision) | Accès au PDF par toute personne qui détient le lien | Expiration du lien de validation après décision |
 | Contenu des courriels non échappé | Injection HTML | Échapper les champs saisis |
-| Patch `react-pdf-html` orphelin, dépendances mortes (`canvas`, `@rawwee/react-pdf-html`, `jsdom`, backend `@react-pdf/renderer`, `@mikecousins/react-pdf`, `react-pdfobject`) et paquets Cairo/Pango dans le Dockerfile | Dette, image lourde, surface d'attaque | Nettoyage |
+| Dépendances mortes (`canvas`, `@rawwee/react-pdf-html`, `jsdom`, backend `@react-pdf/renderer` et `react-pdf-html`, `@mikecousins/react-pdf`, `react-pdfobject`) et paquets Cairo/Pango dans le Dockerfile | Dette, image lourde, surface d'attaque | Nettoyage |
 | Alertes envoyées avant validation | Alerte transmise pour un constat ensuite refusé | Décaler l'envoi après acceptation |
 | Courriel d'alerte sans plafond de taille | Rejet SMTP | Limiter, ou passer par des liens |
 | Fournisseur OpenFreeMap hors sphère publique, attribution masquée | Disponibilité, licences | Basculer sur PLAN.IGN (Géoplateforme) |

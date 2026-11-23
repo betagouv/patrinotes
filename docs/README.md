@@ -8,7 +8,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 2. **Servir de base à l'homologation** de sécurité (analyse de risques, flux, données personnelles) ;
 3. **Accueillir de nouveaux développeurs** et donner aux interlocuteurs non techniques une vue d'ensemble.
 
-> **État du document : au 23/11/2026.** Il décrit le code de la branche `development` (préproduction) à cette date, et la production telle que l'a établie le **relevé de production du 17/11/2026** (lecture seule de Coolify, des bases, de Keycloak et des DNS), inchangée depuis. La configuration de production (Coolify, realm Keycloak, publication PostgreSQL, stockage objet) n'est pas dans le dépôt. Ce que le relevé n'a pas pu établir est marqué « à confirmer » et repris dans [18 — Questions ouvertes](18-questions-ouvertes.md).
+> **État du document : au 23/11/2026.** Il décrit le code du dépôt à cette date, et la production telle que l'a établie le **relevé de production du 17/11/2026** (lecture seule de Coolify, des bases, de Keycloak et des DNS). La configuration de production (Coolify, realm Keycloak, publication PostgreSQL, stockage objet) n'est pas dans le dépôt. Ce que le relevé n'a pas pu établir est marqué « à confirmer » et repris dans [18 — Questions ouvertes](18-questions-ouvertes.md).
 
 ## Sommaire
 

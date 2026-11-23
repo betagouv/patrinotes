@@ -2,7 +2,7 @@
 
 Ce document consolide les risques relevés pendant l'analyse du code : sécurité, perte de données, données personnelles, exploitation et dette technique. Il sert de base à l'analyse de risques de l'homologation et au plan d'action avant ou pendant le transfert vers l'infrastructure du ministère.
 
-**Méthode.** Les constats viennent d'une lecture du code de la branche `development` (état au 23/11/2026) et du relevé de production du 17/11/2026 (lecture seule de Coolify, des bases, de Keycloak et des DNS). Ce que le relevé n'a pas pu mesurer reste marqué « à confirmer ».
+**Méthode.** Les constats viennent d'une lecture du code (état au 23/11/2026) et du relevé de production du 17/11/2026 (lecture seule de Coolify, des bases, de Keycloak et des DNS). Ce que le relevé n'a pas pu mesurer reste marqué « à confirmer ».
 
 
 **Niveaux.** Critique : exploitable par un agent connecté ou perte de données avérée, à traiter avant homologation. Élevé : à traiter avant ou pendant le transfert. Moyen : à planifier. Faible : nettoyage.
@@ -53,13 +53,13 @@ quadrantChart
 | SEC-22 | DMARC en `p=none`, DKIM non vérifié | Moyen | §2 |
 | OPS-13 | Qualité des données POP, images jamais importées, PostgreSQL non réglé | Faible | §5 |
 
-Les identifiants ne se suivent pas : ils sont stables d'une version du dossier à l'autre, et ceux des risques qui ne se posent plus ne sont pas réattribués.
+Les identifiants sont stables et ne se suivent pas.
 
 ## 2. Sécurité
 
 ### Contrôles en place
 
-Le serveur contrôle chaque écriture de synchronisation : liste blanche de tables et de colonnes, colonnes de propriété fixées par le serveur, contrôle du service, de l'auteur et des délégations, une transaction par opération ([syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts)). Un constat envoyé n'est plus modifiable, sauf s'il a été refusé par le validateur. Les fichiers S3 et les PDF sont limités au service du document ; les flux PowerSync de pièces jointes sont filtrés par service. Sentry ne reçoit ni corps de requête, ni jetons, ni journaux console (`beforeSend`, échantillonnage à 10 %). Détail dans [05](05-authentification-securite.md) §7, §8 et §10.
+Le serveur contrôle chaque écriture de synchronisation : liste blanche de tables et de colonnes, colonnes de propriété fixées par le serveur, contrôle du service, de l'auteur et des délégations, une transaction par opération ([syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts)). Un constat envoyé n'est pas modifiable, sauf s'il a été refusé par le validateur. Les fichiers S3 et les PDF sont limités au service du document ; les flux PowerSync de pièces jointes sont filtrés par service. Sentry ne reçoit ni corps de requête, ni jetons, ni journaux console (`beforeSend`, échantillonnage à 10 %). Détail dans [05](05-authentification-securite.md) §7, §8 et §10.
 
 Limites de ces contrôles : les valeurs écrites ne sont pas validées, un refus est silencieux pour l'agent (DAT-01), l'utilisateur est identifié par son courriel plutôt que par le `sub` Keycloak, et le dépôt de fichiers n'a ni limite de taille ni contrôle de type (une URL de dépôt est délivrée pour un document pas encore en base). Le filtre Sentry repose sur des noms de clés.
 
@@ -91,8 +91,8 @@ Le détail de ces constats (réglages, noms d'hôte, ports) n'est pas reproduit 
 
 | ID | Constat | Recommandation |
 | --- | --- | --- |
-| SEC-08 | Liens `/attachment/:id` publics pendant 90 jours ; nom du fichier de CR contenant le nom du demandeur. Jeton de validation lisible sans limite après décision. Lien S3 pré-signé de 7 jours après validation. | Durée plus courte si le métier l'accepte, nom de fichier neutre, expiration après décision. |
-| SEC-09 | Textes saisis (commentaires, titres, préconisations, motif de refus) insérés **sans échappement** dans le HTML des e-mails, sauf pour les alertes de fiche ; tout agent peut envoyer un e-mail officiel à n'importe quelle adresse. | Échapper, limiter le nombre de destinataires, journaliser. |
+| SEC-08 | Liens `/attachment/:id` publics pendant 90 jours ; nom du fichier de CR contenant le nom du demandeur. Jeton de validation lisible sans limite après décision. | Durée plus courte si le métier l'accepte, nom de fichier neutre, expiration après décision. |
+| SEC-09 | Textes saisis (titres, commentaires, motif de refus) insérés **sans échappement** dans le HTML des courriels de compte-rendu, de demande et de décision de validation, et des courriels d'alerte de constat ([mail.ts](../packages/backend/src/features/mail.ts), [alertMail.ts](../packages/backend/src/features/mail/alertMail.ts)) ; le bordereau du constat ([bordereau.ts](../packages/backend/src/features/bordereau.ts)) et les alertes de fiche ([monumentAlertMail.ts](../packages/backend/src/features/mail/monumentAlertMail.ts)) sont échappés ; tout agent peut envoyer un e-mail officiel à n'importe quelle adresse. | Échapper, limiter le nombre de destinataires, journaliser. |
 | SEC-10 | La déconnexion ne vide pas la base locale ni la file d'écritures et ne révoque pas le jeton hors ligne. Jetons stockés en IndexedDB, lisibles par un script injecté. | Purge locale à la déconnexion (après envoi des écritures), révocation, CSP. |
 | SEC-11 | `ssl:false` en dur vers PostgreSQL, `sslmode: disable` pour PowerSync, MongoDB sans authentification et port publié dans le Compose de développement ; pas de rôle de réplication dédié pour PowerSync. | Paramétrer TLS, authentifier MongoDB, rôle de réplication dédié, ne rien publier hors réseau interne. |
 | SEC-12 | CORS `*`, pas d'en-têtes de sécurité, pas de CSP. | Restreindre l'origine, ajouter les en-têtes au reverse proxy. |
@@ -150,8 +150,8 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 
 | Sujet | Constat |
 | --- | --- |
-| Code mort | `relations.ts` (ne compile pas), `udap.json`, `addPDFToReport` (construit `https://https://…`), `SpeechRecorder.tsx`, `template-generique.html`, plugin *multipart* sans route, `swEnv.js` jamais chargé, `public/pdfjs`, `wa-sqlite-async`. |
-| Dépendances inutiles | Backend : `linkedom`, `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `@keycloak/keycloak-admin-client`, `@fastify/swagger-ui`. Frontend : `npm`, `install`, `@rawwee/react-pdf-html`. |
+| Code mort | `relations.ts` (ne compile pas), `udap.json`, `addPDFToReport` (construit `https://https://…`), `SpeechRecorder.tsx`, `template-generique.html`, plugin *multipart* sans route, `swEnv.js` jamais chargé, `public/pdfjs` (le worker vient de `pdfjs-dist`), `wa-sqlite-async`. |
+| Dépendances inutiles | Backend : `linkedom`, `@react-pdf/renderer`, `react-pdf-html`, `canvas`, `jsdom`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `@keycloak/keycloak-admin-client`, `@fastify/swagger-ui`. Frontend : `npm`, `install`, `react-pdf-html`, `@rawwee/react-pdf-html` (ce dernier, déclaré aussi par `packages/pdf`, n'est importé nulle part). |
 | Configuration | `.env.dist` obsolète (variables ElectricSQL, AWS, proxy PG) et incomplet (une quinzaine de variables obligatoires manquantes) ; variables obligatoires inutilisées. `.env.test` est la vraie référence. |
 | Documentation | README : pnpm 8.4.0 au lieu de 10.12.4 (le `package.json` déclare bien `packageManager: pnpm@10.12.4`), noms de fichiers CSV erronés, `clearDb.sh` au lieu de `clear-db.sh`. [db-workflow.png](../images/db-workflow.png) montre l'ancienne architecture ElectricSQL/Prisma. |
 | Hébergement historique | [Procfile](../Procfile) et [scalingo.json](../scalingo.json) obsolètes ; branche `compte-rendu-vif` inactive mais encore construite par la CI. |

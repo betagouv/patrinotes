@@ -58,7 +58,7 @@ flowchart LR
 | Composant | Technologie | Rôle | Détail |
 | --- | --- | --- | --- |
 | Frontend | React 18, Vite, TanStack Router, PowerSync Web, DSFR, TipTap, MapLibre, Konva, react-pdf | Interface, base locale, aperçu des PDF, annotation des photos, cartes | [03](03-frontend-pwa.md) |
-| Backend | Node.js 20, Fastify 4, TypeBox, Kysely, Drizzle (migrations), Nodemailer, AWS SDK S3 | Intermédiaire d'authentification vers Keycloak, application des écritures, URL pré-signées S3, envoi des e-mails, liens courts, validation des constats, statistiques, import des données patrimoniales, administration. `@react-pdf/renderer` et `canvas` sont encore installés mais ne servent plus. | [04](04-backend-api.md) |
+| Backend | Node.js 20, Fastify 4, TypeBox, Kysely, Drizzle (migrations), Nodemailer, AWS SDK S3 | Intermédiaire d'authentification vers Keycloak, application des écritures, URL pré-signées S3, envoi des e-mails, liens courts, validation des constats, statistiques, import des données patrimoniales, administration. `@react-pdf/renderer`, `react-pdf-html` et `canvas` sont déclarés dans le backend mais importés par aucun code. | [04](04-backend-api.md) |
 | Package `pdf` | @react-pdf/renderer, react-pdf-html | Gabarits PDF partagés (compte-rendu, constat d'état) | [09](09-documents-pdf-cartes-emails.md) |
 | PostgreSQL 17 | Réplication logique, publication `powersync` | Source de vérité métier, plus la base Keycloak | [06](06-modele-de-donnees.md) |
 | PowerSync Service | `journeyapps/powersync-service`, mode `unified` | Diffusion en temps réel des données aux clients, selon des règles d'accès (*sync streams*) | [08](08-synchronisation-hors-ligne.md) |
@@ -117,7 +117,7 @@ sequenceDiagram
     P-->>A: confirme et diffuse aux autres agents du service
 ```
 
-> **Point d'attention.** Le backend contrôle chaque écriture : table et colonnes autorisées, service de l'utilisateur, auteur du document ou délégation. Un constat envoyé n'accepte plus de modification, sauf sa suppression. En cas de refus ou d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
+> **Point d'attention.** Le backend contrôle chaque écriture : table et colonnes autorisées, service de l'utilisateur, auteur du document ou délégation. Un constat envoyé n'accepte aucune modification, sauf sa suppression. En cas de refus ou d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
 
 ### 3.3 Documents : PDF et e-mail
 
@@ -129,7 +129,7 @@ sequenceDiagram
 
 ### 3.4 Données patrimoniales
 
-Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images` contient des URL de photos POP, lues par les fiches objet ; elle est vide aujourd'hui, et l'affichage des images POP passera par le protocole IIIF. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
+Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images` contient des URL de photos POP, lues par les fiches objet ; elle est vide ; l'affichage des images POP par IIIF est prévu. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
 
 ## 4. Organisation du dépôt
 
@@ -152,7 +152,7 @@ Taille indicative : environ 35 000 lignes de TypeScript et TSX, hors code géné
 
 | Choix | Pourquoi (constaté ou déduit) | Alternatives écartées ou passées |
 | --- | --- | --- |
-| PowerSync | Travail sur le terrain (monuments, églises, zones blanches) : il faut un vrai mode hors ligne, avec une base locale requêtable en SQL. | ElectricSQL : des traces restent (`ELECTRIC_PORT`, `VITE_ELECTRIC_URL` dans `.env.dist`), à confirmer comme ancienne solution. |
+| PowerSync | Travail sur le terrain (monuments, églises, zones blanches) : il faut un vrai mode hors ligne, avec une base locale requêtable en SQL. | ElectricSQL (des variables sans usage `ELECTRIC_PORT`, `VITE_ELECTRIC_URL` figurent dans `.env.dist`). |
 | PostgreSQL avec réplication logique | Exigé par PowerSync pour suivre les changements. | — |
 | Keycloak | Comptes locaux (inscription, mot de passe oublié) sans dépendre d'un fournisseur d'identité externe pendant la phase beta. | ProConnect ou un annuaire ministériel : à étudier pour la cible, voir [14](14-migration-vers-infra-ministere.md). |
 | Gabarits PDF en React partagés | Aperçu hors ligne identique au document final. | Génération seulement côté serveur (pas d'aperçu hors ligne). |

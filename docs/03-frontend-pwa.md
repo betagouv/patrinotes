@@ -71,11 +71,11 @@ Versions déclarées dans [package.json](../packages/frontend/package.json). Les
 | Dessin | konva, react-konva | ^9.3.22 / ^18.2.10 | Annotation des photos |
 | Images | browser-image-compression | ^2.0.2 | Compression dans un *web worker* |
 | Recherche | fuse.js | ^7.1.0 | Recherche floue des monuments |
-| Supervision | @sentry/react | ^10.63.0 | Erreurs et journaux console (production seulement) |
+| Supervision | @sentry/react | ^10.63.0 | Erreurs (production seulement, données filtrées) |
 | Mesure d'audience | @datapunt/matomo-tracker-react | ^0.5.1 | `stats.beta.gouv.fr`, site 123 |
 | Divers | idb-keyval, ofetch, zod, date-fns, jszip, uuid, bowser, pastable, react-use | — | Stockage des jetons, HTTP, validation, dates, ZIP, identifiants, détection du navigateur |
 
-> Dette : `@react-pdf/renderer` est en **^4.1.5** dans le frontend et dans `packages/pdf`, mais en **^3.4.2** dans le backend. Le backend ne rend plus aucun PDF : sa dépendance est morte et peut être retirée (voir [09](09-documents-pdf-cartes-emails.md)). Les dépendances `npm` et `install` déclarées en `dependencies` semblent inutiles (ajouts par erreur, à confirmer).
+> Dette : `@react-pdf/renderer` est en **^4.1.5** dans le frontend et dans `packages/pdf`, mais en **^3.4.2** dans le backend. Le backend ne rend aucun PDF : cette dépendance (comme `canvas` et `react-pdf-html`) est inutilisée et peut être retirée (voir [09](09-documents-pdf-cartes-emails.md)). Les dépendances `npm` et `install` déclarées en `dependencies` semblent inutiles (ajouts par erreur, à confirmer).
 
 ## 3. Structure des dossiers
 
@@ -86,7 +86,7 @@ packages/frontend/
 ├── scripts/
 │   ├── createEnvFile.ts     # génère dist/env.js et dist/swEnv.js à partir des VITE_* (au démarrage)
 │   └── setVersion.ts        # génère dist/version.js (version + horodatage hexadécimal)
-├── public/                  # env.js et version.js de dev, polices Marianne, logos PDF, pdfjs, wasm
+├── public/                  # env.js et version.js de dev, polices Marianne, logos PDF, icons/ (icônes du manifeste), pdfjs, wasm
 ├── dsfr-chart/              # bundle vendorisé de @gouvfr/dsfr-chart (web components Vue), patché
 └── src/
     ├── main.tsx             # point d'entrée : SW, reprise des chunks périmés, providers
@@ -170,7 +170,7 @@ Il reprend **toutes** les variables d'environnement préfixées `VITE_`. Le fich
 > - Le fichier [`.env.dist`](../.env.dist) contient encore `VITE_ELECTRIC_URL` (ancien moteur de synchronisation ElectricSQL) et **ne contient pas `VITE_POWERSYNC_URL`**.
 > - Les valeurs sont injectées entre guillemets sans échappement : une valeur contenant `"` casse `env.js`.
 > - `env.js` et `swEnv.js` sont **exclus du précache** (`globIgnores`). `env.js` est servi en **NetworkFirst** (cache `env-js`) : un changement de configuration est pris en compte dès que le client est en ligne, et la dernière version connue reste disponible hors ligne.
-> - Le *service worker* n'importe jamais `swEnv.js` (pas d'`importScripts`). Dans le SW, `self.ENV` est donc indéfini et `ENV` vaut `{}` ; seul `isDev` y est utilisé, ce qui n'a pas d'impact pratique aujourd'hui.
+> - Le *service worker* n'importe jamais `swEnv.js` (pas d'`importScripts`). Dans le SW, `self.ENV` est donc indéfini et `ENV` vaut `{}` ; seul `isDev` y est utilisé, ce qui n'a pas d'impact pratique.
 > - `ApiStore.loadUrl()` mémorise `VITE_BACKEND_URL` dans IndexedDB au premier lancement, mais cette valeur n'est pas réutilisée par le client API. Changer l'URL du backend **ne nécessite donc pas** de vider IndexedDB (à confirmer).
 
 ### 5.3 Version affichée
@@ -204,7 +204,6 @@ Le routage utilise **TanStack Router** avec des routes basées sur des fichiers 
 | `/accessibilite`, `/mentions-legales`, `/politique-confidentialite`, `/cgu` | fichiers du même nom | public | Pages légales (voir [01](01-contexte-et-perimetre.md#7-pages-légales-et-accessibilité)) |
 
 > Règles cachées :
-> - Les routes `/monument` et `/objet` et la recherche de monument de l'accueil.
 > - Les gardes sont des **composants**, pas des `beforeLoad` : `EnsureUser` redirige vers `/connexion` si `auth.user` est nul ; `RedirectIfUser` redirige vers `?redirect=` ou `/`. Les routes de constat n'ont pas de garde explicite : sans session, la base locale est vide et la page renvoie vers `/`. La sécurité réelle repose sur les règles de synchronisation et sur le backend.
 > - L'URL porte l'état d'écran (`step`, `mode`, `tab`). Une valeur invalide est silencieusement remplacée par la valeur par défaut (`validateSearch`).
 > - L'étape `documents` existe dans le schéma mais n'a **aucun écran** : `ButtonsSwitch` renvoie `null` et le sommaire ne la propose pas.
@@ -237,7 +236,7 @@ sequenceDiagram
     PS->>UI: fetchCredentials, endpoint et jeton
 ```
 
-Points de code : [ApiStore.ts](../packages/frontend/src/ApiStore.ts), [Connector.ts](../packages/frontend/src/db/Connector.ts#L44-L98), [AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx), [api.ts](../packages/frontend/src/api.ts).
+Points de code : [ApiStore.ts](../packages/frontend/src/ApiStore.ts), [Connector.ts](../packages/frontend/src/db/Connector.ts#L44-L97), [AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx), [api.ts](../packages/frontend/src/api.ts).
 
 > Règles cachées :
 > - Les jetons sont stockés dans **IndexedDB** (base `auth`, magasin `access`, clés `accessToken`, `refreshToken`, `expiresAt`, `user` en JSON). Ils sont donc lisibles par tout script exécuté sur l'origine : le risque XSS est à prendre en compte dans l'homologation.
@@ -308,8 +307,8 @@ Points de code : [SyncForm.tsx](../packages/frontend/src/components/SyncForm.tsx
 > - `getDiff` ignore les valeurs non primitives (objets, tableaux) : seuls les champs scalaires sont synchronisés.
 > - **Fusion des modifications distantes** ([useFormWithFocus.tsx](../packages/frontend/src/hooks/useFormWithFocus.tsx)) : quand une ligne change en base (autre appareil, collègue), chaque champ modifié est réinjecté dans le formulaire, **sauf** le champ qui a le focus et qui a déjà été modifié localement. Côté serveur, la règle est **le dernier qui écrit gagne**, sans détection de conflit (test `sync.spec.ts`).
 > - `uploadData` envoie les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur HTTP sur une opération bloque le lot, que PowerSync réessaiera ; un refus du serveur (droits) arrive en HTTP 200 et n'est pas vu (voir [08](08-synchronisation-hors-ligne.md)).
-> - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation puis affiche une erreur au lieu de perdre la modification.
-> - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées** : une alerte créée pendant la session garde son commentaire et ses destinataires.
+> - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation (30 s au plus), puis affiche une erreur si la ligne est toujours absente.
+> - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées** : le commentaire et les destinataires d'une alerte créée pendant la session sont conservés à l'enregistrement.
 > - Les identifiants sont générés **côté client** : `report-<uuid v4>` pour les CR (le préfixe `report-` est une convention historique), uuid v4 pour les CE et les parties visitées, uuid v7 pour les pièces jointes et les délégations.
 > - Un CE est créé avec `disabled = 1` et `version = 2`. Il ne devient visible (`disabled = 0`) qu'au choix d'un monument ([ImmeubleAutocomplete.tsx](../packages/frontend/src/features/ImmeubleAutocomplete.tsx#L71-L93)). Un CR est créé directement avec `disabled = 0`.
 > - **Suppression = `disabled = 1`** (suppression logique), pour les CR comme pour les CE.
@@ -339,9 +338,9 @@ Plusieurs colonnes stockent des structures sous forme de **chaînes avec sépara
 | Élément | Valeur |
 | --- | --- |
 | Manifeste | `id: gouv.beta.patrinotes`, `name/short_name: Patrinotes`, `lang: fr`, `orientation: portrait`, `scope` et `start_url: /`, icônes `icons/android-chrome-192x192.png` et `-512x512.png` (copiées du DSFR dans `public/icons/`) |
-| Précache | `**/*.{svg,woff2,js,wasm,css,html,png}`, taille maximale par fichier **16 Mio** (`2097152 * 8`) |
-| Exclus du précache | `**/admin*.js` (chunk de la page admin), `**/env.js`, `**/swEnv.js` |
-| Ressources incluses | `**/*.{svg,woff2,wasm,ttf}`, `marianne_footer.png` |
+| Précache | `**/*.{svg,woff2,js,mjs,wasm,css,html,png}`, taille maximale par fichier **16 Mio** (`2097152 * 8`). Le *worker* pdf.js (`pdf.worker.min.mjs`, importé par [PDFViewerPaginated.tsx](../packages/frontend/src/components/PDFViewerPaginated.tsx#L6-L8)) est donc précaché |
+| Exclus du précache | `**/admin*.js` (chunk de la page admin), `**/env.js`, `**/swEnv.js`, `pdfjs/**` (copie de pdf.js dans `public/pdfjs`, inutilisée par le code), `wa-sqlite-async.mjs` |
+| Ressources incluses | `**/*.{svg,woff2,wasm,ttf}` (dont les polices), `marianne_footer.png` |
 
 ### 9.2 Stratégie de cache
 
@@ -392,7 +391,7 @@ Côté page ([main.tsx](../packages/frontend/src/main.tsx#L23-L102)) :
 
 Clés `localStorage` : `scheme` (forcé à `light`), `crvif/version`, `crvif/update-popup`, `crvif/no-report-alert-closed`, `patrinotes/home-document` (`compte-rendus` ou `constats`), `patrinotes/home-scope` (`my` ou `service`), `chunk-reload-attempt` (dans `sessionStorage`).
 
-Bases IndexedDB : `crvif-sync.db` (SQLite PowerSync, sauf si OPFS est utilisé), `crvif-attachments` (fichiers), `auth` (jetons), `toSync`, `toUpload`, `uploadStatus` (anciens magasins d'images, [idb.ts](../packages/frontend/src/features/idb.ts), *a priori* hérités et inutilisés, à confirmer).
+Bases IndexedDB : `crvif-sync.db` (SQLite PowerSync, sauf si OPFS est utilisé), `crvif-attachments` (fichiers), `auth` (jetons), `toSync`, `toUpload`, `uploadStatus` (magasins d'images de [idb.ts](../packages/frontend/src/features/idb.ts), alimentés par aucun code).
 
 > Règle cachée : `searchStore.scope` vaut **`"all"`** par défaut, alors que les onglets de l'accueil ont pour identifiants `my` et `service`. Au premier lancement, aucun onglet ne correspond donc à la valeur courante (à confirmer visuellement). Le repli `?? "my"` ne s'applique pas, puisque `"all"` n'est pas nul.
 
@@ -570,9 +569,9 @@ En production, l'étape `frontend` du [Dockerfile](../Dockerfile) construit l'ap
 > Pour le transfert :
 > - Un **nouveau nom de domaine** doit être ajouté à `allowedHosts`, sinon `vite preview` refuse les requêtes. La meilleure option est de servir `dist/` par un serveur statique (nginx…) qui génère `env.js` au démarrage.
 > - Prévoir les en-têtes `Cache-Control` : pas de cache pour `index.html`, `sw.js`, `env.js`, `version.js` et `manifest.webmanifest` ; cache long pour `assets/*` (fichiers hachés).
-> - Une **politique CSP** devra autoriser : le backend, le WebSocket PowerSync, le bucket S3 (PUT et GET signés), `api-adresse.data.gouv.fr`, `tiles.openfreemap.org`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `stats.beta.gouv.fr`, l'ingestion Sentry, `blob:` (images et PDF), `wasm-unsafe-eval` (wa-sqlite) et les *workers* (`worker-src blob: 'self'`). Aucune CSP n'est définie aujourd'hui côté frontend (à confirmer au niveau du proxy).
+> - Une **politique CSP** devra autoriser : le backend, le WebSocket PowerSync, le bucket S3 (PUT et GET signés), `api-adresse.data.gouv.fr`, `tiles.openfreemap.org`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `stats.beta.gouv.fr`, l'ingestion Sentry, `blob:` (images et PDF), `wasm-unsafe-eval` (wa-sqlite) et les *workers* (`worker-src blob: 'self'`). Aucune CSP n'est définie côté frontend (à confirmer au niveau du proxy).
 > - Le bucket S3 doit accepter le **CORS** pour les `PUT` depuis l'origine du frontend.
-> - Le `Procfile` (`pnpm frontend dev`) et [scalingo.json](../scalingo.json) sont des vestiges d'un ancien hébergement Scalingo.
+> - Le `Procfile` (`pnpm frontend dev`) et [scalingo.json](../scalingo.json) concernent un hébergement Scalingo inutilisé.
 
 ## 15. Comportement hors ligne : synthèse
 
@@ -590,7 +589,7 @@ En production, l'étape `frontend` du [Dockerfile](../Dockerfile) construit l'ap
 | Voir les photos d'un document jamais ouvert en ligne | non | Flux de pièces jointes à la demande |
 | Dictée vocale | non (Chrome) | Service distant |
 | Cartes, cadastre, plan de situation, géocodage | non | Tuiles et API en ligne |
-| Prévisualiser le PDF | partiellement | Le flux de pièces jointes doit avoir été synchronisé, plan de situation absent |
+| Prévisualiser le PDF | oui | Avec les photos présentes sur l'appareil ; plan de situation absent s'il n'a pas été généré en ligne |
 | Envoyer un CR ou un CE, télécharger un PDF envoyé, exports ZIP | non | URL signée et API |
 
 ## 16. Règles implicites et défauts relevés
@@ -620,10 +619,10 @@ Récapitulatif des points qui surprennent un nouvel arrivant. Les détails figur
 ## 17. Dette technique relevée
 
 - **Production servie par `vite preview`** au lieu d'un serveur statique.
-- Ressources *a priori* inutilisées dans `public/` : `pdfjs/` (la visionneuse importe `pdfjs-dist` directement), `wa-sqlite-async.*`, `vite.svg`, une image « Tableau de bord mon compte rendu VIF (1).png ». Également des magasins IndexedDB hérités (`toSync`, `toUpload`, `uploadStatus`) et le fichier [service-worker.d.ts](../packages/frontend/src/service-worker.d.ts) marqué « DEPRECIATED » (à confirmer avant suppression).
+- Ressources *a priori* inutilisées dans `public/` : `pdfjs/` (la visionneuse importe `pdfjs-dist` directement), `wa-sqlite-async.*`, `vite.svg`, une image « Tableau de bord mon compte rendu VIF (1).png ». Également des magasins IndexedDB inutilisés (`toSync`, `toUpload`, `uploadStatus`) et le fichier [service-worker.d.ts](../packages/frontend/src/service-worker.d.ts) marqué « DEPRECIATED » (à confirmer avant suppression).
 - Code mort ou commenté : `Layout.AppHeader` (code après le `return`), le bouton « Je donne mon avis » (Typeform), la génération manuelle du plan de situation, `get80PercentOfTokenLifespan`, l'abonnement `swEnv.js` jamais importé.
 - `index.html` déclare deux jeux de favicons et deux manifestes (DSFR `node_modules` et `/manifest.webmanifest`).
-- `@react-pdf/renderer` 3.x est encore déclaré dans le backend, alors que le rendu PDF se fait uniquement dans le navigateur (4.x). C'est une dépendance morte à retirer. Voir [09](09-documents-pdf-cartes-emails.md).
+- Le backend déclare `@react-pdf/renderer` 3.x, `react-pdf-html`, `canvas`, `react`, `react-dom` et `jsdom`, qu'aucun code n'importe : le rendu PDF se fait uniquement dans le navigateur (4.x). Ce sont des dépendances mortes à retirer. Voir [09](09-documents-pdf-cartes-emails.md).
 - Un effet de bord (génération et écriture du plan de situation) se trouve dans une `queryFn` TanStack Query.
 - Beaucoup de `@ts-ignore` et de `as any` autour des composants DSFR et MUI.
 - [packages/frontend/README.md](../packages/frontend/README.md) est le README générique du modèle Vite.

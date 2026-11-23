@@ -32,7 +32,7 @@ Versions effectivement résolues dans [pnpm-lock.yaml](../pnpm-lock.yaml) (les p
 | Dév. | `vite-node`, `vitest`, `typescript` | 1.6.1 / 2.1.9 / 5.9.3 | Exécution avec rechargement à chaud, tests unitaires |
 | Partagé | `@patrinotes/pdf` (workspace) | — | Fonctions communes (noms de fichiers PDF, désérialisation des alertes et préconisations) |
 
-Dépendances déclarées mais **non utilisées** par le code lu : `@fastify/swagger-ui`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `reflect-metadata`, `@keycloak/keycloak-admin-client` (le code appelle l'API d'administration Keycloak à la main avec `ofetch`). `@react-pdf/renderer`, `react`, `canvas` et `jsdom` sont présents mais le PDF est aujourd'hui généré **côté navigateur** puis déposé sur S3 (voir §6.4). *À confirmer : ces dépendances peuvent être retirées.*
+Dépendances déclarées mais **non utilisées** par le code lu : `@fastify/swagger-ui`, `fastify-multer`, `@aws-sdk/lib-storage`, `jose`, `postgres`, `ws`, `reflect-metadata`, `@keycloak/keycloak-admin-client` (le code appelle l'API d'administration Keycloak à la main avec `ofetch`). `@react-pdf/renderer`, `react-pdf-html`, `react`, `react-dom`, `canvas` et `jsdom` ne sont importés par aucun code : le PDF est généré **côté navigateur** puis déposé sur S3 (voir §6.4). Ces dépendances peuvent être retirées.
 
 Image d'exécution : `node:20.11-alpine` avec les bibliothèques natives de `canvas` (cairo, pango, jpeg…), voir [Dockerfile](../Dockerfile).
 
@@ -61,7 +61,7 @@ packages/backend/
     ├── services/           # Classes de service injectées dans chaque requête
     └── features/
         ├── auth/keycloak.ts    # Client de l'API d'administration Keycloak
-        ├── data/               # Import des données POP (Mérimée, Palissy, images)
+        ├── data/               # Import des données POP (Mérimée, Palissy)
         ├── mail/ , mail.ts     # Gabarits et envoi des courriels (habillage DSFR)
         ├── bordereau.ts        # Corps du courriel d'envoi d'un constat d'état
         ├── sentry.ts, debug.ts, errors.ts
@@ -132,7 +132,7 @@ Les migrations **ne sont pas** lancées par le backend lui-même : l'image Docke
 | `EMAIL_HOST`, `EMAIL_PORT` (465), `EMAIL_USER`, `EMAIL_PASSWORD`, `EMAIL_EMITTER` | oui | SMTP (option `secure` non fixée ; comportement TLS à confirmer selon le port) |
 | `MINIO_URL`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY` | oui | Client S3 (région `us-east-1` en dur, *path style*) |
 | `MINIO_PUBLIC_URL` | non | Point d'accès utilisé pour **signer** les URL présignées quand le stockage est joint par une autre adresse que `MINIO_URL` (reverse proxy) |
-| `UP_API_MODE` (`mock`), `UP_API_URL`, `UP_API_KEY`, `UP_CACHE_TTL_HOURS` (24) | non (`UP_API_KEY` obligatoire si `UP_API_MODE=live`) | API Dataspace des unités patrimoniales (§4.10) |
+| `UP_API_MODE` (`mock`), `UP_API_URL`, `UP_API_KEY`, `UP_CACHE_TTL_HOURS` (24) | non (`UP_API_KEY` obligatoire si `UP_API_MODE=live`) | API Dataspace des unités patrimoniales (§4.9) |
 | `VITE_AUTH_URL`, `VITE_AUTH_REALM`, `VITE_AUTH_CLIENT_ID` | oui | Keycloak (partagées avec le frontend) |
 | `AUTH_CLIENT_SECRET` | oui | Secret du client Keycloak applicatif (signature HS256 de l'assertion client) |
 | `AUTH_ADMIN_CLIENT_ID`, `AUTH_ADMIN_CLIENT_SECRET` | oui | Compte de service Keycloak pour l'API d'administration |
@@ -141,7 +141,7 @@ Les migrations **ne sont pas** lancées par le backend lui-même : l'image Docke
 | `DEBUG` (`cr-vif:*`) | non | Espaces de noms de journalisation (activés **par défaut**, y compris en production) |
 | `FORCE_REFETCH_POP` (false) | non | Réimport POP au démarrage |
 | `NODE_ENV` | non | Voir §3.2 |
-| `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DATAGOUV_API` | **oui** | **Jamais lues par le code** : héritage d'une ancienne authentification maison. Elles doivent pourtant être définies (valeur quelconque), sinon le démarrage échoue |
+| `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DATAGOUV_API` | **oui** | **Jamais lues par le code**. Elles doivent pourtant être définies (valeur quelconque), sinon le démarrage échoue |
 | `TOKEN_LIFETIME` (60m), `ASSETS_DIR` | non | Jamais lues |
 
 Remarque : [.env.dist](../.env.dist) est désynchronisé (il mentionne `AWS_*`, `KEYCLOAK_CLIENT_SECRET`, `VITE_ELECTRIC_URL`… mais pas `BACKEND_URL`, `AUTH_ADMIN_CLIENT_*`, `EMAIL_EMITTER`, `DATAGOUV_API`, `JWT_REFRESH_SECRET`). La liste ci-dessus, tirée de `envVars.ts`, fait foi.
@@ -231,7 +231,7 @@ Routes **publiques** : l'authentification repose sur la seule connaissance du je
 | --- | --- | --- | --- |
 | GET | `/api/constat-validation/:token` | Jeton de validation | Renvoie titre, commune, date de visite, statut, commentaire et une URL S3 présignée (1 h) du PDF. L'expiration (7 jours) n'est vérifiée **que si le statut est `pending`** : une fois acceptée ou refusée, la page reste consultable sans limite de durée |
 | GET | `/api/constat-validation/:token/pdf` | Jeton de validation | Renvoie le PDF (`application/pdf`), même règle d'expiration |
-| POST | `/api/constat-validation/:token/accept` | Jeton de validation | Corps `{comment?}`. Seulement si `pending` et non expiré. Passe `constat_validation.status` et `state_report.validation_status` à `accepted`, envoie le constat aux destinataires (URL présignée de **7 jours**), trace `state_report_sent_email`, puis informe le rédacteur |
+| POST | `/api/constat-validation/:token/accept` | Jeton de validation | Corps `{comment?}`. Seulement si `pending` et non expiré. Passe `constat_validation.status` et `state_report.validation_status` à `accepted`, envoie le constat aux destinataires (lien court `/attachment/:id` de **90 jours**, comme pour un envoi direct), trace `state_report_sent_email`, puis informe le rédacteur |
 | POST | `/api/constat-validation/:token/decline` | Jeton de validation | Corps `{comment}` (obligatoire). Passe les statuts à `declined` et informe le rédacteur |
 
 ### 4.8 Administration — [adminRoutes.ts](../packages/backend/src/routes/adminRoutes.ts)
@@ -248,7 +248,7 @@ Routes **publiques** : l'authentification repose sur la seule connaissance du je
 
 Il n'existe **aucune route** pour promouvoir un administrateur, supprimer un utilisateur ou modifier un rôle : ces opérations se font directement en base (`internal_user.role`) et dans Keycloak.
 
-### 4.10 Fiches monument — [upRoutes.ts](../packages/backend/src/routes/upRoutes.ts), [monumentAlertRoutes.ts](../packages/backend/src/routes/monumentAlertRoutes.ts)
+### 4.9 Fiches monument — [upRoutes.ts](../packages/backend/src/routes/upRoutes.ts), [monumentAlertRoutes.ts](../packages/backend/src/routes/monumentAlertRoutes.ts)
 
 
 | Méthode | Chemin | Auth | Rôle et logique notable |
@@ -256,7 +256,7 @@ Il n'existe **aucune route** pour promouvoir un administrateur, supprimer un uti
 | GET | `/api/up/monument` | Jeton | Query `reference` (Mérimée). Arbre des **unités patrimoniales** du monument, ou `null` s'il n'est pas découpé. Lu dans l'API Dataspace (une requête pour la racine, puis une par niveau), mis en cache dans `up_cache` (`UP_CACHE_TTL_HOURS`). Si l'API ne répond pas, le cache périmé est servi ; sans cache, **502** « service des unités patrimoniales indisponible ». En mode `mock`, les données viennent de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json) |
 | POST | `/api/monument-alert/send` | Jeton | Corps `{id}`. Envoie par courriel une alerte ou une annotation saisie depuis une fiche (`monument_alert`). Renvoie `pending` tant que la ligne ou ses photos ne sont pas arrivées, `not_sent` si l'envoi n'est pas demandé, `sent` sinon. `sent_at` est posé **avant** l'envoi (et effacé en cas d'échec SMTP) : une alerte n'est jamais envoyée deux fois. 403 si l'alerte est d'un autre service |
 
-### 4.9 Statistiques — [statsRoutes.ts](../packages/backend/src/routes/statsRoutes.ts)
+### 4.10 Statistiques — [statsRoutes.ts](../packages/backend/src/routes/statsRoutes.ts)
 
 | Méthode | Chemin | Auth | Rôle et logique notable |
 | --- | --- | --- | --- |
@@ -276,7 +276,7 @@ Règles de calcul cachées des statistiques :
 - Statistiques UDAP par département : **seul le premier département** de `service.dept_numbers` est pris en compte.
 - **Abandon** : document créé il y a plus de **21 jours** sans PDF. Pour les constats, critère `attachment_id IS NULL` ; pour les comptes-rendus, critère sur la colonne `pdf IS NULL`. La pièce jointe d'un constat et le PDF d'un compte-rendu sont la même notion (le document envoyé) : la différence de colonne n'est pas une incohérence.
 - **Utilisateur actif** sur la période : a envoyé au moins un document (table `sent_email` ou `state_report_sent_email`).
-- Le suivi des téléchargements n'existe que depuis l'introduction de `constat_pdf_download` ; l'API renvoie `downloadTrackingSince` pour l'indiquer.
+- Les téléchargements ne sont comptés qu'à partir de la date renvoyée dans `downloadTrackingSince`.
 
 ---
 
@@ -429,7 +429,7 @@ Règles cachées :
 - **Envoi sous couvert** : quand la requête porte `needValidation`, le serveur prend l'adresse du validateur dans `user_settings` du **couple (utilisateur, service courant)** si la validation y est activée et l'adresse valide, sinon l'adresse `validationEmail` transmise par le navigateur (sa copie locale des réglages peut ne pas être encore synchronisée). Sans adresse valide, l'envoi est refusé (409) **avant tout effet** (pièce jointe, alertes, courriels) : un constat demandé sous couvert ne part jamais directement. Si plusieurs lignes de réglages existent, celle qui active la validation est prise en priorité.
 - En mode validation, les destinataires sont mémorisés dans `constat_validation.recipients` et le courriel final part à l'acceptation. `suggested_email` n'est pas alimenté dans ce cas.
 - Dans le parcours sans validation, **deux** liens courts sont créés (un pour le courriel, un renvoyé à l'appelant).
-- Le lien court expire à **90 jours**. Le texte des courriels annonce encore un lien « valable 1 mois » ; sa correction en « 90 jours » est en cours. L'URL présignée envoyée après acceptation d'une validation expire à **7 jours**.
+- Le lien court expire à **90 jours**, durée annoncée dans le texte des courriels (« lien valable 90 jours »). Après acceptation par le validateur, le courriel aux destinataires contient lui aussi un lien court de 90 jours ([attachmentRedirection.ts](../packages/backend/src/features/attachmentRedirection.ts)). Seule la page de validation donne au validateur une URL présignée d'une heure.
 
 ### 6.6 Courriels
 
@@ -478,7 +478,7 @@ Conséquences cachées :
 
 ### 7.3 Sentry
 
-[sentry.ts](../packages/backend/src/features/sentry.ts) : initialisé seulement si `NODE_ENV !== "development"` **et** `SENTRY_DSN` est défini. 10 % des transactions, `sendDefaultPii: false`, pas de fil d'Ariane console, et un filtre `beforeSend` qui retire le corps, les cookies et la chaîne de requête, l'utilisateur, et masque toute clé ressemblant à un mot de passe, un jeton, un secret, un courriel ou des destinataires. Sentry ne reçoit que les exceptions et le message de refus d'écriture de synchronisation (§6.2).
+[sentry.ts](../packages/backend/src/features/sentry.ts) : initialisé seulement si `NODE_ENV !== "development"` **et** `SENTRY_DSN` est défini. 10 % des transactions, `sendDefaultPii: false`, pas de fil d'Ariane console, et un filtre `beforeSend` qui retire le corps, les cookies et la chaîne de requête, l'utilisateur, et masque toute clé ressemblant à un mot de passe, un jeton, un secret, un courriel ou des destinataires. Sentry ne reçoit que les exceptions et le message de refus d'écriture de synchronisation (§6.2). Aucun `SENTRY_DSN` n'est défini en production : Sentry backend n'y est pas branché.
 
 ---
 
@@ -498,7 +498,7 @@ Détails cachés de l'import ([pop.ts](../packages/backend/src/features/data/pop
 
 - Les en-têtes CSV sont mis en minuscules et seules les colonnes existant dans la table (introspection) sont conservées.
 - Doublons de référence dans un même lot : seule la première occurrence est gardée.
-- Images : `pop_images` (URL de photos POP, lue par les fiches objet) est vide aujourd'hui ; l'affichage des images POP passera par le protocole IIIF. L'équipe POP a accepté l'affichage direct de ses photos.
+- Images : `pop_images` (URL de photos POP, lue par les fiches objet) est vide et n'est alimentée par aucun import. L'affichage des images POP par IIIF est prévu ; l'équipe POP a donné son accord pour l'affichage direct de ses photos.
 
 ---
 
@@ -551,7 +551,7 @@ Le paquet déclare `exports: "./src/router.ts"` : les tests importent directemen
 | 6 | Chaque écriture client est copiée intégralement dans `transactions` (sans purge) | `syncService.ts` |
 | 7 | Les erreurs de validation de schéma deviennent des 500 | `router.ts` |
 | 8 | Un jeton absent ou invalide → 403, jamais 401 (sauf `refresh-token` → 401) | `authMiddleware.ts` |
-| 9 | Liens courts publics, valables 90 jours (le texte « 1 mois » des courriels est en cours de correction) | `attachmentRedirectRoutes.ts`, `mail.ts` |
+| 9 | Liens courts publics, valables 90 jours (durée annoncée dans les courriels), y compris dans le courriel envoyé après acceptation par le validateur | `attachmentRedirectRoutes.ts`, `attachmentRedirection.ts`, `mail.ts` |
 | 10 | Validation d'un constat : jeton de 7 jours, mais page consultable sans limite une fois traitée | `validationRoutes.ts` |
 | 11 | Constat en validation : déjà compté comme « envoyé » (attachment_id renseigné) ; alertes déjà parties | `pdfRoutes.tsx` |
 | 12 | L'expéditeur est toujours ajouté aux destinataires | `pdfRoutes.tsx` |

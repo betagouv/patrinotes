@@ -103,7 +103,7 @@ La CI actuelle ([main.yml](../.github/workflows/main.yml)) publie sur **`ghcr.io
 | Ajouter tout nouveau domaine (recette ministère) à `preview.allowedHosts` **et reconstruire l'image**. | Sinon le frontend répond 403. | [vite.config.ts](../packages/frontend/vite.config.ts#L73-L82) |
 | Rendre TLS vers PostgreSQL configurable, **si le ministère l'impose**. | Le code force `ssl: false` (backend, migrations) et `sslmode: disable` (PowerSync). | [db.ts](../packages/backend/src/db/db.ts), [drizzle.config.ts](../packages/backend/drizzle.config.ts) |
 | Supprimer la requête `constat_validation` de [sync-config.yaml](../powersync/sync-config.yaml), ou ajouter la table à la publication par une migration. | La table n'est pas publiée en production (§ 5.1). | [08](08-synchronisation-hors-ligne.md) |
-| Rendre le `siteId` Matomo configurable, si l'instance change. | Valeur en dur. | [main.tsx#L132-L136](../packages/frontend/src/main.tsx#L132-L136) |
+| Rendre le `siteId` Matomo configurable, si l'instance change. | Valeur en dur. | [main.tsx#L140-L144](../packages/frontend/src/main.tsx#L140-L144) |
 | Corriger les risques critiques et élevés exigés par l'homologation. | Chantier transverse. | [16](16-risques-et-dette-technique.md) |
 
 ### 3.3 Identité : Keycloak ou SSO du ministère ?
@@ -305,7 +305,7 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | `tiles.openfreemap.org` | Fond de carte vectoriel et polices | [MapLibre.tsx#L14-L21](../packages/frontend/src/features/map/MapLibre.tsx#L14-L21) |
 | `openmaptiles.geo.data.gouv.fr` | Parcelles cadastrales | [MapLibre.tsx#L17](../packages/frontend/src/features/map/MapLibre.tsx#L17) |
 | `data.geopf.fr` | Orthophotos IGN (WMTS) | [MapLibre.tsx#L26](../packages/frontend/src/features/map/MapLibre.tsx#L26) |
-| `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx#L132-L136](../packages/frontend/src/main.tsx#L132-L136) |
+| `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx#L140-L144](../packages/frontend/src/main.tsx#L140-L144) |
 | Sentry | Erreurs du navigateur, si `VITE_SENTRY_DSN` | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 
 Liens simples (navigation, pas d'appel automatique) : `patrinotes.beta.gouv.fr` (FAQ), `pop.culture.gouv.fr`, `culture.gouv.fr`, `legifrance.gouv.fr`, Typeform (questionnaire).

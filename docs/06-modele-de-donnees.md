@@ -4,7 +4,7 @@ Ce document décrit la base PostgreSQL de Patrinotes : les tables et leurs colon
 
 Source de vérité : [schema.ts](../packages/backend/src/db/schema.ts) (Drizzle). Les types Kysely utilisés à l'exécution sont dérivés de ce fichier dans [db.ts](../packages/backend/src/db/db.ts). Côté navigateur, le schéma SQLite local est déclaré à part dans [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts).
 
-> Les informations ci-dessous viennent de la lecture du code de `development` et du relevé de production du 17/11/2026 (lecture seule de la base de production : publication, migrations, volumétrie). Les points déduits mais non vérifiés sur une base réelle sont signalés par « *à confirmer* ».
+> Les informations ci-dessous viennent de la lecture du code et du relevé de production du 17/11/2026 (lecture seule de la base de production : publication, migrations, volumétrie). Les points déduits mais non vérifiés sur une base réelle sont signalés par « *à confirmer* ».
 
 ---
 
@@ -25,7 +25,7 @@ La base compte **32 tables applicatives** dans le schéma `public`, plus la tabl
 
 ### 1.2 Particularités globales à connaître
 
-- **Presque aucune contrainte d'intégrité.** Seules 14 clés étrangères existent (liste au § 3). La plupart des liens (`report_id`, `state_report_id`, `service_id`, `visited_section_id`…) sont **logiques** : rien n'empêche une ligne orpheline. La cohérence repose sur l'application.
+- **Presque aucune contrainte d'intégrité.** Seules 12 clés étrangères existent (liste au § 3). La plupart des liens (`report_id`, `state_report_id`, `service_id`, `visited_section_id`…) sont **logiques** : rien n'empêche une ligne orpheline. La cohérence repose sur l'application.
 - **Presque aucun index secondaire** sur les tables métier, hormis les clés primaires, les contraintes d'unicité et 4 index sur les tables des fiches (`monument_alert` : `reference_pop`, `service_id`, `state_report_id` ; `monument_correction` : `reference_pop`). Les requêtes par `service_id`, `state_report_id` ou `departement_format_numerique` passent par des parcours séquentiels (voir § 9).
 - **Toutes les clés primaires sont des `text`**, générées par l'application (UUID v4 ou v7, parfois préfixées), jamais par la base (§ 4.1).
 - **Les dates sont des `timestamp without time zone`** lues et écrites en chaîne ISO (`mode: "string"`). Le décalage `Z` envoyé par le client est ignoré par PostgreSQL (§ 4.2).
@@ -390,19 +390,19 @@ erDiagram
 | `internal_user_userId_fkey` | `internal_user.userId` → `user.id` | `CASCADE` | [schema.ts#L46](../packages/backend/src/db/schema.ts#L46) |
 | `delegation_createdBy_fkey`, `delegation_delegatedTo_fkey` | `delegation` → `user.id` | `CASCADE` | [schema.ts#L62](../packages/backend/src/db/schema.ts#L62) |
 | `report_createdBy_fkey` | `report.createdBy` → `user.id` | `SET NULL` (même incohérence : colonne `NOT NULL`) | [schema.ts#L154](../packages/backend/src/db/schema.ts#L154) |
-| `sent_email_report_id_fkey` | `sent_email.report_id` → `report.id` | aucune action | [schema.ts#L260](../packages/backend/src/db/schema.ts#L260) |
-| `state_report_sent_email_state_report_id_fkey` | → `state_report.id` | aucune action | [schema.ts#L278](../packages/backend/src/db/schema.ts#L278) |
-| `suggested_email_email_key` | `suggested_email.email` unique **pour toute la base** | — | [schema.ts#L293](../packages/backend/src/db/schema.ts#L293) |
-| `state_report_created_by_fkey` | `state_report.created_by` → `user.id` | aucune action | [schema.ts#L690](../packages/backend/src/db/schema.ts#L690) |
-| `visited_section_state_report_id_fkey` | → `state_report.id` | aucune action | [schema.ts#L715](../packages/backend/src/db/schema.ts#L715) |
-| `user_dept_user_id_fkey` + PK composite `(user_id, dept_number)` | → `user.id` | `CASCADE` | [schema.ts#L740](../packages/backend/src/db/schema.ts#L740) |
-| `constat_pdf_download_*_fkey` | → `user.id`, `state_report.id` | aucune action | [schema.ts#L776](../packages/backend/src/db/schema.ts#L776) |
+| `sent_email_report_id_fkey` | `sent_email.report_id` → `report.id` | aucune action | [schema.ts#L242](../packages/backend/src/db/schema.ts#L242) |
+| `state_report_sent_email_state_report_id_fkey` | → `state_report.id` | aucune action | [schema.ts#L260](../packages/backend/src/db/schema.ts#L260) |
+| `suggested_email_email_key` | `suggested_email.email` unique **pour toute la base** | — | [schema.ts#L275](../packages/backend/src/db/schema.ts#L275) |
+| `state_report_created_by_fkey` | `state_report.created_by` → `user.id` | aucune action | [schema.ts#L541](../packages/backend/src/db/schema.ts#L541) |
+| `visited_section_state_report_id_fkey` | → `state_report.id` | aucune action | [schema.ts#L566](../packages/backend/src/db/schema.ts#L566) |
+| `user_dept_user_id_fkey` + PK composite `(user_id, dept_number)` | → `user.id` | `CASCADE` | [schema.ts#L592](../packages/backend/src/db/schema.ts#L592) |
+| `constat_pdf_download_*_fkey` | → `user.id`, `state_report.id` | aucune action | [schema.ts#L635](../packages/backend/src/db/schema.ts#L635) |
 
 Conséquences pratiques :
 
 - **Supprimer un utilisateur** supprime en cascade son `internal_user`, ses `user_dept` et ses délégations. La suppression **échoue** s'il a créé un constat (`state_report_created_by_fkey`) ou téléchargé un PDF de constat (`constat_pdf_download`).
 - **Supprimer un constat** échoue tant qu'il a des `visited_section`, des `state_report_sent_email` ou des `constat_pdf_download`. En pratique les constats ne sont jamais supprimés physiquement : ils sont désactivés (§ 4.3).
-- Le fichier [relations.ts](../packages/backend/src/db/relations.ts) (relations Drizzle) importe `tmpPictures`, une table supprimée en migration 0003. Il **ne compile plus** et n'est utilisé nulle part. C'est un vestige.
+- Le fichier [relations.ts](../packages/backend/src/db/relations.ts) (relations Drizzle) importe `tmpPictures`, une table supprimée en migration 0003. Il **ne compile pas** et n'est utilisé nulle part.
 
 ---
 
@@ -438,9 +438,9 @@ Les identifiants sont générés **par le client** (navigateur, hors ligne) ou p
 | Marqueur | Tables | Sens | Règles cachées |
 | --- | --- | --- | --- |
 | `disabled` | `report`, `state_report` | Document supprimé par l'utilisateur (corbeille). La ligne reste en base. | Les statistiques filtrent `disabled IS NOT TRUE` ([statsRoutes.ts#L77](../packages/backend/src/routes/statsRoutes.ts#L77)). Les lignes désactivées restent synchronisées vers les navigateurs du service. |
-| `is_deprecated` | les 4 tables `*_attachment` | Version remplacée d'une pièce jointe (ex. ancien plan de situation, ancienne image de localisation). | **PowerSync ne synchronise que `is_deprecated = 0`** ([sync-config.yaml](../powersync/sync-config.yaml)). Une ligne à `NULL` n'est **pas** synchronisée, alors que le code front accepte `0 OR NULL`. Les lignes créées par la migration 0026 ont `is_deprecated = NULL` : elles n'arrivent donc pas sur les postes (*à confirmer en production*). |
+| `is_deprecated` | les 5 tables `*_attachment` (dont `monument_alert_attachment`) | Version remplacée d'une pièce jointe (ex. ancien plan de situation, ancienne image de localisation). | **PowerSync ne synchronise que `is_deprecated = 0`** ([sync-config.yaml](../powersync/sync-config.yaml)). Une ligne à `NULL` n'est **pas** synchronisée, alors que le code front accepte `0 OR NULL`. Les lignes créées par la migration 0026 ont `is_deprecated = NULL` : elles n'arrivent donc pas sur les postes (*à confirmer en production*). |
 | `is_ignored` | les 4 tables `*_attachment` | Pièce jointe que l'utilisateur a choisi d'abandonner (envoi impossible, par exemple). | Exclue des files « non synchronisées » et des courriels d'alerte ([pdfRoutes.tsx#L283](../packages/backend/src/routes/pdfRoutes.tsx#L283)). |
-| Suppression physique | toutes | Une opération `DELETE` venant du navigateur est appliquée telle quelle par le backend ([syncService.ts#L36](../packages/backend/src/services/syncService.ts#L36)). | Ne fonctionne que sur les tables qui ont une colonne `id` (donc pas sur `user_dept` ni `whitelist`). |
+| Suppression physique | toutes | Une opération `DELETE` venant du navigateur est appliquée si la politique d'écriture l'autorise pour cette table et cette ligne (voir [05 § 8](05-authentification-securite.md#8-écritures-via-la-synchronisation--contrôle-daccès)) ([syncService.ts#L177](../packages/backend/src/services/syncService.ts#L177)). | Ne fonctionne que sur les tables qui ont une colonne `id`. |
 
 > **« Envoyé » se lit dans `attachment_id`.** Un CR ou un CE est considéré comme envoyé quand `attachment_id IS NOT NULL` (statistiques, verrouillage du formulaire dans [ContexteVisite.tsx](../packages/frontend/src/features/state-report/steps/ContexteVisite.tsx#L296)). Il n'y a pas de colonne de statut dédiée.
 
@@ -477,7 +477,7 @@ Un service est une UDAP (unité départementale de l'architecture et du patrimoi
 | Table | Colonne | Sens |
 | --- | --- | --- |
 | `user` | `id`, `name` 🔒, `email` 🔒 (unique), `service_id`, `job` 🔒 (fonction déclarée) | Agent. **L'adresse électronique est la clé de jointure avec Keycloak et avec PowerSync** (`auth.parameter('email')`). |
-| `internal_user` | `email` 🔒, `role` (`user` ou `admin`), `temporaryLink` (empreinte MD5 du jeton de réinitialisation), `temporaryLinkExpiresAt` (+1 jour), `newsletter`, `createdAt` | Données de compte. `role = 'admin'` ouvre `/api/admin` ([adminMiddleware.ts](../packages/backend/src/routes/adminMiddleware.ts)). La colonne `password` a été supprimée en 0003 : l'authentification est déléguée à Keycloak. La réinitialisation du mot de passe en service passe par cette table (jeton haché, 24 h, mot de passe poussé dans Keycloak). **Il n'y a une ligne `internal_user` que pour les comptes créés par le formulaire d'inscription** ; des comptes anciens n'en ont pas. |
+| `internal_user` | `email` 🔒, `role` (`user` ou `admin`), `temporaryLink` (empreinte MD5 du jeton de réinitialisation), `temporaryLinkExpiresAt` (+1 jour), `newsletter`, `createdAt` | Données de compte. `role = 'admin'` ouvre `/api/admin` ([adminMiddleware.ts](../packages/backend/src/routes/adminMiddleware.ts)). La base ne stocke aucun mot de passe : l'authentification est déléguée à Keycloak. La réinitialisation du mot de passe en service passe par cette table (jeton haché, 24 h, mot de passe poussé dans Keycloak). **Il n'y a une ligne `internal_user` que pour les comptes créés par le formulaire d'inscription** ; des comptes anciens n'en ont pas. |
 | `whitelist` | `email` 🔒, `createdAt` | Adresses autorisées à s'inscrire. La comparaison ignore la casse et les espaces. Le contrôle est **désactivé en développement** ([authService.ts](../packages/backend/src/services/authService.ts)). |
 | `user_dept` | `user_id`, `dept_number` | Départements couverts par l'agent. Recalculée par `changeService` : suppression puis réinsertion à partir de `service.dept_numbers`. Si le nouveau service n'a **aucun** département, les anciennes lignes **sont conservées** ([userService.ts#L22](../packages/backend/src/services/userService.ts#L22)). |
 
@@ -523,7 +523,7 @@ Le constat d'état décrit l'état sanitaire d'un monument historique protégé,
 
 - **`state_report_alert`** : une alerte par rubrique (`alert`) parmi « Édifice en péril », « Abords de l'édifice », « Objets et mobiliers », « Archéologie », « Site classé ou inscrit », « Biodiversité », « Sécurité » ([utils.tsx#L121](../packages/pdf/src/utils.tsx#L121)). `should_send` : envoyer un courriel au service compétent. `show_in_report` : afficher l'alerte dans le PDF. Pour « Objets et mobiliers », `objet_ou_mobilier` contient la référence Palissy et `objet_ou_mobilier_name` le titre. Le code compte aussi une alerte comme « visitée » si `probleme` est rempli.
 - **Les alertes ne partent qu'une fois** : `state_report.alerts_sent` passe à `true` après le premier envoi, et les envois suivants du même constat ne renvoient plus d'alerte ([pdfRoutes.tsx#L271](../packages/backend/src/routes/pdfRoutes.tsx#L271)).
-- **`constat_validation`** : demande de validation hiérarchique. Le jeton (UUID v4) est **valable 7 jours**. Les routes publiques `/api/constat-validation/:token[/pdf|/accept|/decline]` ne demandent pas d'authentification ([validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts)). Après acceptation, le PDF part aux `recipients` avec une URL S3 présignée valable **7 jours** (et non un lien court `attachment_redirection`).
+- **`constat_validation`** : demande de validation hiérarchique. Le jeton (UUID v4) est **valable 7 jours**. Les routes publiques `/api/constat-validation/:token[/pdf|/accept|/decline]` ne demandent pas d'authentification ([validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts)). Après acceptation, le PDF part aux `recipients` avec un lien court `attachment_redirection` valable **90 jours**, comme pour un envoi direct.
 - **`sent_email` / `state_report_sent_email`** : une ligne par destinataire et par envoi. L'auteur est **toujours ajouté** aux destinataires. Pour les CE, les adresses sont mises en minuscules, pas pour les CR.
 - **`constat_pdf_download`** : trace chaque téléchargement de PDF de constat (via `/api/upload/attachment?stateReportId=` ou `/api/pdf/state-report/log-download`), pour les statistiques.
 
@@ -549,7 +549,7 @@ Le constat d'état décrit l'état sanitaire d'un monument historique protégé,
 | `visited_section.localisation_pins` | JSON `[{id, lng, lat}]` | [localisationTypes.ts](../packages/frontend/src/features/map/localisationTypes.ts) |
 | `visited_section.localisation_drawings` | JSON `[{points:[{lng,lat}], color, width}]` | idem |
 | `visited_section.localisation_zone` | JSON `{sw:[lng,lat], ne:[lng,lat]}` | idem |
-| `*_attachment.attachment_id` | chemin relatif dans le stockage, **sans** le préfixe `attachment/` (§ 7 du [document 07](07-donnees-externes-et-stockage.md)) ; un ancien format pouvait contenir **plusieurs identifiants séparés par `;`** (encore géré par la file de pièces jointes) | [db.ts#L80](../packages/frontend/src/db/db.ts#L80) |
+| `*_attachment.attachment_id` | chemin relatif dans le stockage, **sans** le préfixe `attachment/` (§ 7 du [document 07](07-donnees-externes-et-stockage.md)) ; peut contenir **plusieurs identifiants séparés par `;`** (lignes anciennes, encore gérées par la file de pièces jointes) | [db.ts#L80](../packages/frontend/src/db/db.ts#L80) |
 | `pdf_snapshot.report`, `transactions.data` | JSON | — |
 | `pop_immeubles.coordonnees_au_format_wgs84` | texte issu du CSV POP (*format exact à confirmer*) | — |
 
@@ -578,7 +578,7 @@ La table de correspondance est codée en dur dans [stateReport.tsx#L465](../pack
 
 ### 7.1 `transactions` — journal des écritures
 
-Chaque opération envoyée par un navigateur (`POST /api/upload-data`) est **d'abord** insérée dans `transactions` (table visée, opération `PUT`/`PATCH`/`DELETE`, données JSON, utilisateur), **puis** appliquée ([syncService.ts#L20](../packages/backend/src/services/syncService.ts#L20)). Points d'attention :
+Chaque opération envoyée par un navigateur (`POST /api/upload-data`) est **d'abord** insérée dans `transactions` (table visée, opération `PUT`/`PATCH`/`DELETE`, données JSON, utilisateur), **puis** appliquée ([syncService.ts#L100](../packages/backend/src/services/syncService.ts#L100)). Points d'attention :
 
 - La table **grossit sans limite** et contient une copie de toutes les données saisies, donc des données personnelles. Aucune purge n'est prévue.
 - La colonne `error` n'est **jamais remplie**. En cas d'échec SQL, le backend répond HTTP 200 avec `{ success: false }`. Le navigateur considère alors le lot comme traité ([Connector.ts](../packages/frontend/src/db/Connector.ts)) : **l'écriture est perdue sans erreur visible**. Seul `transactions.data` permet de la retrouver.
@@ -662,7 +662,7 @@ Mesures du relevé de production du 17/11/2026. Base applicative : **719 Mo** (v
 | `state_report` | 1 214 | — | usage |
 | `state_report_attachment` | 952 | — | usage |
 | `user` / `service` | 261 / 118 | — | inscriptions |
-| `pop_images` | **0** | — | table des URL de photos POP, lue par les fiches objet ; vide aujourd'hui, l'affichage des images POP passera par le protocole IIIF |
+| `pop_images` | **0** | — | table des URL de photos POP, lue par les fiches objet ; vide ; l'affichage des images POP par IIIF est prévu |
 | Navigateur | — | — | toutes les notices POP des départements de l'agent, téléchargées au premier démarrage |
 
 Qualité des données POP : 42 immeubles et **4 541 objets** ont autre chose qu'une date dans `date_de_la_derniere_mise_a_jour` (texte d'une autre colonne, caractères mal encodés) : décalage de colonnes ou problème d'encodage à l'import (voir [12](12-exploitation-et-supervision.md) § 7.1).
@@ -688,13 +688,11 @@ Requêtes coûteuses à surveiller : le filtre `pop_objets.reference_a_une_notic
 
 > **Ne pas modifier une migration déjà appliquée.** Plusieurs migrations contiennent du SQL ajouté à la main (publication PowerSync, reprise de données en 0025/0026). Drizzle ne régénère pas ces ajouts.
 
-![Ancien schéma de flux base de données](../images/db-workflow.png)
-
-L'image [db-workflow.png](../images/db-workflow.png) décrit **l'ancienne architecture** : PostgreSQL 14 avec deux bases (`/cr-vif-users` pour les utilisateurs et délégations, `/cr-vif` pour les CR et clauses), un proxy **ElectricSQL** qui « électrifiait » les tables, des migrations SQL écrites à la main côté frontend et un client Prisma généré par introspection. **Elle n'est plus d'actualité** : il y a aujourd'hui une seule base, des migrations Drizzle uniques et PowerSync. Le fichier [.env.dist](../.env.dist) contient encore des restes de cette époque (`ELECTRIC_PORT`, `PG_PROXY_*`, `VITE_ELECTRIC_URL`, `AWS_*`).
+Le fichier [.env.dist](../.env.dist) déclare des variables qu'aucun code n'utilise (`ELECTRIC_PORT`, `PG_PROXY_*`, `VITE_ELECTRIC_URL`, `AWS_*`).
 
 ### 10.2 Historique des 41 migrations
 
-Le journal commence le 6 novembre 2025. Les migrations 0000 et 0001 forment une **ligne de base** issue de l'ancien système (`@databases/pg-migrations`, dont les tables `atdatabases_migrations_*` sont créées puis supprimées en 0001). La migration 0001 ajoute `user.email NOT NULL` sans valeur par défaut, ce qui échouerait sur une table non vide : la production a probablement été « marquée » comme migrée jusqu'à ce point plutôt que réellement migrée. Le relevé du 17/11/2026 ne permet pas de trancher (les tables `atdatabases_*` n'existent plus). Il montre en revanche que **le fichier 0000 a été modifié après son application** : l'empreinte enregistrée en production correspond au fichier du commit `34a34eb` (07/11/2025), reformaté depuis au commit `52842b2` (25/02/2026). Drizzle ne revérifie pas les empreintes, donc sans effet en production, mais une base neuve n'aura pas la même empreinte pour 0000. Ne plus jamais modifier une migration appliquée.
+Le journal commence le 6 novembre 2025. Les migrations 0000 et 0001 forment une **ligne de base** issue de l'ancien système (`@databases/pg-migrations`, dont les tables `atdatabases_migrations_*` sont créées puis supprimées en 0001). La migration 0001 ajoute `user.email NOT NULL` sans valeur par défaut, ce qui échouerait sur une table non vide : la production a probablement été « marquée » comme migrée jusqu'à ce point plutôt que réellement migrée. Le relevé du 17/11/2026 ne permet pas de trancher (les tables `atdatabases_*` n'existent plus). Il montre en revanche que **le fichier 0000 a été modifié après son application** : l'empreinte enregistrée en production correspond au fichier du 07/11/2025, reformaté le 25/02/2026. Drizzle ne revérifie pas les empreintes, donc sans effet en production, mais une base neuve n'aura pas la même empreinte pour 0000. Ne jamais modifier une migration appliquée.
 
 | # | Date | Évolution |
 | --- | --- | --- |
@@ -734,7 +732,7 @@ Le journal commence le 6 novembre 2025. Les migrations 0000 et 0001 forment une 
 | [scripts/clear-db.sh](../scripts/clear-db.sh) | `docker compose down`, **suppression du volume `compte-rendu-vif_pg_data`**, redémarrage, puis `pnpm migration:up`. | Destructif. Le nom du volume dépend du **nom du dossier** (projet compose `compte-rendu-vif`). Avec un dossier `patrinotes`, le volume s'appelle `patrinotes_pg_data` et le script ne supprime rien. À adapter. |
 | [scripts/fill-db.sh](../scripts/fill-db.sh) | Injecte [scripts/db/service.sql](../scripts/db/service.sql) dans le conteneur `compte-rendu-vif-pg-1`, base `patrinotes-dev`. | Mêmes noms codés en dur. |
 | [scripts/db/service.sql](../scripts/db/service.sql) | Crée **un seul** service de démonstration : `snum` (« Service du Numérique », département 75, visible). | Pas de clauses, pas de POP, pas d'utilisateur. |
-| [packages/backend/data/udap.json](../packages/backend/data/udap.json) | 96 services (un par département, champs vides), avec des identifiants hérités. | **Lu par aucun code** : vestige d'un ancien chargement initial. |
+| [packages/backend/data/udap.json](../packages/backend/data/udap.json) | 96 services (un par département, champs vides), avec des identifiants hérités. | **Lu par aucun code**. |
 | `pnpm backend import-pop` | Import POP complet (voir [07](07-donnees-externes-et-stockage.md)). | Remplit environ 560 Mo de tables (mesure de production) ; téléchargement du même ordre. |
 | [tests/setup.ts](../tests/setup.ts) | Remise à zéro de la base de test et jeux de données fictifs (services, clauses, POP). | Utile comme modèle de **données minimales** pour un nouvel environnement. |
 

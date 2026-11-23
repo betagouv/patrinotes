@@ -1,6 +1,6 @@
 # 10 — Infrastructure et déploiement
 
-Ce document décrit comment Patrinotes est construit, empaqueté et déployé : images Docker, intégration continue (GitHub Actions), fichiers Docker Compose, reliquats d'hébergements antérieurs (Scalingo, ancien domaine « Compte-rendu VIF ») et topologie cible de production.
+Ce document décrit comment Patrinotes est construit, empaqueté et déployé : images Docker, intégration continue (GitHub Actions), fichiers Docker Compose, fichiers d'hébergement inutilisés (Scalingo), redirection de l'ancien domaine « Compte-rendu VIF » et topologie cible de production.
 
 > [!IMPORTANT]
 > L'hébergement actuel est un VPS privé (serveur `cr-vif`, 8 vCPU, 31 Go de RAM, 915 Go de disque) piloté par **Coolify 4.4.7** avec Traefik 3.1. La configuration Coolify (services, variables, volumes, domaines) **n'est pas versionnée dans le dépôt**. Elle a été relevée en lecture seule le 17/11/2026 (« relevé de production du 17/11/2026 ») : la production réelle est décrite au § 6.0. Le reste du chapitre décrit ce que montre le code.
@@ -19,7 +19,7 @@ La référence de toutes les variables d'environnement se trouve dans [11 — Co
 | Configuration PowerSync | [powersync/powersync-config.yaml](../powersync/powersync-config.yaml), [powersync/sync-config.yaml](../powersync/sync-config.yaml) | Connexion à PostgreSQL, stockage MongoDB, validation des jetons, règles de synchronisation. |
 | Initialisation PostgreSQL | [db/init/](../db/init/) | Crée la publication `powersync` et la base `keycloak` (uniquement au premier démarrage d'un volume vide). |
 | Thème Keycloak | [keycloak-theme.jar](../keycloak-theme.jar) | Thème DSFR (Keycloakify) pour les écrans Keycloak. |
-| Reliquat Scalingo | [Procfile](../Procfile), [scalingo.json](../scalingo.json) | Ancien hébergement, obsolète. |
+| Scalingo (inutilisé) | [Procfile](../Procfile), [scalingo.json](../scalingo.json) | Inutilisés, supprimables. |
 | Redirection de l'ancien domaine | [crvif-redirection/](../crvif-redirection/) | Site statique qui renvoie vers `app.patrinotes.beta.gouv.fr` et désinstalle l'ancien service worker. **La version servie en production est différente** (§ 5.2). |
 
 ## 2. Le Dockerfile
@@ -36,7 +36,7 @@ flowchart TD
 ### 2.1 Étape `with-pnpm` (image de base)
 
 - Image : `node:20.11-alpine` ([Dockerfile#L4](../Dockerfile#L4)).
-- Paquets Alpine installés ([Dockerfile#L5-L15](../Dockerfile#L5-L15)) : `build-base`, `g++`, `cairo-dev`, `jpeg-dev`, `pango-dev`, `giflib-dev`, `pixman-dev`, `pangomm-dev`, `libjpeg-turbo-dev`, `freetype-dev`. Ce sont les prérequis de compilation du module natif **`canvas`** (node-canvas), déclaré dans les dépendances du backend ([packages/backend/package.json#L58](../packages/backend/package.json#L58)) et autorisé à exécuter son script de build dans `pnpm.onlyBuiltDependencies` ([package.json](../package.json)). Aucun `import "canvas"` direct n'existe dans `packages/backend/src` : il est vraisemblablement chargé indirectement (par `jsdom` ou la chaîne `@react-pdf`, à confirmer). Il est aussi marqué `external` dans [tsup.config.ts](../packages/backend/tsup.config.ts). En production, le backend tourne sous Node **20.11.1**.
+- Paquets Alpine installés ([Dockerfile#L5-L15](../Dockerfile#L5-L15)) : `build-base`, `g++`, `cairo-dev`, `jpeg-dev`, `pango-dev`, `giflib-dev`, `pixman-dev`, `pangomm-dev`, `libjpeg-turbo-dev`, `freetype-dev`. Ce sont les prérequis de compilation du module natif **`canvas`** (node-canvas), déclaré dans les dépendances du backend ([packages/backend/package.json#L58](../packages/backend/package.json#L58)) et autorisé à exécuter son script de build dans `pnpm.onlyBuiltDependencies` ([package.json](../package.json)). `canvas` n'est importé nulle part, ni directement ni via `jsdom` ou `@react-pdf`, eux-mêmes inutilisés (voir [09](09-documents-pdf-cartes-emails.md) § 3.3). Il est aussi marqué `external` dans [tsup.config.ts](../packages/backend/tsup.config.ts). En production, le backend tourne sous Node **20.11.1**.
 - Les paquets `-dev` et la chaîne de compilation restent dans l'image finale (pas d'étape d'exécution allégée) : images lourdes et surface d'attaque plus large que nécessaire.
 - pnpm est installé globalement en version **10.12.4** ([Dockerfile#L16](../Dockerfile#L16)).
 
@@ -48,10 +48,10 @@ flowchart TD
 
 ### 2.2 Étape `with-deps` (installation)
 
-- Copie des manifestes (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`) et des `package.json` des trois paquets ([Dockerfile#L24-L33](../Dockerfile#L24-L33)).
+- Copie des manifestes (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`) et des `package.json` des trois paquets ([Dockerfile#L24-L32](../Dockerfile#L24-L32)).
 - Pour le frontend, copie aussi `public/`, `scripts/` et `vite.config.ts` **avant** l'installation : ils sont nécessaires aux scripts de cycle de vie.
 - `pnpm install --frozen-lockfile` installe **toutes** les dépendances, y compris de développement : `drizzle-kit`, `vite`, `vite-node` et `tsup` sont nécessaires à l'exécution (migrations au démarrage, `vite preview`, génération de `env.js`).
-- [.dockerignore](../.dockerignore) n'exclut que `dsfr/*` et `node_modules` : le contexte de build envoyé au démon Docker contient notamment le `.git`, le jar Keycloak (6,7 Mo) et un éventuel `.env` local. Le `.env` racine n'est pas copié dans l'image (seuls des sous-dossiers ciblés le sont), mais un `packages/*/.env` le serait. À durcir (ajouter `.git`, `.env*`, `*.jar`).
+- [.dockerignore](../.dockerignore) n'exclut que `dsfr/*` (entrée sans objet : le dépôt n'a pas de dossier `dsfr/`) et `node_modules` : le contexte de build envoyé au démon Docker contient notamment le `.git`, le jar Keycloak (6,7 Mo) et un éventuel `.env` local. Le `.env` racine n'est pas copié dans l'image (seuls des sous-dossiers ciblés le sont), mais un `packages/*/.env` le serait. À durcir (ajouter `.git`, `.env*`, `*.jar`).
 
 ### 2.3 Cible `backend`
 
@@ -60,7 +60,7 @@ RUN pnpm backend build
 CMD pnpm migration:up;pnpm backend start
 ```
 
-([Dockerfile#L41-L52](../Dockerfile#L41-L52))
+([Dockerfile#L40-L51](../Dockerfile#L40-L51))
 
 - Copie `packages/backend`, `packages/pdf` et le dossier [db/](../db/) (migrations SQL Drizzle).
 - `pnpm backend build` lance `tsup --publicDir` : bundle ESM unique `packages/backend/dist/index.js`, plus copie du dossier `public/` (polices Marianne, logos utilisés dans les courriels).
@@ -84,7 +84,7 @@ RUN pnpm frontend build
 CMD ["pnpm", "frontend", "preview"]
 ```
 
-([Dockerfile#L58-L64](../Dockerfile#L58-L64))
+([Dockerfile#L57-L63](../Dockerfile#L57-L63))
 
 - `pnpm frontend build` = `react-dsfr update-icons` (prébuild) puis `vite build`, puis `setVersion.ts` qui écrit `dist/version.js` avec `window.APP_VERSION = "<version package>.<horodatage hexadécimal>"` ([setVersion.ts](../packages/frontend/scripts/setVersion.ts)).
 - Au démarrage, le script `preview` exécute **`pnpm env:gen && vite preview --host`** ([packages/frontend/package.json#L10](../packages/frontend/package.json#L10)) :
@@ -98,7 +98,7 @@ Implications pour la production :
 - Le système de fichiers du conteneur doit être **inscriptible** (`dist/env.js` est réécrit à chaque démarrage).
 - **Toute variable `VITE_*` présente dans l'environnement du conteneur est publiée** dans `env.js`, lisible par n'importe qui. Ne jamais donner un préfixe `VITE_` à un secret. Les valeurs sont insérées entre guillemets sans échappement : une valeur contenant `"` casse `env.js`.
 - `env.js` est exclu du précache du service worker et servi en *network-first* ([sw.ts#L20](../packages/frontend/src/service-worker/sw.ts#L20)) : un changement de configuration est pris en compte au prochain chargement en ligne. Les pages de navigation sont aussi en *network-first* en production.
-- `swEnv.js` est généré mais n'est importé nulle part (le service worker n'a pas besoin de la configuration en pratique) : reliquat.
+- `swEnv.js` est généré mais n'est importé nulle part (le service worker n'a pas besoin de la configuration en pratique).
 
 ## 3. Intégration continue (GitHub Actions)
 
@@ -171,7 +171,7 @@ Remarques :
 Ces scripts ne s'exécutent **qu'au premier démarrage d'un volume vide** (mécanisme `docker-entrypoint-initdb.d`). Sur une base gérée ou restaurée, ils doivent être rejoués à la main.
 
 > [!WARNING]
-> **Tables synchronisées absentes de la publication.** Les migrations ajoutent à la publication `powersync` : `user`, `delegation`, `service_instructeurs`, `clause_v2`, `pdf_snapshot`, `tmp_pictures`, `picture_lines`, `pictures` (retirée en 0040), `transactions`, `report`, `sent_email`, `suggested_email`, `udap` (renommée ensuite `service`, ce qui conserve l'appartenance), `user_settings`, `state_report`, `pop_immeubles`, `user_dept`, `visited_section`, `report_attachment`, `state_report_attachment`, `visited_section_attachment`, `pop_objets`, `state_report_alert`, `state_report_alert_attachment`. **`constat_validation`, lue par les règles de synchronisation ([sync-config.yaml](../powersync/sync-config.yaml)), n'est ajoutée par aucune migration** ([db/0019_bouncy_falcon.sql](../db/0019_bouncy_falcon.sql) crée la table sans `ALTER PUBLICATION`). Le relevé de production du 17/11/2026 confirme qu'elle **n'est pas dans la publication de production** (voir [08](08-synchronisation-hors-ligne.md) § 2.4). C'est sans effet aujourd'hui, car le frontend ne déclare ni n'utilise cette table. Vérifier tout de même le contenu de la publication avant et après migration avec `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';`.
+> **Tables synchronisées absentes de la publication.** Les migrations ajoutent à la publication `powersync` : `user`, `delegation`, `service_instructeurs`, `clause_v2`, `pdf_snapshot`, `tmp_pictures`, `picture_lines`, `pictures` (ajoutée en 0000 puis retirée en 0040), `transactions`, `report`, `sent_email`, `suggested_email`, `udap` (renommée ensuite `service`, ce qui conserve l'appartenance), `user_settings`, `state_report`, `pop_immeubles`, `user_dept`, `visited_section`, `report_attachment`, `state_report_attachment`, `visited_section_attachment`, `pop_objets`, `state_report_alert`, `state_report_alert_attachment`. **`constat_validation`, lue par les règles de synchronisation ([sync-config.yaml](../powersync/sync-config.yaml)), n'est ajoutée par aucune migration** ([db/0019_bouncy_falcon.sql](../db/0019_bouncy_falcon.sql) crée la table sans `ALTER PUBLICATION`). Le relevé de production du 17/11/2026 confirme qu'elle **n'est pas dans la publication de production** (voir [08](08-synchronisation-hors-ligne.md) § 2.4). C'est sans effet, car le frontend ne déclare ni n'utilise cette table. Vérifier tout de même le contenu de la publication avant et après migration avec `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';`.
 
 ### 4.3 `docker-compose.test.yaml` (tests E2E)
 
@@ -200,9 +200,9 @@ Même pile que le développement, avec les différences suivantes ([docker-compo
 | `client_auth.audience` | `["account"]` | Audience par défaut des jetons d'accès Keycloak. |
 | `telemetry.disable_telemetry_sharing` | `false` | **La télémétrie anonyme vers JourneyApps est active** (flux sortant). |
 
-En production, les deux fichiers ont été **déposés à la main** dans `/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/` et montés dans `/config/` (relevé de production du 17/11/2026). `powersync-config.yaml` ne diffère du dépôt que par `jwks_uri` et `issuer`, qui pointent sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`. `sync-config.yaml` est celui de `main`, pas celui de `development` : voir [08](08-synchronisation-hors-ligne.md) § 3. Il est tenu à jour à la main, dans Coolify et dans le fichier monté. La CI ne déploie pas ces fichiers.
+En production, les deux fichiers ont été **déposés à la main** dans `/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/` et montés dans `/config/` (relevé de production du 17/11/2026). `powersync-config.yaml` ne diffère du dépôt que par `jwks_uri` et `issuer`, qui pointent sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`. `sync-config.yaml` y est une copie tenue à jour à la main, dans Coolify et dans le fichier monté (voir [08](08-synchronisation-hors-ligne.md) § 3). La CI ne déploie pas ces fichiers.
 
-## 5. Reliquats d'hébergements antérieurs
+## 5. Fichiers d'hébergement inutilisés et ancien domaine
 
 ### 5.1 Scalingo — `Procfile` et `scalingo.json`
 
@@ -246,7 +246,7 @@ Un seul serveur porte tout : tous les domaines ci-dessous y pointent. Trois proj
 | Stockage objet | Scaleway Object Storage, bucket **`patrinotes-prod`**, région `fr-par` (`https://patrinotes-prod.s3.fr-par.scw.cloud`) | bucket `patrimoine-embarque-preprod` |
 | SMTP | Scaleway Transactional Email (`smtp.tem.scw.cloud:465`) | idem, même expéditeur |
 | Adminer | présent, protégé par authentification | idem |
-| Sentry | frontend (`sentry.incubateur.net`) ; backend pas encore branché (prévu) | — |
+| Sentry | frontend (`sentry.incubateur.net`) ; backend non branché | — |
 
 Points notables :
 
@@ -308,7 +308,7 @@ flowchart LR
 | Backend | `PORT` (3001 par défaut ; 3002 en production) | HTTP (REST JSON, multipart) | **Oui** (URL = `VITE_BACKEND_URL` = `BACKEND_URL`) | CORS `origin: "*"` ([router.ts#L43-L45](../packages/backend/src/router.ts#L43-L45)). Liens de courriel `BACKEND_URL/attachment/:id` valables 90 jours. |
 | PowerSync | 8080 (`PS_PORT` ; 3003 en production) | HTTP + **WebSocket** | **Oui** (URL = `VITE_POWERSYNC_URL`) | Le proxy doit accepter l'*upgrade* WebSocket et des connexions longues (pas de coupure à 60 s). |
 | Stockage S3 | 9000 (MinIO) | HTTP(S) S3 | **Oui**, au moins en lecture/écriture par URL présignée | Le navigateur envoie les pièces jointes et PDF **directement** sur `MINIO_URL` (PUT présigné) et y est redirigé en lecture. CORS du bucket à configurer. |
-| Keycloak | 8080 (HTTP), 9000 (santé, métriques) | HTTP (OIDC) | **Non requis** pour les utilisateurs (le navigateur n'appelle jamais Keycloak) | Doit être joignable par le backend et PowerSync. Aujourd'hui exposé publiquement : à restreindre. |
+| Keycloak | 8080 (HTTP), 9000 (santé, métriques) | HTTP (OIDC) | **Non requis** pour les utilisateurs (le navigateur n'appelle jamais Keycloak) | Doit être joignable par le backend et PowerSync. Exposé publiquement : à restreindre. |
 | PostgreSQL | 5432 | PostgreSQL | **Non** | Réplication logique requise. |
 | MongoDB | 27017 | MongoDB | **Non** | *Replica set* obligatoire. |
 | Console MinIO | 9001 | HTTP | **Non** | Administration uniquement. |
@@ -339,7 +339,7 @@ Différences de comportement selon `NODE_ENV` (backend) :
 
 | Comportement | `development` | `test` | autre (dont `production`) |
 | --- | --- | --- | --- |
-| Liste blanche des adresses à l'inscription ([authService.ts#L336-L348](../packages/backend/src/services/authService.ts#L336-L348)) | **Désactivée** | Active | Active |
+| Liste blanche des adresses à l'inscription ([authService.ts#L297-L314](../packages/backend/src/services/authService.ts#L297-L314)) | **Désactivée** | Active | Active |
 | Sentry | Désactivé | Actif si DSN | Actif si DSN |
 | Pile d'erreur renvoyée au client | Oui | Non | Non |
 | Fichier `.env` chargé | `../../.env` | `../../.env.test` | `../../.env` (s'il existe) |
@@ -370,7 +370,7 @@ sequenceDiagram
 - Il n'y a ni numéro de version publié, ni changelog, ni étiquette Git de version. La version déployée ne se retrouve que par recoupement des dates de construction des images. La version visible côté client est `window.APP_VERSION` (version de `packages/frontend/package.json` + horodatage du build).
 - Les modifications de `sync-config.yaml` et `powersync-config.yaml` sont à recopier à la main sur le serveur, puis PowerSync à redémarrer.
 - `development` est fusionnée dans `main` à chaque mise en production.
-- Les clients PWA récupèrent la nouvelle version au chargement suivant en ligne (service worker en `autoUpdate`, navigation *network-first*, rechargement forcé si un *chunk* JS ancien est introuvable).
+- Les clients PWA récupèrent la nouvelle version au chargement suivant en ligne (service worker en `autoUpdate`, navigation *network-first*, rechargement forcé si un *chunk* JS ancien est introuvable, en ligne seulement).
 - Avant de livrer une migration touchant des tables synchronisées : vérifier la publication `powersync`, le schéma client [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts) et les règles [sync-config.yaml](../powersync/sync-config.yaml) ([README](../README.md#L107-L113)).
 
 ### 8.2 Retour arrière

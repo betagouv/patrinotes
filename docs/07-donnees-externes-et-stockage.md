@@ -52,7 +52,7 @@ flowchart LR
 
 ### 1.1 API Dataspace des unités patrimoniales
 
-Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts). Route : `GET /api/up/monument` ([04 §4.10](04-backend-api.md)).
+Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts). Route : `GET /api/up/monument` ([04 §4.9](04-backend-api.md)).
 
 - L'API reçoit en `POST` un filtre de type MongoDB (`{UPI_REFERENCE_MERIMEE: "PA…"}` pour la racine, `{$or: [{_id: {$in: […]}}]}` pour les enfants, par lots de 50). Elle ne connaît que le lien parent → enfants : l'arbre est lu **niveau par niveau** (10 niveaux et 1 000 UP au plus).
 - Elle répond **404 au lieu d'une liste vide** quand rien ne correspond : le backend le traite comme « aucune UP ».
@@ -80,7 +80,7 @@ Code : [pop.ts](../packages/backend/src/features/data/pop.ts) et [KyselyBatchWri
 
 Règles cachées :
 
-- **Les immeubles sont toujours réimportés** (upsert complet). **Les objets ne le sont que si la table `pop_objets` est vide** ([pop.ts#L59](../packages/backend/src/features/data/pop.ts#L57)). Pour rafraîchir Palissy, il faut vider `pop_objets` avant le lancement.
+- **Les immeubles sont toujours réimportés** (upsert complet). **Les objets ne le sont que si la table `pop_objets` est vide** ([pop.ts#L57](../packages/backend/src/features/data/pop.ts#L57)). Pour rafraîchir Palissy, il faut vider `pop_objets` avant le lancement.
 - Si `FORCE_REFETCH_POP` reste à `true`, **chaque redémarrage** retélécharge Mérimée et retarde la mise en service.
 - `FORCE_REFETCH_POP` accepte `true` (insensible à la casse) ; toute autre chaîne vaut `false`.
 
@@ -103,7 +103,7 @@ sequenceDiagram
     BE->>FS: supprime le fichier
 ```
 
-1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`). Le chemin est relatif au répertoire courant, en pratique `packages/backend/data/` ([pop.ts#L253](../packages/backend/src/features/data/pop.ts#L81)). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (plusieurs centaines de Mo pour Palissy, *à confirmer*).
+1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`). Le chemin est relatif au répertoire courant, en pratique `packages/backend/data/` ([pop.ts#L81](../packages/backend/src/features/data/pop.ts#L81)). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (plusieurs centaines de Mo pour Palissy, *à confirmer*).
 2. **Analyse CSV** (`csv-parser`) avec le séparateur `|`. Les en-têtes sont mis en minuscules et débarrassés des espaces. **Les noms de colonnes de la table doivent correspondre exactement aux en-têtes du fichier** (d'où les colonnes `région`, `département`, `emplacement__forme_et_structure_de_l_escalier`, `vocable___pour_les_edifices_cultuels`).
 3. **Écriture par lots de 500** ([KyselyBatchWriter.ts](../packages/backend/src/features/data/KyselyBatchWriter.ts)) :
    - les lignes sans `reference` sont ignorées ;
@@ -138,7 +138,7 @@ Quand l'agent choisit un monument, certains champs POP sont **copiés** dans le 
 
 ### 2.4 Photos POP (`pop_images`)
 
-La table `pop_images` contient des URL de photos POP (`url`, `label`, `copyright`, `dept_number`). Elle est lue par les fiches objet, la galerie et l'étape « Monument historique » du constat via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)). Elle n'est pas synchronisée : hors ligne, pas d'image, et une vignette par défaut `/objet-sans-image.png` s'affiche. Elle est vide aujourd'hui ; l'affichage des images POP passera par le protocole IIIF.
+La table `pop_images` contient des URL de photos POP (`url`, `label`, `copyright`, `dept_number`). Elle est lue par les fiches objet, la galerie et l'étape « Monument historique » du constat via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)). Elle n'est pas synchronisée : hors ligne, pas d'image, et une vignette par défaut `/objet-sans-image.png` s'affiche. Elle est vide ; l'affichage des images POP passera par le protocole IIIF.
 
 ### 2.5 Code mort lié à POP
 
@@ -237,7 +237,7 @@ sequenceDiagram
 Points d'attention :
 
 - **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L64](../packages/frontend/src/db/db.ts#L64)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
-- **Pas de limite de taille côté serveur** pour les envois présignés. La limite de 15 Mo de `@fastify/multipart` ne s'applique à aucune route existante, puisque les fichiers ne transitent plus par le backend.
+- **Pas de limite de taille côté serveur** pour les envois présignés. La limite de 15 Mo de `@fastify/multipart` ne s'applique à aucune route existante, puisque les fichiers ne transitent pas par le backend (envoi direct par URL présignée).
 - **Contrôle d'appartenance** : lecture et écriture limitées au service du document désigné par le premier segment de la clé. Exception : une URL d'écriture est délivrée pour un document **pas encore en base**, car les photos peuvent partir avant la ligne.
 - `getReportPDF` prend **le premier** `report_attachment` en `.pdf` rangé sous `<reportId>/`, **sans tri** : après plusieurs envois, il peut renvoyer un ancien PDF ([uploadService.ts](../packages/backend/src/services/uploadService.ts)).
 - Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit (`getAttachment`), ce qui échoue s'il est absent.
@@ -246,7 +246,7 @@ Points d'attention :
 ### 3.4 Cycle de vie et volumétrie
 
 - **Aucune règle de cycle de vie** dans le code : photos remplacées (`is_deprecated`), PDF successifs, pièces jointes de documents désactivés et anciens plans de situation sont **conservés indéfiniment**. La durée de conservation doit être définie avec le ministère (archivage, RGPD) puis mise en œuvre par une règle de cycle de vie S3 ou un script de purge.
-- **Volumétrie estimée** (*à confirmer*) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (renseignées depuis la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, utiliser `mc du` sur le bucket.
+- **Volumétrie estimée** (*à confirmer*) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (vides pour les documents envoyés avant la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, utiliser `mc du` sur le bucket.
 - **Migration du stockage** : copier le bucket en conservant **exactement les clés** (par exemple `mc mirror` ou `rclone sync`). Les clés sont référencées en base et dans les liens courts déjà envoyés. Seules `MINIO_URL` et `MINIO_BUCKET` changent.
 
 ---
@@ -257,7 +257,7 @@ Les courriels d'envoi de CR et de CE ne contiennent pas de pièce jointe, mais u
 
 ### 4.1 Création
 
-`createAttachmentRedirection` ([pdfRoutes.tsx#L25](../packages/backend/src/routes/pdfRoutes.tsx#L25)) :
+`createAttachmentRedirection` ([attachmentRedirection.ts#L7](../packages/backend/src/features/attachmentRedirection.ts#L7)) :
 
 - `id` = entier aléatoire cryptographique entre 1 et 2⁴⁸ − 1, encodé en **base62** (environ 8 caractères) ;
 - `s3_key` = `attachment/<pdfPath>` ; `created_by` ; `sent_to` (CSV des destinataires 🔒) ;
@@ -266,7 +266,7 @@ Les courriels d'envoi de CR et de CE ne contiennent pas de pièce jointe, mais u
   - CE : `constat-d-etat-<titre-normalisé>_<jjMMaaaa>.pdf` ([stateReport.tsx#L449](../packages/pdf/src/stateReport.tsx#L449)).
 - URL renvoyée : `{BACKEND_URL}/attachment/<id>/<name>`.
 
-Lors de l'envoi d'un CE, **plusieurs lignes** sont créées pour un même PDF : une pour le courriel, une autre renvoyée à l'interface, une pour le valideur si la validation est demandée.
+Lors de l'envoi d'un CE, **plusieurs lignes** sont créées pour un même PDF : une pour le courriel, une autre renvoyée à l'interface, une pour le valideur si la validation est demandée, puis une nouvelle pour le courriel aux destinataires après acceptation.
 
 ### 4.2 Résolution
 
@@ -287,19 +287,19 @@ Règles vérifiées par [tests/attachment-redirect.spec.ts](../tests/attachment-
 - un lien de **91 jours** donne **410** ; un lien d'**exactement 90 jours** est encore valide (`differenceInDays > 90`, en jours entiers) ;
 - un lien **sans `name`** donne une **redirection 302** vers une URL contenant `X-Amz-Signature`.
 
-Le cas avec `name` (le seul utilisé en production depuis la migration 0029) n'est pas couvert par ce test. Le segment `:filename` de l'URL est **ignoré** : seul `id` compte, le nom servi est celui de la base.
+Le cas avec `name` (le seul cas produit par le code actuel) n'est pas couvert par ce test. Le segment `:filename` de l'URL est **ignoré** : seul `id` compte, le nom servi est celui de la base.
 
 Conséquences pour le transfert :
 
 - `BACKEND_URL` est inscrit **en dur dans les courriels déjà envoyés**. Si le domaine du backend change, l'ancien domaine doit continuer à répondre (ou rediriger `/attachment/*`) **pendant 90 jours** après la bascule.
 - La table n'est jamais purgée. Les lignes expirées peuvent être supprimées sans risque.
-- Pour une validation acceptée, le courriel aux destinataires contient au contraire une **URL S3 présignée de 7 jours** ([validationRoutes.ts#L138](../packages/backend/src/routes/validationRoutes.ts#L138)). Elle dépend directement de `MINIO_URL` et expire au bout de 7 jours, sans lien court.
+- Pour une validation acceptée, le courriel aux destinataires contient lui aussi un lien court de 90 jours, comme un envoi direct ([validationRoutes.ts#L160](../packages/backend/src/routes/validationRoutes.ts#L160)). Seule la page de validation (`GET /api/constat-validation/:token`) donne au valideur une URL S3 présignée valable 1 h.
 
 ---
 
 ## 5. Redirection de l'ancien domaine (`crvif-redirection`)
 
-Le dossier [crvif-redirection](../crvif-redirection) contient un **mini-site statique** à déployer sur l'**ancien domaine** de l'application, lorsqu'elle s'appelait « Compte-rendu VIF » (CR-VIF). Ancien domaine probable : `app.compte-rendu-vif.beta.gouv.fr` et `*.compte-rendu-vif.incubateur.net`, encore listés dans `preview.allowedHosts` de [vite.config.ts](../packages/frontend/vite.config.ts#L74). Ajouté par le commit « feat: redirect users from crvif » (mai 2026).
+Le dossier [crvif-redirection](../crvif-redirection) contient un **mini-site statique** à déployer sur l'**ancien domaine** de l'application, lorsqu'elle s'appelait « Compte-rendu VIF » (CR-VIF). Ancien domaine probable : `app.compte-rendu-vif.beta.gouv.fr` et `*.compte-rendu-vif.incubateur.net`, encore listés dans `preview.allowedHosts` de [vite.config.ts](../packages/frontend/vite.config.ts#L74).
 
 | Fichier | Rôle |
 | --- | --- |
@@ -319,7 +319,7 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 | Élément | Statut |
 | --- | --- |
 | `data/` (répertoire) | Répertoire de travail **temporaire** de l'import POP (`merimee.csv`, `palissy.csv`, supprimés après import). Doit être inscriptible. |
-| [data/udap.json](../packages/backend/data/udap.json) | 96 entrées (une par département : `id`, `department`, autres champs vides). **Lu par aucun code** : vestige de l'ancien chargement des UDAP. |
+| [data/udap.json](../packages/backend/data/udap.json) | 96 entrées (une par département : `id`, `department`, autres champs vides). **Lu par aucun code**. |
 
 ---
 

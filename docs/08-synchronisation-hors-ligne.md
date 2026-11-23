@@ -18,10 +18,6 @@ migration vers l'infrastructure du ministère.
 > Légende : les affirmations non vérifiables dans le code (comportement interne du service PowerSync) sont signalées par
 > **« à confirmer »**. La configuration de production a été relevée le 17/11/2026 (« relevé de production du
 > 17/11/2026 ») ; ses écarts avec le dépôt sont signalés dans chaque section.
->
-> **La production tourne sur `main`, pas sur `development`** : ses règles de synchronisation n'ont pas les tables des
-> fiches (§ 3.2) et sa base n'a que 37 migrations. Le contrôle de service sur les flux de pièces jointes y est en
-> place.
 
 ---
 
@@ -136,8 +132,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
    (`VITE_AUTH_REALM`), ce fichier doit être modifié **en même temps** que les variables du backend, sinon toutes les
    connexions de synchronisation sont refusées (l'application passe « hors ligne » en permanence).
 4. **`PS_JWT_SECRET` (alimenté par `JWT_SECRET`) est injecté dans le conteneur mais n'est référencé nulle part** dans
-   la configuration (aucun `!env PS_JWT_SECRET`). Il est inutile en l'état (vestige d'une authentification HS256
-   antérieure — à confirmer). Ne pas le confondre avec le mécanisme réel (JWKS Keycloak).
+   la configuration (aucun `!env PS_JWT_SECRET`). Il est inutile en l'état. Ne pas le confondre avec le mécanisme réel (JWKS Keycloak).
 5. L'image est en **`:latest`** : un redémarrage peut tirer une version majeure différente. Le format
    `config.edition: 3` / `streams:` (« Sync Streams ») exige une version récente du service. **Épingler la version**
    (1.20.5 en production) lors de la migration.
@@ -192,7 +187,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
 > `transactions`, `user`, `user_dept`, `user_settings`, `visited_section`, `visited_section_attachment`.
 >
 > - **`constat_validation` n'est pas publiée** (migration 0019 sans `ALTER PUBLICATION`) alors que `reports_stream` la
->   lit : cette requête ne renvoie rien. Sans conséquence aujourd'hui, car la table n'est pas dans `AppSchema` (§ 3.3).
+>   lit : cette requête ne renvoie rien. Sans conséquence, car la table n'est pas dans `AppSchema` (§ 3.3).
 > - **`transactions` est publiée sans être lue** par aucun flux : chaque écriture la fait transiter inutilement par la
 >   réplication.
 > - `pop_images` et `state_report_sent_email` sont dans `AppSchema` mais ni dans la publication, ni dans les streams :
@@ -265,7 +260,7 @@ Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écr
   `user_dept` sont conservés** : l'agent continue de recevoir le référentiel POP de son ancien service. Les deux
   écritures ne sont pas dans une même transaction.
 - **Compte sans service** (`service_id = 'no-service'`, service technique créé au démarrage du backend, invisible,
-  département vide) : des comptes anciens n'ont pas de service ; l'inscription actuelle en affecte directement un. Tant qu'un tel compte n'a pas choisi de service, il ne reçoit
+  département vide) : certains comptes n'ont pas de service ; l'inscription en affecte directement un. Tant qu'un tel compte n'a pas choisi de service, il ne reçoit
   que `global_stream`, ses propres données utilisateur et le service `no-service`.
 - **Départements POP** : le rapprochement `departement_format_numerique IN my_depts` est une égalité de chaînes ; le
   format de `dept_numbers` (ex. `01` vs `1`, `2A`) doit correspondre exactement à celui du CSV POP (**à confirmer** par
@@ -425,9 +420,8 @@ compte-rendu) ; c'est à la fois l'id local et le suffixe de la clé S3.
   rechoisir la même photo pendant un envoi ou après un échec.
 - `getAttachmentUrl` crée un blob typé `image/png` quel que soit le format réel (sans effet pratique pour l'affichage).
 - `watchAttachments` ignore le `signal` d'annulation (watcher jamais arrêté — sans conséquence car unique).
-- Stores IndexedDB hérités `toSync`, `toUpload`, `uploadStatus`
-  ([idb.ts](../packages/frontend/src/features/idb.ts)) : vestiges de l'ancien mécanisme, encore nettoyés mais plus
-  alimentés (à confirmer).
+- Stores IndexedDB inutilisés `toSync`, `toUpload`, `uploadStatus`
+  ([idb.ts](../packages/frontend/src/features/idb.ts)) : nettoyés mais alimentés par aucun code (à confirmer).
 
 ---
 
@@ -682,8 +676,8 @@ faut vérifier la **publication** et le **schéma frontend**, et suivre la docum
 | PowerSync → Keycloak | 8080 (interne) | Récupération du JWKS. |
 | Sondes | `/probes/liveness` (utilisé dans [docker-compose.test.yaml](../docker-compose.test.yaml)), `/probes/readiness` | À brancher sur la supervision. |
 
-`.env.dist` ne mentionne ni `PS_DATABASE_URL`, ni `POWERSYNC_PORT`, ni `VITE_POWERSYNC_URL` (il référence encore
-`ELECTRIC_PORT` / `VITE_ELECTRIC_URL`, vestiges d'ElectricSQL) ; `.env.test` est la référence la plus à jour.
+`.env.dist` ne mentionne ni `PS_DATABASE_URL`, ni `POWERSYNC_PORT`, ni `VITE_POWERSYNC_URL` (il référence
+`ELECTRIC_PORT` / `VITE_ELECTRIC_URL`, variables d'ElectricSQL sans usage) ; `.env.test` est la référence la plus à jour.
 
 ### 10.2 Ressources
 
@@ -733,7 +727,7 @@ CPU et mémoire du seul service PowerSync n'a pas été mesurée (ordre de grand
   pendant le retraitement, re-téléchargement par les clients, **et slot précédent laissé orphelin** dans PostgreSQL
   (à supprimer à la main, sinon WAL retenu indéfiniment).
 - **Retard de réplication** : exposé par le service via les métriques (option `telemetry.prometheus_port`, non
-  configurée aujourd'hui) — voir [Replication Lag](https://docs.powersync.com/maintenance-ops/replication-lag) et
+  configurée) — voir [Replication Lag](https://docs.powersync.com/maintenance-ops/replication-lag) et
   [Monitoring and Alerting](https://docs.powersync.com/maintenance-ops/monitoring-and-alerting). Le retard du slot
   (requête ci-dessus) est un indicateur équivalent côté PostgreSQL.
 - **Compactage** : les buckets accumulent l'historique des opérations ; PowerSync propose un job de compactage

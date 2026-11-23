@@ -4,7 +4,7 @@ Ce chapitre décrit la **stratégie de test** (suite Playwright de bout en bout)
 formatage, lint), les **conventions** observées dans le code et l'historique Git, puis une **procédure de prise en main**
 pas à pas pour un nouveau développeur. Il termine par les **zones non couvertes** par les tests.
 
-En résumé : la qualité repose aujourd'hui **surtout sur une suite e2e Playwright** (17 fichiers de specs, 80 tests) qui démarre
+En résumé : la qualité repose **surtout sur une suite e2e Playwright** (17 fichiers de specs, 80 tests) qui démarre
 une pile complète en Docker. Quelques **tests unitaires** vitest existent côté backend (§ 4). La CI de test est
 **manuelle**.
 
@@ -122,9 +122,10 @@ flowchart LR
 - `mockServices` : `service-1` (département `00`) et `service-multi-dept` (`01,02,03`).
 - `mockServiceInstructeur`, `mockClauses` (4 clauses du `service-1`), un monument fictif `TEST00001` « Château de Test »
   et deux objets mobiliers `OBJ00001` / `OBJ00002`.
-- `resetDatabase()` ([setup.ts](../tests/setup.ts#L6-L85)) :
+- `resetDatabase()` ([setup.ts](../tests/setup.ts#L6-L88)) :
   - **supprime** dans l'ordre des clés étrangères `whitelist`, `visited_section*`, `state_report*`,
-    `constat_validation`, `attachment_redirection`, `user_settings`, `report*`, `sent_email`, `internal_user`, `user` ;
+    `constat_validation`, `attachment_redirection`, `user_settings`, `monument_alert*`, `monument_correction`,
+    `report*`, `sent_email`, `internal_user`, `user` ;
   - **supprime les comptes Keycloak** des `mockUsers` ;
   - réinsère les données fictives et **met les 3 courriels en liste blanche**.
 
@@ -247,7 +248,7 @@ package `pdf` (rendu sans navigateur).
 
 | Outil | Configuration | État réel |
 | --- | --- | --- |
-| **TypeScript** (backend) | [packages/backend/tsconfig.json](../packages/backend/tsconfig.json) : `strict`, `noUncheckedIndexedAccess`, `module: ESNext`, `moduleResolution: bundler`, décorateurs, `jsx: react-jsx` (PDF côté serveur) | `pnpm backend check` (`tsc --noEmit`), **jamais lancé en CI**. Le build `tsup` ne vérifie pas les types. |
+| **TypeScript** (backend) | [packages/backend/tsconfig.json](../packages/backend/tsconfig.json) : `strict`, `noUncheckedIndexedAccess`, `module: ESNext`, `moduleResolution: bundler`, décorateurs, `jsx: react-jsx` (sans usage : le backend ne contient pas de JSX) | `pnpm backend check` (`tsc --noEmit`), **jamais lancé en CI**. Le build `tsup` ne vérifie pas les types. |
 | **TypeScript** (frontend) | [packages/frontend/tsconfig.json](../packages/frontend/tsconfig.json) : `strict`, `noUnusedParameters`, `allowImportingTsExtensions`, alias `#components/*`, types `vite-plugin-pwa/client`, plus [tsconfig.node.json](../packages/frontend/tsconfig.node.json) pour `vite.config.ts` et `scripts/` | `pnpm frontend check`, jamais lancé en CI. Vite ne vérifie pas les types. Il existe des `// @ts-ignore`. |
 | **TypeScript** (pdf) | [packages/pdf/tsconfig.json](../packages/pdf/tsconfig.json) : `strict`, `noUncheckedIndexedAccess` | Pas de script `check` |
 | **Prettier** 3 | [.prettierrc](../.prettierrc) : guillemets doubles, `printWidth: 120`, `trailingComma: "all"`, `semi`, 2 espaces, `proseWrap: "always"` (Markdown replié à 120 colonnes) | Pas de script `format` ni de contrôle en CI. À appliquer via l'éditeur. |
@@ -374,7 +375,7 @@ Le [README](../README.md) donne la trame, mais il est **incomplet et en partie f
 # 1. Outils : Node 20 (l'image utilise 20.11), pnpm 10, Docker + Compose v2
 corepack enable && corepack prepare pnpm@10.12.4 --activate
 
-# 2. Dépendances (canvas, utilisé côté backend, compile du natif : paquets cairo, pango,
+# 2. Dépendances (canvas, dépendance du backend inutilisée mais installée, compile du natif : paquets cairo, pango,
 #    libjpeg, giflib… requis, voir la liste apk du Dockerfile)
 pnpm install
 

@@ -13,7 +13,7 @@ Colonne « Bloquant » : nécessaire au transfert.
 | P3 | Réglages Keycloak | Realm `patrinotes` (216 comptes), thème DSFR, courriel comme identifiant. Réglages de sécurité dans le relevé transmis au ministère (hors dépôt). | Prévu avant le transfert : protection contre la force brute, politique de mot de passe, console d'administration restreinte (voir [05](05-authentification-securite.md)). | Oui |
 | P5 | Réglages PostgreSQL | PostgreSQL 17.8, `wal_level=logical`, `max_slot_wal_keep_size=-1` (sans plafond), un seul slot actif. | Plafonner le WAL retenu ; créer un rôle de réplication dédié. | Oui |
 | P6 | Publication `powersync` | 24 tables. `constat_validation` n'y est pas, alors que la configuration de synchronisation la lit (sans effet : le frontend ne l'utilise pas). `transactions` y est sans être lue. | Aligner publication et configuration (voir [14 § 3.2](14-migration-vers-infra-ministere.md#32-adaptations-de-configuration-et-de-code)). | Oui |
-| P7 | Migrations 0000 et 0001 | L'empreinte enregistrée pour 0000 ne correspond plus au fichier du dépôt, reformaté depuis ; sans effet (drizzle ne revérifie pas les empreintes). | Ne pas rejouer les migrations sur une base vide pendant le transfert : restaurer le dump (voir [14 § 5.1](14-migration-vers-infra-ministere.md#51-postgresql)). | Non |
+| P7 | Migrations 0000 et 0001 | L'empreinte enregistrée pour 0000 ne correspond pas au fichier du dépôt ; sans effet (drizzle ne revérifie pas les empreintes). | Ne pas rejouer les migrations sur une base vide pendant le transfert : restaurer le dump (voir [14 § 5.1](14-migration-vers-infra-ministere.md#51-postgresql)). | Non |
 | P8 | Stockage objet | Scaleway, bucket `patrinotes-prod`, région `fr-par`, non listable anonymement. L'origine de production est autorisée en CORS (`GET, HEAD, POST, PUT, DELETE`), les autres origines testées sont refusées. | Relever dans la console Scaleway la liste exacte des origines CORS, la taille du bucket et la présence d'un versionnage. | Oui |
 | P9 | Domaine d'envoi | `smtp.tem.scw.cloud:465`, expéditeur `noreply@patrinotes.beta.gouv.fr`. SPF correct, DMARC en `p=none`, sélecteur DKIM non trouvé publiquement. | Relever le DKIM dans la console Scaleway ; passer DMARC en `quarantine`. Mettre à jour la politique de confidentialité (elle cite Brevo et OVH). | Non |
 | P10 | Sentry | Instance `sentry.incubateur.net` (beta.gouv), frontend seulement : le backend n'a pas de DSN. | Brancher le backend (prévu : définir `SENTRY_DSN`) ; vérifier la rétention ; choisir l'outil cible avec le ministère (M11). | Non |
@@ -51,12 +51,11 @@ Ces questions relèvent du ministère. Elles sont reformulées pour lui dans [19
 | F8 | Lettre d'information | La liste des abonnés est exportée et importée dans Brevo à la main par l'équipe. |
 | F9 | Échelle du plan de situation | 1:5000, considérée correcte (non mesurée sur papier). |
 | F10 | Affichage direct des photos POP | Accepté par l'équipe POP. |
-| F11 | Durée des liens publics (courriels et bouton « Copier le lien » d'un constat) | 90 jours, voulu. Le texte des courriels (« lien valable 1 mois ») est corrigé pour dire 90 jours (PR #88, en relecture). |
+| F11 | Durée des liens publics (courriels et bouton « Copier le lien » d'un constat) | 90 jours, voulu ; les courriels l'indiquent, y compris après acceptation par le valideur. |
 
 ## 4. Techniques, vérifiées en exécutant le code
 
 | # | Question | Réponse |
 | --- | --- | --- |
-| T3 | `react-pdf-html` 2.1.5 fonctionne-t-il sans le correctif de l'ancien patch ? | Oui : la 2.1.5 contient la correction ; le patch a été retiré. |
-| T4 | Peut-on générer un PDF hors ligne sur un appareil neuf ? | Oui, avec les données présentes sur l'appareil (vérifié en test : constat et compte-rendu créés hors ligne). Le plan de situation IGN est omis hors ligne, avec un avertissement. |
+| T4 | Peut-on générer un PDF hors ligne sur un appareil neuf ? | Oui, avec les données présentes sur l'appareil (vérifié manuellement : constat et compte-rendu créés hors ligne). Le plan de situation IGN est omis hors ligne, avec un avertissement. |
 | T7 | Une photo dont la ligne arrive avant le fichier finit-elle par s'afficher ? | Oui : nouvel essai toutes les 30 s, affichage sans action dès que le fichier est en S3. |
