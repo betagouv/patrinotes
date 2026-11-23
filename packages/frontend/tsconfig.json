@@ -22,7 +22,7 @@
     "paths": {
       "#components/*": ["./src/components/*"]
     },
-    "types": ["vite-plugin-pwa/client"]
+    "types": ["vite-plugin-pwa/client", "geojson"]
   },
   "include": ["src/**/*.tsx", "src/**/*.ts"],
   "exclude": [

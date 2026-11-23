@@ -1,4 +1,4 @@
-import maplibregl from "maplibre-gl";
+import { maplibregl } from "./maplibre";
 
 const TILE_LOAD_TIMEOUT_MS = 30000;
 
@@ -51,7 +51,7 @@ export function waitForIdle(map: maplibregl.Map, makeError: (failure: MapLoadFai
       fail({ error: event.error });
     };
 
-    const onData = (event: maplibregl.MapDataEvent & { tile?: unknown }) => {
+    const onData = (event: maplibregl.MapSourceDataEvent | maplibregl.MapStyleDataEvent) => {
       if (event.dataType === "source" && event.tile) loadedTiles++;
     };
 

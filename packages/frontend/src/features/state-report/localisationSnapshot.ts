@@ -1,4 +1,4 @@
-import maplibregl from "maplibre-gl";
+import { maplibregl } from "../map/maplibre";
 import { waitForIdle } from "../map/waitForIdle";
 
 export class MapOfflineError extends Error {

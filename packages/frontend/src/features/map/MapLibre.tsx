@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import maplibregl, { FilterSpecification, StyleSpecification } from "maplibre-gl";
+import { maplibregl } from "./maplibre";
+import { FilterSpecification, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Box, IconButton, Popover } from "@mui/material";
 import { fr } from "@codegouvfr/react-dsfr";

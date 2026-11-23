@@ -1,4 +1,4 @@
-import maplibregl from "maplibre-gl";
+import { maplibregl } from "./maplibre";
 import {
   CADASTRE_SOURCE_URL,
   SATELLITE_STYLE,

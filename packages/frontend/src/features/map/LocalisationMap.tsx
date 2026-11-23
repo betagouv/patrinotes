@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import maplibregl, { GeoJSONSource } from "maplibre-gl";
+import { maplibregl } from "./maplibre";
+import { GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Box, Popover } from "@mui/material";
 import { RadioButtons } from "@codegouvfr/react-dsfr/RadioButtons";
