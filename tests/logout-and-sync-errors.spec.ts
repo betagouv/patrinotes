@@ -77,6 +77,31 @@ test.describe("Déconnexion et écritures non enregistrées", () => {
     await expect(page.locator("input[name=email]")).toBeVisible();
   });
 
+  test("logging out revokes the offline token at Keycloak", async ({ page, request }) => {
+    test.setTimeout(60_000);
+    const backend = `http://localhost:${process.env.BACKEND_PORT ?? "3011"}`;
+    await signup({ page, user: mockUsers[0] });
+
+    // a second session of the same agent: once revoked, its refresh token is refused
+    const session = await (
+      await request.post(`${backend}/api/login-user`, {
+        data: { email: mockUsers[0].email, password: mockUsers[0].password },
+      })
+    ).json();
+    const revoke = await request.post(`${backend}/api/logout`, { data: { refreshToken: session.refreshToken } });
+    expect(await revoke.json()).toEqual({ revoked: true });
+    const refresh = await request.post(`${backend}/api/refresh-token`, { data: { refreshToken: session.refreshToken } });
+    expect(refresh.status()).toBe(401);
+    // an unknown token is not an error for the agent leaving
+    expect((await request.post(`${backend}/api/logout`, { data: { refreshToken: "inconnu" } })).ok()).toBeTruthy();
+
+    // the interface asks for the revocation when the agent logs out
+    const logoutRequest = page.waitForRequest((req) => req.url().endsWith("/api/logout") && req.method() === "POST");
+    await page.getByRole("button", { name: "Déconnexion" }).first().click();
+    expect((await logoutRequest).postDataJSON().refreshToken).toEqual(expect.any(String));
+    await expect(page).toHaveURL(/\/connexion$/, { timeout: 20_000 });
+  });
+
   test("shows a write refused by the server until the agent acknowledges it", async ({ page }) => {
     test.setTimeout(60_000);
     await signup({ page, user: mockUsers[0] });

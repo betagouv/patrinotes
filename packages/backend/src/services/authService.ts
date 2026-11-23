@@ -69,6 +69,34 @@ export class AuthService {
     };
   }
 
+  /**
+   * Logout: revokes the refresh token at Keycloak. It is an offline token (scope offline_access), valid for weeks:
+   * revoking it ends the offline session, so a copy of it left on the device can no longer be used (SEC-10).
+   * Never fails: an unknown or already revoked token is not an error for the agent leaving.
+   */
+  async revokeRefreshToken(refreshToken: string) {
+    try {
+      await authApi("/protocol/openid-connect/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          token: refreshToken,
+          token_type_hint: "refresh_token",
+          client_id: ENV.VITE_AUTH_CLIENT_ID,
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+          client_assertion: getClientAssertion(),
+        }).toString(),
+      });
+      return { revoked: true };
+    } catch (error) {
+      if (error instanceof FetchError) {
+        debug("refresh token revocation refused", error.status, error.data?.error, error.data?.error_description);
+        return { revoked: false };
+      }
+      throw error;
+    }
+  }
+
   async getUserFromToken(token: string) {
     const checked = await this.checkToken(token);
     const user = await db

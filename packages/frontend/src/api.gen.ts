@@ -106,6 +106,14 @@ export namespace Endpoints {
       expiresAt: string;
     };
   };
+  export type post_Apilogout = {
+    method: "POST";
+    path: "/api/logout";
+    parameters: {
+      body: { refreshToken: string };
+    };
+    response: { revoked: boolean };
+  };
   export type post_ApiloginUser = {
     method: "POST";
     path: "/api/login-user";
@@ -793,6 +801,7 @@ export type EndpointByMethod = {
   post: {
     "/api/refresh-token": Endpoints.post_ApirefreshToken;
     "/api/create-user": Endpoints.post_ApicreateUser;
+    "/api/logout": Endpoints.post_Apilogout;
     "/api/login-user": Endpoints.post_ApiloginUser;
     "/api/change-service": Endpoints.post_ApichangeService;
     "/api/send-reset-password": Endpoints.post_ApisendResetPassword;

@@ -5,6 +5,8 @@ import { Box, Dialog, DialogTitle } from "@mui/material";
 import { useSyncExternalStore } from "react";
 import { menuActor } from "../menu/menuMachine";
 import { getPendingLocalChanges, PendingLocalChanges, resetLocalData } from "../menu/resetLocalData";
+import { apiStore } from "../../ApiStore";
+import { unauthenticatedApi } from "../../api";
 
 /**
  * Logging out empties the device, like "Réinitialiser les données locales" in the help menu: the next person
@@ -46,8 +48,22 @@ export const requestLogout = async () => {
 
 const logout = async () => {
   setState({ step: "logging-out" });
+  await revokeSession();
   // Offline caches hold the app code only: keeping them lets the sign-in page load without network.
   await resetLocalData({ redirectTo: "/connexion", keepAppCache: true });
+};
+
+/**
+ * Asks the server to revoke the offline token at Keycloak, so a copy left on the device is useless. Never blocks the
+ * logout: skipped offline, errors ignored, and the device is emptied after 3 seconds at most.
+ */
+const revokeSession = async () => {
+  const refreshToken = apiStore.refreshToken;
+  if (!refreshToken || !navigator.onLine) return;
+  await Promise.race([
+    unauthenticatedApi.post("/api/logout", { body: { refreshToken } }).catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, 3_000)),
+  ]);
 };
 
 export const LogoutDialogs = () => {
