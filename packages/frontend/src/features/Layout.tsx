@@ -14,11 +14,13 @@ import { useStatus } from "@powersync/react";
 import { Header } from "#components/MUIDsfr.tsx";
 import { menuActor } from "./menu/menuMachine";
 import { useServiceType } from "./useServiceType";
+import { RejectedWritesBanner } from "./sync/RejectedWritesBanner";
 
 export const Layout = ({ children }: PropsWithChildren) => {
   const location = useLocation();
   const noProvider = ["/connexion", "/inscription"].includes(location.pathname);
   const shouldFooterTakeFullheight = location.pathname.startsWith("/constat/");
+  const isLoggedIn = useIsLoggedIn();
 
   return (
     <Box display="flex" position="relative" flexDirection={"column"} height="100vh" sx={{ overflowX: "hidden" }}>
@@ -30,6 +32,7 @@ export const Layout = ({ children }: PropsWithChildren) => {
         ]}
       />
       <AppHeader noProvider={noProvider} />
+      {isLoggedIn ? <RejectedWritesBanner /> : null}
       <Box component="main" id="content" flex={shouldFooterTakeFullheight ? undefined : "1"}>
         {children}
       </Box>

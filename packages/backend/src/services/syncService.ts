@@ -124,7 +124,8 @@ export class SyncService {
         level: "warning",
         extra: { table, op, id, userId: user.id, reason },
       });
-      return { success: false, error: "Forbidden" };
+      // The reason names a table, an operation or columns, never row data: the client shows it to the agent.
+      return { success: false, error: "Forbidden", reason };
     };
 
     // unknown tables are refused before any query, so their name never reaches SQL
