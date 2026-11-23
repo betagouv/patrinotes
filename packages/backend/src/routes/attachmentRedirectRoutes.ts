@@ -2,11 +2,14 @@ import { Type, type FastifyPluginAsyncTypebox } from "@fastify/type-provider-typ
 import { db } from "../db/db";
 import { generatePresignedUrl, getObjectByKey } from "../services/uploadService";
 import { differenceInDays } from "date-fns";
+import { publicRateLimit } from "../features/rateLimit";
 
 export const attachmentRedirectPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.get(
     "/attachment/:id/:filename?",
     {
+      // public short links (emails): limited per IP
+      onRequest: publicRateLimit,
       schema: {
         params: Type.Object({ id: Type.String(), filename: Type.Optional(Type.String()) }),
       },

@@ -7,6 +7,7 @@ import { getGroupedStateReportMailName } from "@patrinotes/pdf/constat";
 import { sendStateReportMail, sendValidationResultMail } from "../features/mail";
 import { v4 } from "uuid";
 import { AppError } from "../features/errors";
+import { publicRateLimit } from "../features/rateLimit";
 
 const optionalString = Type.Optional(Type.Union([Type.String(), Type.Null()]));
 
@@ -23,6 +24,9 @@ const validationInfoTSchema = Type.Object({
 });
 
 export const validationPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
+  // public pages opened from the validator's email: limited per IP
+  fastify.addHook("onRequest", publicRateLimit);
+
   fastify.get(
     "/constat-validation/:token",
     {

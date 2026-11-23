@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncTypebox, Static } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { authenticate } from "./authMiddleware";
+import { authRateLimit } from "../features/rateLimit";
 
 export const userPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.post("/change-service", { schema: changeServiceTSchema, preHandler: authenticate }, async (request) => {
@@ -15,11 +16,11 @@ export const userPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     return { createdAt };
   });
 
-  fastify.post("/send-reset-password", { schema: sendResetPasswordTSchema }, async (request) => {
+  fastify.post("/send-reset-password", { schema: sendResetPasswordTSchema, preHandler: authRateLimit }, async (request) => {
     return request.services.user.generateResetLink(request.body.email) as Promise<{ message: string }>;
   });
 
-  fastify.post("/reset-password", { schema: resetPasswordTSchema }, async (request) => {
+  fastify.post("/reset-password", { schema: resetPasswordTSchema, preHandler: authRateLimit }, async (request) => {
     return request.services.user.resetPassword(request.body);
   });
 };

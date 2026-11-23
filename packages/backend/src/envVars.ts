@@ -40,6 +40,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string(),
   // extra browser origins allowed by CORS, comma-separated (FRONTEND_URL is always allowed)
   CORS_ORIGINS: z.string().optional(),
+  // reverse proxies in front of the backend (Traefik: 1), so request.ip is the client's address (rate limits)
+  TRUST_PROXY_HOPS: stringOrNumberAsNumber.default(1),
   BACKEND_URL: z.string(),
   EMAIL_HOST: z.string(),
   EMAIL_PORT: stringOrNumberAsNumber.default(465),

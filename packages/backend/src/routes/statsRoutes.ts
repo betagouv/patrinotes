@@ -3,6 +3,7 @@ import { db } from "../db/db";
 import { sql } from "kysely";
 import { authenticateAdmin } from "./adminMiddleware";
 import { getJobCategory, JOB_CATEGORIES } from "../features/jobCategories";
+import { publicRateLimit } from "../features/rateLimit";
 
 const regionCodes: Record<string, string> = {
   "Île-de-France": "IDF",
@@ -29,6 +30,8 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/public",
     {
+      // public statistics page: limited per IP
+      onRequest: publicRateLimit,
       schema: {
         querystring: Type.Object({
           from: Type.Optional(Type.String()),
@@ -208,6 +211,8 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/accounts",
     {
+      // public statistics page: limited per IP
+      onRequest: publicRateLimit,
       schema: {
         response: {
           200: Type.Array(
@@ -249,6 +254,8 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/documents",
     {
+      // public statistics page: limited per IP
+      onRequest: publicRateLimit,
       schema: {
         response: {
           200: Type.Array(

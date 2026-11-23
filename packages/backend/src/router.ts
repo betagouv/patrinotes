@@ -25,11 +25,17 @@ import { adminPlugin } from "./routes/adminRoutes";
 import { statsPlugin } from "./routes/statsRoutes";
 import { attachmentRedirectPlugin } from "./routes/attachmentRedirectRoutes";
 import { checkReadiness } from "./features/health";
+import { RateLimitError, registerRateLimits } from "./features/rateLimit";
 
 const debug = makeDebug("fastify");
 
 export const initFastify = async () => {
-  const fastifyInstance = fastify({ routerOptions: { maxParamLength: 5000 } })
+  const fastifyInstance = fastify({
+    routerOptions: { maxParamLength: 5000 },
+    // Behind Traefik: request.ip is the address Traefik saw (last X-Forwarded-For hop), not Traefik's own.
+    // Trusting a hop count rather than every proxy keeps a client from choosing its IP with its own header.
+    trustProxy: (_address, hop) => hop < ENV.TRUST_PROXY_HOPS,
+  })
     .setValidatorCompiler(TypeBoxValidatorCompiler)
     .withTypeProvider<TypeBoxTypeProvider>();
 
@@ -58,6 +64,8 @@ export const initFastify = async () => {
 
   registerSecurityHeaders(fastifyInstance, { hsts: isProd });
 
+  await registerRateLimits(fastifyInstance);
+
   fastifyInstance.addHook("onRequest", async (request) => {
     // route pattern only: the URL may hold validation tokens, attachment ids, reset links or query parameters
     debug(request.method, request.routeOptions?.url ?? "(unknown route)");
@@ -77,6 +85,10 @@ export const initFastify = async () => {
   fastifyInstance.register(
     async (instance) => {
       instance.setErrorHandler((error: FastifyError, request, reply) => {
+        if (error instanceof RateLimitError) {
+          // expected under load or abuse: not an application error, not sent to Sentry
+          return reply.status(429).header("Retry-After", String(Math.max(error.retryAfter, 1))).send({ error: error.message });
+        }
         if ((error as unknown) instanceof FetchError) {
           // the message holds the full upstream URL, which may contain an email (Keycloak user lookups)
           const fetchError = error as unknown as FetchError;

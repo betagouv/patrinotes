@@ -1,16 +1,17 @@
 import { FastifyPluginAsyncTypebox, Type } from "@fastify/type-provider-typebox";
 import { userTSchema } from "../services/authService";
+import { authRateLimit } from "../features/rateLimit";
 
 export const authPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
   fastify.post("/refresh-token", { schema: refreshTokenTSchema }, async (request) => {
     return request.services.auth.refreshToken(request.body.refreshToken);
   });
 
-  fastify.post("/create-user", { schema: createUserTSchema }, async (request) => {
+  fastify.post("/create-user", { schema: createUserTSchema, preHandler: authRateLimit }, async (request) => {
     return request.services.auth.createUser(request.body);
   });
 
-  fastify.post("/login-user", { schema: loginTSchema }, async (request) => {
+  fastify.post("/login-user", { schema: loginTSchema, preHandler: authRateLimit }, async (request) => {
     return request.services.auth.loginUser(request.body);
   });
 };
