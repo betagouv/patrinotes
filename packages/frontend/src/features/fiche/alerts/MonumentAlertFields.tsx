@@ -90,6 +90,8 @@ export const getRecipientsError = (value: RecipientsValue) => {
   if (!recipients.length) return "Renseignez au moins un courriel destinataire.";
   const invalid = recipients.filter((email) => !checkEmailValid(email));
   if (invalid.length) return `Courriel invalide : ${invalid.join(", ")}`;
+  // same limit as the server (one email sent to at most 20 recipients)
+  if (recipients.length > 20) return "20 destinataires au maximum par envoi.";
   return null;
 };
 

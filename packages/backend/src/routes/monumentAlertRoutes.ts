@@ -6,6 +6,7 @@ import { sendMonumentAlertEmail } from "../features/mail";
 import { makeDebug } from "../features/debug";
 import { sentry } from "../features/sentry";
 import { authenticate } from "./authMiddleware";
+import { assertRecipientLimit } from "../features/recipients";
 
 const debug = makeDebug("monument-alert");
 
@@ -44,6 +45,7 @@ export const monumentAlertPlugin: FastifyPluginAsyncTypebox = async (fastify, _)
 
     const recipients = getMonumentAlertRecipients(alert);
     if (!recipients.length) throw new AppError(400, "Aucun destinataire valide pour cette alerte");
+    assertRecipientLimit(recipients);
 
     const attachments = await db
       .selectFrom("monument_alert_attachment")

@@ -17,6 +17,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getPDFInMailName } from "@patrinotes/pdf";
 import { createAttachmentRedirection } from "../features/attachmentRedirection";
 import { canEditReport, canEditStateReport, findReport, findStateReport } from "../features/sync/syncPolicy";
+import { assertRecipientLimit } from "../features/recipients";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -138,6 +139,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     if (!(await canEditReport(db, request.user!, await findReport(db, reportId)))) {
       throw new AppError(403, "Vous ne pouvez pas envoyer ce compte-rendu");
     }
+    assertRecipientLimit(rawRecipients);
 
     const pdf = await request.services.upload.getAttachment({ filePath: pdfPath });
 
@@ -298,6 +300,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     if (!(await canEditStateReport(db, user, stateReportQuery))) {
       throw new AppError(403, "Vous ne pouvez pas envoyer ce constat");
     }
+    // the constat and each alert sent with it: checked before anything is stored or sent
+    assertRecipientLimit(request.body.recipients);
+    for (const alert of alerts ?? []) {
+      if (alert.should_send) assertRecipientLimit(getAlertRecipients(alert));
+    }
 
     // rapport groupé (MH complexe): the PDF holds every constat of the rapport, all of them are sent with it
     const groupedReports = await getGroupedStateReports({
@@ -421,14 +428,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         const alertStateReport = getAlertReport(alert.id)! as Selectable<Database["state_report"]>;
 
         try {
-          const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
-          const additionalEmails = alert.additional_emails
-            ? alert.additional_emails.split(",").map((e) => e.trim().toLowerCase())
-            : [];
-
-          const alertRecipients = Array.from(
-            new Set([...mandatoryEmails.map((e) => e.email.toLowerCase()), ...additionalEmails]),
-          );
+          const alertRecipients = getAlertRecipients(alert);
 
           const alertAttachments = alertsAttachmentsQuery.filter((a) => a.state_report_alert_id === alert.id);
 
@@ -558,6 +558,15 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     });
     return url;
   });
+};
+
+/** Recipients of a constat alert: its mandatory services' emails and the additional ones, deduplicated. */
+export const getAlertRecipients = (alert: { mandatory_emails: string | null; additional_emails: string | null }) => {
+  const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
+  const additionalEmails = alert.additional_emails
+    ? alert.additional_emails.split(",").map((e) => e.trim().toLowerCase())
+    : [];
+  return Array.from(new Set([...mandatoryEmails.map((e) => e.email.toLowerCase()), ...additionalEmails]));
 };
 
 type StateReportRow = Selectable<Database["state_report"]> & { createdByName?: string | null };

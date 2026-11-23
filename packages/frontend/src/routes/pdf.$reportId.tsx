@@ -13,7 +13,7 @@ import { Editor } from "@tiptap/react";
 import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { v4 } from "uuid";
-import { api } from "../api";
+import { api, getErrorMessage } from "../api";
 import sentImage from "../assets/sent.svg";
 import { EmailInput } from "../components/EmailInput";
 import { getDiff } from "../components/SyncForm";
@@ -28,7 +28,7 @@ import { TextEditorContext, TextEditorContextProvider } from "../features/text-e
 import { TextEditorToolbar } from "../features/text-editor/TextEditorToolbar";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { format } from "date-fns";
-import { Button, Center } from "#components/MUIDsfr.tsx";
+import { Alert, Button, Center } from "#components/MUIDsfr.tsx";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { useSyncStream } from "@powersync/react";
@@ -310,6 +310,7 @@ export const PDF = () => {
               }
               reportId={report?.id}
               buttons={buttons}
+              sendError={generatePdfMutation.error}
             />
             <Center sx={{ overflowY: "auto" }} width="100%" height="100%" maxHeight="100%">
               <Stack width="800px" height="100%" mt="24px" mb="64px">
@@ -449,11 +450,14 @@ const EditBanner = ({
   title,
   buttons,
   reportId,
+  sendError,
 }: {
   mode: Mode;
   title: ReactNode;
   buttons: ReactNode;
   reportId?: string;
+  /** failure of the last send, shown under the recipients (server message, e.g. too many recipients) */
+  sendError?: unknown;
 }) => {
   const router = useRouter();
   const navigate = useNavigate();
@@ -558,6 +562,13 @@ const EditBanner = ({
                   nativeInputProps={{ style: { backgroundColor: "white" } }}
                   onValueChange={(value) => form.setValue("recipients", value.join(","))}
                 />
+                {sendError ? (
+                  <Alert
+                    severity="error"
+                    sx={{ mt: "16px" }}
+                    title={<Typography fontWeight="regular">{getErrorMessage(sendError)}</Typography>}
+                  />
+                ) : null}
               </Box>
             ) : null}
             <Flex
