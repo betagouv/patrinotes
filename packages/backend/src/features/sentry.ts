@@ -31,11 +31,24 @@ const beforeSend = <T extends Sentry.Event>(event: T): T => {
   return event;
 };
 
+/**
+ * SENTRY_RELEASE when set (for instance the commit SHA passed by the CI), otherwise the commit Coolify exposes
+ * for builds from a git source, otherwise the backend package version.
+ */
+const getRelease = () => {
+  if (ENV.SENTRY_RELEASE) return ENV.SENTRY_RELEASE;
+  if (process.env.SOURCE_COMMIT) return `patrinotes-backend@${process.env.SOURCE_COMMIT}`;
+  if (process.env.npm_package_version) return `patrinotes-backend@${process.env.npm_package_version}`;
+  return undefined;
+};
+
 isDev
   ? null
   : ENV.SENTRY_DSN
     ? Sentry.init({
         dsn: ENV.SENTRY_DSN,
+        environment: ENV.SENTRY_ENVIRONMENT ?? ENV.NODE_ENV,
+        release: getRelease(),
         tracesSampleRate: 0.1,
         sendDefaultPii: false,
         // console breadcrumbs would carry our debug logs (emails, Keycloak errors) into every event

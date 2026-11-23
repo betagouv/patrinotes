@@ -19,6 +19,7 @@ const envSchema = z.object({
   VITE_AUTH_REALM: z.string(),
   VITE_AUTH_CLIENT_ID: z.string(),
   VITE_SENTRY_DSN: z.string().optional(),
+  VITE_SENTRY_ENVIRONMENT: z.string().optional(),
 });
 
 const isSW = typeof window === "undefined";

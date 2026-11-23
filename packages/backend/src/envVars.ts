@@ -52,6 +52,8 @@ const envSchema = z.object({
   MINIO_PUBLIC_URL: z.string().optional(),
   MINIO_BUCKET: z.string(),
   SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_RELEASE: z.string().optional(),
   VITE_AUTH_CLIENT_ID: z.string(),
   VITE_AUTH_URL: z.string(),
   VITE_AUTH_REALM: z.string(),

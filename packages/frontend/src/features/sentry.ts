@@ -17,6 +17,9 @@ isDev
   : ENV.VITE_SENTRY_DSN
     ? Sentry.init({
         dsn: ENV.VITE_SENTRY_DSN,
+        environment: ENV.VITE_SENTRY_ENVIRONMENT ?? "production",
+        // version.js, written at build time (scripts/setVersion.ts)
+        release: typeof window !== "undefined" && window.APP_VERSION ? `patrinotes-frontend@${window.APP_VERSION}` : undefined,
         tracesSampleRate: 0.1,
         sendDefaultPii: false,
         // no console logs or console breadcrumbs: they used to carry tokens and synced data
