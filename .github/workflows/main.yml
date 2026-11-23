@@ -93,6 +93,8 @@ jobs:
           context: .
           push: true
           target: backend
+          build-args: |
+            SENTRY_RELEASE=${{ github.sha }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:backend
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:backend-${{ github.sha }}

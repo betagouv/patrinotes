@@ -37,6 +37,9 @@ COPY db/ ./db/
 COPY --from=with-deps /usr/src/app/packages/backend/node_modules ./packages/backend/node_modules
 
 RUN pnpm backend build
+# Commit SHA passed by the CI (build-args), read by Sentry as the release; empty in local builds
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 # Migration puis serveur ; le conteneur s'arrête si la migration échoue (voir docker-start.sh)
 CMD ["sh", "/usr/src/app/packages/backend/docker-start.sh"]
 
