@@ -37,7 +37,7 @@ flowchart LR
     end
 
     SMTP["Relais SMTP"]
-    EXT["Services externes<br/>data.gouv.fr, POP, Sentry, Matomo, fonds de carte"]
+    EXT["Services externes<br/>POP, API Dataspace des UP, Sentry, Matomo, fonds de carte"]
 
     UI -->|HTTPS| RP
     RP --> FE
@@ -93,8 +93,8 @@ sequenceDiagram
 
 Les règles d'accès se trouvent dans [sync-config.yaml](../powersync/sync-config.yaml). Elles reposent sur le claim `email` du jeton. Un agent reçoit :
 
-- les données globales : clauses nationales (`service_id = 'ALL'`), photos POP ;
-- les données de **son service** : service, collègues, clauses, e-mails suggérés, comptes-rendus (`report`), constats (`state_report`) et leurs sous-objets ;
+- les données globales : clauses nationales (`service_id = 'ALL'`) ;
+- les données de **son service** : service, collègues, clauses, e-mails suggérés, comptes-rendus (`report`), constats (`state_report`) et leurs sous-objets, alertes et corrections des fiches monument ;
 - ses données personnelles : délégations, réglages, *snapshots* PDF ;
 - le patrimoine (`pop_immeubles`, `pop_objets`) **de ses départements** (`user_dept`) ;
 - les pièces jointes d'un constat ou d'un compte-rendu, **seulement à l'ouverture** (flux à abonnement explicite).
@@ -117,19 +117,19 @@ sequenceDiagram
     P-->>A: confirme et diffuse aux autres agents du service
 ```
 
-> **Point d'attention.** Le backend n'applique **aucun contrôle de droits ni aucune validation** sur ces écritures : seule la table `internal_user` est interdite. En cas d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
+> **Point d'attention.** Le backend contrôle chaque écriture : table et colonnes autorisées, service de l'utilisateur, auteur du document ou délégation. Un constat envoyé n'accepte plus de modification, sauf sa suppression. En cas de refus ou d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
 
 ### 3.3 Documents : PDF et e-mail
 
 1. L'agent rédige le compte-rendu ou le constat, éventuellement hors ligne.
-2. Le PDF est généré **uniquement dans le navigateur** avec le package `pdf`. Il n'y a plus de rendu côté serveur depuis le commit `fd87550`.
+2. Le PDF est généré **uniquement dans le navigateur** avec le package `pdf`. Le backend ne fait aucun rendu PDF.
 3. Le navigateur dépose le PDF **directement sur S3**, avec une URL pré-signée valable 1 h que fournit le backend. Le stockage objet doit donc être joignable depuis les postes des agents, avec une configuration CORS adaptée.
 4. Le backend enregistre la pièce jointe, crée un **lien court public** `BACKEND_URL/attachment/:id/:nom`, valable 90 jours sans authentification, et envoie un e-mail par SMTP. L'e-mail contient ce lien, pas le PDF.
 5. Pour un constat soumis à validation (« envoi sous-couvert »), un validateur reçoit d'abord un lien à jeton, valable 7 jours.
 
 ### 3.4 Données patrimoniales
 
-Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). Il récupère aussi les URL des photos par *scraping* de `pop.culture.gouv.fr`. Ces données alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Voir [07](07-donnees-externes-et-stockage.md).
+Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images` contient des URL de photos POP, lues par les fiches objet ; elle est vide aujourd'hui, et l'affichage des images POP passera par le protocole IIIF. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
 
 ## 4. Organisation du dépôt
 
@@ -168,3 +168,5 @@ Taille indicative : environ 35 000 lignes de TypeScript et TSX, hors code géné
 | Branche `compte-rendu-vif` | `push` sur la branche | `ghcr.io/<dépôt>-compte-rendu-vif:*`. Branche historique, à confirmer. |
 
 Le déploiement actuel (VPS avec Coolify) récupère ces images. Le détail est dans [10 — Infrastructure](10-infrastructure-et-deploiement.md).
+
+La production déploie la branche `main`, la préproduction la branche `development`.

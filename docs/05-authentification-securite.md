@@ -2,9 +2,9 @@
 
 Ce document décrit comment Patrinotes authentifie ses utilisateurs, comment les droits d'accès aux données sont appliqués (backend, PowerSync, stockage S3), quelles données personnelles sont traitées et où, et dresse un bilan orienté **homologation de sécurité** (démarche ANSSI / RGS) : points forts et points de vigilance.
 
-Il s'adresse à l'équipe sécurité (RSSI, SSI du ministère), aux équipes d'exploitation chargées du transfert et aux développeurs. Les constats viennent de la lecture du code ; ce qui n'a pas pu être vérifié (configuration de production, réglages de l'instance Keycloak réelle) est signalé « à confirmer ». Les routes citées sont détaillées dans [04 — Backend et API](04-backend-api.md).
+Il s'adresse à l'équipe sécurité (RSSI, SSI du ministère), aux équipes d'exploitation chargées du transfert et aux développeurs. Les constats viennent de la lecture du code de `development` et du relevé de production du 17/11/2026 (lecture seule de Coolify, des bases PostgreSQL et de Keycloak) ; ce qui n'a pas pu être vérifié est signalé « à confirmer ». Les routes citées sont détaillées dans [04 — Backend et API](04-backend-api.md).
 
-> **Résumé pour un lecteur non technique.** Les agents se connectent avec un courriel et un mot de passe gérés par Keycloak, un logiciel libre de gestion des identités. Seules les adresses inscrites sur une **liste blanche** peuvent créer un compte. Chaque agent ne reçoit sur son appareil que les données de **son service** (UDAP, CRMH…). En revanche, le serveur contrôle peu les **écritures** et l'accès aux **fichiers** : un agent connecté et malveillant pourrait techniquement modifier des données d'autres services ou changer de service librement. Ces points sont à corriger avant une homologation (voir §12).
+> **Résumé pour un lecteur non technique.** Les agents se connectent avec un courriel et un mot de passe gérés par Keycloak, un logiciel libre de gestion des identités. Seules les adresses inscrites sur une **liste blanche** peuvent créer un compte. Chaque agent ne reçoit sur son appareil que les données de **son service** (UDAP, CRMH…). Le serveur contrôle aussi les **écritures** et l'accès aux **fichiers** par service, auteur et délégation. Restent à traiter avant une homologation : le durcissement de Keycloak en production, l'absence de limitation de débit, et le changement de service libre (voir §12).
 
 ---
 
@@ -51,21 +51,37 @@ Points clés :
 
 ### 2.1 Rôle et version
 
-Keycloak (image `quay.io/keycloak/keycloak:26.3.5` dans [docker-compose.yaml](../docker-compose.yaml)) stocke les comptes et les mots de passe. Sa base est une base `keycloak` sur le même serveur PostgreSQL que l'application ([db/init/1_create_keycloak.sql](../db/init/1_create_keycloak.sql)).
+Keycloak stocke les comptes et les mots de passe. En développement (image `26.3.5` de [docker-compose.yaml](../docker-compose.yaml)), sa base est une base `keycloak` sur le même serveur PostgreSQL que l'application ([db/init/1_create_keycloak.sql](../db/init/1_create_keycloak.sql)). **En production** : Keycloak **26.7.2**, avec sa propre instance PostgreSQL 16, sur `https://auth.patrinotes.beta.gouv.fr` (projet Coolify `keycloak-auth`).
 
 ### 2.2 Modèle de realm (environnement de développement et de test)
 
-Le fichier [tests/realm-template.json](../tests/realm-template.json) est importé au démarrage du conteneur (`start-dev --import-realm`) après substitution des variables d'environnement par [tests/keycloak-entrypoint.sh](../tests/keycloak-entrypoint.sh) (`envsubst`). **Il ne décrit que l'environnement local et de test** ; la configuration du realm de production n'est pas dans le dépôt (*à confirmer et à exporter lors du transfert*).
+Le fichier [tests/realm-template.json](../tests/realm-template.json) est importé au démarrage du conteneur (`start-dev --import-realm`) après substitution des variables d'environnement par [tests/keycloak-entrypoint.sh](../tests/keycloak-entrypoint.sh) (`envsubst`). **Il ne décrit que l'environnement local et de test** ; le realm de production est décrit au § 2.2 bis. Il faudra l'exporter lors du transfert.
 
 | Élément | Valeur dans le modèle | Commentaire |
 | --- | --- | --- |
-| Realm | `master` | Le realm d'administration de Keycloak est utilisé comme realm applicatif. À éviter en production (*le nom réel est donné par `VITE_AUTH_REALM`, à confirmer*) |
+| Realm | `master` | Le realm d'administration de Keycloak est utilisé comme realm applicatif. La production utilise un realm dédié, `patrinotes` |
 | `accessTokenLifespan` | **60 secondes** | Le client rafraîchit donc son jeton environ toutes les 48 s (§3.3) |
 | `registrationEmailAsUsername` | `true` | |
 | Profil utilisateur déclaratif | `username`, `email`, `firstName`, `lastName` **modifiables par l'utilisateur** | Voir le risque lié au courriel, §4.3 |
-| Politique de mot de passe, protection contre la force brute | **Non définies** | Valeurs par défaut de Keycloak : pas de politique, détection de force brute désactivée (*à confirmer en production*) |
+| Politique de mot de passe, protection contre la force brute | **Non définies** | Valeurs par défaut de Keycloak : pas de politique, détection de force brute désactivée. Pour la production, voir § 2.2 bis |
 | Client applicatif `${AUTH_CLIENT_ID}` | Confidentiel, authentification `client-secret-jwt`, *direct access grants* activé, compte de service activé, `redirectUris` et `webOrigins` = `/*` | Seul le *password grant* et le *refresh* sont utilisés en pratique |
 | Client d'administration `${AUTH_ADMIN_CLIENT_ID}` | Compte de service avec les rôles `manage-users`, `view-users`, `query-users`, `manage-authorization` sur `master-realm` et `manage-account` | Utilisé par le backend pour créer des comptes et changer des mots de passe |
+
+### 2.2 bis Realm de production (relevé de production du 17/11/2026)
+
+Le realm de l'application est `patrinotes` (216 utilisateurs). Pas de fédération d'annuaire.
+
+> Les réglages de sécurité relevés en production (politique de mot de passe, force brute, durées de session, exposition de la console d'administration) ne sont pas reproduits dans ce dépôt public. Ils figurent dans le relevé de sécurité transmis au ministère, avec les durcissements recommandés.
+
+| Réglage (realm `patrinotes`) | Valeur | Commentaire |
+| --- | --- | --- |
+| Émetteur | `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes` | Identique dans la configuration PowerSync de production |
+| Inscription par Keycloak | désactivée | L'inscription passe par l'API d'administration |
+| Courriel comme identifiant, connexion par courriel | activés | Corrige la règle A9 en production : `username` = courriel |
+| `sslRequired` | `external` | |
+| Thèmes | DSFR (connexion et compte) | |
+| SMTP | `smtp.tem.scw.cloud:465`, expéditeur `noreply@patrinotes.beta.gouv.fr` | |
+| Clients | `patrinotes-prod` et `patrinotes-prod-admin` (confidentiels, flux standard, *direct access grants* et compte de service sur les deux) ; `account` et `account-console` **actifs** | L'espace « mon compte » est accessible aux agents |
 
 Variables d'environnement côté backend : `VITE_AUTH_URL`, `VITE_AUTH_REALM`, `VITE_AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_ADMIN_CLIENT_ID`, `AUTH_ADMIN_CLIENT_SECRET`. Côté frontend : `VITE_AUTH_URL`, `VITE_AUTH_REALM`, `VITE_AUTH_CLIENT_ID` (déclarées mais non utilisées pour la connexion).
 
@@ -76,9 +92,9 @@ Le fichier [keycloak-theme.jar](../keycloak-theme.jar) à la racine est une arch
 - un thème **`DSFR`** pour les types `login` et `account` (pages de connexion et espace « mon compte » aux couleurs de l'État) ;
 - un thème **`account-v1`** (console de compte « ancienne génération », extension *phasetwo* `keycloak-account-v1`).
 
-Il n'est **monté dans aucun fichier docker-compose** du dépôt : il doit être copié dans `/opt/keycloak/providers/` de l'instance Keycloak et sélectionné dans la configuration du realm. Les variables `DSFR_THEME_HOME_URL`, `DSFR_THEME_SERVICE_TITLE` et `DSFR_THEME_BRAND_TOP` de [.env.dist](../.env.dist) servent vraisemblablement à paramétrer ce thème (*à confirmer*). Le code source du thème n'est pas dans le dépôt (`keycloak-theme/*` est dans `.gitignore`).
+Il n'est **monté dans aucun fichier docker-compose** du dépôt : il doit être copié dans `/opt/keycloak/providers/` de l'instance Keycloak et sélectionné dans la configuration du realm. En production, il est monté depuis `/home/ubuntu/keycloak-theme.jar` ; il est identique au fichier du dépôt. Les variables `DSFR_THEME_HOME_URL`, `DSFR_THEME_SERVICE_TITLE` et `DSFR_THEME_BRAND_TOP` de [.env.dist](../.env.dist) servent vraisemblablement à paramétrer ce thème (*à confirmer*). Le code source du thème n'est pas dans le dépôt (`keycloak-theme/*` est dans `.gitignore`).
 
-Comme la connexion passe par le formulaire de l'application et non par la page Keycloak, le thème `login` n'est visible que si un utilisateur accède directement à Keycloak (par exemple à l'espace « compte »). *À confirmer : usage réel de l'espace compte Keycloak en production.*
+Comme la connexion passe par le formulaire de l'application et non par la page Keycloak, le thème `login` n'est visible que si un utilisateur accède directement à Keycloak, par exemple à l'espace « compte », qui est **actif** en production (usage réel par les agents inconnu).
 
 ### 2.4 Usage du client d'administration
 
@@ -117,7 +133,7 @@ sequenceDiagram
 Détails ([authService.ts](../packages/backend/src/services/authService.ts#L125-L163)) :
 
 - **Authentification du client** : le backend envoie à la fois `client_secret` et une `client_assertion` (JWT HS256 signé avec `AUTH_CLIENT_SECRET`, `iss`=`sub`=client id, `aud` = URL du realm, `exp` = +30 s, `jti` aléatoire) — méthode `client-secret-jwt` ([authService.ts](../packages/backend/src/services/authService.ts#L275-L287)).
-- **`scope=offline_access`** : le jeton de rafraîchissement est un **jeton hors ligne** (*offline token*). Il ne dépend pas de la session SSO et reste valable jusqu'à son expiration d'inactivité hors ligne (30 jours par défaut dans Keycloak, *à confirmer*). C'est ce qui permet l'usage hors ligne prolongé de la PWA.
+- **`scope=offline_access`** : le jeton de rafraîchissement est un **jeton hors ligne** (*offline token*). Il ne dépend pas de la session SSO et reste valable jusqu'à son expiration d'inactivité hors ligne (réglage du realm, § 2.2 bis). C'est ce qui permet l'usage hors ligne prolongé de la PWA.
 - `expiresAt` est calculé **côté backend** à 80 % de la durée de vie ([authService.ts](../packages/backend/src/services/authService.ts#L301)).
 - Erreurs : le message Keycloak « Invalid user credentials » est traduit en « Courriel ou mot de passe incorrect ».
 
@@ -140,9 +156,9 @@ Détails ([authService.ts](../packages/backend/src/services/authService.ts#L125-
 
 `useLogout` ([AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx#L211-L220)) efface les jetons localement. **Aucun appel à Keycloak** n'est fait : le jeton hors ligne reste valable côté serveur jusqu'à son expiration. Les données synchronisées (base SQLite locale) et les photos en cache **restent sur l'appareil** (*à confirmer : purge éventuelle ailleurs dans le frontend*).
 
-### 3.5 Route `/api/authenticate` (flux par code, inutilisé)
+### 3.5 Connexion par redirection OIDC
 
-Le backend expose un échange de **code d'autorisation** (`redirect_uri = FRONTEND_URL/auth-callback`) qui **crée automatiquement** un utilisateur local rattaché au service `no-service` **sans vérifier la liste blanche** ([authService.ts](../packages/backend/src/services/authService.ts#L95-L111)). Le frontend actuel ne l'utilise pas (aucune route `/auth-callback`). Cette route reste néanmoins accessible : toute personne disposant d'un compte Keycloak valide dans le realm pourrait obtenir un compte applicatif. À supprimer ou à protéger.
+Aucune route n'échange de code d'autorisation OIDC : le seul moyen de créer un compte est `/api/create-user`, soumis à la liste blanche. La connexion par ProConnect et par code fait l'objet d'une PR en relecture (#82), non fusionnée.
 
 ---
 
@@ -151,11 +167,11 @@ Le backend expose un échange de **code d'autorisation** (`redirect_uri = FRONTE
 ### 4.1 Liste blanche
 
 - Table `whitelist(email, createdAt)`.
-- Vérifiée **uniquement** dans `/api/create-user`, par égalité stricte (sensible à la casse) ([authService.ts](../packages/backend/src/services/authService.ts#L336-L348)). Message d'erreur : « Votre courriel n'est pas autorisé… écrire à contact@patrinotes.beta.gouv.fr ».
+- Vérifiée **uniquement** dans `/api/create-user`, sans tenir compte de la casse ni des espaces (`lower(trim(email))`) ; le courriel est enregistré en minuscules ([authService.ts](../packages/backend/src/services/authService.ts)). Message d'erreur : « Votre courriel n'est pas autorisé… écrire à contact@patrinotes.beta.gouv.fr ».
 - **Désactivée si `NODE_ENV=development`** (fonction `assertEmailInWhitelist`, retour immédiat). Attention : sans `NODE_ENV` défini, l'application se comporte comme en production et la liste blanche est active (voir [04 §3.2](04-backend-api.md)).
 - Gérée par les administrateurs via `/api/admin/whitelist` (ajout, suppression, export).
 - **Retirer une adresse de la liste ne désactive pas le compte** : la connexion, le rafraîchissement et la synchronisation ne consultent pas la liste blanche. Pour bloquer un agent, il faut désactiver son compte dans Keycloak (et attendre l'expiration de son jeton d'accès).
-- Contournements possibles : `/api/authenticate` (§3.5) et l'écriture directe dans la table `whitelist` via `/api/upload-data` (§8).
+- La table `whitelist` n'est pas modifiable par la synchronisation (§8).
 
 ### 4.2 Rôles
 
@@ -166,7 +182,7 @@ Le backend expose un échange de **code d'autorisation** (`redirect_uri = FRONTE
 
 - Les rôles **ne viennent pas de Keycloak** (aucun rôle ou groupe du jeton n'est lu).
 - Aucune route ne permet de nommer un administrateur : il faut modifier la base directement.
-- La table `internal_user` est la seule protégée en écriture via la synchronisation, précisément pour empêcher l'auto-promotion (test [sync.spec.ts](../tests/sync.spec.ts)).
+- `internal_user` n'est pas modifiable via la synchronisation, ce qui empêche l'auto-promotion (tests [sync.spec.ts](../tests/sync.spec.ts) et [syncPolicy.test.ts](../packages/backend/src/features/sync/syncPolicy.test.ts)), comme toute table absente de la liste des tables modifiables (§8).
 - Le contrôle `authenticateAdmin` est fait **à chaque requête** en base (pas de cache).
 
 ### 4.3 Identité pivot : le courriel
@@ -174,7 +190,7 @@ Le backend expose un échange de **code d'autorisation** (`redirect_uri = FRONTE
 L'utilisateur applicatif est retrouvé par `user.email = claim email du jeton`. Conséquences pour la sécurité :
 
 - Le profil Keycloak du modèle autorise l'utilisateur à **modifier son propre courriel** (espace compte). La vérification du courriel (`email_verified`) n'est pas contrôlée par le backend. *À confirmer : si l'espace compte est accessible en production, un utilisateur pourrait prendre l'adresse d'un compte applicatif qui n'existe pas (ou plus) dans Keycloak.*
-- Un utilisateur peut aussi modifier la colonne `user.email` en base via `/api/upload-data` (§8), ce qui permet, en théorie, de **se substituer à un autre utilisateur**, y compris un administrateur : il suffit de libérer sa propre adresse, puis d'attribuer son adresse à la ligne `user` de la victime. Le contrôle administrateur se fait sur l'`id` de la ligne retrouvée par courriel. **Point critique à corriger.**
+- Par la synchronisation, un utilisateur ne peut modifier que son propre profil, et seulement `name` et `job` : `user.email` n'est pas modifiable (§8).
 
 ### 4.4 Mot de passe
 
@@ -192,22 +208,22 @@ Chaque utilisateur appartient à **un** service (`user.service_id`) : UDAP, CRMH
 
 | Flux PowerSync | Données | Filtre |
 | --- | --- | --- |
-| `global_stream` | `clause_v2` communes, `pictures` | `service_id = 'ALL'` ; `pictures` **sans filtre** |
-| `service_stream` | Service, membres du service (id, nom), services instructeurs, clauses, courriels envoyés et suggérés | Service de l'utilisateur |
+| `global_stream` | `clause_v2` communes | `service_id = 'ALL'` |
+| `service_stream` | Service, membres du service (id, nom), services instructeurs, clauses, courriels envoyés et suggérés, corrections des fiches (`monument_correction`) | Service de l'utilisateur |
 | `user_stream` | Délégations, `pdf_snapshot`, `user_settings` | Utilisateur |
 | `reports_stream` | Comptes-rendus, constats, sections visitées, alertes, état des validations (sans le jeton) | Service de l'utilisateur |
-| `state_report_attachments_stream`, `report_attachments_stream` | Pièces jointes | Paramètre `state_report_id` / `report_id` **fourni par le client, sans contrôle de service** |
+| `reports_stream` (suite) | Alertes et annotations des fiches (`monument_alert`, avec leurs photos) | Service de l'utilisateur |
+| `state_report_attachments_stream`, `report_attachments_stream` | Pièces jointes d'un document | Paramètre `state_report_id` / `report_id` fourni par le client, **et document du service de l'utilisateur** |
 | `pop_stream` | Monuments et objets POP | Départements de l'utilisateur (`user_dept`) |
 
 Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans [08 — Synchronisation](08-synchronisation-hors-ligne.md).
 
+> **Production** : le `sync-config.yaml` est **déposé à la main** dans Coolify et n'est pas déployé avec l'application ; il doit être recopié à chaque modification.
+
 ### 5.2 Limites du cloisonnement
 
-1. **Le service n'est pas une frontière de sécurité.** `/api/change-service` permet à tout utilisateur connecté de rejoindre **n'importe quel service** existant, sans validation. Il reçoit alors toutes les données de ce service. C'est un choix fonctionnel (agents itinérants, multi-services ?) qui doit être assumé ou encadré (*à confirmer avec le métier*).
-2. **Les écritures ne sont pas cloisonnées** : voir §8.
-3. **Les fichiers ne sont pas cloisonnés** : voir §7.
-4. Les routes PDF (`GET /api/pdf/report`, `GET /api/pdf/state-report`, `POST …`) ne vérifient pas que le document appartient au service de l'utilisateur.
-5. Les flux de pièces jointes acceptent n'importe quel identifiant de constat ou de compte-rendu (les identifiants sont des UUID difficiles à deviner, mais il n'y a pas de contrôle).
+1. **Le service n'est pas une frontière de sécurité.** `/api/change-service` permet à tout utilisateur connecté de rejoindre **n'importe quel service** existant, sans validation. Il reçoit alors toutes les données de ce service. C'est un **choix assumé** : chaque changement est tracé dans `transactions` (`op = CHANGE_SERVICE`, ancien et nouveau service).
+2. Les écritures, les fichiers et les routes PDF sont cloisonnés par service : voir §7 et §8. Exception voulue : `GET /api/pdf/state-report` et `/api/state-report/previous` donnent accès aux constats envoyés d'**autres services** sur un monument situé dans un département du service (historique des fiches).
 
 ---
 
@@ -215,12 +231,12 @@ Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans 
 
 | Mesure | État |
 | --- | --- |
-| Validation des schémas | TypeBox sur la plupart des routes (types simples, pas de format `email`, pas de longueur maximale). Les routes `/api/upload/attachment*` lisent `request.query` sans schéma. `/api/upload-data` accepte `data: Any` |
+| Validation des schémas | TypeBox sur la plupart des routes (types simples, pas de format `email`, pas de longueur maximale). Les routes `/api/upload/attachment*` lisent `request.query` sans schéma, mais le chemin est contrôlé (format, pas de `..`). `/api/upload-data` accepte `data: Any`, dont seuls les noms de colonnes sont vérifiés |
 | Injection SQL | Kysely paramètre les valeurs et échappe les identifiants. Les seules chaînes SQL brutes (`sql\`…\``) des statistiques interpolent des paramètres liés. Pas d'injection SQL identifiée |
-| Injection HTML dans les courriels | **Non protégée** : titres, commentaires, préconisations et commentaire du validateur sont insérés tels quels dans le HTML |
+| Injection HTML dans les courriels | **Non protégée** : titres, commentaires, préconisations et commentaire du validateur sont insérés tels quels dans le HTML. Seul le courriel des alertes de fiche échappe les saisies |
 | CORS | `origin: "*"` ([router.ts](../packages/backend/src/router.ts#L43-L45)), sans cookies. L'authentification par en-tête limite le risque CSRF, mais n'importe quel site peut appeler l'API avec un jeton volé |
 | Limitation de débit | **Aucune** (`@fastify/rate-limit` absent). Les routes publiques (connexion, inscription, réinitialisation, validation, liens courts, statistiques publiques) sont exposées sans limite. La protection contre la force brute dépend de Keycloak |
-| En-têtes de sécurité | Aucun (`helmet` absent) côté backend. À traiter au niveau du proxy inverse (*à confirmer*) |
+| En-têtes de sécurité | Aucun (`helmet` absent) côté backend. À traiter au niveau du proxy inverse (Traefik en production, configuration des en-têtes non relevée) |
 | Taille des requêtes | Limite par défaut de Fastify (1 Mio pour le corps JSON). `maxParamLength` porté à 5000. Le plugin multipart (15 Mo) est enregistré mais aucune route ne l'utilise |
 | Messages d'erreur | Message générique en production ; pile d'appel renvoyée en développement uniquement |
 | Interface Swagger | Non exposée |
@@ -232,15 +248,17 @@ Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans 
 ### 7.1 Organisation
 
 - Un seul bucket (`MINIO_BUCKET`). Les pièces jointes (photos, plans, PDF) sont sous le préfixe `attachment/`. Les PDF suivent le chemin `attachment/<id du document>/compte_rendu_<epoch>.pdf` ou `…/constat_d_etat_<epoch>.pdf`.
-- Le bucket est **privé** dans l'environnement local (`minio-init` ne définit pas de politique anonyme). *À confirmer en production.* L'accès se fait par URL présignées (SigV4) ou en relais par le backend.
+- Le bucket est **privé** : en local (`minio-init` ne définit pas de politique anonyme) comme en production, où le listage anonyme de `patrinotes-prod` (Scaleway, `fr-par`) est refusé. L'accès se fait par URL présignées (SigV4) ou en relais par le backend.
+- **CORS en production** : seule l'origine `https://app.patrinotes.beta.gouv.fr` a été trouvée autorisée (GET, HEAD, POST, PUT, DELETE, avec `Allow-Credentials`) ; les origines de préproduction, locales et quelconques sont refusées. La liste complète est à lire dans la console Scaleway.
 - Le client S3 utilise des clés d'accès statiques (`MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY`) avec la politique `readwrite` en local.
 
 ### 7.2 Mécanismes d'accès
 
 | Mécanisme | Authentification | Durée | Contrôle |
 | --- | --- | --- | --- |
-| URL PUT présignée (`/api/upload/attachment/presigned-url`, `/api/pdf/*/upload-url`) | Jeton | 1 h | **Aucun** sur le chemin (choisi par le client), la taille ou le type. Un utilisateur peut écraser n'importe quel objet sous `attachment/` |
-| Lecture relayée (`/api/upload/attachment?filePath=`) | Jeton | — | **Aucun** contrôle de propriété ; tout objet sous `attachment/` est lisible par tout utilisateur connecté qui connaît son chemin |
+| URL PUT présignée (`/api/upload/attachment/presigned-url`) | Jeton | 1 h | Le premier segment du chemin désigne le document (compte-rendu, constat, section, alerte, alerte de fiche) : refus si ce document est d'un autre service. **Acceptée si le document n'est pas encore en base** (photos déposées avant la ligne). Ni taille ni type contrôlés |
+| URL PUT présignée des PDF (`/api/pdf/*/upload-url`) | Jeton | 1 h | Chemin imposé par le serveur ; refus si le document existe et que l'utilisateur ne peut pas le modifier (auteur ou délégation) |
+| Lecture relayée (`/api/upload/attachment?filePath=`) | Jeton | — | Document du service de l'utilisateur seulement (403 sinon, 404 si inconnu) |
 | Lien court `/attachment/:id` (courriels) | **Aucune** | **90 jours** | Identifiant base62 d'un entier aléatoire de 48 bits (`crypto.randomInt`). Pas de limitation de débit contre l'énumération. Le fichier est relayé ou une URL présignée (1 h) est renvoyée |
 | URL présignée GET dans le courriel d'acceptation de validation | Aucune | 7 jours | — |
 | Page de validation `/api/constat-validation/:token` | Jeton de validation (UUID v4) | 7 jours tant qu'en attente, **illimitée ensuite** | — |
@@ -251,21 +269,25 @@ Les noms de fichiers sont générés par le client (identifiants UUID) ou par le
 
 ## 8. Écritures via la synchronisation : contrôle d'accès
 
-`POST /api/upload-data` ([syncService.ts](../packages/backend/src/services/syncService.ts)) applique les opérations `PUT`, `PATCH` et `DELETE` envoyées par le client sur **la table nommée par le client**, pour **l'identifiant fourni par le client**, avec **les colonnes fournies par le client**. La seule restriction est la liste noire `["internal_user"]`.
+`POST /api/upload-data` ([syncService.ts](../packages/backend/src/services/syncService.ts)) applique les opérations `PUT`, `PATCH` et `DELETE` envoyées par le client. Chaque opération passe par [syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts) :
 
-Conséquences (déduites du code, non testées en exploitation) — un utilisateur authentifié peut :
+| Contrôle | Règle |
+| --- | --- |
+| Tables | **Liste blanche** : documents et leurs lignes filles, alertes et corrections des fiches, `delegation`, `user_settings`, `user` (son profil), `service` (son service), `service_instructeurs`, `suggested_email` (suppression seule), `pdf_snapshot`. `whitelist`, `internal_user`, `user_dept`, `transactions`, `attachment_redirection`, `constat_validation`, `pop_*` sont refusées |
+| Colonnes | Liste par table ; une colonne inconnue fait refuser l'opération. Les colonnes de propriété et d'état d'envoi (`service_id`, auteur, `attachment_id`, `pdf_size`, `validation_status`, `sent_at`) sont fixées par le serveur |
+| Service | La ligne doit appartenir au service de l'utilisateur |
+| Auteur et délégation | Un compte-rendu, un constat ou une alerte de fiche n'est modifiable que par son auteur (ou le rédacteur d'un compte-rendu) ou par une personne à qui l'auteur a donné délégation. Une alerte de fiche envoyée n'est plus modifiable ; une annotation peut être complétée depuis son constat jusqu'à son envoi |
+| Constat envoyé | Un constat dont le PDF existe n'est plus modifiable (ni ses sections, alertes et pièces jointes), sauf s'il a été refusé par le validateur ; seul l'indicateur de suppression `disabled` reste modifiable ([syncService.ts](../packages/backend/src/services/syncService.ts)) |
 
-- modifier ou supprimer des comptes-rendus, constats, alertes et pièces jointes **d'autres services** ;
-- ajouter des adresses dans `whitelist` ;
-- modifier `user` (y compris `email` et `service_id` d'autres utilisateurs → usurpation, §4.3) ;
-- modifier `service` (adresses de courriel institutionnelles utilisées pour les alertes) ;
-- créer des `attachment_redirection` vers n'importe quel objet S3 ;
-- modifier `constat_validation` (statut, destinataires) ;
-- effacer ou falsifier le journal `transactions`.
+Un refus est répondu en HTTP 200 `{success:false}` (comme une erreur SQL, pour ne pas bloquer la file du client) et signalé à Sentry. Le détail des règles est dans [04 §6.2](04-backend-api.md).
 
-**Recommandation** : remplacer la liste noire par une **liste blanche de tables** (celles du schéma frontend) et, pour chaque table, vérifier que la ligne visée appartient au service de l'utilisateur (`service_id`) et que les colonnes modifiées sont autorisées. Les tables `user`, `service`, `whitelist`, `transactions`, `attachment_redirection`, `constat_validation`, `user_dept`, `pop_*` ne devraient pas être modifiables par ce biais.
+Risques restants :
 
-Point positif : chaque opération est **tracée** dans `transactions` avec l'identifiant de l'utilisateur avant d'être appliquée, ce qui donne une piste d'audit, mais elle est elle-même modifiable par le même canal.
+- `data` n'est pas validé en valeur (seulement en noms de colonnes) ;
+- tout membre d'un service peut modifier les paramètres du service, dont les adresses de courriel institutionnelles utilisées pour les alertes (choix assumé) ;
+- un refus est invisible pour l'agent (voir [08](08-synchronisation-hors-ligne.md)).
+
+Chaque opération est **tracée** dans `transactions` avec l'identifiant de l'utilisateur avant d'être appliquée. Cette table n'est pas modifiable par les clients.
 
 ---
 
@@ -275,15 +297,15 @@ Point positif : chaque opération est **tracée** dans `transactions` avec l'ide
 | --- | --- | --- |
 | `AUTH_ADMIN_CLIENT_SECRET` | Backend → API d'administration Keycloak | **Très élevée** (gestion de tous les comptes) |
 | `AUTH_CLIENT_SECRET` | Backend → Keycloak (secret client et clé HMAC des assertions) | Élevée |
-| `DATABASE_URL`, `POSTGRES_PASSWORD` | Backend, migrations, PowerSync (`PS_DATABASE_URL`), Keycloak (`KC_DB_PASSWORD`) | Élevée. Le même compte PostgreSQL sert l'application, PowerSync et Keycloak dans la configuration locale |
+| `DATABASE_URL`, `POSTGRES_PASSWORD` | Backend, migrations, PowerSync (`PS_DATABASE_URL`), Keycloak (`KC_DB_PASSWORD`) | Élevée. Le même compte PostgreSQL sert l'application, PowerSync et Keycloak dans la configuration locale. En production, Keycloak a sa propre instance ; un rôle de réplication dédié à PowerSync est recommandé |
 | `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY` | Backend | Élevée (lecture et écriture de tous les fichiers) |
 | `EMAIL_USER`, `EMAIL_PASSWORD` | Backend → SMTP | Moyenne (usurpation de l'expéditeur) |
 | `SENTRY_DSN`, `VITE_SENTRY_DSN` | Backend, frontend | Faible (le DSN frontend est public par nature) |
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | Aucun | Inutilisés ; à retirer |
 
-- Les secrets sont fournis par **variables d'environnement** (fichier `.env` à la racine en développement, configuration Coolify en production — *à confirmer*). Aucun gestionnaire de secrets n'est intégré au code.
+- Les secrets sont fournis par **variables d'environnement** (fichier `.env` à la racine en développement, variables Coolify en production). Aucun gestionnaire de secrets n'est intégré au code.
 - Aucun secret n'est commité : `.env.dist` ne contient que des noms. Les variables `VITE_*` sont **publiques** par construction : `createEnvFile.ts` écrit toutes les variables `VITE_*` dans `env.js`, servi au navigateur. Il ne faut jamais nommer un secret `VITE_…`.
-- Connexions **sans TLS** vers PostgreSQL (`ssl: false` en dur dans [db.ts](../packages/backend/src/db/db.ts#L11) et `drizzle.config.ts`) et entre PowerSync et PostgreSQL (`sslmode: disable`). Acceptable sur un réseau privé de conteneurs, à revoir si la base est distante.
+- Connexions **sans TLS** vers PostgreSQL (`ssl: false` en dur dans [db.ts](../packages/backend/src/db/db.ts#L11) et `drizzle.config.ts`) et entre PowerSync et PostgreSQL (`sslmode: disable`). C'est le cas en production (réseau Docker interne), où MongoDB tourne aussi **sans authentification**. Acceptable sur un réseau privé de conteneurs, à revoir si la base est distante.
 - La télémétrie PowerSync n'est **pas désactivée** (`disable_telemetry_sharing: false`, et la clé est d'ailleurs mal indentée sous `client_auth`). À désactiver pour l'hébergement ministériel.
 
 ---
@@ -301,7 +323,8 @@ Point positif : chaque opération est **tracée** dans `transactions` avec l'ide
 | Demandeur d'un compte-rendu | Particuliers | `report.applicantName`, `applicantAddress`, `applicantEmail`, `contacts`, `personnes_presentes`, champs libres | IndexedDB, PDF sur S3, courriels |
 | Propriétaire d'un monument et son représentant | Particuliers ou personnes morales | `state_report.proprietaire`, `proprietaire_email`, `proprietaire_representant`, `proprietaire_representant_email`, `personnes_presentes`, champs libres | IndexedDB, PDF, courriels |
 | Validateur | Agents | `user_settings.validation_nom`, `validation_prenom`, `validation_email`, `constat_validation.validator_email`, `comment` | — |
-| Courriels par défaut | Partenaires | `user_settings.default_emails`, `state_report_alert.mandatory_emails`, `additional_emails`, `service.courriel_*` | — |
+| Courriels par défaut | Partenaires | `user_settings.default_emails`, `state_report_alert.mandatory_emails`, `additional_emails`, `monument_alert.mandatory_emails`, `additional_emails`, `service.courriel_*` | — |
+| Auteur d'une alerte ou annotation de fiche | Agents | `monument_alert.created_by_name` | IndexedDB des agents du service |
 | Photos | Personnes éventuellement visibles | S3 `attachment/…` | Cache local, courriels d'alerte |
 | Traces d'usage | Agents | `transactions` (copie intégrale de **toutes** les écritures, dont tous les champs ci-dessus), `constat_pdf_download` | — |
 | Contacts de services instructeurs | Agents d'autres administrations | `service_instructeurs.email`, `tel` | — |
@@ -313,20 +336,19 @@ Autres emplacements : la base MongoDB interne de PowerSync (copie des données s
 
 - **Conservation** : la [politique de confidentialité](../packages/frontend/src/routes/politique-confidentialite.tsx) annonce 2 ans après la dernière connexion pour les comptes et comptes-rendus, et 1 an pour la traçabilité. **Aucun mécanisme de purge** n'existe dans le code (ni tâche planifiée, ni suppression de compte). La table `transactions` et les liens courts ne sont jamais purgés. La suppression des documents est **logique** (`disabled = true`).
 - **Dernière connexion** : elle n'est pas enregistrée dans la base applicative (seulement dans les sessions Keycloak), ce qui empêche d'appliquer la durée annoncée.
-- **CGU** : le champ `cgu` est demandé à l'inscription mais **n'est pas enregistré**. `newsletter` est enregistré dans `internal_user`, sans export vers Brevo dans le code (*à confirmer : export manuel ?*).
-- **Sous-traitants** : la politique de confidentialité cite OVH et Brevo. Le code utilise aussi **Sentry** (backend et frontend) et Scaleway (stockage objet et SMTP), qui n'y figurent pas. L'hébergement actuel est un VPS privé (Coolify). La liste est à mettre à jour lors du transfert.
+- **CGU** : le champ `cgu` est demandé à l'inscription mais **n'est pas enregistré**. `newsletter` est enregistré dans `internal_user` ; l'équipe exporte la liste des abonnés et l'importe dans Brevo à la main (aucun export dans le code).
+- **Sous-traitants** : la politique de confidentialité cite OVH et Brevo. Le code utilise aussi **Sentry** et Scaleway (stockage objet, SMTP, sauvegardes), qui n'y figurent pas. En production, Sentry n'est configuré que côté frontend, sur `sentry.incubateur.net` (instance beta.gouv). OVH n'héberge que le DNS. L'hébergement actuel est un VPS privé (Coolify). La liste est à mettre à jour lors du transfert.
 - **Droits des personnes** : aucune fonction d'export ou de suppression des données d'un agent. Les données des tiers (propriétaires, demandeurs) sont dans des champs libres et des PDF.
 
 ### 10.3 Données personnelles dans les journaux et la supervision
 
 | Source | Contenu | Fichier |
 | --- | --- | --- |
-| Sentry backend, toute erreur sous `/api` | **Corps complet de la requête** : y compris **mots de passe** en cas d'erreur sur `/api/login-user`, `/api/create-user`, `/api/reset-password`, et données des documents | [router.ts](../packages/backend/src/router.ts#L60) |
-| Sentry backend, messages d'information | Destinataires et objet complet du compte-rendu ou du constat (noms et courriels des propriétaires…) à **chaque** envoi | [mail.ts](../packages/backend/src/features/mail.ts#L34) |
-| Sentry frontend | `consoleLoggingIntegration` remonte tous les `console.log/info/warn/error`. Or le connecteur écrit `console.log("applying operation", payload)` (toutes les écritures) et `console.log("token expired, refreshing...", {...apiStore})`, qui contient **le jeton d'accès, le jeton de rafraîchissement hors ligne et le profil** | [sentry.ts](../packages/frontend/src/features/sentry.ts), [Connector.ts](../packages/frontend/src/db/Connector.ts#L36) |
-| Journaux backend (`debug`, actifs par défaut) | Courriel à la connexion et à l'inscription, destinataires des alertes, URL des requêtes (chemins de fichiers) ; `console.log` du détail des erreurs Keycloak | [authService.ts](../packages/backend/src/services/authService.ts#L126) |
+| Sentry backend (pas encore branché en production ; branchement prévu) | Exceptions avec méthode et modèle de route ; message de refus d'écriture de synchronisation (table, opération, identifiants, motif). `beforeSend` retire corps, cookies, chaîne de requête et utilisateur, et masque les clés de type mot de passe, jeton, secret, courriel, destinataires | [sentry.ts](../packages/backend/src/features/sentry.ts), [router.ts](../packages/backend/src/router.ts) |
+| Sentry frontend | Exceptions seulement : plus de journaux console ni de fil d'Ariane console ; `beforeSend` retire l'utilisateur et masque les mêmes clés | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
+| Journaux backend (`debug`, actifs par défaut) | Courriel à la connexion et à l'inscription, destinataires des alertes, URL des requêtes (chemins de fichiers) ; `console.log` du détail des erreurs Keycloak | [authService.ts](../packages/backend/src/services/authService.ts) |
 
-Le **transfert de jetons d'accès et de rafraîchissement vers Sentry** est le point le plus sensible : il permettrait à toute personne ayant accès au projet Sentry de se connecter au nom d'un agent pendant la durée de validité du jeton hors ligne.
+Sentry ne reçoit ni corps de requête, ni cookies, ni jetons, ni journaux console. En production, seul le frontend envoie aujourd'hui des événements. Le masquage repose sur les **noms de clés** : une donnée personnelle rangée sous une autre clé (un titre, un nom) n'est pas masquée.
 
 ---
 
@@ -357,7 +379,9 @@ La CI ([.github/workflows](../.github/workflows)) construit et publie les images
 - Jetons d'accès **courts** (60 s dans le modèle de realm) et rafraîchissement centralisé côté client, sans requêtes concurrentes.
 - **Liste blanche** des adresses autorisées à créer un compte, gérée par les administrateurs.
 - **Cloisonnement en lecture** par service et par département dans les règles PowerSync ; le jeton de validation n'est pas synchronisé.
-- Accès aux fichiers par **URL présignées** à durée limitée ; bucket non public (local).
+- **Cloisonnement en écriture** : liste blanche de tables et de colonnes, contrôle du service, de l'auteur et des délégations, testé par des tests unitaires et de bout en bout.
+- Accès aux fichiers par **URL présignées** à durée limitée, réservé au service du document ; bucket privé.
+- Sentry filtré (`beforeSend`, pas de données personnelles par défaut).
 - Requêtes SQL **paramétrées** (Kysely), schémas d'entrée TypeBox sur la plupart des routes.
 - Piste d'audit des écritures (`transactions`) et des téléchargements de PDF.
 - Liens de réinitialisation aléatoires, hachés, à usage unique, valables 24 h.
@@ -368,27 +392,32 @@ La CI ([.github/workflows](../.github/workflows)) construit et publie les images
 
 | Priorité | Constat | Recommandation |
 | --- | --- | --- |
-| **Critique** | `/api/upload-data` : écriture sur toute table et toute ligne, sauf `internal_user` (§8) ; usurpation possible d'un compte, y compris administrateur, via `user.email` (§4.3) | Liste blanche de tables et de colonnes, contrôle du `service_id` et de la propriété, interdiction des tables sensibles. Identifier l'utilisateur par le `sub` Keycloak plutôt que par le courriel |
-| **Critique** | Jetons d'accès et de rafraîchissement hors ligne, mots de passe et données personnelles envoyés à **Sentry** (§10.3) | Supprimer les `console.log` sensibles, retirer `consoleLoggingIntegration` ou filtrer avec `beforeSend`, ne pas joindre `request.body`, réduire `tracesSampleRate` |
-| **Élevée** | Fichiers S3 lisibles et écrasables par tout utilisateur connecté (§7) | Vérifier la propriété (service) avant d'émettre une URL présignée ; imposer le chemin, la taille et le type |
-| **Élevée** | `/api/change-service` sans contrôle : n'importe quel agent peut lire les données de n'importe quel service (§5.2) | Valider le rattachement (liste d'affectations, validation par un administrateur) |
-| **Élevée** | `/api/authenticate` crée des comptes sans liste blanche (§3.5) | Supprimer la route ou y appliquer la liste blanche |
-| **Élevée** | Aucune limitation de débit, pas de protection contre la force brute dans le modèle de realm, pas de politique de mot de passe côté serveur | `@fastify/rate-limit` ou limitation au proxy ; activer la détection de force brute et une politique de mot de passe dans Keycloak |
+| **Élevée** | Aucune limitation de débit dans le backend | `@fastify/rate-limit` ou limitation au proxy |
+| **Élevée** | Durcissement de Keycloak et de l'infrastructure de production (§ 2.2 bis) | Détail et recommandations dans le relevé de sécurité transmis au ministère, hors dépôt |
 | **Élevée** | Dépendances vulnérables, Fastify 4 en fin de vie, CI sans tests ni audit (§11) | Plan de montée de version, `pnpm audit` et analyse d'image en CI |
+| Moyenne | `/api/change-service` sans contrôle : n'importe quel agent peut lire les données de n'importe quel service (§5.2) | Choix assumé, changements journalisés. À réexaminer pour l'homologation |
+| Moyenne | Utilisateur identifié par son courriel et non par le `sub` Keycloak (§4.3) | Stocker le `sub` et l'utiliser comme identité pivot |
+| Moyenne | Fichiers déposés sans contrôle de taille ni de type ; dépôt accepté pour un document pas encore en base (§7) | Limiter taille et type dans l'URL présignée ; contrôler le contenu |
+| Moyenne | Fichiers de configuration PowerSync déposés à la main dans Coolify (§ 5.1) | Les déployer avec l'application |
+| Moyenne | Pas de rôle de réplication dédié pour PowerSync ; MongoDB sans authentification dans la configuration fournie | Rôle de réplication dédié, limité aux tables publiées ; authentification MongoDB |
 | Moyenne | Liens courts publics de 90 jours (48 bits d'aléa), page de validation consultable sans limite après décision | Raccourcir la durée, augmenter l'aléa, limiter le débit, expirer les jetons de validation traités |
-| Moyenne | Contenus utilisateur insérés sans échappement dans les courriels officiels ; un utilisateur peut envoyer des courriels à des destinataires arbitraires depuis l'adresse de l'application | Échapper le HTML ; journaliser et limiter les envois |
+| Moyenne | Écritures refusées ou en erreur perdues sans message pour l'agent (§8) | Répondre en erreur, afficher l'échec |
+| Moyenne | Contenus utilisateur insérés sans échappement dans les courriels officiels (sauf alertes de fiche) ; un utilisateur peut envoyer des courriels à des destinataires arbitraires depuis l'adresse de l'application | Échapper le HTML ; journaliser et limiter les envois |
 | Moyenne | Déconnexion sans révocation du jeton hors ligne ; données locales conservées | Appeler le *logout* / la révocation Keycloak ; purger la base locale à la déconnexion |
 | Moyenne | Retrait de la liste blanche sans effet sur les comptes existants | Désactiver le compte Keycloak en même temps |
 | Moyenne | Aucune purge RGPD, CGU non enregistrées, sous-traitants incomplets (Sentry, SMTP) | Tâche de purge, enregistrement du consentement, mise à jour de la politique |
-| Moyenne | Realm `master` utilisé comme realm applicatif (modèle), compte de service d'administration aux droits larges | Realm dédié, droits minimaux (`manage-users` seulement sur ce realm) |
+| Moyenne | Compte de service d'administration aux droits larges (la production utilise bien un realm dédié, `patrinotes`) | Droits minimaux (`manage-users` seulement sur ce realm) |
 | Faible | CORS `*`, pas d'en-têtes de sécurité, connexions internes sans TLS, télémétrie PowerSync active | Restreindre l'origine au domaine du frontend, en-têtes au proxy, TLS si réseau non maîtrisé, `disable_telemetry_sharing: true` |
 | Faible | Énumération des comptes via la réinitialisation ; MD5 pour le lien | Réponse identique dans tous les cas ; SHA-256 |
 | Faible | Variables `JWT_*` inutilisées mais obligatoires ; `.env.dist` désynchronisé | Nettoyage |
 
 ### 12.3 Éléments à fournir lors du transfert (non présents dans le dépôt)
 
-- Export du realm Keycloak de production (clients, durées de vie des jetons, durée des jetons hors ligne, politique de mot de passe, force brute, thème actif, SMTP de Keycloak).
-- Configuration PowerSync de production (émetteur, JWKS, connexion à la base).
-- Politique du bucket S3 de production et configuration CORS du stockage (nécessaire pour les dépôts directs depuis le navigateur).
-- Configuration du proxy inverse (TLS, en-têtes, éventuelle limitation de débit).
-- Projet Sentry utilisé (hébergeur, rétention, accès).
+Les réglages ont été relevés le 17/11/2026 (§ 2.2 bis, [10](10-infrastructure-et-deploiement.md) § 6.0) ; restent à fournir :
+
+- l'export complet du realm Keycloak `patrinotes` (fichier JSON) ;
+- les fichiers `powersync-config.yaml` et `sync-config.yaml` déposés sur le serveur ;
+- la liste complète des origines CORS et la politique du bucket `patrinotes-prod` (console Scaleway) ;
+- la configuration de Traefik (TLS, en-têtes) ;
+- la rétention et les accès du projet Sentry frontend (`sentry.incubateur.net`) ;
+- le sélecteur DKIM de Scaleway TEM.

@@ -8,35 +8,36 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 2. **Servir de base à l'homologation** de sécurité (analyse de risques, flux, données personnelles) ;
 3. **Accueillir de nouveaux développeurs** et donner aux interlocuteurs non techniques une vue d'ensemble.
 
-> **État du document.** Il a été rédigé à partir d'une lecture complète du code. La configuration de production (Coolify, realm Keycloak, publication PostgreSQL, stockage objet) n'est pas dans le dépôt et n'a pas été vérifiée. Ce qui en dépend est marqué « à confirmer » et repris dans [18 — Questions ouvertes](18-questions-ouvertes.md).
+> **État du document : au 23/11/2026.** Il décrit le code de la branche `development` (préproduction) à cette date, et la production telle que l'a établie le **relevé de production du 17/11/2026** (lecture seule de Coolify, des bases, de Keycloak et des DNS), inchangée depuis. La configuration de production (Coolify, realm Keycloak, publication PostgreSQL, stockage objet) n'est pas dans le dépôt. Ce que le relevé n'a pas pu établir est marqué « à confirmer » et repris dans [18 — Questions ouvertes](18-questions-ouvertes.md).
 
 ## Sommaire
 
 | N° | Document | Contenu | Pour qui |
 | --- | --- | --- | --- |
-| 01 | [Contexte et périmètre](01-contexte-et-perimetre.md) | Le produit, ses utilisateurs, les documents produits, les parcours, les pages légales, le périmètre du DAT | Tous |
+| 01 | [Contexte et périmètre](01-contexte-et-perimetre.md) | Le produit, ses utilisateurs, les documents produits, les parcours (dont les fiches monument), les pages légales, le périmètre du DAT | Tous |
 | 02 | [Architecture générale](02-architecture-generale.md) | Principes, composants, flux principaux, organisation du dépôt, choix techniques | Tous |
 | 03 | [Frontend et PWA](03-frontend-pwa.md) | Application React, routes, base locale, *service worker*, mises à jour, fonctionnalités | Développeurs |
 | 04 | [Backend et API](04-backend-api.md) | Fastify, toutes les routes, services, erreurs, journaux, génération du client typé | Développeurs |
 | 05 | [Authentification et sécurité](05-authentification-securite.md) | Keycloak, jetons, liste blanche, rôles, cloisonnement, données personnelles, synthèse pour l'homologation | Sécurité, développeurs |
 | 06 | [Modèle de données](06-modele-de-donnees.md) | Toutes les tables, diagrammes entité-relation, conventions, migrations | Développeurs, exploitation |
-| 07 | [Données externes et stockage](07-donnees-externes-et-stockage.md) | Imports POP, photos, API Adresse, stockage S3, liens courts, redirection de l'ancien domaine | Développeurs, exploitation |
+| 07 | [Données externes et stockage](07-donnees-externes-et-stockage.md) | Imports POP, API Dataspace des unités patrimoniales, photos, API Adresse, stockage S3, liens courts, redirection de l'ancien domaine | Développeurs, exploitation |
 | 08 | [Synchronisation et hors ligne](08-synchronisation-hors-ligne.md) | PowerSync, règles de synchronisation, écriture, pièces jointes, changements de schéma | Développeurs, exploitation |
 | 09 | [Documents PDF, cartes et e-mails](09-documents-pdf-cartes-emails.md) | Gabarits PDF, plan de situation, cartes, e-mails, alertes, validation, dictée, flux sortants | Développeurs |
 | 10 | [Infrastructure et déploiement](10-infrastructure-et-deploiement.md) | Images Docker, CI, Compose, topologie de production, environnements, livraison | Exploitation |
 | 11 | [Configuration](11-configuration.md) | Référence exhaustive des variables d'environnement | Exploitation, développeurs |
 | 12 | [Exploitation et supervision](12-exploitation-et-supervision.md) | Journaux, Sentry, supervision, sauvegardes, tâches d'administration, procédures d'incident | Exploitation |
 | 13 | [Tests et qualité](13-tests-et-qualite.md) | Tests e2e, outillage, conventions, installation du poste de développement | Développeurs |
-| 14 | [Migration vers l'infrastructure du ministère](14-migration-vers-infra-ministere.md) | Exigences, dimensionnement, flux réseau, procédure de migration, bascule, retour arrière | **Ministère, exploitation** |
+| 14 | [Migration vers l'infrastructure du ministère](14-migration-vers-infra-ministere.md) | Plan en six phases : cadrage, mise à niveau de l'application, infrastructure cible, répétition générale, bascule, décommissionnement ; exigences, flux réseau, retour arrière | **Ministère, exploitation** |
 | 15 | [Règles implicites et pièges](15-regles-cachees-et-pieges.md) | Tout ce qu'il faut savoir avant de toucher au code | **Développeurs** |
 | 16 | [Risques et dette technique](16-risques-et-dette-technique.md) | Risques classés, recommandations, plan d'action | **Sécurité, direction de produit** |
 | 17 | [Glossaire](17-glossaire.md) | Termes métier et techniques | Tous |
 | 18 | [Questions ouvertes](18-questions-ouvertes.md) | Points à confirmer avant la bascule | **Équipe, ministère** |
+| 19 | [Questions pour le ministère](19-questions-pour-le-ministere.md) | Questions à poser au ministère pour préparer le transfert | **Ministère** |
 
 ## Parcours de lecture conseillés
 
-- **Équipe du ministère qui reprend l'hébergement** : 01 → 02 → 14 → 10 → 11 → 12 → 18.
-- **Homologation** : 02 → 05 → 16 → 14 (§6, flux réseau) → 09 (flux sortants) → 06 (données personnelles).
+- **Équipe du ministère qui reprend l'hébergement** : 01 → 02 → 14 → 10 → 11 → 12 → 18 → 19.
+- **Homologation** : 02 → 05 → 16 → 14 (§ 4.8, flux réseau) → 09 (flux sortants) → 06 (données personnelles).
 - **Nouveau développeur** : 01 → 02 → 15 → 13 (installation) → 03, 04, 08 selon le sujet.
 - **Interlocuteur métier** : 01 → 02 (§1 à 3) → 16 (§1 et §7).
 
@@ -49,9 +50,9 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 5. **Le domaine du frontend porte les données locales** des agents : en changer fait perdre les écritures non synchronisées.
 6. **Keycloak** gère les comptes, mais le navigateur ne lui parle jamais : le backend fait l'intermédiaire. Keycloak peut donc rester sur un réseau interne.
 7. **Le frontend tourne avec `vite preview`**, avec une liste de domaines autorisés codée en dur : un nouveau domaine impose une modification du code.
-8. **Le contrôle d'accès côté serveur est très insuffisant** (écriture libre via `/api/upload-data`, fichiers non cloisonnés) et **des jetons et mots de passe partent dans Sentry**. À corriger avant homologation : voir [16](16-risques-et-dette-technique.md).
-9. **Des écritures peuvent se perdre sans message** (erreur SQL renvoyée en HTTP 200). Voir [08](08-synchronisation-hors-ligne.md).
-10. **Aucune tâche planifiée, aucune purge, aucune sauvegarde décrite dans le dépôt** : ce sont des chantiers d'exploitation à ouvrir avec le ministère.
+8. **Le serveur contrôle les droits** : tables et colonnes modifiables, service, auteur et délégation sur `/api/upload-data` ; fichiers, PDF et flux de pièces jointes limités au service du document ; Sentry ne reçoit ni jetons ni mots de passe. Restent à traiter : réglages de sécurité du Keycloak de production, limitation de débit. Voir [16](16-risques-et-dette-technique.md).
+9. **Des écritures peuvent se perdre sans message** (erreur SQL ou refus de droits renvoyés en HTTP 200). Voir [08](08-synchronisation-hors-ligne.md).
+10. **Aucune tâche planifiée ni purge**, ni dans le dépôt ni dans Coolify. Les sauvegardes sont planifiées dans Coolify (base de production : quotidienne, 7 jours en local et 90 jours sur S3), mais **aucune restauration n'a été testée** et le bucket de fichiers n'est pas sauvegardé. Le déploiement est manuel et non tracé. Voir [12](12-exploitation-et-supervision.md).
 
 ## Conventions du dossier
 

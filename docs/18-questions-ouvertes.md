@@ -1,69 +1,62 @@
 # 18 — Questions ouvertes
 
-Points que la lecture du code ne permet pas de trancher. La plupart concernent l'environnement de production actuel (VPS géré par Coolify), dont la configuration n'est pas dans le dépôt. **Il faut y répondre avant la bascule** : plusieurs réponses changent le plan de [14 — Migration](14-migration-vers-infra-ministere.md).
+Points encore à trancher ou à relever avant le transfert. Les faits établis (relevé de production du 17/11/2026, réponses de l'équipe) sont intégrés dans les chapitres concernés ; ce document ne garde que ce qui reste à faire. Les questions qui dépendent du ministère sont regroupées dans [19 — Questions à poser au ministère](19-questions-pour-le-ministere.md), un document fait pour lui être envoyé.
 
-Colonne « Comment répondre » : où trouver la réponse. Colonne « Bloquant » : nécessaire au transfert.
+Colonne « Bloquant » : nécessaire au transfert.
 
 ## 1. Production actuelle
 
-| # | Question | Comment répondre | Bloquant |
-| --- | --- | --- | --- |
-| P1 | Quelle est la configuration Coolify exacte : images et étiquettes déployées, variables d'environnement, volumes, domaines du backend, de PowerSync et du stockage objet, déclenchement des déploiements ? | Export de la configuration Coolify | Oui |
-| P2 | Le fichier [powersync-config.yaml](../powersync/powersync-config.yaml) du dépôt est-il celui monté en production ? Il pointe sur `http://keycloak:8080/realms/master`. | Coolify, conteneur PowerSync | Oui |
-| P3 | Quel est le realm Keycloak de production, son émetteur (`iss`), la durée des jetons et des sessions hors ligne, la politique de mot de passe, la protection force brute, le thème actif ? La console « compte » est-elle accessible aux agents ? | Export du realm | Oui |
-| P4 | Comment `keycloak-theme.jar` est-il monté ? Aucun fichier Compose ne le fait. | Coolify | Non |
-| P5 | Quelle version de PostgreSQL tourne en production ? `wal_level`, `max_slot_wal_keep_size` ? | `SHOW` sur la base | Oui |
-| P6 | ~~La publication contient-elle `constat_validation` ?~~ **Réponse : non.** Sans effet, car le frontend n'utilise pas cette table. Reste à vérifier que le reste de la publication correspond aux migrations. | `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync'` | Oui |
-| P7 | Comment la production a-t-elle été initialisée pour les migrations 0000 et 0001 ? | Table `drizzle.__drizzle_migrations` | Oui |
-| P8 | ~~Quel stockage objet ?~~ **Réponse : Scaleway Object Storage.** Restent à relever : région, nom du bucket, politique d'accès et règles CORS. | Console Scaleway ou `aws s3api get-bucket-cors` | Oui |
-| P9 | ~~Quel fournisseur SMTP ?~~ **Réponse : Scaleway Transactional Email.** Restent à relever : port et mode TLS, domaine d'envoi (SPF, DKIM, DMARC). La politique de confidentialité, qui cite Brevo et OVH, est à corriger. | Variables `EMAIL_*`, console Scaleway | Oui |
-| P10 | Quelle instance Sentry est utilisée, avec quelle rétention ? Faut-il purger les événements contenant des jetons et mots de passe ? | Compte Sentry | Non, mais urgent |
-| P11 | `NODE_ENV` est-il défini en production ? | Variables d'environnement | Non |
-| P12 | ~~Des sauvegardes existent-elles ?~~ **Réponse : oui, quotidiennes, stockées sur S3.** Restent à préciser : ce qui est sauvegardé (base applicative, base Keycloak, bucket de fichiers ?), l'outil, la rétention, le lieu de stockage (le même compte Scaleway que les données ?) et si une restauration a déjà été testée. | Coolify (sauvegardes planifiées) | Oui |
-| P13 | Volumétrie : taille de la base, nombre de lignes `pop_objets`, `transactions`, taille du bucket, taille du stockage MongoDB, nombre d'agents actifs ? | Requêtes SQL, MinIO | Oui (dimensionnement) |
-| P14 | Quelle version de l'image PowerSync tourne ? Quelle durée d'abonnement des flux à la demande ? | Conteneur | Non |
-| P15 | Les branches `development` et `compte-rendu-vif` sont-elles déployées ? Sur quels domaines ? | Coolify | Non |
-| P16 | L'ancien domaine `compte-rendu-vif` est-il encore servi ? Qui ajoute le paramètre `?from=crvif` ? | DNS | Non |
-| P17 | Un import POP planifié existe-t-il hors du dépôt ? Date du dernier import ? | Coolify, `pop_immeubles` | Non |
+| # | Sujet | État connu | Reste à faire | Bloquant |
+| --- | --- | --- | --- | --- |
+| P1 | Configuration Coolify | Projet `patrimoine-embarque` (environnements `production` et `preprod`), déploiement manuel depuis l'interface, tags d'image fixes, version déployée non tracée. Détail dans [10](10-infrastructure-et-deploiement.md) § 6.0. | Archiver un export de la configuration (variables, volumes, fichiers montés) au début de la phase 1. | Non |
+| P2 | Fichiers PowerSync | Déposés manuellement dans Coolify. `powersync-config.yaml` pointe sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes` ; `sync-config.yaml` est celui de `main`. | Déployer les fichiers PowerSync avec l'application. | Oui |
+| P3 | Réglages Keycloak | Realm `patrinotes` (216 comptes), thème DSFR, courriel comme identifiant. Réglages de sécurité dans le relevé transmis au ministère (hors dépôt). | Prévu avant le transfert : protection contre la force brute, politique de mot de passe, console d'administration restreinte (voir [05](05-authentification-securite.md)). | Oui |
+| P5 | Réglages PostgreSQL | PostgreSQL 17.8, `wal_level=logical`, `max_slot_wal_keep_size=-1` (sans plafond), un seul slot actif. | Plafonner le WAL retenu ; créer un rôle de réplication dédié. | Oui |
+| P6 | Publication `powersync` | 24 tables. `constat_validation` n'y est pas, alors que la configuration de synchronisation la lit (sans effet : le frontend ne l'utilise pas). `transactions` y est sans être lue. | Aligner publication et configuration (voir [14 § 3.2](14-migration-vers-infra-ministere.md#32-adaptations-de-configuration-et-de-code)). | Oui |
+| P7 | Migrations 0000 et 0001 | L'empreinte enregistrée pour 0000 ne correspond plus au fichier du dépôt, reformaté depuis ; sans effet (drizzle ne revérifie pas les empreintes). | Ne pas rejouer les migrations sur une base vide pendant le transfert : restaurer le dump (voir [14 § 5.1](14-migration-vers-infra-ministere.md#51-postgresql)). | Non |
+| P8 | Stockage objet | Scaleway, bucket `patrinotes-prod`, région `fr-par`, non listable anonymement. L'origine de production est autorisée en CORS (`GET, HEAD, POST, PUT, DELETE`), les autres origines testées sont refusées. | Relever dans la console Scaleway la liste exacte des origines CORS, la taille du bucket et la présence d'un versionnage. | Oui |
+| P9 | Domaine d'envoi | `smtp.tem.scw.cloud:465`, expéditeur `noreply@patrinotes.beta.gouv.fr`. SPF correct, DMARC en `p=none`, sélecteur DKIM non trouvé publiquement. | Relever le DKIM dans la console Scaleway ; passer DMARC en `quarantine`. Mettre à jour la politique de confidentialité (elle cite Brevo et OVH). | Non |
+| P10 | Sentry | Instance `sentry.incubateur.net` (beta.gouv), frontend seulement : le backend n'a pas de DSN. | Brancher le backend (prévu : définir `SENTRY_DSN`) ; vérifier la rétention ; choisir l'outil cible avec le ministère (M11). | Non |
+| P12 | Sauvegardes | Base applicative : quotidienne, 7 jours en local, 90 jours sur S3. Keycloak : quotidienne, sans limite de durée. Le S3 de sauvegarde est dans le même compte et la même région que les données. Pas de sauvegarde des photos et PDF, de MongoDB (reconstructible) ni des fichiers de configuration. | Tester une restauration (prévu avant le transfert) ; sauvegarder ou versionner le bucket ; sortir les sauvegardes du compte Scaleway des données. | Oui |
+| P14 | Version de PowerSync | 1.20.5, tirée par le tag `latest`. | Épingler la version (phase 2). | Non |
+| P15 | Préproduction et ancienne application | La préproduction (`development`, `patrinotes.incubateur.net`) s'authentifie sur le Keycloak de production. Des services de l'ancienne application CR VIF tournent encore sur le serveur ; seule la redirection de `app.compte-rendu-vif.beta.gouv.fr` est utile. | Donner à la préproduction son propre Keycloak ou realm ; arrêter les services CR VIF après une dernière sauvegarde (prévu avant le transfert) ; versionner la page de redirection réelle (elle diffère de [crvif-redirection/](../crvif-redirection/)). | Non |
+| P17 | Import POP | Manuel, aucune tâche planifiée. Dernières notices : 06/05/2026 pour les immeubles, 31/07/2025 pour les objets. 4 541 objets ont une date de mise à jour illisible (colonnes décalées ou encodage). | Planifier l'import et corriger le décalage de colonnes. | Non |
 
 ## 2. Choix pour la cible
 
-| # | Question | Bloquant |
+Ces questions relèvent du ministère. Elles sont reformulées pour lui dans [19](19-questions-pour-le-ministere.md) (numéros M1 à M24).
+
+| # | Question | Voir | Bloquant |
+| --- | --- | --- | --- |
+| C1 | Réplication logique autorisée sur le PostgreSQL du ministère ? | M1, M2 | Oui |
+| C2 | MongoDB ou stockage PostgreSQL pour PowerSync ? | M6 | Oui |
+| C3 | Keycloak transféré, ProConnect ou annuaire ministériel ? | M14, M15 | Oui |
+| C4 | S3 du ministère joignable depuis les navigateurs et par des destinataires externes ? | M4 | Oui |
+| C5 | Domaines conservés ? | M5 | Oui |
+| C6 | Forge et registre d'images ? | M7 | Oui |
+| C7 | Supervision, journaux, Matomo ? | M11 | Non |
+| C8 | RPO et RTO ? | M12 | Non |
+| C9 | Corrections de sécurité exigées avant homologation ? | M16, M17 | Oui |
+| C10 | Dictée vocale (Google) et fond de carte OpenFreeMap acceptables ? | M20, M21 | Non |
+
+## 3. Fonctionnel : points tranchés par l'équipe
+
+| # | Sujet | Réponse |
 | --- | --- | --- |
-| C1 | Le PostgreSQL du ministère autorise-t-il la **réplication logique** (création d'une publication et d'un slot) ? Sinon il faut une instance dédiée. | Oui |
-| C2 | Garde-t-on MongoDB pour PowerSync ou utilise-t-on le stockage PostgreSQL de PowerSync ? | Oui |
-| C3 | Garde-t-on Keycloak (transféré tel quel) ou passe-t-on à ProConnect ou à un annuaire ministériel ? Le second demande du développement. | Oui |
-| C4 | Le stockage S3 du ministère accepte-t-il les dépôts directs depuis les navigateurs et des URL pré-signées lisibles depuis Internet (destinataires externes) ? | Oui |
-| C5 | Les domaines `app.patrinotes.beta.gouv.fr` et celui du backend sont-ils conservés ? Changer le domaine du frontend fait perdre les données locales non synchronisées ; changer celui du backend casse les liens envoyés depuis moins de 90 jours. | Oui |
-| C6 | Quelle forge et quel registre d'images : GitHub et `ghcr.io`, ou outils du ministère ? | Oui |
-| C7 | Quel outil de supervision et de collecte des journaux ? Quelle instance Matomo ? | Non |
-| C8 | Quels RPO et RTO sont attendus ? | Non |
-| C9 | Quelles corrections de sécurité de [16](16-risques-et-dette-technique.md) sont exigées avant homologation ? | Oui |
-| C10 | La dictée vocale (audio envoyé à Google sous Chrome) et le fond de carte OpenFreeMap (non étatique) sont-ils acceptables ? | Non |
+| F2 | Changement de service libre | Voulu, et journalisé dans `transactions`. À faire valider par le ministère (M23). |
+| F3 | Modification des paramètres d'un service par n'importe quel membre | Voulue, limitée au service de l'agent ; les départements ne sont pas modifiables. |
+| F4 | Calcul « abandonné » : colonne `pdf` pour un compte-rendu, `attachment_id` pour un constat | Même notion : la pièce jointe d'un constat est le PDF envoyé, comme le PDF d'un compte-rendu. |
+| F5 | Images POP | Affichage prévu par le protocole IIIF. |
+| F7 | Réinitialisation du mot de passe par `internal_user` | En service : c'est le parcours de réinitialisation des agents, qui se connectent pour la plupart par courriel et mot de passe. |
+| F8 | Lettre d'information | La liste des abonnés est exportée et importée dans Brevo à la main par l'équipe. |
+| F9 | Échelle du plan de situation | 1:5000, considérée correcte (non mesurée sur papier). |
+| F10 | Affichage direct des photos POP | Accepté par l'équipe POP. |
+| F11 | Durée des liens publics (courriels et bouton « Copier le lien » d'un constat) | 90 jours, voulu. Le texte des courriels (« lien valable 1 mois ») est corrigé pour dire 90 jours (PR #88, en relecture). |
 
-## 3. Fonctionnel
+## 4. Techniques, vérifiées en exécutant le code
 
-| # | Question |
-| --- | --- |
-| F2 | Le changement de service libre (`/api/change-service`) est-il voulu ? |
-| F3 | La modification des paramètres d'un service par n'importe quel membre est-elle voulue ? |
-| F4 | Les différences de calcul « abandonné » entre CR (colonne `pdf`) et constats (`attachment_id`) sont-elles voulues ? |
-| F5 | Les immeubles sans `last_image_check_at` sont-ils volontairement exclus de la récupération des photos ? |
-| F6 | Les tables `pictures` et `merimee` peuvent-elles être supprimées ? |
-| F7 | La réinitialisation de mot de passe par `internal_user` (avant Keycloak) est-elle encore utilisée ? |
-| F8 | Comment la liste des abonnés à la lettre d'information est-elle transmise à Brevo ? |
-| F9 | L'échelle imprimée du plan de situation est-elle bien 1:5000 ? |
-| F10 | L'équipe POP accepte-t-elle le *scraping* des pages et l'affichage direct des photos ? |
-| F11 | Le texte « lien valable 1 mois » ou la durée réelle de 90 jours : laquelle est la bonne ? |
-
-## 4. Techniques, à vérifier en exécutant le code
-
-| # | Question |
-| --- | --- |
-| T1 | Les routes de validation lancent des objets `{statusCode}` : renvoient-elles 500 (lecture du code) ou 404 et 410 (attendus par les tests) ? |
-| T2 | Une inscription avec des majuscules dans l'e-mail casse-t-elle la connexion (Keycloak met les e-mails en minuscules) ? |
-| T3 | `react-pdf-html` 2.1.5 fonctionne-t-il sans le correctif orphelin ? |
-| T4 | Les écrans PDF restent-ils bloqués hors ligne ? La génération hors ligne fonctionne-t-elle sur un appareil neuf (polices non pré-cachées) ? |
-| T5 | `public/dsfr` (ignoré par Git, utilisé par le manifeste) est-il rempli par `update-icons` ou par `pnpm dsfr` ? |
-| T6 | Le workflow de tests e2e fonctionne-t-il sans champ `packageManager` ? |
-| T7 | Comment le SDK réessaie-t-il un téléchargement de photo en 404, quand la ligne arrive avant le fichier ? |
+| # | Question | Réponse |
+| --- | --- | --- |
+| T3 | `react-pdf-html` 2.1.5 fonctionne-t-il sans le correctif de [patches/](../patches/) ? | Oui : la 2.1.5 contient la correction et les tests e2e de génération PDF passent. Le patch est à supprimer. |
+| T4 | Peut-on générer un PDF hors ligne sur un appareil neuf ? | Non, pour un document jamais ouvert en ligne : la page PDF attend une synchronisation qui n'arrive pas. Et le worker pdf.js non précaché peut rendre l'application inutilisable hors ligne. Voir [16](16-risques-et-dette-technique.md) DAT-11. |
+| T7 | Une photo dont la ligne arrive avant le fichier finit-elle par s'afficher ? | Oui : nouvel essai toutes les 30 s, affichage sans action dès que le fichier est en S3. |
