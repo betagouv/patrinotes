@@ -12,7 +12,7 @@ La référence de toutes les variables d'environnement se trouve dans [11 — Co
 | Élément | Fichier | Rôle |
 | --- | --- | --- |
 | Image multi-étapes | [Dockerfile](../Dockerfile) | Construit deux images à partir du monorepo : `backend` et `frontend`. |
-| CI de publication | [.github/workflows/main.yml](../.github/workflows/main.yml) | À chaque `push` sur `main`, `development` ou `compte-rendu-vif`, construit et pousse les deux images sur `ghcr.io`. |
+| CI de publication | [.github/workflows/main.yml](../.github/workflows/main.yml) | À chaque `push` sur `main`, `development` ou `compte-rendu-vif` : tests unitaires du backend, audit des dépendances (non bloquant), puis construction et publication des deux images sur `ghcr.io`, étiquetées aussi par SHA de commit. |
 | CI de tests E2E | [.github/workflows/tests.yml](../.github/workflows/tests.yml) | Tests Playwright, **déclenchement manuel uniquement**. |
 | Dépendances de développement | [docker-compose.yaml](../docker-compose.yaml) | PostgreSQL, MongoDB, PowerSync, Keycloak, MinIO, Mailpit, Adminer pour le poste du développeur. |
 | Dépendances de test | [docker-compose.test.yaml](../docker-compose.test.yaml) | Même pile, isolée (projet `patrinotes-test`), pilotée par [playwright.config.ts](../playwright.config.ts). |
@@ -28,54 +28,57 @@ Le [Dockerfile](../Dockerfile) est **unique et multi-étapes**. Il produit deux 
 
 ```mermaid
 flowchart TD
-    A["with-pnpm<br/>node:20.11-alpine<br/>+ librairies natives + pnpm 10.12.4"] --> B["with-deps<br/>pnpm install --frozen-lockfile"]
-    B --> C["backend<br/>pnpm backend build (tsup)<br/>CMD: migrations puis start"]
+    A["with-pnpm<br/>node:22.23-alpine<br/>+ pnpm 10.12.4"] --> B["with-deps<br/>pnpm install --frozen-lockfile"]
+    B --> C["backend<br/>pnpm backend build (tsup)<br/>CMD: docker-start.sh, migrations puis node"]
     B --> D["frontend<br/>pnpm frontend build (vite)<br/>CMD: pnpm frontend preview"]
 ```
 
 ### 2.1 Étape `with-pnpm` (image de base)
 
-- Image : `node:20.11-alpine` ([Dockerfile#L4](../Dockerfile#L4)).
-- Paquets Alpine installés ([Dockerfile#L5-L15](../Dockerfile#L5-L15)) : `build-base`, `g++`, `cairo-dev`, `jpeg-dev`, `pango-dev`, `giflib-dev`, `pixman-dev`, `pangomm-dev`, `libjpeg-turbo-dev`, `freetype-dev`. Ce sont les prérequis de compilation du module natif **`canvas`** (node-canvas), déclaré dans les dépendances du backend ([packages/backend/package.json#L58](../packages/backend/package.json#L58)) et autorisé à exécuter son script de build dans `pnpm.onlyBuiltDependencies` ([package.json](../package.json)). `canvas` n'est importé nulle part, ni directement ni via `jsdom` ou `@react-pdf`, eux-mêmes inutilisés (voir [09](09-documents-pdf-cartes-emails.md) § 3.3). Il est aussi marqué `external` dans [tsup.config.ts](../packages/backend/tsup.config.ts). En production, le backend tourne sous Node **20.11.1**.
-- Les paquets `-dev` et la chaîne de compilation restent dans l'image finale (pas d'étape d'exécution allégée) : images lourdes et surface d'attaque plus large que nécessaire.
-- pnpm est installé globalement en version **10.12.4** ([Dockerfile#L16](../Dockerfile#L16)).
+- Image : `node:22.23-alpine` ([Dockerfile#L4](../Dockerfile#L4)), Node 22 LTS. Aucun paquet système supplémentaire : ni chaîne de compilation, ni bibliothèque native. `pnpm.onlyBuiltDependencies` ([package.json](../package.json)) ne laisse exécuter un script de construction qu'à quelques paquets sans module natif à compiler (`@journeyapps/wa-sqlite`, `esbuild`…).
+- Il n'y a pas d'étape d'exécution allégée : les dépendances de développement restent dans l'image (voir § 2.2).
+- pnpm est installé globalement en version **10.12.4** ([Dockerfile#L5](../Dockerfile#L5)).
 
 > [!WARNING]
 > **Version de pnpm.** Le [package.json](../package.json) racine déclare `"packageManager": "pnpm@10.12.4"`, la même version que le Dockerfile. La CI de tests (`pnpm/action-setup@v4` sans version explicite) la lit dans ce champ ; sans lui, corepack prendrait une version plus récente qui ignore la configuration pnpm du `package.json`. Seul le [README](../README.md#L6) indique `pnpm = 8.4.0` : à corriger.
 
 > [!NOTE]
-> **Version de Node.** L'image fige `node:20.11` ; le README demande `node >= 20` ; la CI E2E utilise Node 20. Node 20 n'est plus maintenu depuis avril 2026 : la montée vers Node 22 ou 24 LTS est à faire avant ou pendant le transfert.
+> **Version de Node.** L'image fige `node:22.23`, les deux CI utilisent Node 22 et le `package.json` racine déclare `engines.node >= 22`. Seul le [README](../README.md#L5) indique encore `node >= 20` : à corriger. Au relevé du 17/11/2026, le backend de production tournait encore sous Node 20.11.1 (image antérieure).
 
 ### 2.2 Étape `with-deps` (installation)
 
-- Copie des manifestes (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`) et des `package.json` des trois paquets ([Dockerfile#L24-L32](../Dockerfile#L24-L32)).
+- Copie des manifestes (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`) et des `package.json` des trois paquets ([Dockerfile#L13-L21](../Dockerfile#L13-L21)).
 - Pour le frontend, copie aussi `public/`, `scripts/` et `vite.config.ts` **avant** l'installation : ils sont nécessaires aux scripts de cycle de vie.
 - `pnpm install --frozen-lockfile` installe **toutes** les dépendances, y compris de développement : `drizzle-kit`, `vite`, `vite-node` et `tsup` sont nécessaires à l'exécution (migrations au démarrage, `vite preview`, génération de `env.js`).
-- [.dockerignore](../.dockerignore) n'exclut que `dsfr/*` (entrée sans objet : le dépôt n'a pas de dossier `dsfr/`) et `node_modules` : le contexte de build envoyé au démon Docker contient notamment le `.git`, le jar Keycloak (6,7 Mo) et un éventuel `.env` local. Le `.env` racine n'est pas copié dans l'image (seuls des sous-dossiers ciblés le sont), mais un `packages/*/.env` le serait. À durcir (ajouter `.git`, `.env*`, `*.jar`).
+- [.dockerignore](../.dockerignore) exclut du contexte de build `.git`, `.github`, tous les fichiers `.env*` (à tous les niveaux), tous les `node_modules`, les résultats Playwright, `.scratch`, `docs` et `tests`. Le Dockerfile ne copie de toute façon que les manifestes, `packages/*`, `db/` et les scripts du frontend. Le jar Keycloak reste dans le contexte, sans être copié dans l'image.
 
 ### 2.3 Cible `backend`
 
 ```dockerfile
 RUN pnpm backend build
-CMD pnpm migration:up;pnpm backend start
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
+CMD ["sh", "/usr/src/app/packages/backend/docker-start.sh"]
 ```
 
-([Dockerfile#L40-L51](../Dockerfile#L40-L51))
+([Dockerfile#L29-L44](../Dockerfile#L29-L44), [docker-start.sh](../packages/backend/docker-start.sh))
 
 - Copie `packages/backend`, `packages/pdf` et le dossier [db/](../db/) (migrations SQL Drizzle).
 - `pnpm backend build` lance `tsup --publicDir` : bundle ESM unique `packages/backend/dist/index.js`, plus copie du dossier `public/` (polices Marianne, logos utilisés dans les courriels).
-- **Au démarrage, le conteneur exécute d'abord les migrations** (`pnpm migration:up` → `drizzle-kit migrate`), puis `pnpm backend start` (`cross-env NODE_ENV=production node ./dist/index.js`).
+- `SENTRY_RELEASE` reçoit le SHA du commit, passé par la CI ; vide en construction locale.
+- **Au démarrage**, `docker-start.sh` exécute avec `set -e` les migrations (`pnpm migration:up` → `drizzle-kit migrate`), puis `exec node ./dist/index.js` depuis `packages/backend` avec `NODE_ENV=production`.
 
 Points d'attention (règles cachées) :
 
-1. **Le séparateur est `;` et non `&&`** : si les migrations échouent, le serveur démarre quand même sur un schéma non migré. L'échec n'apparaît que dans les logs.
-2. **Les migrations n'utilisent pas `DATABASE_URL`** mais `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, avec **`ssl: false` codé en dur** ([drizzle.config.ts](../packages/backend/drizzle.config.ts#L4-L16)). Les deux jeux de variables doivent pointer sur la même base.
-3. `drizzle.config.ts` importe [envVars.ts](../packages/backend/src/envVars.ts) : **toute la validation Zod du backend s'applique aussi aux migrations**. Une variable obligatoire manquante (même sans rapport avec la base, par exemple `EMAIL_EMITTER`) fait échouer la migration… puis, à cause du point 1, le démarrage échoue de la même façon.
-4. Le démarrage en mode forme CMD *shell* (`CMD pnpm …`) : le processus PID 1 est `/bin/sh`, les signaux (`SIGTERM`) ne sont pas relayés proprement à Node ; les arrêts se font par `SIGKILL` après le délai de grâce.
+1. **Si les migrations échouent, le conteneur s'arrête** sans démarrer le serveur ; l'orchestrateur le relance selon sa politique de redémarrage.
+2. **Les migrations n'utilisent pas `DATABASE_URL`** mais `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, avec TLS selon `DATABASE_SSL` ([drizzle.config.ts](../packages/backend/drizzle.config.ts#L4-L16)). Les deux jeux de variables doivent pointer sur la même base.
+3. `drizzle.config.ts` importe [envVars.ts](../packages/backend/src/envVars.ts) : **toute la validation Zod du backend s'applique aussi aux migrations**. Une variable obligatoire manquante (même sans rapport avec la base, par exemple `EMAIL_EMITTER`) fait échouer la migration, donc le démarrage.
+4. `node` remplace le shell (PID 1) et reçoit directement `SIGTERM` : le serveur cesse d'accepter des connexions, laisse finir les requêtes en cours, puis s'arrête (8 s au plus, sous les 10 s par défaut de `docker stop`).
 5. Plusieurs répliques du backend lanceraient les migrations en parallèle au démarrage. Drizzle n'utilise pas de verrou consultatif (à confirmer) : **garder une seule réplique**, ou sortir les migrations dans une tâche dédiée.
 6. Les migrations Drizzle exécutent `ALTER PUBLICATION powersync ADD TABLE …` ([db/0000_bright_stone_men.sql#L183](../db/0000_bright_stone_men.sql#L183)) : la publication `powersync` doit exister **avant** la première migration (voir § 4.2).
-7. Au démarrage, le backend insère le service technique `no-service` s'il n'existe pas ([index.ts](../packages/backend/src/index.ts#L33-L38)) ; si `FORCE_REFETCH_POP=true`, il télécharge et importe les CSV POP (Mérimée, Palissy) depuis `ministere-culture.s3.sbg.io.cloud.ovh.net` avant d'ouvrir le port, ce qui retarde fortement le démarrage et écrit des fichiers temporaires dans `packages/backend/data/` (système de fichiers inscriptible requis).
-8. Le serveur écoute sur `0.0.0.0:${PORT}` (3001 par défaut). L'image ne déclare pas `EXPOSE`. Sonde de santé : `GET /health` → `{"status":"ok"}` (ne teste ni la base ni S3).
+7. Au démarrage, le backend insère le service technique `no-service` s'il n'existe pas ([index.ts](../packages/backend/src/index.ts#L42-L47)) ; si `FORCE_REFETCH_POP=true`, il télécharge et importe les CSV POP (Mérimée, Palissy) depuis `ministere-culture.s3.sbg.io.cloud.ovh.net` avant d'ouvrir le port, ce qui retarde fortement le démarrage et écrit des fichiers temporaires dans `packages/backend/data/` (système de fichiers inscriptible requis).
+8. Le serveur écoute sur `0.0.0.0:${PORT}` (3001 par défaut). L'image ne déclare pas `EXPOSE`. Sondes : `GET /health` (vie : le processus répond) et `GET /health/ready` (disponibilité : PostgreSQL et S3 répondent, sinon 503). Voir [12](12-exploitation-et-supervision.md).
+9. Le serveur lance aussi la **tâche d'envoi des alertes** toutes les 15 minutes (voir [04 § 8](04-backend-api.md#8-tâches-planifiées-et-imports-de-données)) : aucune tâche planifiée externe n'est nécessaire pour elle.
 
 ### 2.4 Cible `frontend`
 
@@ -84,7 +87,7 @@ RUN pnpm frontend build
 CMD ["pnpm", "frontend", "preview"]
 ```
 
-([Dockerfile#L57-L63](../Dockerfile#L57-L63))
+([Dockerfile#L50-L56](../Dockerfile#L50-L56))
 
 - `pnpm frontend build` = `react-dsfr update-icons` (prébuild) puis `vite build`, puis `setVersion.ts` qui écrit `dist/version.js` avec `window.APP_VERSION = "<version package>.<horodatage hexadécimal>"` ([setVersion.ts](../packages/frontend/scripts/setVersion.ts)).
 - Au démarrage, le script `preview` exécute **`pnpm env:gen && vite preview --host`** ([packages/frontend/package.json#L10](../packages/frontend/package.json#L10)) :
@@ -94,10 +97,10 @@ CMD ["pnpm", "frontend", "preview"]
 Implications pour la production :
 
 - **`vite preview` n'est pas un serveur de production** (la documentation Vite le déconseille explicitement) : mono-processus Node, pas de maîtrise fine des en-têtes de cache, de compression ni de sécurité (CSP, HSTS…). Un serveur statique (nginx, Caddy) ou le reverse proxy du ministère serait plus adapté — à condition de reproduire la génération de `env.js` au démarrage.
-- **Liste blanche d'hôtes codée en dur.** `vite preview` rejette (HTTP 403 « Blocked request ») tout en-tête `Host` absent de `preview.allowedHosts` ([vite.config.ts#L73-L82](../packages/frontend/vite.config.ts#L73-L82)) : `app.patrinotes.beta.gouv.fr`, `app.patrinotes.incubateur.net`, `app.compte-rendu-vif.beta.gouv.fr`, `compte-rendu-vif.incubateur.net`, `.compte-rendu-vif.incubateur.net`, `patrinotes.incubateur.net`. **Tout nouveau nom de domaine (y compris un nom de recette du ministère) impose une modification du code et une reconstruction de l'image.**
+- **Liste blanche d'hôtes codée en dur.** `vite preview` rejette (HTTP 403 « Blocked request ») tout en-tête `Host` absent de `preview.allowedHosts` ([vite.config.ts#L74-L81](../packages/frontend/vite.config.ts#L74-L81)) : `app.patrinotes.beta.gouv.fr`, `app.patrinotes.incubateur.net`, `app.compte-rendu-vif.beta.gouv.fr`, `compte-rendu-vif.incubateur.net`, `.compte-rendu-vif.incubateur.net`, `patrinotes.incubateur.net`. **Tout nouveau nom de domaine (y compris un nom de recette du ministère) impose une modification du code et une reconstruction de l'image.**
 - Le système de fichiers du conteneur doit être **inscriptible** (`dist/env.js` est réécrit à chaque démarrage).
 - **Toute variable `VITE_*` présente dans l'environnement du conteneur est publiée** dans `env.js`, lisible par n'importe qui. Ne jamais donner un préfixe `VITE_` à un secret. Les valeurs sont insérées entre guillemets sans échappement : une valeur contenant `"` casse `env.js`.
-- `env.js` est exclu du précache du service worker et servi en *network-first* ([sw.ts#L20](../packages/frontend/src/service-worker/sw.ts#L20)) : un changement de configuration est pris en compte au prochain chargement en ligne. Les pages de navigation sont aussi en *network-first* en production.
+- `env.js` est exclu du précache du service worker et servi en *network-first* ([sw.ts#L22](../packages/frontend/src/service-worker/sw.ts#L22)) : un changement de configuration est pris en compte au prochain chargement en ligne. Les pages de navigation sont aussi en *network-first* en production.
 - `swEnv.js` est généré mais n'est importé nulle part (le service worker n'a pas besoin de la configuration en pratique).
 
 ## 3. Intégration continue (GitHub Actions)
@@ -107,27 +110,29 @@ Implications pour la production :
 [.github/workflows/main.yml](../.github/workflows/main.yml) :
 
 - Déclencheur : `push` sur les branches **`main`**, **`development`**, **`compte-rendu-vif`**.
-- Deux jobs parallèles (`build-and-push-backend`, `build-and-push-frontend`), même `Dockerfile`, cibles différentes.
+- Job `unit-tests` : Node 22, `pnpm install --frozen-lockfile --ignore-scripts`, puis `vitest run` du backend. **Les deux images ne sont construites que s'il passe.**
+- Job `audit` : `pnpm audit --prod`, dont les 40 dernières lignes sont écrites dans le résumé du job. Il **ne bloque jamais** la publication (`continue-on-error`).
+- Deux jobs de construction (`build-and-push-backend`, `build-and-push-frontend`), même `Dockerfile`, cibles différentes. Le backend reçoit `SENTRY_RELEASE` = SHA du commit.
 - Registre : `ghcr.io` (GitHub Container Registry), authentification par `GITHUB_TOKEN` (permission `packages: write`).
-- Nom d'image : `${{ github.repository }}-${{ github.ref_name }}`, soit pour le dépôt `betagouv/patrinotes` :
+- Nom d'image : `${{ github.repository }}-${{ github.ref_name }}`. Chaque image porte deux étiquettes, et les labels OCI `org.opencontainers.image.revision` (SHA) et `org.opencontainers.image.source` :
 
 | Branche | Image backend | Image frontend |
 | --- | --- | --- |
-| `main` | `ghcr.io/betagouv/patrinotes-main:backend` | `ghcr.io/betagouv/patrinotes-main:frontend` |
-| `development` | `ghcr.io/betagouv/patrinotes-development:backend` | `ghcr.io/betagouv/patrinotes-development:frontend` |
-| `compte-rendu-vif` | `ghcr.io/betagouv/patrinotes-compte-rendu-vif:backend` | `ghcr.io/betagouv/patrinotes-compte-rendu-vif:frontend` |
+| `main` | `ghcr.io/betagouv/patrinotes-main:backend` et `:backend-<sha>` | `ghcr.io/betagouv/patrinotes-main:frontend` et `:frontend-<sha>` |
+| `development` | `ghcr.io/betagouv/patrinotes-development:backend` et `:backend-<sha>` | `ghcr.io/betagouv/patrinotes-development:frontend` et `:frontend-<sha>` |
+| `compte-rendu-vif` | `ghcr.io/betagouv/patrinotes-compte-rendu-vif:backend` et `:backend-<sha>` | `ghcr.io/betagouv/patrinotes-compte-rendu-vif:frontend` et `:frontend-<sha>` |
 
 Règles cachées :
 
-- **Le tag est le nom du composant (`backend` / `frontend`) et non une version.** Chaque `push` écrase le tag précédent : il n'existe **aucun tag immuable** (SHA de commit, numéro de version). Revenir en arrière suppose de connaître le *digest* de l'image précédente ou de reconstruire un ancien commit (voir § 8).
-- Aucun test, *lint* ni contrôle de type n'est exécuté avant la publication : un commit qui casse le build échoue la CI, mais un commit qui compile et casse le fonctionnement est publié.
-- Aucun scan de vulnérabilités ni signature d'image.
-- La CI ne déclenche pas le déploiement. D'après le relevé de production du 17/11/2026, **tous les déploiements sont lancés à la main depuis l'interface Coolify** (ni webhook, ni appel d'API, pas de déploiement automatique). Coolify enregistre `commit = HEAD` : **la version déployée n'est tracée nulle part**. Les images ne portent pas non plus le label `org.opencontainers.image.revision`.
+- **Coolify tire l'étiquette mobile** (`:backend` / `:frontend`), réécrite à chaque `push`. L'étiquette `-<sha>` est immuable : elle permet de savoir quelle version tourne (label `revision`) et de revenir en arrière (voir § 8).
+- Seuls les tests unitaires du backend sont lancés avant la publication : ni *lint*, ni contrôle de type, ni tests de bout en bout.
+- Aucun scan d'image ni signature d'image ; l'audit des dépendances n'est qu'un rapport.
+- La CI ne déclenche pas le déploiement. D'après le relevé de production du 17/11/2026, **tous les déploiements sont lancés à la main depuis l'interface Coolify** (ni webhook, ni appel d'API, pas de déploiement automatique). Coolify enregistre `commit = HEAD` ; la version déployée se lit dans le label `revision` de l'image et, si Sentry est branché, dans la version des événements.
 - La branche `compte-rendu-vif` porte l'ancien nom du produit. Elle alimente la préproduction abandonnée de l'ancienne application (§ 6.0, résidus), dont le backend tourne en boucle d'erreur.
 
 ### 3.2 Tests de bout en bout — `tests.yml`
 
-[.github/workflows/tests.yml](../.github/workflows/tests.yml) : déclenchement **manuel** (`workflow_dispatch`) uniquement. Node 20, `pnpm install`, Chromium Playwright, puis `pnpm e2e`. Playwright démarre lui-même :
+[.github/workflows/tests.yml](../.github/workflows/tests.yml) : déclenchement **manuel** (`workflow_dispatch`) uniquement. Node 22, `pnpm install`, Chromium Playwright, puis `pnpm e2e`. Playwright démarre lui-même :
 
 1. la pile `docker-compose.test.yaml` (`up --wait`), attendue via le conteneur `healthcheck` sur `HEALTHCHECK_PORT` ;
 2. `pnpm migration:up && pnpm backend dev` (attendu sur `/health`) ;
@@ -198,9 +203,9 @@ Même pile que le développement, avec les différences suivantes ([docker-compo
 | `client_auth.jwks_uri` | `http://keycloak:8080/realms/master/protocol/openid-connect/certs` | En dur : nom d'hôte interne **et** realm `master`. |
 | `client_auth.issuer` | `http://keycloak:8080/realms/master` | En dur. Doit être identique à l'`iss` des jetons émis par Keycloak. |
 | `client_auth.audience` | `["account"]` | Audience par défaut des jetons d'accès Keycloak. |
-| `telemetry.disable_telemetry_sharing` | `false` | **La télémétrie anonyme vers JourneyApps est active** (flux sortant). |
+| `telemetry.disable_telemetry_sharing` | `true` | Télémétrie anonyme vers JourneyApps désactivée. Le bloc `telemetry` doit rester à la racine du fichier. |
 
-En production, les deux fichiers ont été **déposés à la main** dans `/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/` et montés dans `/config/` (relevé de production du 17/11/2026). `powersync-config.yaml` ne diffère du dépôt que par `jwks_uri` et `issuer`, qui pointent sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`. `sync-config.yaml` y est une copie tenue à jour à la main, dans Coolify et dans le fichier monté (voir [08](08-synchronisation-hors-ligne.md) § 3). La CI ne déploie pas ces fichiers.
+En production, les deux fichiers ont été **déposés à la main** dans `/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/` et montés dans `/config/` (relevé de production du 17/11/2026). Au relevé, `powersync-config.yaml` ne différait du dépôt que par `jwks_uri` et `issuer`, qui pointent sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`, et par un bloc de télémétrie rangé sous `client_auth`, donc ignoré. Les deux fichiers sont à recopier avant le prochain déploiement ([12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). `sync-config.yaml` y est une copie tenue à jour à la main, dans Coolify et dans le fichier monté (voir [08](08-synchronisation-hors-ligne.md) § 3). La CI ne déploie pas ces fichiers.
 
 ## 5. Fichiers d'hébergement inutilisés et ancien domaine
 
@@ -305,7 +310,7 @@ flowchart LR
 | Composant | Port interne | Protocole | Exposé publiquement ? | Remarques |
 | --- | --- | --- | --- | --- |
 | Frontend | 4173 | HTTP | **Oui** (`app.patrinotes.beta.gouv.fr`) | Le nom d'hôte doit figurer dans `preview.allowedHosts`. |
-| Backend | `PORT` (3001 par défaut ; 3002 en production) | HTTP (REST JSON, multipart) | **Oui** (URL = `VITE_BACKEND_URL` = `BACKEND_URL`) | CORS `origin: "*"` ([router.ts#L43-L45](../packages/backend/src/router.ts#L43-L45)). Liens de courriel `BACKEND_URL/attachment/:id` valables 90 jours. |
+| Backend | `PORT` (3001 par défaut ; 3002 en production) | HTTP (REST JSON) | **Oui** (URL = `VITE_BACKEND_URL` = `BACKEND_URL`) | CORS limité à `FRONTEND_URL` et `CORS_ORIGINS` ([router.ts#L54-L63](../packages/backend/src/router.ts#L54-L63)). Liens de courriel `BACKEND_URL/attachment/:id` valables 90 jours. Sondes `/health` et `/health/ready`. |
 | PowerSync | 8080 (`PS_PORT` ; 3003 en production) | HTTP + **WebSocket** | **Oui** (URL = `VITE_POWERSYNC_URL`) | Le proxy doit accepter l'*upgrade* WebSocket et des connexions longues (pas de coupure à 60 s). |
 | Stockage S3 | 9000 (MinIO) | HTTP(S) S3 | **Oui**, au moins en lecture/écriture par URL présignée | Le navigateur envoie les pièces jointes et PDF **directement** sur `MINIO_URL` (PUT présigné) et y est redirigé en lecture. CORS du bucket à configurer. |
 | Keycloak | 8080 (HTTP), 9000 (santé, métriques) | HTTP (OIDC) | **Non requis** pour les utilisateurs (le navigateur n'appelle jamais Keycloak) | Doit être joignable par le backend et PowerSync. Exposé publiquement : à restreindre. |
@@ -339,12 +344,16 @@ Différences de comportement selon `NODE_ENV` (backend) :
 
 | Comportement | `development` | `test` | autre (dont `production`) |
 | --- | --- | --- | --- |
-| Liste blanche des adresses à l'inscription ([authService.ts#L297-L314](../packages/backend/src/services/authService.ts#L297-L314)) | **Désactivée** | Active | Active |
+| Liste blanche des adresses à l'inscription ([authService.ts#L328-L346](../packages/backend/src/services/authService.ts#L328-L346)) | **Désactivée** | Active | Active |
 | Sentry | Désactivé | Actif si DSN | Actif si DSN |
+| Limitation de débit | Active | **Désactivée** | Active |
+| CORS : toute origine `localhost` acceptée | Oui | Oui | Non |
+| En-tête `Strict-Transport-Security` | Non | Non | Oui |
+| Tâche d'envoi des alertes | Active | **Désactivée** | Active |
 | Pile d'erreur renvoyée au client | Oui | Non | Non |
 | Fichier `.env` chargé | `../../.env` | `../../.env.test` | `../../.env` (s'il existe) |
 
-`pnpm backend start` force `NODE_ENV=production` (`cross-env`). C'est le cas en production : aucune variable `NODE_ENV` n'est définie dans Coolify, le script la pose. Un `NODE_ENV` absent équivaut de toute façon à la production (`isProd = !isDev && !isTest`).
+L'image pose `NODE_ENV=production` ([docker-start.sh](../packages/backend/docker-start.sh)), comme `pnpm backend start` (`cross-env`). C'est le cas en production comme en préproduction : aucune variable `NODE_ENV` n'est définie dans Coolify. C'est pourquoi la préproduction doit définir `SENTRY_ENVIRONMENT=preprod` pour que ses événements Sentry ne soient pas classés en `production`. Un `NODE_ENV` absent équivaut de toute façon à la production (`isProd = !isDev && !isTest`).
 
 ## 8. Processus de livraison et retour arrière
 
@@ -359,27 +368,29 @@ sequenceDiagram
     participant CF as Coolify sur le VPS
     Dev->>GH: merge / push sur development puis main
     GH->>GA: déclenche main.yml
-    GA->>GHCR: push patrinotes-BRANCHE:backend et :frontend
+    GA->>GA: tests unitaires du backend, audit non bloquant
+    GA->>GHCR: push patrinotes-BRANCHE:backend, :frontend et leurs étiquettes -SHA
     Dev->>CF: clic « Deploy » dans l'interface Coolify
     CF->>GHCR: pull de l'image
     CF->>CF: redémarre le conteneur
-    Note over CF: backend : migrations Drizzle puis démarrage
+    Note over CF: backend : migrations Drizzle puis démarrage, arrêt si la migration échoue
     Note over CF: frontend : génération env.js puis vite preview
 ```
 
-- Il n'y a ni numéro de version publié, ni changelog, ni étiquette Git de version. La version déployée ne se retrouve que par recoupement des dates de construction des images. La version visible côté client est `window.APP_VERSION` (version de `packages/frontend/package.json` + horodatage du build).
+- Il n'y a ni numéro de version publié, ni changelog, ni étiquette Git de version. La version déployée se retrouve par le label `org.opencontainers.image.revision` de l'image (SHA du commit). La version visible côté client est `window.APP_VERSION` (version de `packages/frontend/package.json` + horodatage du build).
+- Avant le prochain déploiement en production, voir la liste des actions manuelles : [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production).
 - Les modifications de `sync-config.yaml` et `powersync-config.yaml` sont à recopier à la main sur le serveur, puis PowerSync à redémarrer.
 - `development` est fusionnée dans `main` à chaque mise en production.
-- Les clients PWA récupèrent la nouvelle version au chargement suivant en ligne (service worker en `autoUpdate`, navigation *network-first*, rechargement forcé si un *chunk* JS ancien est introuvable, en ligne seulement).
+- Les clients PWA téléchargent la nouvelle version au chargement suivant en ligne ; elle s'active tout de suite sur les pages de consultation, et ailleurs quand l'agent clique sur « Recharger » dans le bandeau « Une nouvelle version de Patrinotes est disponible. » (service worker en mode `prompt`, voir [03 § 9.3](03-frontend-pwa.md#93-mise-à-jour-et-reprise-sur-chunk-périmé)). Un *chunk* JS ancien introuvable force un rechargement, en ligne seulement.
 - Avant de livrer une migration touchant des tables synchronisées : vérifier la publication `powersync`, le schéma client [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts) et les règles [sync-config.yaml](../powersync/sync-config.yaml) ([README](../README.md#L107-L113)).
 
 ### 8.2 Retour arrière
 
 | Élément | Possible ? | Procédure |
 | --- | --- | --- |
-| Image applicative | Difficile | Pas de tag immuable. Redéployer le *digest* précédent (`docker pull ghcr.io/…@sha256:…`, visible dans l'historique du paquet GHCR) ou faire un `git revert` sur la branche, ce qui republie l'image. |
+| Image applicative | Oui | Redéployer l'étiquette `:backend-<sha>` / `:frontend-<sha>` du commit précédent (à saisir dans Coolify à la place de `:backend` / `:frontend`), ou faire un `git revert` sur la branche, ce qui republie l'image. |
 | Migration de base | **Non automatisé** | Drizzle ne génère pas de migration descendante. Restaurer une sauvegarde ou écrire une migration corrective. Une migration de schéma incompatible avec l'ancienne image rend le retour arrière de l'image impossible sans restauration. |
 | Configuration frontend | Oui | Modifier les variables `VITE_*` et redémarrer le conteneur (pas de rebuild). |
 | Clients PWA | Partiel | Les clients ayant déjà chargé la nouvelle version la gardent jusqu'au prochain chargement en ligne. |
 
-**Recommandations** : publier aussi un tag par SHA de commit (`:backend-<sha>`), découpler les migrations du démarrage, sauvegarder la base avant chaque livraison comportant une migration.
+**Recommandations** : déployer par étiquette `-<sha>` plutôt que par étiquette mobile, découpler les migrations du démarrage si plusieurs réplicas tournent, sauvegarder la base avant chaque livraison comportant une migration.

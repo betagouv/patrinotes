@@ -58,7 +58,7 @@ flowchart LR
 | Composant | Technologie | Rôle | Détail |
 | --- | --- | --- | --- |
 | Frontend | React 18, Vite, TanStack Router, PowerSync Web, DSFR, TipTap, MapLibre, Konva, react-pdf | Interface, base locale, aperçu des PDF, annotation des photos, cartes | [03](03-frontend-pwa.md) |
-| Backend | Node.js 20, Fastify 4, TypeBox, Kysely, Drizzle (migrations), Nodemailer, AWS SDK S3 | Intermédiaire d'authentification vers Keycloak, application des écritures, URL pré-signées S3, envoi des e-mails, liens courts, validation des constats, statistiques, import des données patrimoniales, administration. `@react-pdf/renderer`, `react-pdf-html` et `canvas` sont déclarés dans le backend mais importés par aucun code. | [04](04-backend-api.md) |
+| Backend | Node.js 22, Fastify 5, TypeBox, Kysely, Drizzle (migrations), Nodemailer, AWS SDK S3 | Intermédiaire d'authentification vers Keycloak, application des écritures, URL pré-signées S3, envoi des e-mails, liens courts, validation des constats, statistiques, import des données patrimoniales, administration, envoi et reprise des alertes (tâche périodique). | [04](04-backend-api.md) |
 | Package `pdf` | @react-pdf/renderer, react-pdf-html | Gabarits PDF partagés (compte-rendu, constat d'état) | [09](09-documents-pdf-cartes-emails.md) |
 | PostgreSQL 17 | Réplication logique, publication `powersync` | Source de vérité métier, plus la base Keycloak | [06](06-modele-de-donnees.md) |
 | PowerSync Service | `journeyapps/powersync-service`, mode `unified` | Diffusion en temps réel des données aux clients, selon des règles d'accès (*sync streams*) | [08](08-synchronisation-hors-ligne.md) |
@@ -117,7 +117,7 @@ sequenceDiagram
     P-->>A: confirme et diffuse aux autres agents du service
 ```
 
-> **Point d'attention.** Le backend contrôle chaque écriture : table et colonnes autorisées, service de l'utilisateur, auteur du document ou délégation. Un constat envoyé n'accepte aucune modification, sauf sa suppression. En cas de refus ou d'erreur SQL, il répond HTTP 200 avec `success:false`, et le client abandonne l'opération, qui est alors perdue sans message. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
+> **Point d'attention.** Le backend contrôle chaque écriture : table et colonnes autorisées, service de l'utilisateur, auteur du document ou délégation. Un constat envoyé n'accepte aucune modification, sauf sa suppression. En cas de refus ou d'erreur SQL, il répond HTTP 200 avec `success:false` ; le client retire l'opération de sa file et la signale à l'agent dans un bandeau. Voir [08](08-synchronisation-hors-ligne.md) et [16](16-risques-et-dette-technique.md).
 
 ### 3.3 Documents : PDF et e-mail
 

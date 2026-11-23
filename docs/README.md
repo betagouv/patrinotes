@@ -25,7 +25,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 | 09 | [Documents PDF, cartes et e-mails](09-documents-pdf-cartes-emails.md) | Gabarits PDF, plan de situation, cartes, e-mails, alertes, validation, dictée, flux sortants | Développeurs |
 | 10 | [Infrastructure et déploiement](10-infrastructure-et-deploiement.md) | Images Docker, CI, Compose, topologie de production, environnements, livraison | Exploitation |
 | 11 | [Configuration](11-configuration.md) | Référence exhaustive des variables d'environnement | Exploitation, développeurs |
-| 12 | [Exploitation et supervision](12-exploitation-et-supervision.md) | Journaux, Sentry, supervision, sauvegardes, tâches d'administration, procédures d'incident | Exploitation |
+| 12 | [Exploitation et supervision](12-exploitation-et-supervision.md) | Journaux, Sentry, supervision, sauvegardes, tâches d'administration, procédures d'incident, actions avant le prochain déploiement | Exploitation |
 | 13 | [Tests et qualité](13-tests-et-qualite.md) | Tests e2e, outillage, conventions, installation du poste de développement | Développeurs |
 | 14 | [Migration vers l'infrastructure du ministère](14-migration-vers-infra-ministere.md) | Plan en six phases : cadrage, mise à niveau de l'application, infrastructure cible, répétition générale, bascule, décommissionnement ; exigences, flux réseau, retour arrière | **Ministère, exploitation** |
 | 15 | [Règles implicites et pièges](15-regles-cachees-et-pieges.md) | Tout ce qu'il faut savoir avant de toucher au code | **Développeurs** |
@@ -37,6 +37,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 ## Parcours de lecture conseillés
 
 - **Équipe du ministère qui reprend l'hébergement** : 01 → 02 → 14 → 10 → 11 → 12 → 18 → 19.
+- **Prochain déploiement en production** : [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production).
 - **Homologation** : 02 → 05 → 16 → 14 (§ 4.8, flux réseau) → 09 (flux sortants) → 06 (données personnelles).
 - **Nouveau développeur** : 01 → 02 → 15 → 13 (installation) → 03, 04, 08 selon le sujet.
 - **Interlocuteur métier** : 01 → 02 (§1 à 3) → 16 (§1 et §7).
@@ -49,10 +50,10 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 4. **Les e-mails envoient un lien public** vers le backend (`/attachment/:id`), valable 90 jours : le domaine du backend doit être conservé, ou redirigé, après la bascule.
 5. **Le domaine du frontend porte les données locales** des agents : en changer fait perdre les écritures non synchronisées.
 6. **Keycloak** gère les comptes, mais le navigateur ne lui parle jamais : le backend fait l'intermédiaire. Keycloak peut donc rester sur un réseau interne.
-7. **Le frontend tourne avec `vite preview`**, avec une liste de domaines autorisés codée en dur : un nouveau domaine impose une modification du code.
-8. **Le serveur contrôle les droits** : tables et colonnes modifiables, service, auteur et délégation sur `/api/upload-data` ; fichiers, PDF et flux de pièces jointes limités au service du document ; Sentry ne reçoit ni jetons ni mots de passe. Restent à traiter : réglages de sécurité du Keycloak de production, limitation de débit. Voir [16](16-risques-et-dette-technique.md).
-9. **Des écritures peuvent se perdre sans message** (erreur SQL ou refus de droits renvoyés en HTTP 200). Voir [08](08-synchronisation-hors-ligne.md).
-10. **Aucune tâche planifiée ni purge**, ni dans le dépôt ni dans Coolify. Les sauvegardes sont planifiées dans Coolify (base de production : quotidienne, 7 jours en local et 90 jours sur S3), mais **aucune restauration n'a été testée** et le bucket de fichiers n'est pas sauvegardé. Le déploiement est manuel et non tracé. Voir [12](12-exploitation-et-supervision.md).
+7. **Le frontend tourne avec `vite preview`**, avec une liste de domaines autorisés codée en dur : un nouveau domaine impose une modification du code. Côté backend, ce domaine doit aussi être `FRONTEND_URL`, seule origine autorisée par CORS.
+8. **Le serveur contrôle les droits** : tables et colonnes modifiables, service, auteur et délégation sur `/api/upload-data` ; fichiers (type et taille signés), PDF et flux de pièces jointes limités au service du document ; limitation de débit sur la connexion, les routes publiques et l'API ; journaux et Sentry sans jetons ni courriels en clair. Restent à traiter : réglages de sécurité du Keycloak de production, identité fondée sur le courriel, purges RGPD. Voir [16](16-risques-et-dette-technique.md).
+9. **Une écriture refusée par le serveur n'est pas appliquée**, mais l'agent la voit dans un bandeau ; la déconnexion vide l'appareil après avoir averti des envois en attente. Voir [08](08-synchronisation-hors-ligne.md).
+10. **Une seule tâche périodique**, dans le backend : la reprise des alertes en échec (toutes les 15 minutes). Ni import POP ni purge planifiés. Les sauvegardes sont planifiées dans Coolify (base de production : quotidienne, 7 jours en local et 90 jours sur S3), mais **aucune restauration n'a été testée** et le bucket de fichiers n'est pas sauvegardé. Le déploiement est manuel ; le prochain demande des actions préalables ([12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)).
 
 ## Conventions du dossier
 

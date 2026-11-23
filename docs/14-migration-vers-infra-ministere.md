@@ -75,8 +75,8 @@ Les phases 2 et 3 se déroulent **en parallèle** : la première est portée par
 | SMTP | Relais du ministère / prestataire actuel | Relais du ministère avec expéditeur autorisé. | 3 |
 | Sauvegardes | Fréquence, rétention, tests de restauration | PostgreSQL quotidien + PITR, S3 versionné. | 3 |
 | Environnements | Production + recette (branche `development`) | Deux environnements isolés ; statut de `compte-rendu-vif` à trancher. | 3 |
-| Télémétrie PowerSync | Active / désactivée | Désactiver. | 2 |
-| Homologation de sécurité | Exigences RGS, durcissement | À planifier dès cette phase ; points relevés : CORS `*`, TLS base désactivé, `vite preview`, images avec chaîne de compilation, tags non immuables. | Transverse |
+| Télémétrie PowerSync | Désactivée dans le dépôt | Reporter le réglage dans la configuration déployée. | 2 |
+| Homologation de sécurité | Exigences RGS, durcissement | À planifier dès cette phase ; points relevés : `vite preview` sans CSP, TLS base désactivé par défaut, réglages Keycloak, purges RGPD (voir [16](16-risques-et-dette-technique.md)). | Transverse |
 | Date et fenêtre de bascule | Jour ouvré calme, hors période de visites intenses | À fixer après la phase 4 (durée mesurée). | 5 |
 
 **Critère de sortie** : export Coolify archivé, mesures faites, exigences 1 à 3 validées par écrit (sinon, instance PostgreSQL dédiée et S3 à fournir), décisions ci-dessus prises ou datées.
@@ -87,23 +87,23 @@ Les phases 2 et 3 se déroulent **en parallèle** : la première est portée par
 
 ### 3.1 Chaîne de livraison : forge et registre
 
-La CI actuelle ([main.yml](../.github/workflows/main.yml)) publie sur **`ghcr.io/betagouv/patrinotes-<branche>:backend|frontend`**, avec des tags mutables. Pour l'infrastructure du ministère :
+La CI actuelle ([main.yml](../.github/workflows/main.yml)) lance les tests unitaires du backend, puis publie sur **`ghcr.io/betagouv/patrinotes-<branche>:backend|frontend`** (étiquettes mobiles) et `:backend-<sha>|frontend-<sha>` (étiquettes immuables). Pour l'infrastructure du ministère :
 
-- si l'hébergement peut tirer depuis `ghcr.io` : prévoir l'ouverture du flux sortant, un jeton de lecture si les paquets sont privés, et **ajouter un tag immuable** (SHA du commit) pour déployer une version précise ;
+- si l'hébergement peut tirer depuis `ghcr.io` : prévoir l'ouverture du flux sortant, un jeton de lecture si les paquets sont privés, et déployer par l'étiquette immuable `:backend-<sha>` / `:frontend-<sha>` que la CI publie déjà ;
 - sinon : ajouter une étape de publication vers le registre du ministère (Harbor, GitLab Registry…) avec ses identifiants en secrets GitHub, ou migrer la CI sur la forge du ministère ;
-- dans les deux cas, la CI ne déclenche aucun déploiement : définir le mécanisme côté ministère (manuel, webhook, GitOps) et **sortir les migrations du démarrage du conteneur** pour qu'un échec de migration bloque le déploiement au lieu d'être ignoré.
+- dans les deux cas, la CI ne déclenche aucun déploiement : définir le mécanisme côté ministère (manuel, webhook, GitOps) et, si plusieurs réplicas du backend tournent, **sortir les migrations du démarrage du conteneur** (aujourd'hui, un échec de migration arrête le conteneur).
 
 ### 3.2 Adaptations de configuration et de code
 
 | Changement | Pourquoi | Référence |
 | --- | --- | --- |
 | **Épingler** l'image PowerSync (aujourd'hui `latest`). | Rendre la cible identique à la répétition. | [10](10-infrastructure-et-deploiement.md) |
-| Désactiver la télémétrie PowerSync (`disable_telemetry_sharing: true`). | Flux sortant non nécessaire. | [powersync-config.yaml](../powersync/powersync-config.yaml) |
+| Reprendre la configuration PowerSync du dépôt, dont la télémétrie désactivée (`disable_telemetry_sharing: true`, à la racine). | Flux sortant non nécessaire. | [powersync-config.yaml](../powersync/powersync-config.yaml) |
 | Externaliser les valeurs en dur de la configuration PowerSync (URI MongoDB, `jwks_uri`, `issuer`). | Elles pointent sur les noms de service Compose. | [11](11-configuration.md) |
-| Ajouter tout nouveau domaine (recette ministère) à `preview.allowedHosts` **et reconstruire l'image**. | Sinon le frontend répond 403. | [vite.config.ts](../packages/frontend/vite.config.ts#L73-L82) |
-| Rendre TLS vers PostgreSQL configurable, **si le ministère l'impose**. | Le code force `ssl: false` (backend, migrations) et `sslmode: disable` (PowerSync). | [db.ts](../packages/backend/src/db/db.ts), [drizzle.config.ts](../packages/backend/drizzle.config.ts) |
-| Supprimer la requête `constat_validation` de [sync-config.yaml](../powersync/sync-config.yaml), ou ajouter la table à la publication par une migration. | La table n'est pas publiée en production (§ 5.1). | [08](08-synchronisation-hors-ligne.md) |
-| Rendre le `siteId` Matomo configurable, si l'instance change. | Valeur en dur. | [main.tsx#L140-L144](../packages/frontend/src/main.tsx#L140-L144) |
+| Ajouter tout nouveau domaine (recette ministère) à `preview.allowedHosts` **et reconstruire l'image**. | Sinon le frontend répond 403. | [vite.config.ts](../packages/frontend/vite.config.ts#L74-L81) |
+| Activer TLS vers PostgreSQL, **si le ministère l'impose** : `DATABASE_SSL=true` (backend, migrations) et `sslmode` dans `powersync-config.yaml`. | TLS désactivé par défaut. | [11](11-configuration.md) |
+| Mettre `FRONTEND_URL` (et au besoin `CORS_ORIGINS`) au domaine du frontend, et `TRUST_PROXY_HOPS` au nombre de proxys devant le backend. | CORS et limitation de débit par IP. | [11](11-configuration.md) |
+| Rendre le `siteId` Matomo configurable, si l'instance change. | Valeur en dur. | [main.tsx#L142-L145](../packages/frontend/src/main.tsx#L142-L145) |
 | Corriger les risques critiques et élevés exigés par l'homologation. | Chantier transverse. | [16](16-risques-et-dette-technique.md) |
 
 ### 3.3 Identité : Keycloak ou SSO du ministère ?
@@ -128,11 +128,11 @@ Le navigateur n'appelle jamais Keycloak (déduction à confirmer en relevant les
 
 #### 3.3.2 Scénario A (recommandé si le calendrier le permet) — sortir de Keycloak avant la migration
 
-La PR [#82](https://github.com/betagouv/patrinotes/pull/82) (en relecture, non fusionnée) remplace Keycloak par **ProConnect** et une **connexion par code reçu par courriel**. Le backend émet ses propres jetons (RS256, JWKS publié par le backend, audience `patrinotes`), que PowerSync vérifie ; inscription et mot de passe oublié disparaissent, la liste blanche est conservée. Elle prévoit une transition sans déconnexion : pendant au moins 30 jours, les jetons Keycloak existants sont échangés contre une session du backend.
+Un développement en relecture, non fusionné, remplace Keycloak par **ProConnect** et une **connexion par code reçu par courriel**. Le backend émet ses propres jetons (RS256, JWKS publié par le backend, audience `patrinotes`), que PowerSync vérifie ; inscription et mot de passe oublié disparaissent, la liste blanche est conservée. Elle prévoit une transition sans déconnexion : pendant au moins 30 jours, les jetons Keycloak existants sont échangés contre une session du backend.
 
 Séquence, **entièrement sur l'hébergement actuel** :
 
-1. Déployer #82 en production en gardant Keycloak (variables Keycloak conservées, PowerSync accepte les deux émetteurs) ; déclarer les URL de redirection chez ProConnect.
+1. Déployer ce développement en production en gardant Keycloak (variables Keycloak conservées, PowerSync accepte les deux émetteurs) ; déclarer les URL de redirection chez ProConnect.
 2. Attendre l'expiration des sessions hors ligne Keycloak (au moins 30 jours).
 3. Retirer le code de transition, les variables Keycloak, l'URI Keycloak de PowerSync, puis Keycloak lui-même.
 
@@ -208,7 +208,7 @@ Ne **pas** déployer : Adminer, Mailpit, `mongo-rs-init`/`minio-init` en tant qu
 | Rôle de réplication | Attribut `REPLICATION` + `SELECT` sur les tables publiées (utilisé par `PS_DATABASE_URL`) | Exigence PowerSync |
 | Publication | `powersync` doit exister **avant** les migrations ; le rôle des migrations doit pouvoir faire `ALTER PUBLICATION powersync ADD TABLE` (propriétaire des tables et de la publication) | [db/init/0_create-publication.sql](../db/init/0_create-publication.sql), migrations dans [db/](../db/) |
 | Extensions | Aucune (`gen_random_uuid()` est natif depuis PG 13) | migrations |
-| TLS | **Le code désactive TLS** (`ssl: false` dans le backend et les migrations, `sslmode: disable` dans PowerSync). Si le ministère impose TLS vers la base, une modification du code et de la configuration PowerSync est nécessaire (§ 3.2). | [db.ts](../packages/backend/src/db/db.ts), [drizzle.config.ts](../packages/backend/drizzle.config.ts), [powersync-config.yaml](../powersync/powersync-config.yaml) |
+| TLS | Désactivé par défaut. Si le ministère impose TLS vers la base : `DATABASE_SSL=true` pour le backend et les migrations (certificat vérifié avec les autorités du système, ou `sslrootcert` dans `DATABASE_URL`), et `sslmode` dans la configuration PowerSync (§ 3.2). | [db.ts](../packages/backend/src/db/db.ts), [drizzle.config.ts](../packages/backend/drizzle.config.ts), [powersync-config.yaml](../powersync/powersync-config.yaml) |
 | Base Keycloak (scénario B) | Base `keycloak` séparée sur la même instance (ou une autre) ; compte dédié recommandé | [db/init/1_create_keycloak.sql](../db/init/1_create_keycloak.sql) |
 | Supervision | **Alerter sur la taille du WAL retenu par le slot** (`pg_replication_slots`, `pg_wal_lsn_diff`), et définir `max_slot_wal_keep_size`. Si PowerSync est arrêté longtemps, le slot empêche le recyclage du WAL et **peut remplir le disque de la base**. | Comportement PostgreSQL |
 | Sauvegardes | Quotidiennes + PITR, restauration testée. | § 2.3 |
@@ -233,7 +233,7 @@ Dans les deux cas, ce stockage est **reconstructible** : il n'est pas nécessair
 | Accès navigateur | Le point d'accès `MINIO_URL` doit être **public en HTTPS** : le navigateur fait un `PUT` sur une URL présignée (photos, PDF) et est redirigé vers une URL présignée en lecture (`/attachment/:id`). Les mêmes URL sont utilisées par le backend : **un nom interne différent du nom public n'est pas possible** sans modification du code. |
 | CORS du bucket | Autoriser l'origine du frontend pour `PUT` et `GET` (en-têtes `Content-Type`). Reprendre la configuration relevée en phase 1. |
 | Compte | Une clé d'accès dédiée avec droits lecture/écriture sur le bucket uniquement. |
-| Taille des objets | Fichiers jusqu'à plusieurs dizaines de Mo (PDF avec photos). Le passage par le backend est limité à 15 Mo, le PUT présigné ne l'est pas. |
+| Taille des objets | Photos de 20 Mo et PDF de 50 Mo au plus, limites signées dans l'URL présignée : le stockage doit accepter les URL présignées qui signent `Content-Type` et `Content-Length`. |
 | Sauvegarde | Versionnage ou réplication du bucket recommandés : les photos de terrain n'existent nulle part ailleurs une fois synchronisées. |
 
 ### 4.6 Relais SMTP
@@ -253,10 +253,10 @@ Dans les deux cas, ce stockage est **reconstructible** : il n'est pas nécessair
 | Nouveau nom de domaine éventuel (recette ministère) | Doit être ajouté à `preview.allowedHosts` (§ 3.2) **et l'image reconstruite**, sinon le frontend répond 403. |
 | TLS | Terminé par le reverse proxy ; certificats valides (pas de certificat interne non reconnu par les terminaux mobiles des agents). |
 | WebSocket | *Upgrade* `Connection`/`Upgrade` vers PowerSync, délai d'inactivité ≥ 5 min (ou désactivé), pas de mise en mémoire tampon des réponses en flux continu (le client PowerSync peut aussi utiliser du HTTP en *streaming*). |
-| Taille des requêtes | ≥ 20 Mo vers le backend (multipart limité à 15 Mo par le code) ; vers S3, autoriser les PDF volumineux. |
-| En-têtes | `X-Forwarded-*` transmis. CORS : l'API répond `Access-Control-Allow-Origin: *` ; ne pas ajouter de politique contradictoire au proxy. |
+| Taille des requêtes | Les fichiers ne passent pas par le backend (limite par défaut de 1 Mio pour le JSON) ; vers S3, autoriser des PDF de 50 Mo. |
+| En-têtes | `X-Forwarded-For` transmis : le backend en tire l'adresse du client en faisant confiance à `TRUST_PROXY_HOPS` proxys (1 par défaut). CORS : l'API n'accepte que `FRONTEND_URL` et `CORS_ORIGINS` ; ne pas ajouter de politique contradictoire au proxy. |
 | Cache | Ne pas mettre en cache `env.js`, `version.js`, `sw.js`, `index.html` au niveau du proxy ou d'un CDN. |
-| Sécurité | Ajouter au proxy les en-têtes absents de `vite preview` (HSTS, `X-Content-Type-Options`, CSP à construire en tenant compte des domaines du § 4.8). |
+| Sécurité | L'API envoie déjà `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` et HSTS. Ajouter au proxy, pour le frontend servi par `vite preview`, HSTS, `X-Content-Type-Options` et une CSP à construire en tenant compte des domaines du § 4.8. |
 
 ### 4.8 Matrice des flux réseau
 
@@ -293,8 +293,7 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | Backend | Relais SMTP | 465 / 587 | Chaque envoi | Oui |
 | Backend (scénario A) | ProConnect | 443 | Chaque connexion (jeton, *userinfo*, JWKS) | Oui |
 | Backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` | 443 | Import POP (`FORCE_REFETCH_POP=true` ou `pnpm backend import-pop`) | Ponctuel |
-| Backend | Sentry | 443 | Si `SENTRY_DSN` (non défini en production ; le frontend utilise `sentry.incubateur.net`) | Optionnel |
-| PowerSync | Télémétrie JourneyApps | 443 | `disable_telemetry_sharing: false` | **À désactiver** (§ 3.2) |
+| Backend | Sentry | 443 | Si `SENTRY_DSN` (non défini en production au relevé du 17/11/2026 ; le frontend utilise `sentry.incubateur.net`) | Optionnel |
 | Hôtes d'exécution | Registre d'images (`ghcr.io` aujourd'hui) | 443 | Déploiement | Oui (ou registre du ministère) |
 
 #### 4.8.4 Flux sortants depuis les navigateurs (à autoriser sur le réseau des agents et dans la CSP)
@@ -302,10 +301,10 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | Destination | Usage | Source dans le code |
 | --- | --- | --- |
 | `api-adresse.data.gouv.fr` | Autocomplétion et géocodage d'adresses | [address.tsx](../packages/frontend/src/features/address.tsx), [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
-| `tiles.openfreemap.org` | Fond de carte vectoriel et polices | [MapLibre.tsx#L14-L21](../packages/frontend/src/features/map/MapLibre.tsx#L14-L21) |
-| `openmaptiles.geo.data.gouv.fr` | Parcelles cadastrales | [MapLibre.tsx#L17](../packages/frontend/src/features/map/MapLibre.tsx#L17) |
-| `data.geopf.fr` | Orthophotos IGN (WMTS) | [MapLibre.tsx#L26](../packages/frontend/src/features/map/MapLibre.tsx#L26) |
-| `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx#L140-L144](../packages/frontend/src/main.tsx#L140-L144) |
+| `tiles.openfreemap.org` | Fond de carte vectoriel et polices | [MapLibre.tsx#L15-L22](../packages/frontend/src/features/map/MapLibre.tsx#L15-L22) |
+| `openmaptiles.geo.data.gouv.fr` | Parcelles cadastrales | [MapLibre.tsx#L17](../packages/frontend/src/features/map/MapLibre.tsx#L18) |
+| `data.geopf.fr` | Orthophotos IGN (WMTS) | [MapLibre.tsx#L26](../packages/frontend/src/features/map/MapLibre.tsx#L27) |
+| `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx#L142-L145](../packages/frontend/src/main.tsx#L142-L145) |
 | Sentry | Erreurs du navigateur, si `VITE_SENTRY_DSN` | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 
 Liens simples (navigation, pas d'appel automatique) : `patrinotes.beta.gouv.fr` (FAQ), `pop.culture.gouv.fr`, `culture.gouv.fr`, `legifrance.gouv.fr`, Typeform (questionnaire).
@@ -392,7 +391,7 @@ Pendant la répétition, accéder à la cible en forçant la résolution DNS (fi
 
 **Infrastructure**
 
-- [ ] `GET <backend>/health` → `{"status":"ok"}`.
+- [ ] `GET <backend>/health/ready` → 200, `database` et `storage` à `ok`.
 - [ ] PowerSync : `GET <powersync>/probes/liveness` en succès ; réplication initiale terminée dans les journaux.
 - [ ] `SELECT slot_name, active FROM pg_replication_slots;` → slot PowerSync actif.
 - [ ] `pg_publication_tables` identique à la source (relevé de phase 1).

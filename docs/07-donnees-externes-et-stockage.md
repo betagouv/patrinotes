@@ -62,7 +62,7 @@ Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upSe
 
 > Le [README](../README.md) parle de fichiers `monuments.csv` et `mobilier.csv` et d'un appel à l'API adresse **par le backend**. Le code est différent : les fichiers s'appellent `merimee.csv` et `palissy.csv`, et l'API adresse est appelée **directement par le navigateur**.
 
-La variable `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts#L31) mais **aucun code ne la lit**. Il faut quand même la renseigner, sinon le backend refuse de démarrer.
+La variable `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts#L33) mais **aucun code ne la lit**. Il faut quand même la renseigner, sinon le backend refuse de démarrer.
 
 ---
 
@@ -74,7 +74,7 @@ Code : [pop.ts](../packages/backend/src/features/data/pop.ts) et [KyselyBatchWri
 
 | Mode | Commande | Ce qui est fait |
 | --- | --- | --- |
-| Au démarrage du backend | variable `FORCE_REFETCH_POP=true` ([index.ts#L16](../packages/backend/src/index.ts#L16)) | `initPopImmeubles()` puis `initPopObjets()`. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. |
+| Au démarrage du backend | variable `FORCE_REFETCH_POP=true` ([index.ts#L19](../packages/backend/src/index.ts#L19)) | `initPopImmeubles()` puis `initPopObjets()`. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. |
 | Manuel, complet | `pnpm backend import-pop` (= `vite-node ./src/features/data/pop.ts --standalone`) | immeubles, objets, puis `process.exit(0)`. |
 | Planifié | **aucun** | Il n'y a ni cron ni tâche planifiée, ni dans le dépôt ni dans Coolify (relevé du 17/11/2026). Le dernier import des immeubles est postérieur au 06/05/2026 ; celui des objets ne peut pas être daté. |
 
@@ -160,7 +160,7 @@ Code : [uploadService.ts](../packages/backend/src/services/uploadService.ts), [u
 | `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY` | Identifiants applicatifs (droit `readwrite` en développement). |
 | `MINIO_USER`, `MINIO_PASSWORD` | Compte administrateur MinIO (docker-compose seulement). |
 
-Particularités du client S3 ([uploadService.ts#L11](../packages/backend/src/services/uploadService.ts#L11)) : `region: "us-east-1"` en dur, `forcePathStyle: true` et `bucketEndpoint: true`. Le paramètre `Bucket` reçoit l'**URL complète** `${MINIO_URL}/${MINIO_BUCKET}`. Toute solution S3 compatible (MinIO, Scaleway, OVH, Outscale…) doit accepter l'adressage en chemin (*path-style*) et la région `us-east-1` (ou l'ignorer).
+Particularités du client S3 ([uploadService.ts#L19-L26](../packages/backend/src/services/uploadService.ts#L19-L26)) : `region: "us-east-1"` en dur, `forcePathStyle: true` et `bucketEndpoint: true`. Le paramètre `Bucket` reçoit l'**URL complète** `${MINIO_URL}/${MINIO_BUCKET}`. Toute solution S3 compatible (MinIO, Scaleway, OVH, Outscale…) doit accepter l'adressage en chemin (*path-style*) et la région `us-east-1` (ou l'ignorer).
 
 **Prérequis hors code** (*à confirmer sur la plateforme actuelle*) :
 
@@ -191,10 +191,10 @@ Bucket unique, **un seul préfixe racine `attachment/`**, puis l'identifiant du 
 
 Le **premier segment** de la clé désigne le document : c'est lui qui décide de l'accès (service du document, [attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)). Ce format ne doit pas changer.
 
-- Les colonnes `attachment_id` des tables `*_attachment`, `report.attachment_id`, `state_report.attachment_id` et `constat_validation.pdf_path` contiennent la clé **sans** le préfixe `attachment/`. Le backend l'ajoute ([uploadService.ts#L21](../packages/backend/src/services/uploadService.ts#L21)). `attachment_redirection.s3_key` contient la clé **avec** le préfixe.
+- Les colonnes `attachment_id` des tables `*_attachment`, `report.attachment_id`, `state_report.attachment_id` et `constat_validation.pdf_path` contiennent la clé **sans** le préfixe `attachment/`. Le backend l'ajoute ([uploadService.ts#L38](../packages/backend/src/services/uploadService.ts#L38)). `attachment_redirection.s3_key` contient la clé **avec** le préfixe.
 - `<epoch>` est en secondes. Chaque envoi produit un **nouveau PDF**. Les anciens restent dans le stockage, et `attachment_id` du document pointe sur le dernier.
 - Le segment `/localisation/` est **porteur de sens** : c'est lui qui identifie une carte de localisation ([localisationAttachment.ts#L7](../packages/frontend/src/features/state-report/localisationAttachment.ts#L7)). Il ne faut pas changer ce format.
-- Tout est en `.jpg` (ou `.pdf`) : les photos sont **recompressées dans le navigateur** (1 Mo et 1920 px maximum, **métadonnées EXIF supprimées**, donc pas de coordonnées GPS des photos) ([UploadReportImage.tsx#L266](../packages/frontend/src/features/upload/UploadReportImage.tsx#L266)).
+- Tout est en `.jpg` (ou `.pdf`) : les photos sont **recompressées dans le navigateur** (1 Mo et 1920 px maximum, **métadonnées EXIF supprimées**, donc pas de coordonnées GPS des photos) ([UploadReportImage.tsx#L276-L279](../packages/frontend/src/features/upload/UploadReportImage.tsx#L276-L279)).
 - **Pas d'audio, pas de vidéo** : le code ne stocke que des images et des PDF.
 - Fonctions mortes : `getPDFName` (`<id>/compte_rendu.pdf`), `getPictureName`, `uploadAttachment`, `addPDFToReport` (qui construit une URL `https://http…` erronée) ne sont pas appelées.
 
@@ -236,12 +236,12 @@ sequenceDiagram
 
 Points d'attention :
 
-- **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L64](../packages/frontend/src/db/db.ts#L64)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
-- **Pas de limite de taille côté serveur** pour les envois présignés. La limite de 15 Mo de `@fastify/multipart` ne s'applique à aucune route existante, puisque les fichiers ne transitent pas par le backend (envoi direct par URL présignée).
+- **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L107](../packages/frontend/src/db/db.ts#L107)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
+- **Type et taille contrôlés et signés** dans l'URL de dépôt : photos JPEG, PNG, WebP ou HEIC/HEIF de 20 Mo au plus, PDF de 50 Mo au plus ([uploadLimits.ts](../packages/backend/src/features/uploadLimits.ts)). S3 refuse un fichier d'un autre type ou d'une autre taille. Les fichiers ne transitent pas par le backend (envoi direct par URL présignée).
 - **Contrôle d'appartenance** : lecture et écriture limitées au service du document désigné par le premier segment de la clé. Exception : une URL d'écriture est délivrée pour un document **pas encore en base**, car les photos peuvent partir avant la ligne.
-- `getReportPDF` prend **le premier** `report_attachment` en `.pdf` rangé sous `<reportId>/`, **sans tri** : après plusieurs envois, il peut renvoyer un ancien PDF ([uploadService.ts](../packages/backend/src/services/uploadService.ts)).
+- `getReportPDF` prend le **plus récent** des `report_attachment` en `.pdf` rangés sous `<reportId>/` ([uploadService.ts](../packages/backend/src/services/uploadService.ts#L140)).
 - Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit (`getAttachment`), ce qui échoue s'il est absent.
-- Les URL présignées de lecture (`generatePresignedUrl`) ré-encodent chaque segment du chemin après signature ([uploadService.ts#L125](../packages/backend/src/services/uploadService.ts#L125)) pour gérer les noms avec caractères spéciaux.
+- Les URL présignées de lecture (`generatePresignedUrl`) ré-encodent chaque segment du chemin après signature ([uploadService.ts#L190](../packages/backend/src/services/uploadService.ts#L190)) pour gérer les noms avec caractères spéciaux.
 
 ### 3.4 Cycle de vie et volumétrie
 
@@ -293,7 +293,7 @@ Conséquences pour le transfert :
 
 - `BACKEND_URL` est inscrit **en dur dans les courriels déjà envoyés**. Si le domaine du backend change, l'ancien domaine doit continuer à répondre (ou rediriger `/attachment/*`) **pendant 90 jours** après la bascule.
 - La table n'est jamais purgée. Les lignes expirées peuvent être supprimées sans risque.
-- Pour une validation acceptée, le courriel aux destinataires contient lui aussi un lien court de 90 jours, comme un envoi direct ([validationRoutes.ts#L160](../packages/backend/src/routes/validationRoutes.ts#L160)). Seule la page de validation (`GET /api/constat-validation/:token`) donne au valideur une URL S3 présignée valable 1 h.
+- Pour une validation acceptée, le courriel aux destinataires contient lui aussi un lien court de 90 jours, comme un envoi direct ([validationRoutes.ts#L179](../packages/backend/src/routes/validationRoutes.ts#L179)). Seule la page de validation (`GET /api/constat-validation/:token`) donne au valideur une URL S3 présignée valable 1 h.
 
 ---
 

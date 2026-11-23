@@ -4,9 +4,9 @@ Ce chapitre décrit la **stratégie de test** (suite Playwright de bout en bout)
 formatage, lint), les **conventions** observées dans le code et l'historique Git, puis une **procédure de prise en main**
 pas à pas pour un nouveau développeur. Il termine par les **zones non couvertes** par les tests.
 
-En résumé : la qualité repose **surtout sur une suite e2e Playwright** (17 fichiers de specs, 80 tests) qui démarre
-une pile complète en Docker. Quelques **tests unitaires** vitest existent côté backend (§ 4). La CI de test est
-**manuelle**.
+En résumé : la qualité repose **surtout sur une suite e2e Playwright** (18 fichiers de specs, 85 tests) qui démarre
+une pile complète en Docker, lancée à la main. Les **tests unitaires** vitest du backend (15 fichiers, 67 tests) sont
+lancés par la CI avant chaque publication d'image (§ 4).
 
 ---
 
@@ -148,17 +148,18 @@ courant**, c'est-à-dire hors du dépôt quand Playwright tourne depuis la racin
 | Spec | Type | Couverture |
 | --- | --- | --- |
 | [user.spec.ts](../tests/user.spec.ts) | UI | Redirection vers la connexion, page d'inscription, création de compte, connexion. Création de toutes les lignes `user_dept` quand le service a plusieurs départements. |
-| [auth-errors.spec.ts](../tests/auth-errors.spec.ts) | UI + Mailpit | Inscription refusée hors liste blanche ou avec un courriel déjà inscrit, mot de passe faible bloqué côté client, mauvais mot de passe. Parcours complet de réinitialisation du mot de passe par courriel, avec vérification que le compte **ne devient pas admin**. |
+| [auth-errors.spec.ts](../tests/auth-errors.spec.ts) | UI + Mailpit | Inscription refusée hors liste blanche ou avec un courriel déjà inscrit, mot de passe faible bloqué côté client, mauvais mot de passe. Parcours complet de réinitialisation du mot de passe par courriel, avec vérification que le compte **ne devient pas admin** et que la demande pour une adresse sans compte reçoit le même message. |
 | [compte-rendu.spec.ts](../tests/compte-rendu.spec.ts) | UI + Mailpit | Parcours complet d'un compte-rendu (création, saisie, PDF, envoi, réception du courriel) |
 | [constat.spec.ts](../tests/constat.spec.ts) | UI + Mailpit | Parcours complet d'un constat d'état, envoi à plusieurs destinataires, caractères spéciaux et textes très longs |
-| [constat-validation.spec.ts](../tests/constat-validation.spec.ts) | UI + API + Mailpit | Validation hiérarchique : courriel au validateur, acceptation, refus. Jeton déjà utilisé rejeté (404), jeton inconnu (404). |
+| [constat-validation.spec.ts](../tests/constat-validation.spec.ts) | UI + API + Mailpit | Validation hiérarchique : courriel au validateur, acceptation, refus. Jeton déjà utilisé rejeté, jeton inconnu (404). Après un refus, la page du lien montre la décision et sa date, sans le constat ni le PDF. |
 | [constat-with-alerts.spec.ts](../tests/constat-with-alerts.spec.ts) | UI + Mailpit | Alertes (objets, sections) et courriels d'alerte. Alertes envoyées au premier envoi et **non renvoyées** après un refus du validateur. |
-| [image-upload-constat.spec.ts](../tests/image-upload-constat.spec.ts) | UI | Photos à tous les emplacements d'un constat, puis génération du PDF |
+| [image-upload-constat.spec.ts](../tests/image-upload-constat.spec.ts) | UI | Photos à tous les emplacements d'un constat, plan de l'édifice compris (erreur affichée et « Finaliser » débloqué après suppression), puis génération du PDF |
 | [image-upload-compte-rendu.spec.ts](../tests/image-upload-compte-rendu.spec.ts) | UI | Photos dans `UploadReportImage` (NotesForm), puis PDF |
 | [image-drawing-legend.spec.ts](../tests/image-drawing-legend.spec.ts) | UI | Dessin sur une photo (Konva), légende, présence de la légende dans le PDF |
-| [upload-errors.spec.ts](../tests/upload-errors.spec.ts) | UI + API | Fichier non image rejeté avec une erreur visible, suppression d'une photo, aller-retour `/api/upload/attachment` et `/size`, 404 sur un chemin inconnu, authentification obligatoire. Crée `fixtures/not-an-image.txt` à la volée. |
+| [upload-errors.spec.ts](../tests/upload-errors.spec.ts) | UI + API | Fichier non image rejeté avec une erreur visible, suppression d'une photo, aller-retour `/api/upload/attachment` et `/size` (avec le type et la taille demandés pour l'URL de dépôt), 404 sur un chemin inconnu, authentification obligatoire. Crée `fixtures/not-an-image.txt` à la volée. |
 | [attachment-redirect.spec.ts](../tests/attachment-redirect.spec.ts) | API | `/attachment/:id` : redirection vers une URL S3 présignée, 404, **410 après 90 jours**, toujours valide au 90e jour |
-| [sync.spec.ts](../tests/sync.spec.ts) | API | `/api/upload-data` : authentification obligatoire (**403**, et non 401, par convention de l'application). Tables non modifiables refusées sans effet, profil limité à soi (jamais l'e-mail), service limité à ses membres, droits auteur, rédacteur et délégation sur les CR et les constats, délégations entre collègues. Dernier écrit gagnant entre deux écritures concurrentes. |
+| [sync.spec.ts](../tests/sync.spec.ts) | API | `/api/upload-data` : authentification obligatoire (**403**, et non 401, par convention de l'application). Tables non modifiables refusées sans effet, profil limité à soi (jamais l'e-mail), service limité à ses membres, droits auteur, rédacteur et délégation sur les CR, constats modifiables par leur seul auteur (même avec une délégation), délégations entre collègues. Dernier écrit gagnant entre deux écritures concurrentes. Alerte de fiche soumise par la synchronisation envoyée une seule fois par le serveur. |
+| [logout-and-sync-errors.spec.ts](../tests/logout-and-sync-errors.spec.ts) | UI + API | Déconnexion avec des envois en attente (avertissement, refus hors ligne, appareil vidé) ; révocation du jeton hors ligne auprès de Keycloak à la déconnexion ; écriture refusée par le serveur affichée dans le bandeau jusqu'à « J'ai compris ». |
 | [admin.spec.ts](../tests/admin.spec.ts) | API + UI | Liste blanche (pagination, ajout, 409 si doublon, suppression, 404), `/api/admin/me`, exports, recherche utilisateurs, 403 pour un non-admin. Page `/admin` : ajout et suppression, pagination des deux tableaux. Le rôle admin est attribué **en SQL**. |
 | [stats.spec.ts](../tests/stats.spec.ts) | API + UI | `/api/stats/public` (forme, comptages, utilisateurs actifs, exclusion des documents désactivés), `/api/stats/admin` (403, constats abandonnés, envois par service), page `/stats` publique et admin, changement de période |
 | [map-smoke.spec.ts](../tests/map-smoke.spec.ts) | UI | Ouverture et fermeture de la carte MapLibre « Choisir sur la carte » **sans erreur JS**. Test de fumée volontaire : cliquer un marqueur sur un canvas WebGL serait instable. **Dépend d'Internet** (tuiles). |
@@ -184,7 +185,7 @@ Le monument utilisé est inséré directement en base (`TEST00001`) : aucun impo
 
 ### 3.1 En local
 
-Prérequis : Docker avec Compose v2, Node 20, pnpm, ports **3010 à 3019 libres**.
+Prérequis : Docker avec Compose v2, Node 22, pnpm, ports **3010 à 3019 libres**.
 
 ```bash
 pnpm install
@@ -210,28 +211,43 @@ Comportements à connaître :
 
 - Déclenchement **manuel uniquement** (`workflow_dispatch`). Aucun test ne tourne automatiquement sur les PR ni sur les
   push.
-- `ubuntu-latest`, Node 20, `pnpm/action-setup@v4`, `pnpm install` (sans `--frozen-lockfile`),
+- `ubuntu-latest`, Node 22, `pnpm/action-setup@v4`, `pnpm install` (sans `--frozen-lockfile`),
   `playwright install --with-deps chromium`, puis `pnpm e2e` avec `CI=true`.
 - Timeout de 30 min. Rapport `playwright-report/` publié en artefact, conservé 7 jours.
 - Le workflow de build [main.yml](../.github/workflows/main.yml) (images GHCR sur `main`, `development` et
-  `compte-rendu-vif`) **ne dépend pas** des tests : une image cassée peut être publiée.
+  `compte-rendu-vif`) lance les **tests unitaires du backend** et ne publie les images que s'ils passent ; il lance
+  aussi `pnpm audit --prod` (rapport non bloquant). Il ne dépend pas des tests e2e.
 
 > [!NOTE]
 > `pnpm/action-setup@v4` sans version explicite lit le champ `packageManager` du `package.json` : `pnpm@10.12.4`.
 
-**Proposition** : déclencher `tests.yml` sur `pull_request` vers `main` et `development`, ajouter un job `tsc --noEmit`
-(scripts `check` du backend et du frontend), et conditionner `main.yml` au succès des tests.
+**Proposition** : déclencher `tests.yml` sur `pull_request` vers `main` et `development` et ajouter un job
+`tsc --noEmit` (scripts `check` du backend et du frontend).
 
 ---
 
 ## 4. Tests unitaires
 
-Backend seulement : `pnpm backend test` (vitest `^2.1.5`, sans configuration particulière). **Non lancés en CI.**
+Backend seulement : `pnpm backend test` (vitest `^2.1.5`, sans configuration particulière). 15 fichiers, 67 tests (dont
+un répété pour chaque table modifiable). **Lancés en CI** par [main.yml](../.github/workflows/main.yml) avant la
+construction des images. Ils ne demandent ni base ni service externe, sauf [migration0045.test.ts](../packages/backend/src/db/migration0045.test.ts)
+et [alertDelivery.test.ts](../packages/backend/src/features/alertDelivery.test.ts), qui utilisent la base de test
+(pile `patrinotes-test`) et sont ignorés quand elle ne tourne pas, ce qui est le cas en CI.
 
 | Fichier | Couvre |
 | --- | --- |
-| [syncPolicy.test.ts](../packages/backend/src/features/sync/syncPolicy.test.ts) | Règles d'écriture de `/api/upload-data` (tables, colonnes, service, auteur, délégation, alertes de fiche) ; vérifie aussi que les colonnes déclarées correspondent au schéma client |
+| [syncPolicy.test.ts](../packages/backend/src/features/sync/syncPolicy.test.ts) | Règles d'écriture de `/api/upload-data` (tables, colonnes, service, auteur, délégation, constats réservés à leur auteur, alertes de fiche, `PUT` rejoué appliqué comme une mise à jour) ; vérifie aussi que les colonnes déclarées correspondent au schéma client |
 | [attachmentAccess.test.ts](../packages/backend/src/features/attachmentAccess.test.ts) | Format des chemins de fichiers |
+| [uploadLimits.test.ts](../packages/backend/src/features/uploadLimits.test.ts) | Types et tailles de fichiers acceptés |
+| [recipients.test.ts](../packages/backend/src/features/recipients.test.ts) | Limite de 20 destinataires |
+| [passwordPolicy.test.ts](../packages/backend/src/features/passwordPolicy.test.ts) | Politique de mot de passe |
+| [rateLimit.test.ts](../packages/backend/src/features/rateLimit.test.ts) | Limitation de débit (connexion par adresse et par IP, routes publiques, API, 429 et `Retry-After`) |
+| [httpSecurity.test.ts](../packages/backend/src/features/httpSecurity.test.ts) | Origines CORS autorisées, en-têtes de sécurité |
+| [errors.test.ts](../packages/backend/src/features/errors.test.ts) | 400 sur une requête refusée par le schéma |
+| [email.test.ts](../packages/backend/src/features/email.test.ts) | Normalisation et masquage des courriels |
+| [alertPhotos.test.ts](../packages/backend/src/features/mail/alertPhotos.test.ts) | Photos jointes ou en liens selon la taille (15 Mo) |
+| [alertDelivery.test.ts](../packages/backend/src/features/alertDelivery.test.ts) | Envoi unique et reprise des alertes |
+| [migration0045.test.ts](../packages/backend/src/db/migration0045.test.ts) | Reprise des pièces jointes à `is_deprecated` `NULL`, sans doublon de plan |
 | [upService.test.ts](../packages/backend/src/services/upService.test.ts), [upProvider.test.ts](../packages/backend/src/features/up/upProvider.test.ts) | Arbre des unités patrimoniales, cache, réponse 404 de l'API |
 | [monumentAlertRoutes.test.ts](../packages/backend/src/routes/monumentAlertRoutes.test.ts) | Destinataires d'une alerte de fiche |
 
@@ -364,7 +380,7 @@ Le [README](../README.md) donne la trame, mais il est **incomplet et en partie f
 
 | Le README dit | Réalité |
 | --- | --- |
-| `pnpm = 8.4.0` | Le [package.json](../package.json) déclare `"packageManager": "pnpm@10.12.4"` (comme le [Dockerfile](../Dockerfile#L16)). **Utiliser pnpm 10.12.4** (corepack le choisit). |
+| `pnpm = 8.4.0` | Le [package.json](../package.json) déclare `"packageManager": "pnpm@10.12.4"` (comme le [Dockerfile](../Dockerfile#L5)). **Utiliser pnpm 10.12.4** (corepack le choisit). |
 | « Copy `.env.dist` to `.env` » | [.env.dist](../.env.dist) est **obsolète** : il contient des variables ElectricSQL et AWS inutilisées et **il manque** `DATAGOUV_API`, `JWT_REFRESH_SECRET`, `BACKEND_URL`, `EMAIL_EMITTER`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_ADMIN_CLIENT_ID`, `AUTH_ADMIN_CLIENT_SECRET`, `KEYCLOAK_*`, `PS_DATABASE_URL`, `POWERSYNC_PORT`, `KEYCLOAK_PORT`, `SMTP_PORT`, `SMTP_WEB_PORT`, `MINIO_SERVER_PORT`, `MINIO_CONSOLE_PORT`, `VITE_POWERSYNC_URL`. **Partir de [.env.test](../.env.test)** est bien plus fiable. |
 | « La whitelist n'est pas active en dev » | Vrai seulement si `process.env.NODE_ENV === "development"` : `isDev` lit la variable **brute**, et le `default("development")` du schéma zod ne s'applique qu'à `ENV.NODE_ENV`. `pnpm backend dev` passe par `vite-node`, et Vite fixe `NODE_ENV=development` quand il est absent (comportement de Vite 5, à confirmer). Un lancement par `node` ou `pnpm backend start` sans `NODE_ENV` est traité **comme la production** (liste blanche active, Sentry actif si un DSN est défini). |
 | `clearDb.sh` | Le fichier s'appelle [scripts/clear-db.sh](../scripts/clear-db.sh) et vise le volume `compte-rendu-vif_pg_data` (ancien nom de projet Compose). |
@@ -372,11 +388,10 @@ Le [README](../README.md) donne la trame, mais il est **incomplet et en partie f
 ### 7.1 Étapes
 
 ```bash
-# 1. Outils : Node 20 (l'image utilise 20.11), pnpm 10, Docker + Compose v2
+# 1. Outils : Node 22 (l'image utilise 22.23), pnpm 10, Docker + Compose v2
 corepack enable && corepack prepare pnpm@10.12.4 --activate
 
-# 2. Dépendances (canvas, dépendance du backend inutilisée mais installée, compile du natif : paquets cairo, pango,
-#    libjpeg, giflib… requis, voir la liste apk du Dockerfile)
+# 2. Dépendances (aucun module natif à compiler)
 pnpm install
 
 # 3. Fichier d'environnement : partir de .env.test, puis ajuster
@@ -457,14 +472,15 @@ Le `.gitignore` exclut aussi `.claude` et `.playwright-mcp` : le développement 
 | **Hors ligne** | Aucun test ne coupe le réseau (`context.setOffline`) pour vérifier la saisie hors ligne puis la resynchronisation, alors que c'est la promesse centrale du produit. | Élevé |
 | Navigateurs | Chromium desktop uniquement. Pas de WebKit/Safari iOS (pas de SharedWorker, OPFS partiel), ni de Firefox, ni de viewport mobile. | Élevé |
 | Synchronisation descendante | Pas de test multi-utilisateurs vérifiant qu'un collègue du même service reçoit les données et qu'un autre service **ne les reçoit pas** (règles `sync-config.yaml`). | Élevé (cloisonnement des données) |
-| Échecs silencieux de `applyCrud` | Les refus sont testés côté serveur, mais aucun test ne vérifie ce que voit l'agent quand une écriture est refusée ou en erreur (réponse 200 `success:false`, perte silencieuse). | Moyen |
+| Écritures mises de côté | Le bandeau des écritures refusées est testé, mais pas la mise de côté après 5 erreurs 4xx répétées. | Faible |
 | Fichiers et routes PDF | Le contrôle d'accès aux fichiers et aux PDF d'un autre service n'a qu'un test unitaire de format de chemin ; pas de test e2e d'accès croisé. | Moyen |
 | Mise à jour de version (service worker) | Pas de test du mécanisme anti-version périmée (`vite:preloadError`, NetworkFirst). | Moyen |
 | Plan de situation | Aucun test de `generatePlanSituationSnapshot` ni du bandeau hors ligne. Le test de fumée ne fait qu'ouvrir la carte. | Moyen |
 | Contenu du PDF | Les tests vérifient la présence d'éléments (légende…), pas le rendu visuel (pas de comparaison d'images). | Faible à moyen |
-| Pannes de dépendances | Pas de test SMTP ou S3 indisponible, ni Keycloak lent. | Moyen |
+| Pannes de dépendances | Pas de test e2e SMTP ou S3 indisponible, ni Keycloak lent ; la reprise des alertes en échec n'est testée qu'en unitaire (la tâche est désactivée en `NODE_ENV=test`). `/health/ready` n'a pas de test. | Moyen |
+| Limitation de débit | Testée en unitaire seulement : elle est désactivée en `NODE_ENV=test`, donc dans les tests e2e. | Faible |
 | Import POP | Aucun test de `pop.ts` ni de `KyselyBatchWriter`. | Moyen |
 | Expiration des jetons de validation (7 jours) et des liens de réinitialisation | Testés indirectement au mieux. | Faible |
 | Accessibilité (RGAA) | Aucun test automatisé (axe…), bien qu'une page « Accessibilité » existe. | Moyen (obligation légale) |
 | Performance / charge | Aucun | Moyen |
-| Unitaires | Backend seulement, hors CI (§ 4) | Moyen |
+| Unitaires | Backend seulement (§ 4) ; ni frontend, ni package `pdf` | Moyen |

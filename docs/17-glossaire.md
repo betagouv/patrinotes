@@ -20,7 +20,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Courriels obligatoires / additionnels** | Destinataires imposés d'une alerte (services compétents) et destinataires ajoutés librement. |
 | **CRMH** | Conservation régionale des monuments historiques, service de la DRAC. |
 | **CST** | Contrôle scientifique et technique de l'État sur les monuments historiques. |
-| **Délégation** (`delegation`) | Droit donné par un agent à un collègue de son service de créer, modifier et supprimer ses comptes-rendus (et, côté serveur, ses constats et alertes de fiche). |
+| **Délégation** (`delegation`) | Droit donné par un agent à un collègue de son service de créer, modifier et supprimer ses comptes-rendus (et, côté serveur, ses alertes de fiche). Elle ne s'applique pas aux constats. |
 | **Demandeur, pétitionnaire** (`applicant*`) | Personne reçue pour un projet de travaux, destinataire du compte-rendu. |
 | **DGPA** | Direction générale des patrimoines et de l'architecture. Éditrice de l'application et responsable de traitement. |
 | **DRAC** | Direction régionale des affaires culturelles. |

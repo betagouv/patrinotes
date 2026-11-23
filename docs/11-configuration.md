@@ -25,14 +25,15 @@ Légende : **Obl.** = obligatoire (le composant refuse de démarrer sans) ; **Se
 
 ## 2. Backend (`packages/backend`)
 
-Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts#L24-L61).
+Schéma de référence : [envVars.ts#L24-L76](../packages/backend/src/envVars.ts#L24-L76).
 
 ### 2.1 Base de données
 
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
-| `DATABASE_URL` | Oui | — | Chaîne de connexion utilisée **à l'exécution** (pool `pg`). Le code force `ssl: false` ([db.ts#L6-L9](../packages/backend/src/db/db.ts#L6-L9)) ; l'effet d'un `?sslmode=require` dans l'URL est à vérifier. | `postgresql://patrinotes:***@pg:5432/patrinotes` | **Oui** (mot de passe) |
-| `POSTGRES_HOST` | Oui | — | Hôte utilisé **uniquement par les migrations** `drizzle-kit` (TLS désactivé en dur). | `pg` | Non |
+| `DATABASE_URL` | Oui | — | Chaîne de connexion utilisée **à l'exécution** (pool `pg`, [db.ts#L9-L13](../packages/backend/src/db/db.ts#L9-L13)). `sslmode` et `sslrootcert` dans l'URL priment sur `DATABASE_SSL`. | `postgresql://patrinotes:***@pg:5432/patrinotes` | **Oui** (mot de passe) |
+| `DATABASE_SSL` | Non | `false` | `true` : connexion TLS vers PostgreSQL, certificat vérifié avec les autorités du système, pour le backend **et** les migrations. `false` : connexion non chiffrée (réseau Docker interne). PowerSync se règle à part (§ 4). | `true` si la base est distante | Non |
+| `POSTGRES_HOST` | Oui | — | Hôte utilisé **uniquement par les migrations** `drizzle-kit` (TLS selon `DATABASE_SSL`). | `pg` | Non |
 | `POSTGRES_PORT` | Non | `5432` | Port pour les migrations (et port publié du conteneur `pg` en dev). | `5432` | Non |
 | `POSTGRES_USER` | Oui | — | Utilisateur pour les migrations ; en Compose, aussi superutilisateur de l'instance **et** utilisateur Keycloak. | `postgres` | Non |
 | `POSTGRES_PASSWORD` | Oui | — | Mot de passe associé. | — | **Oui** |
@@ -46,9 +47,11 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
 | `PORT` | Non | `3001` | Port d'écoute de Fastify (sur `0.0.0.0`). | `3001` | Non |
-| `FRONTEND_URL` | Oui | — | URL publique du frontend, utilisée dans les liens envoyés par courriel (réinitialisation de mot de passe, validation de constat, lien vers un constat). | `https://app.patrinotes.beta.gouv.fr` | Non |
+| `FRONTEND_URL` | Oui | — | URL publique du frontend, utilisée dans les liens envoyés par courriel (réinitialisation de mot de passe, validation de constat, lien vers un constat). **C'est aussi l'origine autorisée par CORS** : une valeur fausse (autre domaine, `http` au lieu de `https`) bloque tous les appels du navigateur à l'API. | `https://app.patrinotes.beta.gouv.fr` | Non |
+| `CORS_ORIGINS` | Non | — | Autres origines autorisées par CORS, séparées par des virgules (par exemple un second domaine pendant une bascule). En développement et en test, toute origine `localhost` est acceptée en plus. | `https://app.patrinotes.incubateur.net` | Non |
+| `TRUST_PROXY_HOPS` | Non | `1` | Nombre de proxys inverses devant le backend. Le backend prend l'adresse du client dans `X-Forwarded-For` en ne faisant confiance qu'à ce nombre de sauts ; elle sert à la limitation de débit par IP. `1` = Traefik seul ; `2` si un autre proxy (répartiteur, CDN) est placé devant Traefik. Trop bas : tous les agents semblent venir du proxy et partagent la même limite ; trop haut : un client peut choisir son adresse. | `1` | Non |
 | `BACKEND_URL` | Oui | — | URL publique du backend, utilisée pour fabriquer les liens de pièces jointes des courriels : `${BACKEND_URL}/attachment/<id>/<nom>` ([pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx)). Ces liens restent valables **90 jours** : changer cette URL casse les liens déjà envoyés. | `https://api.patrinotes.beta.gouv.fr` (production) | Non |
-| `NODE_ENV` | Non | `development` (dans `ENV`) | `development` désactive la liste blanche d'inscription et Sentry ; `test` charge `.env.test`. Toute autre valeur, **ou l'absence de valeur**, est traitée comme la production par `isProd`. `pnpm backend start` force `production` par `cross-env` : c'est ce qui la pose en production, où la variable n'est pas définie dans Coolify. | `production` | Non |
+| `NODE_ENV` | Non | `development` (dans `ENV`) | `development` désactive la liste blanche d'inscription et Sentry ; `test` charge `.env.test` et désactive la limitation de débit et la tâche d'envoi des alertes. Toute autre valeur, **ou l'absence de valeur**, est traitée comme la production par `isProd` (CORS strict, `Strict-Transport-Security`). L'image Docker pose `production` ([docker-start.sh](../packages/backend/docker-start.sh)), y compris en préproduction. | `production` | Non |
 | `DEBUG` | Non | `cr-vif:*` | Filtre des journaux du module `debug` (espace de noms `cr-vif`, ancien nom du produit). | `cr-vif:*` | Non |
 
 ### 2.3 Authentification (Keycloak)
@@ -87,7 +90,9 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
 | `FORCE_REFETCH_POP` | Non | `false` | Si `true` (chaîne insensible à la casse), au démarrage : téléchargement de `merimee.csv` et `palissy.csv` depuis `ministere-culture.s3.sbg.io.cloud.ovh.net`, import dans `pop_immeubles` (toujours) et `pop_objets` (**seulement si la table est vide**). Bloque l'ouverture du port pendant l'import. À remettre à `false` ensuite. | `false` | Non |
-| `SENTRY_DSN` | Non | — | DSN Sentry du backend. Absent → Sentry désactivé. **Absent en production** : seul le frontend remonte ses erreurs. `tracesSampleRate: 0.1` en dur, données personnelles filtrées par `beforeSend` ([sentry.ts](../packages/backend/src/features/sentry.ts)). | — | Sensible |
+| `SENTRY_DSN` | Non | — | DSN Sentry du backend. Absent → Sentry désactivé. Absent en production au relevé du 17/11/2026 (voir [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). `tracesSampleRate: 0.1` en dur, données personnelles filtrées par `beforeSend` ([sentry.ts](../packages/backend/src/features/sentry.ts)). Le projet Sentry peut être le même que celui du frontend (`VITE_SENTRY_DSN`). | — | Sensible |
+| `SENTRY_ENVIRONMENT` | Non | `NODE_ENV` | Environnement des événements Sentry du backend. L'image posant `NODE_ENV=production` partout, mettre `preprod` en préproduction. | `preprod` | Non |
+| `SENTRY_RELEASE` | Non | `SOURCE_COMMIT`, sinon version du paquet | Version des événements Sentry. Posée dans l'image par la CI (SHA du commit) : rien à définir dans Coolify. | SHA de commit | Non |
 | `UP_API_MODE` | Non | `mock` | `live` : appel réel de l'API Dataspace des unités patrimoniales ; `mock` : données de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json). Doit valoir `live` en production. | `live` | Non |
 | `UP_API_URL` | Non | `https://api-ext.stg.cloud.culture.fr/dataspace/patrinote/up` | Point d'accès de l'API Dataspace. Joignable seulement depuis le réseau de production. | idem | Non |
 | `UP_API_KEY` | Si `UP_API_MODE=live` | — | Clé de l'API Dataspace (en-tête `apiKey`). Le démarrage échoue si elle manque en mode `live`. | — | **Oui** |
@@ -102,7 +107,7 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 
 ## 3. Frontend (`packages/frontend`)
 
-Schéma de référence : [envVars.ts#L15-L22](../packages/frontend/src/envVars.ts#L15-L22). Toutes ces variables sont **publiques** et lues **à l'exécution** en production (aucune reconstruction nécessaire pour les changer).
+Schéma de référence : [envVars.ts#L15-L23](../packages/frontend/src/envVars.ts#L15-L23). Toutes ces variables sont **publiques** et lues **à l'exécution** en production (aucune reconstruction nécessaire pour les changer).
 
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
@@ -111,7 +116,8 @@ Schéma de référence : [envVars.ts#L15-L22](../packages/frontend/src/envVars.t
 | `VITE_AUTH_URL` | Oui (schéma) | — | Validée mais **non utilisée** par le frontend. | idem backend | Non |
 | `VITE_AUTH_REALM` | Oui (schéma) | — | Validée mais non utilisée. | `master` | Non |
 | `VITE_AUTH_CLIENT_ID` | Oui (schéma) | — | Validée mais non utilisée. | `patrinotes` | Non |
-| `VITE_SENTRY_DSN` | Non | — | DSN Sentry du navigateur (public par nature). Exceptions seulement, sans journaux console, données personnelles filtrées. En production : instance `sentry.incubateur.net`. | — | Non |
+| `VITE_SENTRY_DSN` | Non | — | DSN Sentry du navigateur (public par nature). Exceptions et écritures refusées, sans journaux console, données personnelles filtrées. En production : instance `sentry.incubateur.net`. | — | Non |
+| `VITE_SENTRY_ENVIRONMENT` | Non | `production` | Environnement des événements Sentry du navigateur. `preprod` en préproduction. | `preprod` | Non |
 
 Variables spéciales et paramètres de build :
 
@@ -136,7 +142,7 @@ Variables spéciales et paramètres de build :
 | `PS_PORT` | Oui | — | Port d'écoute. | `8080` (`3003` en production) | Non |
 | `PS_JWT_SECRET` | Non | — | Transmise par Compose (valeur de `JWT_SECRET`) mais **non référencée** dans [powersync-config.yaml](../powersync/powersync-config.yaml) : inutilisée. | — | Oui (par prudence) |
 
-Paramètres **codés en dur** dans le YAML (à externaliser ou adapter pour la cible) : URI MongoDB `mongodb://mongo:27017/powersync_demo` (sans authentification), `jwks_uri` et `issuer` pointant sur `http://keycloak:8080/realms/master`, audience `account`, télémétrie active. En production, `jwks_uri` et `issuer` ont été modifiés à la main pour `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes` ; le reste est identique (télémétrie active comprise). Voir [10 § 4.4](10-infrastructure-et-deploiement.md#44-configuration-powersync-versionnée).
+Paramètres **codés en dur** dans le YAML (à externaliser ou adapter pour la cible) : URI MongoDB `mongodb://mongo:27017/powersync_demo` (sans authentification), `jwks_uri` et `issuer` pointant sur `http://keycloak:8080/realms/master`, audience `account`, `sslmode: disable`. La télémétrie est désactivée (`telemetry.disable_telemetry_sharing: true`, à la racine). En production (relevé du 17/11/2026), `jwks_uri` et `issuer` ont été modifiés à la main pour `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`, et le fichier déposé range le bloc de télémétrie sous `client_auth`, où il est ignoré : il est à recopier ([12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). Voir [10 § 4.4](10-infrastructure-et-deploiement.md#44-configuration-powersync-versionnée).
 
 > [!IMPORTANT]
 > **Cohérence de l'émetteur des jetons.** Le même jeton d'accès Keycloak est vérifié par le backend (émetteur attendu `${VITE_AUTH_URL}/realms/${VITE_AUTH_REALM}`) et par PowerSync (émetteur `client_auth.issuer`). Keycloak calcule l'`iss` à partir de son nom d'hôte (`KC_HOSTNAME`) ou, à défaut, de l'URL appelée. Il faut donc que **`VITE_AUTH_URL`, l'URL publique ou interne de Keycloak et `client_auth.issuer` désignent exactement la même URL**. Sinon : erreurs 403 sur l'API ou refus de connexion PowerSync. Les règles de synchronisation filtrent par `auth.parameter('email')` : le jeton doit contenir la revendication `email`.
@@ -194,7 +200,7 @@ Variables utilisées dans [docker-compose.yaml](../docker-compose.yaml) (mode d�
 | `ELECTRIC_PORT`, `VITE_ELECTRIC_URL` | Variables du moteur **ElectricSQL**, sans usage (voir aussi `.electric_migrations_*` dans [.gitignore](../.gitignore)). |
 | `PG_PROXY_PORT`, `PG_PROXY_PASSWORD` | Proxy PostgreSQL d'ElectricSQL, sans usage. |
 | `KEYCLOAK_CLIENT_SECRET` | Équivalent : `AUTH_CLIENT_SECRET`. |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`, `AWS_REGION`, `AWS_ENDPOINT` | Équivalent : `MINIO_*`. **Définies en production** (`AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod`, `AWS_ENDPOINT` = `MINIO_URL`), sans effet. Le SDK AWS pourrait lire `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` par défaut, mais le client reçoit ses identifiants explicitement ([uploadService.ts#L11-L17](../packages/backend/src/services/uploadService.ts#L11-L17)). |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`, `AWS_REGION`, `AWS_ENDPOINT` | Équivalent : `MINIO_*`. **Définies en production** (`AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod`, `AWS_ENDPOINT` = `MINIO_URL`), sans effet. Le SDK AWS pourrait lire `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` par défaut, mais le client reçoit ses identifiants explicitement ([uploadService.ts#L20-L31](../packages/backend/src/services/uploadService.ts#L20-L31)). |
 | `HTTP_PORT` | Équivalent : `PORT`. |
 | `COMPOSE_PROFILES` | Aucun profil n'est défini dans les fichiers Compose. |
 | `FRONTEND_PORT` | Utilisée seulement par Playwright. |
@@ -220,21 +226,25 @@ Paramètres qui ne passent par aucune variable et dont un changement impose une 
 
 | Paramètre | Valeur | Emplacement |
 | --- | --- | --- |
-| Hôtes autorisés par `vite preview` | `app.patrinotes.beta.gouv.fr`, `app.patrinotes.incubateur.net`, `app.compte-rendu-vif.beta.gouv.fr`, `compte-rendu-vif.incubateur.net`, `.compte-rendu-vif.incubateur.net`, `patrinotes.incubateur.net` | [vite.config.ts#L73-L82](../packages/frontend/vite.config.ts#L73-L82) |
-| Matomo | `https://stats.beta.gouv.fr/`, `siteId: 123` | [main.tsx#L132-L136](../packages/frontend/src/main.tsx#L132-L136) |
-| CORS de l'API | `origin: "*"` | [router.ts#L43-L45](../packages/backend/src/router.ts#L43-L45) |
-| TLS PostgreSQL | `ssl: false` (backend et migrations), `sslmode: disable` (PowerSync) | [db.ts](../packages/backend/src/db/db.ts), [drizzle.config.ts](../packages/backend/drizzle.config.ts), [powersync-config.yaml](../powersync/powersync-config.yaml) |
-| Client S3 | région `us-east-1`, `forcePathStyle: true`, `bucketEndpoint: true` | [uploadService.ts#L11-L17](../packages/backend/src/services/uploadService.ts#L11-L17) |
+| Hôtes autorisés par `vite preview` | `app.patrinotes.beta.gouv.fr`, `app.patrinotes.incubateur.net`, `app.compte-rendu-vif.beta.gouv.fr`, `compte-rendu-vif.incubateur.net`, `.compte-rendu-vif.incubateur.net`, `patrinotes.incubateur.net` | [vite.config.ts#L74-L81](../packages/frontend/vite.config.ts#L74-L81) |
+| Matomo | `https://stats.beta.gouv.fr/`, `siteId: 123` | [main.tsx#L142-L145](../packages/frontend/src/main.tsx#L142-L145) |
+| TLS PostgreSQL de PowerSync | `sslmode: disable` | [powersync-config.yaml](../powersync/powersync-config.yaml) |
+| Client S3 | région `us-east-1`, `forcePathStyle: true`, `bucketEndpoint: true` | [uploadService.ts#L20-L31](../packages/backend/src/services/uploadService.ts#L20-L31) |
 | Durée des URL présignées | 3 600 s | [uploadService.ts](../packages/backend/src/services/uploadService.ts) |
-| Taille maximale d'un fichier envoyé au backend | 15 Mo (multipart) | [uploadRoutes.tsx#L19-L23](../packages/backend/src/routes/uploadRoutes.tsx#L19-L23) |
-| Validité des liens de pièces jointes envoyés par courriel | 90 jours | [attachmentRedirectRoutes.ts#L27](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L27) |
-| Validité d'un lien de réinitialisation de mot de passe | 1 jour (stocké en MD5) | [userService.ts#L42-L45](../packages/backend/src/services/userService.ts#L42-L45) |
-| Audience attendue des jetons | `account` | [authService.ts#L54](../packages/backend/src/services/authService.ts#L54) |
+| Fichiers acceptés | photos JPEG, PNG, WebP, HEIC/HEIF de 20 Mo au plus ; PDF de 50 Mo au plus | [uploadLimits.ts](../packages/backend/src/features/uploadLimits.ts) (backend), [uploadLimits.ts](../packages/frontend/src/features/upload/uploadLimits.ts) (frontend) |
+| Destinataires d'un envoi | 20 au plus | [recipients.ts](../packages/backend/src/features/recipients.ts) |
+| Limitation de débit | connexion, inscription, mot de passe oublié : 10 essais / 15 min par adresse, 200 / 15 min par IP ; routes publiques : 60 / min par IP ; API connectée : 1 200 / min par utilisateur | [rateLimit.ts](../packages/backend/src/features/rateLimit.ts) |
+| Photos d'un courriel d'alerte | jointes jusqu'à 15 Mo au total, sinon liens de 90 jours | [alertPhotos.ts](../packages/backend/src/features/mail/alertPhotos.ts) |
+| Tâche d'envoi des alertes | toutes les 15 min, 5 essais au plus, attente de 24 h des photos d'une alerte de fiche | [alertDelivery.ts](../packages/backend/src/features/alertDelivery.ts) |
+| Politique de mot de passe | 8 caractères, une majuscule, une minuscule, un chiffre, un caractère spécial | [passwordPolicy.ts](../packages/backend/src/features/passwordPolicy.ts) |
+| Validité des liens de pièces jointes envoyés par courriel | 90 jours | [attachmentRedirectRoutes.ts#L30](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L30) |
+| Validité d'un lien de réinitialisation de mot de passe | 1 jour (stocké en SHA-256) | [userService.ts#L68](../packages/backend/src/services/userService.ts#L68) |
+| Audience attendue des jetons | `account` | [authService.ts#L34](../packages/backend/src/services/authService.ts#L34) |
 | Sources POP | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv`, `…/palissy.csv` | [pop.ts](../packages/backend/src/features/data/pop.ts) |
-| Fonds de carte | `tiles.openfreemap.org`, `openmaptiles.geo.data.gouv.fr` (cadastre), `data.geopf.fr` (orthophotos IGN) | [MapLibre.tsx#L14-L26](../packages/frontend/src/features/map/MapLibre.tsx#L14-L26) |
+| Fonds de carte | `tiles.openfreemap.org`, `openmaptiles.geo.data.gouv.fr` (cadastre), `data.geopf.fr` (orthophotos IGN) | [MapLibre.tsx#L15-L27](../packages/frontend/src/features/map/MapLibre.tsx#L15-L27) |
 | Géocodage | `https://api-adresse.data.gouv.fr/search/` (autocomplétion), `https://data.geopf.fr/geocodage/search` (cartes) | [address.tsx](../packages/frontend/src/features/address.tsx), [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
 | Adresse de contact | `contact@patrinotes.beta.gouv.fr` | message d'erreur de liste blanche, pages légales |
-| Service technique créé au démarrage | `no-service` | [index.ts#L33-L38](../packages/backend/src/index.ts#L33-L38) |
+| Service technique créé au démarrage | `no-service` | [index.ts#L42-L47](../packages/backend/src/index.ts#L42-L47) |
 | Taux d'échantillonnage Sentry | `0.1` (10 %) | [sentry.ts](../packages/backend/src/features/sentry.ts) (backend et frontend) |
 | API des unités patrimoniales | délai 5 s, une nouvelle tentative, lots de 50 identifiants, 10 niveaux et 1 000 UP au plus | [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts) |
 
@@ -245,12 +255,15 @@ Paramètres qui ne passent par aucune variable et dont un changement impose une 
 NODE_ENV=production
 PORT=
 DATABASE_URL=                 # secret
+DATABASE_SSL=false            # true si la base est distante
 POSTGRES_HOST=
 POSTGRES_PORT=
 POSTGRES_USER=
 POSTGRES_PASSWORD=            # secret
 POSTGRES_DB=
-FRONTEND_URL=
+FRONTEND_URL=                 # aussi l'origine autorisée par CORS
+CORS_ORIGINS=                 # facultative
+TRUST_PROXY_HOPS=1            # 2 si un proxy est placé devant Traefik
 BACKEND_URL=
 VITE_AUTH_URL=
 VITE_AUTH_REALM=
@@ -269,6 +282,7 @@ MINIO_ACCESS_KEY_ID=          # secret
 MINIO_SECRET_KEY=             # secret
 MINIO_PUBLIC_URL=             # facultative
 SENTRY_DSN=
+SENTRY_ENVIRONMENT=           # production, ou preprod
 UP_API_MODE=live
 UP_API_URL=
 UP_API_KEY=                   # secret
@@ -285,6 +299,7 @@ VITE_AUTH_URL=
 VITE_AUTH_REALM=
 VITE_AUTH_CLIENT_ID=
 VITE_SENTRY_DSN=
+VITE_SENTRY_ENVIRONMENT=      # production, ou preprod
 
 # --- powersync ---
 POWERSYNC_CONFIG_PATH=/config/config.yaml
@@ -301,7 +316,7 @@ Relevé de production du 17/11/2026 (aucun secret relevé ni reproduit).
 | Frontend / API / synchronisation | `https://app.patrinotes.beta.gouv.fr`, `https://api.patrinotes.beta.gouv.fr`, `https://sync.patrinotes.beta.gouv.fr` | `https://patrinotes.incubateur.net`, `https://api.patrinotes.incubateur.net`, `https://sync.patrinotes.incubateur.net` |
 | Keycloak | `https://auth.patrinotes.beta.gouv.fr`, realm `patrinotes`, émetteur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`, clients `patrinotes-prod` et `patrinotes-prod-admin` | **même Keycloak** que la production |
 | Ports internes | frontend 4173, backend 3002, PowerSync 3003 | — |
-| `NODE_ENV` | non défini ; `production` posé par `cross-env` (script `start`) | idem |
+| `NODE_ENV` | non défini dans Coolify ; `production` posé au démarrage | idem |
 | SMTP | `EMAIL_HOST=smtp.tem.scw.cloud`, `EMAIL_PORT=465`, `EMAIL_EMITTER=noreply@patrinotes.beta.gouv.fr` | idem |
 | Stockage objet | `MINIO_URL=https://patrinotes-prod.s3.fr-par.scw.cloud`, `MINIO_BUCKET=patrinotes-prod` ; restes `AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod` | bucket `patrimoine-embarque-preprod` |
 | Sentry | `VITE_SENTRY_DSN` (hôte `sentry.incubateur.net`) ; pas de `SENTRY_DSN` backend | — |

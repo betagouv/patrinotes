@@ -115,7 +115,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
 | [16](../powersync/powersync-config.yaml#L16) | `port` | `!env PS_PORT` | Fixé à `8080` dans le compose. |
 | [17-18](../powersync/powersync-config.yaml#L17-L18) | `sync_config.path` | `sync-config.yaml` | Chemin relatif au fichier de config (les deux sont montés dans `/config/`). |
 | [21-24](../powersync/powersync-config.yaml#L21-L24) | `client_auth` | `jwks_uri`, `issuer`, `audience: ["account"]` | Authentification des clients par **JWT RS256 émis par Keycloak**, vérifiés avec les clés publiques du JWKS (sélection par `kid` de l'en-tête). |
-| [26-30](../powersync/powersync-config.yaml#L26-L30) | `telemetry` | `disable_telemetry_sharing: false` | Voir piège ci-dessous. |
+| [26-30](../powersync/powersync-config.yaml#L26-L30) | `telemetry` | `disable_telemetry_sharing: true` | À la racine du fichier : la télémétrie anonyme vers JourneyApps est désactivée. |
 
 **Pièges de ce fichier :**
 
@@ -123,9 +123,8 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
    `@powersync/service-types` ne connaît sous `client_auth` que `jwks_uri`, `block_local_jwks`,
    `jwks_reject_ip_ranges`, `jwks`, `supabase`, `supabase_jwt_secret`, `audience`). Elle est donc **ignorée** :
    l'émetteur du jeton n'est pas vérifié par PowerSync. Seuls la signature (JWKS) et l'audience `account` le sont.
-2. **`telemetry` est indenté sous `client_auth`** au lieu d'être à la racine : il est ignoré. De toute façon la valeur
-   `false` signifie « ne pas désactiver » : la télémétrie anonyme vers JourneyApps est **active**. Pour un
-   hébergement ministériel, placer `telemetry: { disable_telemetry_sharing: true }` à la racine.
+2. **`telemetry` doit rester à la racine** : rangé sous une autre clé, il est ignoré et la télémétrie reste active.
+   Le fichier déposé en production doit reprendre ce bloc (voir [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)).
 3. **`jwks_uri` pointe vers `http://keycloak:8080/realms/master`** (nom d'hôte Docker interne et realm `master` en
    dur). En production, le fichier a été modifié à la main pour `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`
    (c'est la seule différence de fond avec le dépôt). Le service PowerSync doit pouvoir joindre ce JWKS ; si Keycloak est déplacé, renommé, ou si le realm change
@@ -144,7 +143,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
 
 - Le client n'obtient **pas** de jeton spécifique à PowerSync : il réutilise **le jeton d'accès Keycloak** (celui-là
   même qu'il envoie au backend), via `fetchCredentials()` dans
-  [Connector.ts](../packages/frontend/src/db/Connector.ts#L11-L18), qui renvoie `{ endpoint: VITE_POWERSYNC_URL,
+  [Connector.ts](../packages/frontend/src/db/Connector.ts#L12-L19), qui renvoie `{ endpoint: VITE_POWERSYNC_URL,
   token }`.
 - Vérifications côté PowerSync : signature RS256 via le JWKS Keycloak (choix de la clé par `kid`), audience `account`
   (audience par défaut des access tokens Keycloak), expiration. La claim `sub` sert d'identifiant utilisateur
@@ -153,7 +152,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
   contenir l'email** (scope `email` dans Keycloak) et cet email doit correspondre **exactement** (casse comprise) à
   `user.email` en base. Un utilisateur dont l'email Keycloak diffère de celui de la table `user` ne reçoit aucune
   donnée.
-- Le rafraîchissement : `getTokenOrRefresh()` ([Connector.ts#L50](../packages/frontend/src/db/Connector.ts#L50))
+- Le rafraîchissement : `getTokenOrRefresh()` ([Connector.ts#L104](../packages/frontend/src/db/Connector.ts#L104))
   considère le jeton expiré à **80 % de sa durée de vie** (`expiresAt` calculé par
   `get80PercentOfTokenLifespan`), appelle `POST /api/refresh-token` et **mutualise** les appels concurrents dans une
   promesse unique (`refreshPromise`) pour éviter que PowerSync et le client API ne consomment deux fois le même
@@ -179,6 +178,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
 | [0011_petite_zarda.sql#L20-L22](../db/0011_petite_zarda.sql#L20-L22) | `state_report_alert`, `state_report_alert_attachment` |
 | [0038_fiche_monument.sql](../db/0038_fiche_monument.sql) | `monument_alert`, `monument_alert_attachment`, `monument_correction` |
 | [0040_suppression_pictures_merimee.sql](../db/0040_suppression_pictures_merimee.sql) | aucune (`pictures` retirée de la publication, puis supprimée) |
+| 0041 à 0046 | aucune (colonnes ajoutées à des tables déjà publiées, voir [06](06-modele-de-donnees.md)) |
 
 > **Publication** : `powersync`, sans `FOR ALL TABLES`, alimentée par les migrations : `clause_v2`,
 > `delegation`, `monument_alert`, `monument_alert_attachment`, `monument_correction`, `pdf_snapshot`,
@@ -186,8 +186,8 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
 > `state_report`, `state_report_alert`, `state_report_alert_attachment`, `state_report_attachment`, `suggested_email`,
 > `transactions`, `user`, `user_dept`, `user_settings`, `visited_section`, `visited_section_attachment`.
 >
-> - **`constat_validation` n'est pas publiée** (migration 0019 sans `ALTER PUBLICATION`) alors que `reports_stream` la
->   lit : cette requête ne renvoie rien. Sans conséquence, car la table n'est pas dans `AppSchema` (§ 3.3).
+> - **`constat_validation` n'est pas publiée** (migration 0019 sans `ALTER PUBLICATION`) et aucun flux ne la lit : le
+>   jeton de validation ne quitte jamais le serveur.
 > - **`transactions` est publiée sans être lue** par aucun flux : chaque écriture la fait transiter inutilement par la
 >   réplication.
 > - `pop_images` et `state_report_sent_email` sont dans `AppSchema` mais ni dans la publication, ni dans les streams :
@@ -219,16 +219,16 @@ comptes-rendus et constats du service.
 | `global_stream` | [6-10](../powersync/sync-config.yaml#L6-L10) | auto | 1 | aucun | `clause_v2` avec `service_id = 'ALL'` (clauses communes à tous les services) |
 | `service_stream` | [12-24](../powersync/sync-config.yaml#L12-L24) | auto | 1 | `current_service` = `service_id` de l'utilisateur (via email) | la ligne `service` ; les `user` du service **limités à `id, name, service_id`** (pas d'email) ; `service_instructeurs`, `clause_v2`, `sent_email`, `suggested_email`, `monument_correction` (corrections des fiches) du service |
 | `user_stream` | [26-34](../powersync/sync-config.yaml#L26-L34) | auto | 2 | `current_user_id` | `delegation` où l'utilisateur est créateur **ou** délégataire ; ses `pdf_snapshot` ; ses `user_settings` |
-| `reports_stream` | [58-71](../powersync/sync-config.yaml#L58-L71) | auto | 2 | `current_service` | `report`, `state_report`, `visited_section`, `state_report_alert` du service ; `constat_validation` **limitée à `id, state_report_id, status, service_id`** (le `token` de validation n'est jamais synchronisé) ; `monument_alert` (brouillons compris, masqués par le client) et `monument_alert_attachment` non dépréciées |
-| `pop_stream` | [73-82](../powersync/sync-config.yaml#L73-L82) | auto | 3 | `my_depts` = `user_dept.dept_number` de l'utilisateur | `pop_immeubles` et `pop_objets` (référentiel POP — monuments et objets protégés) dont `departement_format_numerique` ∈ départements de l'utilisateur |
+| `reports_stream` | [58-70](../powersync/sync-config.yaml#L58-L70) | auto | 2 | `current_service` | `report`, `state_report`, `visited_section`, `state_report_alert` du service ; `monument_alert` (brouillons compris, masqués par le client) et `monument_alert_attachment` non dépréciées (flux des fiches) |
+| `pop_stream` | [72-81](../powersync/sync-config.yaml#L72-L81) | auto | 3 | `my_depts` = `user_dept.dept_number` de l'utilisateur | `pop_immeubles` et `pop_objets` (référentiel POP — monuments et objets protégés) dont `departement_format_numerique` ∈ départements de l'utilisateur |
 | `state_report_attachments_stream` | [38-50](../powersync/sync-config.yaml#L38-L50) | **à la demande** | défaut | `subscription.parameter('state_report_id')` | pièces jointes non dépréciées d'un constat **du service de l'utilisateur** : `state_report_attachment`, `visited_section_attachment` (via `visited_section`), `state_report_alert_attachment` (via `state_report_alert`) |
 | `report_attachments_stream` | [52-56](../powersync/sync-config.yaml#L52-L56) | **à la demande** | défaut | `subscription.parameter('report_id')` | `report_attachment` non dépréciées d'un compte-rendu **du service de l'utilisateur** |
 
 Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écrans
 [constat.$constatId.tsx](../packages/frontend/src/routes/constat.$constatId.tsx#L45),
-[constat_.$constatId.pdf.tsx](../packages/frontend/src/routes/constat_.$constatId.pdf.tsx#L66),
+[constat_.$constatId.pdf.tsx](../packages/frontend/src/routes/constat_.$constatId.pdf.tsx#L80),
 [edit.$reportId.tsx](../packages/frontend/src/routes/edit.$reportId.tsx#L25) et
-[pdf.$reportId.tsx](../packages/frontend/src/routes/pdf.$reportId.tsx#L697). Quand `hasSynced` devient vrai, ces
+[pdf.$reportId.tsx](../packages/frontend/src/routes/pdf.$reportId.tsx#L714). Quand `hasSynced` devient vrai, ces
 écrans déclenchent `attachmentQueue.syncStorage()` pour télécharger immédiatement les fichiers.
 
 ### 3.2 Règles cachées des streams
@@ -240,10 +240,10 @@ Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écr
 - **Filtre `is_deprecated = 0`** : la suppression d'une photo est un **soft delete** (`is_deprecated = 1` côté client,
   par ex. [useAttachmentImages.ts#L223](../packages/frontend/src/features/upload/hooks/useAttachmentImages.ts#L223)).
   La ligne disparaît alors des streams, donc des autres appareils. Les booléens PostgreSQL sont convertis par PowerSync
-  en entiers `1`/`0` ; **une ligne avec `is_deprecated = NULL` n'est jamais synchronisée** (`NULL = 0` est faux en
-  SQL). La colonne n'a pas de valeur par défaut en base ([schema.ts#L164](../packages/backend/src/db/schema.ts#L164)) :
-  toute insertion qui omettrait `is_deprecated` rend la pièce jointe invisible. Les insertions côté client et côté
-  backend (PDF) le renseignent explicitement.
+  en entiers `1`/`0` ; **une ligne avec `is_deprecated = NULL` ne serait jamais synchronisée** (`NULL = 0` est faux en
+  SQL). Les cinq tables de pièces jointes ont donc la valeur par défaut `false` (migration 0043,
+  [schema.ts#L168](../packages/backend/src/db/schema.ts#L168)), et la migration 0045 a rendu visibles les anciennes
+  lignes `NULL` (voir [06](06-modele-de-donnees.md)).
 - **Les photos d'un constat/compte-rendu ne sont disponibles hors ligne que si l'écran a été ouvert en ligne** : les
   métadonnées des pièces jointes passent par des streams à la demande. Après fermeture de l'écran, PowerSync conserve
   l'abonnement pendant une durée de rétention (TTL, 24 h par défaut dans le SDK — **à confirmer** selon la version),
@@ -252,13 +252,12 @@ Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écr
   client ; les requêtes vérifient que le **document** appartient au service de l'utilisateur. Le contrôle passe par le document et non par la pièce jointe, car des lignes anciennes n'ont pas
   de `service_id`.
 - **Changement de service** : `POST /api/change-service`
-  ([userService.ts](../packages/backend/src/services/userService.ts)) met à jour `user.service_id` (et le trace dans
-  `transactions`) puis
-  remplace les lignes `user_dept` par les départements de `service.dept_numbers` (liste séparée par des virgules).
+  ([userService.ts](../packages/backend/src/services/userService.ts)) met à jour `user.service_id`, le trace dans
+  `transactions` et remplace les lignes `user_dept` par les départements de `service.dept_numbers` (liste séparée par
+  des virgules), dans **une seule transaction**.
   PowerSync réévalue les paramètres et bascule les buckets : les données de l'ancien service disparaissent de
   l'appareil, celles du nouveau arrivent. **Si le nouveau service n'a pas de `dept_numbers`, les anciens
-  `user_dept` sont conservés** : l'agent continue de recevoir le référentiel POP de son ancien service. Les deux
-  écritures ne sont pas dans une même transaction.
+  `user_dept` sont conservés** : l'agent continue de recevoir le référentiel POP de son ancien service.
 - **Compte sans service** (`service_id = 'no-service'`, service technique créé au démarrage du backend, invisible,
   département vide) : certains comptes n'ont pas de service ; l'inscription en affecte directement un. Tant qu'un tel compte n'a pas choisi de service, il ne reçoit
   que `global_stream`, ses propres données utilisateur et le service `no-service`.
@@ -277,13 +276,13 @@ texte ISO, booléens en `0/1`). Conséquences :
 
 | Cas | Tables / colonnes | Effet |
 | --- | --- | --- |
-| Synchronisé mais absent d'`AppSchema` | table `constat_validation` ; colonnes `state_report.redacted_by_name`, `redacted_by_id`, `alerts_sent` ; `service.id`… | Données reçues (stockées en JSON / table non typée) mais invisibles des requêtes. Les ajouter à `AppSchema` les rend visibles **sans re-synchronisation** (le JSON contient déjà toutes les colonnes de `SELECT *`). |
+| Synchronisé mais absent d'`AppSchema` | colonnes `state_report.redacted_by_name`, `redacted_by_id`, `alerts_sent` ; `state_report_alert.sent_at`, `send_attempts`, `last_send_attempt_at` ; `service.id`… | Données reçues (stockées en JSON / table non typée) mais invisibles des requêtes. Les ajouter à `AppSchema` les rend visibles **sans re-synchronisation** (le JSON contient déjà toutes les colonnes de `SELECT *`). |
 | Dans `AppSchema` mais jamais synchronisé | `pop_images`, `state_report_sent_email`, `transactions` (pas de stream) ; `user.job` (le stream ne sélectionne que `id, name, service_id`) | Tables/colonnes toujours vides localement. |
 | Locale uniquement | `attachments` (`AttachmentTable` du SDK) | État de la file des pièces jointes ; jamais envoyée au serveur. |
 | Dans `AppSchema` sans être dans la publication | `pop_images`, `state_report_sent_email` | Ajouter un stream ne suffirait pas : il faudrait aussi `ALTER PUBLICATION`. |
 
 Un **garde-fou de typage** existe en fin d'`AppSchema.ts`
-([L490-L525](../packages/frontend/src/db/AppSchema.ts#L490-L525)) : pour chaque table commune, chaque colonne du
+([L570-L596](../packages/frontend/src/db/AppSchema.ts#L570-L596)) : pour chaque table commune, chaque colonne du
 schéma client doit exister dans le type Kysely du backend, sinon la compilation TypeScript échoue. Il ne vérifie
 **pas** l'inverse (colonne serveur absente du client), ni la publication, ni les streams.
 
@@ -293,7 +292,7 @@ schéma client doit exister dans le type Kysely du backend, sinon la compilation
 
 ### 4.1 Base locale
 
-Créée dans [db.ts#L31-L40](../packages/frontend/src/db/db.ts#L31-L40) :
+Créée dans [db.ts#L32-L41](../packages/frontend/src/db/db.ts#L32-L41) :
 
 - SDK `@powersync/web` (≈ 1.37), `@powersync/common` 1.50.0 (épinglé), `@powersync/react`, `@powersync/kysely-driver`
   (requêtes typées Kysely sur SQLite) ; moteur **wa-sqlite** (SQLite compilé en WebAssembly).
@@ -302,7 +301,7 @@ Créée dans [db.ts#L31-L40](../packages/frontend/src/db/db.ts#L31-L40) :
 - `useWebWorker` n'est activé que si le navigateur expose OPFS (`navigator.storage.getDirectory`) et
   `crypto.randomUUID` ; `enableMultiTabs` que si `SharedWorker` existe (**donc jamais sur iOS**, où chaque onglet a sa
   propre connexion). Bowser détecte Firefox mais la variable `isFirefox` n'est pas utilisée.
-- Initialisation unique au montage de `WithPowersync` ([main.tsx#L121](../packages/frontend/src/main.tsx#L121)),
+- Initialisation unique au montage de `WithPowersync` ([main.tsx#L131](../packages/frontend/src/main.tsx#L131)),
   placé **sous** `AuthProvider` : `init()` → `connect(connector)` → `attachmentQueue.startSync()` →
   `syncStorage()` immédiat. La connexion est lancée **même si l'utilisateur n'est pas connecté** :
   `fetchCredentials` lève alors « No token found » et le SDK réessaie périodiquement jusqu'au login.
@@ -322,25 +321,35 @@ L'indicateur d'état (`useAppStatus`, [useAppStatus.tsx](../packages/frontend/sr
 
 ### 4.3 Envoi des écritures : `uploadData`
 
-[Connector.ts#L22-L41](../packages/frontend/src/db/Connector.ts#L22-L41) :
+[Connector.ts#L23-L96](../packages/frontend/src/db/Connector.ts#L23-L96) :
 
-1. `getCrudBatch()` récupère un lot d'opérations en attente (taille par défaut du SDK, 100 — **à confirmer**).
-2. Pour **chaque opération, dans l'ordre**, une requête `POST /api/upload-data` avec le corps
-   `{ op_id, tx_id, id, type, op, data }` (`type` = nom de table).
-3. Les opérations non-`DELETE` dont `data` est vide sont **ignorées** (avertissement console).
-4. Si toutes les requêtes HTTP réussissent, `batch.complete()` retire le lot de la file.
-5. Si une requête lève une erreur (réseau, 5xx, 403…), `complete()` n'est pas appelé : le SDK **réessaie tout le lot**
-   plus tard (délai par défaut ≈ 5 s — **à confirmer**). Les opérations déjà appliquées sont donc **rejouées** :
-   `PATCH` et `DELETE` sont idempotents, un `PUT` rejoué est refusé (« la ligne existe déjà ») et silencieusement
-   ignoré (voir § 6).
+1. **Une opération à la fois** : `getCrudBatch(1)` récupère l'opération suivante, une requête `POST /api/upload-data`
+   l'envoie avec le corps `{ op_id, tx_id, id, type, op, data }` (`type` = nom de table), puis `complete()` l'acquitte
+   avant de passer à la suivante (100 opérations au plus par appel ; PowerSync rappelle `uploadData` tant que la file
+   n'est pas vide). Après une erreur, seule l'opération en cours est renvoyée : celles déjà appliquées ne le sont plus.
+2. Les opérations non-`DELETE` dont `data` est vide sont **ignorées** (avertissement console).
+3. **Écriture refusée** : si le serveur répond `success: false` (refus de droits, erreur SQL, utilisateur absent de la
+   table `user`), l'opération est acquittée mais **enregistrée localement** ([rejectedWrites.ts](../packages/frontend/src/features/sync/rejectedWrites.ts) :
+   table, identifiant, opération, date, motif ; 50 au plus, dans le `localStorage`) et signalée à Sentry (table,
+   opération, motif). Un **bandeau** « Une modification n'a pas pu être enregistrée. »
+   ([RejectedWritesBanner.tsx](../packages/frontend/src/features/sync/RejectedWritesBanner.tsx)) permet à l'agent d'en
+   voir le détail (document, date, motif) ; « J'ai compris » vide la liste. La modification locale est ensuite
+   remplacée par l'état serveur (§ 4.4).
+4. **Erreur répétée** : si le serveur répond **5 fois de suite** à la même opération par une erreur 4xx qui ne dépend
+   ni de la session ni de la charge (hors 401, 403, 408, 425 et 429), l'opération est **mise de côté** : retirée de
+   la file et ajoutée à la liste des écritures refusées (motif « erreur serveur répétée »). Elle ne bloque donc plus
+   les suivantes. Le compteur est en mémoire : un rechargement le remet à zéro.
+5. **Erreur passagère** (réseau, 5xx, 401, 403, 408, 425, 429) : l'opération reste dans la file et le SDK la renvoie
+   plus tard (délai par défaut ≈ 5 s — **à confirmer**), sans limite.
 
 **Ordre et transactions** : l'ordre de la file locale est respecté (une requête à la fois), mais il n'y a **pas
 d'atomicité serveur** : chaque opération est appliquée dans sa propre requête/transaction ; `tx_id` est enregistré
 mais pas exploité.
 
 **Blocage** : tant que la file CRUD locale n'est pas vide, le SDK PowerSync **n'applique pas** les nouveaux
-checkpoints serveur (il attend que ses propres écritures soient confirmées). Une opération qui échoue en boucle (par
-exemple 500 parce que l'utilisateur n'existe plus en base) **gèle la réception des données** sur cet appareil.
+checkpoints serveur (il attend que ses propres écritures soient confirmées). Une opération qui échoue en 5xx en
+boucle **gèle la réception des données** sur cet appareil jusqu'au retour du serveur ; une erreur 4xx répétée est
+mise de côté (point 4).
 
 ### 4.4 Résolution des conflits
 
@@ -352,8 +361,8 @@ côté interface ([useCanEditReport.tsx](../packages/frontend/src/hooks/useCanEd
 (§ 6).
 
 Lorsqu'une écriture est rejetée par le serveur (erreur SQL ou droits insuffisants), la valeur locale reste affichée
-jusqu'au prochain checkpoint, où PowerSync **remplace l'état local par l'état serveur** : la modification disparaît
-alors sans message.
+jusqu'au prochain checkpoint, où PowerSync **remplace l'état local par l'état serveur** : la modification disparaît,
+et le bandeau des écritures refusées le signale (§ 4.3).
 
 ---
 
@@ -361,7 +370,7 @@ alors sans message.
 
 ### 5.1 Mécanisme
 
-[db.ts#L42-L100](../packages/frontend/src/db/db.ts#L42-L100) utilise l'`AttachmentQueue` du SDK PowerSync :
+[db.ts#L43-L110](../packages/frontend/src/db/db.ts#L43-L110) utilise l'`AttachmentQueue` du SDK PowerSync :
 
 - **Stockage local** : `IndexDBFileSystemStorageAdapter("crvif-attachments")` (IndexedDB).
 - **Table d'état locale** `attachments` (`AttachmentTable`) : `id`, `local_uri`, `state` (`QUEUED_UPLOAD`,
@@ -372,9 +381,12 @@ alors sans message.
   Un `attachment_id` peut contenir **plusieurs identifiants séparés par `;`** (découpage dans le watcher).
   L'extension est déduite du suffixe de l'id (`jpg` par défaut) — les PDF générés (`…/constat_d_etat_<ts>.pdf`)
   sont donc aussi téléchargés localement.
-- **Envoi** (`uploadFile`) : `GET /api/upload/attachment/presigned-url?filePath=<id>` puis `PUT` direct vers S3/MinIO
-  (URL valable 3600 s, clé `attachment/<id>`). Le backend refuse l'URL si le document du chemin appartient à un
-  autre service, et l'accepte si ce document n'est pas encore en base (la photo peut partir avant la ligne).
+- **Envoi** (`uploadFile`) : `GET /api/upload/attachment/presigned-url?filePath=<id>&contentType=…&size=…` (type lu
+  dans les premiers octets du fichier) puis `PUT` direct vers S3/MinIO (URL valable 3600 s, clé `attachment/<id>`, type
+  et taille signés). Le backend refuse l'URL si le document du chemin appartient à un autre service, ou si le type ou
+  la taille ne sont pas acceptés ; il l'accepte si ce document n'est pas encore en base (la photo peut partir avant la
+  ligne). **Le statut du `PUT` est vérifié** : en cas d'échec, l'envoi lève une erreur et la pièce jointe reste en
+  `QUEUED_UPLOAD`, renvoyée au passage suivant.
 - **Téléchargement** (`downloadFile`) : `GET /api/upload/attachment?filePath=<id>` (le backend vérifie le service du
   document, lit S3 et renvoie le binaire).
 - **Suppression distante** (`deleteFile`) : **non implémentée** (simple log). Les fichiers ne sont jamais supprimés de
@@ -396,7 +408,10 @@ compte-rendu) ; c'est à la fois l'id local et le suffixe de la clé S3.
   pour plusieurs fichiers, avec annulation logique et nouvel essai sans re-sélection du fichier.
 - [pendingUploadsStore.ts](../packages/frontend/src/features/upload/pendingUploadsStore.ts) : registre en mémoire des
   photos en cours de traitement par parent ; **bloque le bouton « Finaliser »** tant qu'une photo est en cours ou en
-  échec (seul un DISMISS explicite débloque). Registre non persistant : un rechargement de page le vide.
+  échec. Supprimer la photo en échec ou la réessayer libère l'essai raté. Registre non persistant : un rechargement
+  de page le vide. Le plan de l'édifice passe par le même chemin que les photos (mêmes messages d'erreur, « Réessayer »).
+- Avant l'envoi, la photo compressée est contrôlée avec les mêmes limites que le serveur (type, 20 Mo)
+  ([uploadLimits.ts](../packages/frontend/src/features/upload/uploadLimits.ts)) ; un refus s'affiche sur la vignette.
 - [thumbnailMachine.ts](../packages/frontend/src/features/upload/machines/thumbnailMachine.ts) : affichage d'une
   vignette (`init → waitingForUri | loadingBlob → ready | blobError`), attente que `local_uri` soit renseigné,
   nouvel essai après 100 ms puis 5 s.
@@ -405,10 +420,6 @@ compte-rendu) ; c'est à la fois l'id local et le suffixe de la clé S3.
 
 ### 5.3 Pièges des pièces jointes
 
-- **`uploadFile` ne vérifie pas le statut HTTP du `PUT`** (`fetch` ne lève pas d'erreur sur 4xx/5xx) : une URL
-  expirée ou un refus S3 est considéré comme un succès, la pièce jointe passe `SYNCED` alors que le fichier n'existe
-  pas en S3. Le fichier reste en local tant qu'il n'est pas purgé, mais les autres appareils et le PDF serveur ne le
-  verront jamais.
 - **Ligne et fichier voyagent séparément** : la ligne métier part par la file CRUD (immédiate), le fichier par
   l'AttachmentQueue (toutes les 30 s). Un autre appareil peut recevoir la ligne avant que le fichier soit en S3 →
   téléchargement en 404. Aucun gestionnaire d'erreur n'est configuré, donc le SDK garde la pièce jointe en attente
@@ -441,23 +452,25 @@ Algorithme `applyCrud(operation, user)` :
 3. Dans une transaction SQL, lit la ligne stockée (`FOR UPDATE`) et évalue l'opération : opération permise, colonnes
    connues, colonnes serveur forcées ou ignorées, droit de l'utilisateur (service, auteur, délégation). Détail dans
    [04 § 6.2](04-backend-api.md).
-4. Applique selon `op` : `DELETE`, `PATCH` (colonnes retenues seulement), `PUT` (**insertion pure, pas d'upsert** ; une
-   ligne déjà présente est refusée).
-5. En cas de refus ou d'erreur SQL : renvoie `{ success: false, error }` **avec un HTTP 200** → le client considère
-   l'opération comme réussie et la retire de sa file. **L'écriture est perdue** (traces : la table `transactions`,
-   les logs `debug` et, pour un refus, un message Sentry).
+4. Applique selon `op` : `DELETE`, `PATCH` (colonnes retenues seulement), `PUT` (insertion ; un `PUT` sur une ligne
+   déjà présente est appliqué comme un `PATCH`, avec les mêmes contrôles).
+5. En cas de refus ou d'erreur SQL : renvoie `{ success: false, error, reason }` **avec un HTTP 200** → le client
+   retire l'opération de sa file et la signale à l'agent (§ 4.3). **L'écriture n'est pas appliquée** (traces : la table
+   `transactions`, les logs `debug` et, pour un refus, un message Sentry).
+6. Après une écriture réussie sur une alerte de fiche (`monument_alert`) au statut `submitted`, lance son envoi par
+   courriel (§ 7.5).
 
 Règles et absences notables :
 
 - **Contrôle d'autorisation par table, colonne et ligne**. Les valeurs elles-mêmes ne sont pas validées.
 - **Conversion de types implicite** : le client envoie des valeurs SQLite (booléens `0/1`, dates en texte) ;
   PostgreSQL les convertit (`'0'`/`'1'` acceptés pour `boolean`, ISO pour `timestamp`).
-- **Aucun effet de bord** dans la synchronisation : pas d'envoi de mail, pas de génération de PDF, pas de trigger
-  métier. Les effets de bord passent par des **routes API dédiées**, appelées explicitement par le client et
+- **Un seul effet de bord** dans la synchronisation : l'envoi des alertes de fiche soumises. Les autres effets (envoi
+  des documents, génération de PDF) passent par des **routes API dédiées**, appelées explicitement par le client et
   **nécessitant le réseau** (cf. § 7.4).
 - Si l'utilisateur authentifié n'existe pas dans `user`, `applyCrud` renvoie `{ success: false, error: "Unauthorized" }`
-  en HTTP 200 (le middleware laisse passer un jeton valide sans ligne `user`) : les écritures de cet appareil sont
-  perdues sans message.
+  en HTTP 200 (le middleware laisse passer un jeton valide sans ligne `user`) : les écritures de cet appareil ne sont
+  pas appliquées, et l'agent voit le bandeau des écritures refusées.
 - Les écritures directes du backend en base (routes PDF, validation, changement de service, imports POP) **reviennent
   aux clients** par la réplication comme n'importe quelle modification.
 
@@ -534,17 +547,22 @@ sequenceDiagram
     UI->>DB: UPDATE diff après debounce 500 ms
     DB->>DB: ajoute une entrée dans ps_crud
     Note over DB,C: hors ligne, les entrées s'accumulent
-    C->>DB: getCrudBatch
-    loop pour chaque opération dans l'ordre
+    loop une opération à la fois, dans l'ordre
+        C->>DB: getCrudBatch 1
         C->>BE: POST /api/upload-data
         BE->>PG: INSERT transactions - journal
         BE->>PG: contrôle des droits, puis INSERT, UPDATE ou DELETE
-        BE-->>C: 200 success true, ou 200 success false si refus ou erreur
-    end
-    alt toutes les requêtes HTTP OK
-        C->>DB: batch.complete
-    else erreur réseau ou HTTP
-        C-->>DB: exception, lot rejoué plus tard
+        alt 200 success true
+            C->>DB: complete
+        else 200 success false
+            C->>C: écriture refusée enregistrée, bandeau
+            C->>DB: complete
+        else erreur 4xx pour la 5e fois
+            C->>C: opération mise de côté, bandeau
+            C->>DB: complete
+        else erreur réseau ou passagère
+            C-->>DB: exception, opération renvoyée plus tard
+        end
     end
 ```
 
@@ -568,24 +586,32 @@ sequenceDiagram
     Note over AQ: passe toutes les 30 s ou sur changement
     AQ->>BE: GET presigned-url
     BE-->>AQ: URL PUT valable 1 h
-    AQ->>S3: PUT binaire, statut non vérifié
-    AQ->>DB: attachments state SYNCED
+    AQ->>S3: PUT binaire
+    alt statut HTTP OK
+        AQ->>DB: attachments state SYNCED
+    else échec
+        AQ->>DB: reste QUEUED_UPLOAD, renvoyé au passage suivant
+    end
     Note over UI,BE: envoi du constat, en ligne uniquement
-    UI->>BE: POST /api/pdf/state-report/upload-url
+    UI->>BE: POST /api/pdf/state-report/upload-url avec la taille du PDF
     UI->>UI: génère le PDF dans le navigateur
-    UI->>S3: PUT PDF
+    UI->>S3: PUT PDF, échec de l'envoi si statut non OK
+    UI->>DB: attend que la file d'écritures soit vide, 30 s au plus
     UI->>BE: POST /api/pdf/state-report
-    BE->>BE: lit state_report en base, 404 si pas encore synchronisé
+    BE->>BE: lit state_report en base
     BE->>BE: insère state_report_attachment du PDF, envoie les mails
 ```
 
-**Règle cachée — course à l'envoi** : les routes `/api/pdf/report` et `/api/pdf/state-report`
+**Course à l'envoi** : les routes `/api/pdf/report` et `/api/pdf/state-report`
 ([pdfRoutes.tsx](../packages/backend/src/routes/pdfRoutes.tsx)) lisent le rapport **depuis PostgreSQL**, alors que
-le PDF est généré **dans le navigateur** à partir des données locales. Le client n'attend pas que la file CRUD soit
-vide avant d'appeler ces routes : si des modifications locales ne sont pas encore remontées, le mail d'envoi
-utilise des données serveur plus anciennes que le PDF, et un constat créé juste avant renvoie **404 « Constat d'état
-non trouvé »**. Correction possible : attendre `powerSyncDb.getUploadQueueStats()` à zéro / un write checkpoint avant
-l'appel. C'est ce que fait déjà la boîte d'envoi des alertes de fiche (§ 7.5).
+le PDF est généré **dans le navigateur** à partir des données locales. Avant d'appeler ces routes, le client attend
+que la file d'écritures soit vide (`waitForUploadQueueEmpty`, [db.ts](../packages/frontend/src/db/db.ts#L151-L165)),
+**30 s au plus**, pendant l'indicateur de chargement. Hors ligne, ou si la file n'est toujours pas vide après 30 s,
+il envoie quand même : le courriel peut alors reprendre des données serveur plus anciennes que le PDF, ou recevoir
+404 « Constat d'état non trouvé ».
+
+Le dépôt du PDF sur S3 est vérifié : un statut non OK fait échouer l'envoi (message déjà affiché par l'écran) au lieu
+de produire un courriel au lien cassé. Il en va de même pour le bouton « Copier le lien » d'un constat.
 
 ### 7.5 Alertes et annotations des fiches : envoi différé
 
@@ -593,8 +619,15 @@ Une alerte ou une annotation saisie depuis une fiche (MH, unité patrimoniale, o
 écrite **hors ligne** par la file CRUD, avec ses photos (`monument_alert_attachment`). La boîte d'envoi
 [MonumentAlertOutbox.tsx](../packages/frontend/src/features/fiche/alerts/MonumentAlertOutbox.tsx), montée sur toutes
 les pages, demande l'envoi au backend (`POST /api/monument-alert/send`) quand l'appareil est en ligne, que la file
-CRUD est vide et que toutes les photos sont `SYNCED`. Le backend pose `sent_at` avant l'envoi : une alerte n'est
-envoyée qu'une fois, même si deux appareils réessaient. `sent_at` revient ensuite au client par la synchronisation.
+CRUD est vide et que toutes les photos sont `SYNCED`.
+
+Le serveur n'attend pas ce navigateur : dès que la ligne soumise arrive par `/api/upload-data`, il tente l'envoi
+(qui attend que toutes les photos soient sur S3), et la tâche périodique du backend reprend toutes les 15 minutes les
+alertes soumises qui ne sont pas encore parties ([alertDelivery.ts](../packages/backend/src/features/alertDelivery.ts),
+voir [04 § 8](04-backend-api.md#8-tâches-planifiées-et-imports-de-données)). Une alerte validée hors ligne part donc
+même si l'appareil de l'auteur ne revient jamais en ligne, pourvu que la ligne ait été synchronisée. Le premier qui
+envoie pose `sent_at` avant l'envoi : une alerte n'est envoyée qu'une fois. `sent_at` revient ensuite au client par la
+synchronisation.
 
 ---
 
@@ -602,9 +635,9 @@ envoyée qu'une fois, même si deux appareils réessaient. `sent_at` revient ens
 
 | Événement | Comportement constaté dans le code |
 | --- | --- |
-| **Déconnexion** (`useLogout`, [AuthContext.tsx#L113](../packages/frontend/src/contexts/AuthContext.tsx#L113)) | Efface uniquement les jetons et l'utilisateur. **La base SQLite, la file CRUD et les fichiers locaux sont conservés**, la connexion PowerSync reste ouverte (elle échoue faute de jeton). |
-| **Session expirée** (refresh refusé) | Idem, avec la modale « session expirée ». Les écritures en attente sont conservées et repartiront après reconnexion. |
-| **Changement d'utilisateur sur le même navigateur** | Les données de l'utilisateur précédent restent présentes jusqu'à ce que PowerSync recalcule les buckets du nouveau. **Les écritures en attente de l'utilisateur précédent sont envoyées avec le jeton du nouvel utilisateur** (et journalisées sous son `user_id`). Risque de confidentialité et d'imputabilité sur poste partagé. |
+| **Déconnexion** ([LogoutDialogs.tsx](../packages/frontend/src/features/auth/LogoutDialogs.tsx)) | **Vide l'appareil** comme « Supprimer les données locales » (ligne ci-dessous), en gardant le code de l'application en cache pour que la page de connexion s'ouvre hors ligne. Avant : s'il reste des écritures ou des photos non envoyées, une fenêtre propose « Attendre » ou « Se déconnecter quand même » ; **hors ligne, la déconnexion est refusée** tant qu'elles ne sont pas envoyées. En ligne, le jeton hors ligne est révoqué auprès de Keycloak (`POST /api/logout`). |
+| **Session expirée** (refresh refusé) | Efface les jetons et affiche la modale « session expirée ». La base locale et les écritures en attente sont conservées et repartiront après reconnexion. |
+| **Changement d'utilisateur sur le même navigateur** | Après une déconnexion, l'appareil est vide : le nouvel utilisateur ne voit pas les données du précédent et n'envoie pas ses écritures. Après une **session expirée** suivie d'une connexion par un autre compte, les écritures en attente du premier partiraient avec le jeton du second. |
 | **« Supprimer les données locales »** (menu Aide, [HelpMenu.tsx](../packages/frontend/src/features/menu/HelpMenu.tsx), [resetLocalData.ts](../packages/frontend/src/features/menu/resetLocalData.ts)) | Refusé hors ligne (l'application ne pourrait ni recharger ni retélécharger les données). La confirmation indique le nombre d'écritures et de photos non envoyées. Puis : arrêt de la file des pièces jointes, vidage de la base PowerSync (`disconnectAndClear`), des fichiers locaux et des jetons, suppression des autres bases IndexedDB, vidage du `localStorage` (sauf la version et le thème), désinscription des service workers, vidage des caches, rechargement des autres onglets et de la page. Chaque étape a un délai maximal et n'empêche pas les suivantes. **Les écritures non synchronisées sont perdues.** |
 | **Modification juste après l'inscription** | La ligne `service` ou `user` peut ne pas être encore arrivée. `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) attend la première synchronisation (30 s au plus) avant l'`UPDATE` local et affiche une erreur si la ligne manque toujours. |
 | **Montée de version applicative** | Contrôle `localStorage["crvif/version"]` ([AuthContext.tsx#L58](../packages/frontend/src/contexts/AuthContext.tsx#L58)) : s'il est absent, l'ancienne clé `crvif/auth` est supprimée, un popup de mise à jour est programmé, la version `1` est posée et la page rechargée. Ce n'est pas un versionnement de la base locale. |
@@ -630,7 +663,8 @@ faut vérifier la **publication** et le **schéma frontend**, et suivre la docum
    `constat_validation` sans `token`).
 4. Ajouter la table / colonne à [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts) (types `text` / `integer`
    uniquement) et à l'objet `_checkTables`.
-5. Si la table porte des pièces jointes : l'ajouter à l'union de `watchAttachments` ([db.ts#L66](../packages/frontend/src/db/db.ts#L66)).
+5. Si la table porte des pièces jointes : l'ajouter à l'union de `watchAttachments` ([db.ts#L74](../packages/frontend/src/db/db.ts#L74)),
+   avec `is_deprecated` par défaut à `false`.
 6. Déployer dans l'ordre : migration SQL → redémarrage de PowerSync (rechargement de la config et de la publication)
    → frontend.
 7. Vérifier : `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';` et les logs PowerSync (avertissements
@@ -643,8 +677,8 @@ faut vérifier la **publication** et le **schéma frontend**, et suivre la docum
 | Table absente de la publication | La table n'est jamais répliquée : le stream renvoie vide ; les créations faites hors ligne remontent bien au serveur (via `/api/upload-data`) mais **disparaissent de l'appareil** au checkpoint suivant (PowerSync ne les renvoie pas). Effet « mes données s'effacent ». |
 | Table/colonne absente d'`AppSchema` | Données reçues mais invisibles ; écriture impossible (la vue n'existe pas). |
 | Table absente des streams | Même effet « données qui s'effacent » après écriture locale. |
-| Colonne renommée/supprimée côté serveur sans mise à jour client | Les `PATCH` envoyés avec l'ancien nom échouent en SQL → `success: false` en HTTP 200 → **perte silencieuse**. |
-| Contrainte NOT NULL ajoutée côté serveur | Les `PUT` des anciens clients (PWA en cache) échouent → perte silencieuse. Prévoir une valeur par défaut. |
+| Colonne renommée/supprimée côté serveur sans mise à jour client | Les `PUT` et `PATCH` envoyés avec l'ancien nom sont refusés (colonne inconnue) → écriture **perdue**, signalée à l'agent par le bandeau. C'est pourquoi `state_report.bilan_quinquennal` reste en base et dans la politique d'écriture tant que des clients non mis à jour peuvent l'envoyer. |
+| Contrainte NOT NULL ajoutée côté serveur | Les `PUT` des anciens clients (PWA en cache) échouent → écriture perdue, signalée par le bandeau. Prévoir une valeur par défaut. |
 | `wal_level` non logique sur la nouvelle base | PowerSync ne démarre pas la réplication. |
 | JWKS / realm non mis à jour | Toutes les connexions de sync refusées ; l'application reste « hors ligne ». |
 
@@ -657,7 +691,7 @@ faut vérifier la **publication** et le **schéma frontend**, et suivre la docum
 - modification de `sync-config.yaml` (nouvelle version de règles) ;
 - perte ou réinitialisation du stockage MongoDB ;
 - invalidation du slot de réplication ;
-- import POP forcé (`FORCE_REFETCH_POP`, [index.ts#L16](../packages/backend/src/index.ts#L16)) : l'upsert
+- import POP forcé (`FORCE_REFETCH_POP`, [index.ts#L19](../packages/backend/src/index.ts#L19)) : l'upsert
   ([KyselyBatchWriter.ts](../packages/backend/src/features/data/KyselyBatchWriter.ts#L67-L75)) met à jour **toutes**
   les lignes (`ON CONFLICT DO UPDATE` sur toutes les colonnes), donc tout le référentiel transite dans le WAL et chaque
   client re-télécharge son référentiel départemental.
@@ -690,8 +724,7 @@ CPU et mémoire du seul service PowerSync n'a pas été mesurée (ordre de grand
 
 1. **`wal_level=logical`** et `max_replication_slots` ≥ 2 (pendant un redéploiement des règles, deux slots coexistent
    temporairement), `max_wal_senders` suffisant.
-2. **La publication `powersync` et sa liste de tables** (vérifier `pg_publication_tables` avant/après, y compris le
-   cas `constat_validation`).
+2. **La publication `powersync` et sa liste de tables** (vérifier `pg_publication_tables` avant/après).
 3. **Le slot de réplication** : il n'est **pas** inclus dans un `pg_dump`. Après restauration de la base sur la
    nouvelle infrastructure, PowerSync crée un nouveau slot et refait un snapshot initial complet. C'est normal, mais
    cela implique un retraitement total et une re-synchronisation des clients.
@@ -744,17 +777,20 @@ CPU et mémoire du seul service PowerSync n'a pas été mesurée (ordre de grand
 2. Le partage se fait au niveau du **service** ; les droits d'édition (auteur, délégation) sont contrôlés dans
    l'interface et par le serveur.
 3. `POST /api/upload-data` n'accepte qu'une liste de tables et de colonnes, avec contrôle du service et de l'auteur.
-4. Les refus et erreurs SQL à l'application d'une écriture renvoient HTTP 200 → l'écriture est abandonnée
-   silencieusement.
-5. `PUT` = `INSERT` strict ; un rejeu après coupure réseau est refusé sans bruit.
-6. Une opération en échec HTTP permanent bloque la file et gèle la réception des données.
+4. Les refus et erreurs SQL à l'application d'une écriture renvoient HTTP 200 `success:false` → l'écriture n'est pas
+   appliquée, le client la signale à l'agent dans un bandeau.
+5. Les opérations sont envoyées et acquittées une par une ; un `PUT` rejoué sur une ligne existante est appliqué
+   comme un `PATCH`.
+6. Une opération refusée 5 fois de suite par la même erreur 4xx est mise de côté ; une erreur 5xx ou réseau la
+   garde dans la file (et gèle la réception des données tant qu'elle dure).
 7. Conflits : dernier arrivé gagne, par colonne.
-8. Photos : fichier écrit localement **avant** la ligne ; soft delete par `is_deprecated` ; `NULL` = invisible ;
-   jamais supprimées de S3.
+8. Photos : fichier écrit localement **avant** la ligne ; soft delete par `is_deprecated` (défaut `false`) ;
+   jamais supprimées de S3 ; statut du `PUT` S3 vérifié.
 9. Photos disponibles hors ligne uniquement pour les constats/comptes-rendus ouverts récemment en ligne.
-10. Statut HTTP du `PUT` S3 non vérifié.
+10. Les alertes de fiche soumises sont envoyées par le serveur dès leur synchronisation.
 11. La publication n'est pas `FOR ALL TABLES` : chaque nouvelle table doit y être ajoutée dans la migration.
-12. `issuer` et `telemetry` de `powersync-config.yaml` sont sans effet ; `PS_JWT_SECRET` inutilisé.
-13. La déconnexion ne purge pas la base locale ; la purge (menu Aide) détruit aussi les écritures non envoyées.
-14. Les routes d'envoi PDF lisent PostgreSQL alors que le PDF est construit sur les données locales.
+12. `issuer` de `powersync-config.yaml` est sans effet ; `PS_JWT_SECRET` inutilisé ; `telemetry` doit rester à la
+    racine.
+13. La déconnexion vide l'appareil après avoir averti des écritures non envoyées (refusée hors ligne s'il en reste).
+14. Les routes d'envoi PDF lisent PostgreSQL : le client attend que sa file d'écritures soit vide (30 s au plus).
 15. Un import POP forcé provoque le re-téléchargement du référentiel par tous les clients.

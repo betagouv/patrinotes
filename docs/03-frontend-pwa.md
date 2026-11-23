@@ -58,24 +58,24 @@ Versions déclarées dans [package.json](../packages/frontend/package.json). Les
 | Routage | @tanstack/react-router + router-vite-plugin | ^1.22.2 (1.168.4) | Routes basées sur des fichiers, arbre généré `routeTree.gen.ts` |
 | Données serveur | @tanstack/react-query | ^5.90.20 (5.95.2) | Mutations et requêtes ; `networkMode: "always"` |
 | Base locale | @powersync/web, @powersync/common, @powersync/react, @powersync/kysely-driver | 1.37.0 / 1.50.0 (version figée) / ^1.9.1 / ^1.0.0 | SQLite synchronisé et file de pièces jointes |
-| Requêtes SQL | kysely | ^0.27.4 (0.27.6) | Constructeur de requêtes typé, mêmes types que le backend |
+| Requêtes SQL | kysely | ^0.28.17 (0.28.20) | Constructeur de requêtes typé, mêmes types et même version que le backend et le pilote PowerSync |
 | SQLite WASM | @journeyapps/wa-sqlite, wa-sqlite (GitHub) | ^1.3.1 (1.5.0) | Moteur SQLite dans le navigateur |
 | Design system | @codegouvfr/react-dsfr | ^1.26.0 (1.32.0) | DSFR, thème MUI DSFR |
 | Composants | @mui/material, @emotion, tss-react | ^5.18.0 | Mise en page (Box, Stack), Dialog, Autocomplete |
 | Formulaires | react-hook-form | ^7.51.1 | Tous les formulaires |
 | Machines d'état | xstate, @xstate/react, @xstate/store | ^5.19.0 (5.29.0) / ^5.0.0 / ^0.0.5 | Envoi de photos, dictée, menu, stores globaux |
-| Éditeur riche | TipTap 2 (+ quelques extensions 3.x) | ^2.4.0 | Mise en page du PDF des CR |
+| Éditeur riche | TipTap 3 | ^3.35.0 | Mise en page du PDF des CR |
 | PDF (génération) | @react-pdf/renderer | ^4.1.5 (4.3.2) | Génération des PDF CR et CE dans le navigateur |
 | PDF (affichage) | pdfjs-dist | 4.3.136 (version figée) | Visionneuse paginée |
-| Cartographie | maplibre-gl | ^5.24.0 | Cartes, cadastre, plan de situation |
+| Cartographie | maplibre-gl | ^6.19.0 | Cartes, cadastre, plan de situation |
 | Dessin | konva, react-konva | ^9.3.22 / ^18.2.10 | Annotation des photos |
 | Images | browser-image-compression | ^2.0.2 | Compression dans un *web worker* |
 | Recherche | fuse.js | ^7.1.0 | Recherche floue des monuments |
-| Supervision | @sentry/react | ^10.63.0 | Erreurs (production seulement, données filtrées) |
+| Supervision | @sentry/react | ^11.16.0 | Erreurs (production seulement, données filtrées) |
 | Mesure d'audience | @datapunt/matomo-tracker-react | ^0.5.1 | `stats.beta.gouv.fr`, site 123 |
-| Divers | idb-keyval, ofetch, zod, date-fns, jszip, uuid, bowser, pastable, react-use | — | Stockage des jetons, HTTP, validation, dates, ZIP, identifiants, détection du navigateur |
+| Divers | idb-keyval, ofetch, zod 4, date-fns, jszip, uuid, bowser, pastable, react-use | — | Stockage des jetons, HTTP, validation, dates, ZIP, identifiants, détection du navigateur |
 
-> Dette : `@react-pdf/renderer` est en **^4.1.5** dans le frontend et dans `packages/pdf`, mais en **^3.4.2** dans le backend. Le backend ne rend aucun PDF : cette dépendance (comme `canvas` et `react-pdf-html`) est inutilisée et peut être retirée (voir [09](09-documents-pdf-cartes-emails.md)). Les dépendances `npm` et `install` déclarées en `dependencies` semblent inutiles (ajouts par erreur, à confirmer).
+> `@react-pdf/renderer` est en **^4.1.5** dans le frontend et dans `packages/pdf`, mais en **^3.4.2** dans le backend, qui ne rend aucun PDF et ne le charge qu'au travers de `@patrinotes/pdf` (voir [09](09-documents-pdf-cartes-emails.md)). Les outils de développement TanStack et `vite-plugin-wasm` sont en `devDependencies`.
 
 ## 3. Structure des dossiers
 
@@ -122,7 +122,7 @@ Ordre d'exécution dans [main.tsx](../packages/frontend/src/main.tsx) :
 
 1. Polyfills : `structuredClone`, `Array.prototype.at` et ses équivalents pour les tableaux typés, requis par pdfjs ([polyfill.ts](../packages/frontend/src/polyfill.ts)) ; `crypto.randomUUID` ([features/polyfill.ts](../packages/frontend/src/features/polyfill.ts)). Puis `globalThis.Buffer`.
 2. Initialisation de Sentry, en production et seulement si `VITE_SENTRY_DSN` est défini ([sentry.ts](../packages/frontend/src/features/sentry.ts)).
-3. Enregistrement du *service worker* (`registerSW`) avec **rechargement automatique** quand une nouvelle version est disponible.
+3. Enregistrement du *service worker* (`registerSW`). Quand une nouvelle version est installée, elle **attend** que la page l'active (§ 9.3).
 4. Installation des écouteurs qui récupèrent les *chunks* périmés (§ 9.3).
 5. **Mode clair forcé** (`localStorage.scheme = "light"`), puis `startReactDsfr` et `initFonts()` (polices Marianne pour react-pdf, servies depuis `/fonts`).
 6. Imbrication des providers :
@@ -161,9 +161,10 @@ Il reprend **toutes** les variables d'environnement préfixées `VITE_`. Le fich
 | Variable | Obligatoire | Utilisation |
 | --- | --- | --- |
 | `VITE_BACKEND_URL` | oui | Base de toutes les API ([api.ts](../packages/frontend/src/api.ts)) |
-| `VITE_POWERSYNC_URL` | oui | Point d'accès WebSocket PowerSync ([Connector.ts](../packages/frontend/src/db/Connector.ts#L15)) |
+| `VITE_POWERSYNC_URL` | oui | Point d'accès WebSocket PowerSync ([Connector.ts](../packages/frontend/src/db/Connector.ts#L16)) |
 | `VITE_AUTH_URL`, `VITE_AUTH_REALM`, `VITE_AUTH_CLIENT_ID` | oui pour la validation | **Aucune utilisation dans le code frontend** (la connexion passe par le backend) |
 | `VITE_SENTRY_DSN` | non | Active Sentry |
+| `VITE_SENTRY_ENVIRONMENT` | non | Environnement des événements Sentry (défaut `production` ; `preprod` en préproduction) |
 
 > Règles cachées et pièges :
 > - La validation zod est **tout ou rien** : s'il manque **une seule** variable obligatoire (y compris les trois `VITE_AUTH_*` inutilisées), `ENV` devient `{}`. `VITE_BACKEND_URL` et `VITE_POWERSYNC_URL` sont alors `undefined` et toute l'application est hors service, avec pour seul indice « Error parsing env vars » dans la console.
@@ -236,14 +237,14 @@ sequenceDiagram
     PS->>UI: fetchCredentials, endpoint et jeton
 ```
 
-Points de code : [ApiStore.ts](../packages/frontend/src/ApiStore.ts), [Connector.ts](../packages/frontend/src/db/Connector.ts#L44-L97), [AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx), [api.ts](../packages/frontend/src/api.ts).
+Points de code : [ApiStore.ts](../packages/frontend/src/ApiStore.ts), [Connector.ts](../packages/frontend/src/db/Connector.ts#L98-L152), [AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx), [api.ts](../packages/frontend/src/api.ts), [LogoutDialogs.tsx](../packages/frontend/src/features/auth/LogoutDialogs.tsx).
 
 > Règles cachées :
 > - Les jetons sont stockés dans **IndexedDB** (base `auth`, magasin `access`, clés `accessToken`, `refreshToken`, `expiresAt`, `user` en JSON). Ils sont donc lisibles par tout script exécuté sur l'origine : le risque XSS est à prendre en compte dans l'homologation.
 > - Les appels concurrents se partagent **une seule promesse de rafraîchissement** (`refreshPromise`), pour ne pas faire tourner deux fois le même *refresh token*.
 > - Seul un **401** sur `/api/refresh-token` déconnecte l'utilisateur. Une erreur réseau (hors ligne) laisse la session intacte : l'agent continue à travailler localement.
 > - `expiresAt` est calculé par le backend à **80 %** de la durée de vie du jeton ; le client rafraîchit dès que cette date est dépassée (`expiresAt < now`). La fonction frontend `get80PercentOfTokenLifespan` est importée par le connecteur mais jamais appelée.
-> - La déconnexion (`useLogout`) efface les jetons mais **ne vide pas la base SQLite locale** : les données du service restent sur l'appareil jusqu'à la prochaine connexion ou une réinitialisation (point d'attention sur un poste partagé).
+> - **La déconnexion vide l'appareil** ([LogoutDialogs.tsx](../packages/frontend/src/features/auth/LogoutDialogs.tsx)). S'il reste des modifications ou des photos pas encore envoyées, une fenêtre « Se déconnecter ? » en donne le nombre et propose « Attendre » ou « Se déconnecter quand même » (elles seraient perdues). Hors ligne, s'il en reste, la fenêtre « Déconnexion impossible » demande de se reconnecter à Internet d'abord. Ensuite, en ligne, le jeton de rafraîchissement est révoqué (`POST /api/logout`, 3 s au plus, erreurs ignorées), puis les données locales sont effacées comme par « Réinitialiser les données locales » (§ 11.8), en gardant le *service worker* et ses caches (code de l'application seulement) pour que la page de connexion s'ouvre hors ligne. L'application rouvre sur `/connexion`.
 > - L'utilisateur stocké (`auth.user`, avec son `service`) est une **copie figée au moment de la connexion**. `useLiveUser` et `useLiveService` la complètent avec les lignes synchronisées `user` et `service` ; `useRefreshUser` la met à jour après une modification du service.
 > - La page `/stats` appelle `ofetch` directement avec le jeton (et non le client typé), et la page de validation appelle le backend sans jeton.
 
@@ -260,7 +261,7 @@ Défini dans [db.ts](../packages/frontend/src/db/db.ts) :
 Tables locales (26) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`, `service_instructeurs`, `clause_v2`, `transactions`, `sent_email`, `suggested_email`, `user_settings`, `pop_immeubles`, `state_report`, `visited_section`, `visited_section_attachment`, `report_attachment`, `state_report_attachment`, `state_report_sent_email`, `pop_objets`, `pop_images`, `state_report_alert`, `state_report_alert_attachment`, `monument_alert`, `monument_alert_attachment`, `monument_correction` et `attachments` (table interne de la file de pièces jointes).
 
 > Règles cachées :
-> - [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts#L490-L525) contient une **vérification à la compilation** : chaque colonne d'une table partagée doit exister dans le schéma backend (`Database` de `packages/backend/src/db/db`). Ajouter une colonne côté frontend sans l'ajouter côté backend fait échouer `pnpm check`. **L'inverse n'est pas vérifié** : une nouvelle colonne backend absente d'AppSchema est simplement ignorée côté client.
+> - [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts#L570-L596) contient une **vérification à la compilation** : chaque colonne d'une table partagée doit exister dans le schéma backend (`Database` de `packages/backend/src/db/db`). Ajouter une colonne côté frontend sans l'ajouter côté backend fait échouer `pnpm check`. **L'inverse n'est pas vérifié** : une nouvelle colonne backend absente d'AppSchema est simplement ignorée côté client.
 > - PowerSync stocke tout en `text` ou `integer` : les booléens valent `0` ou `1`, les dates sont des chaînes ISO.
 > - Certaines tables locales ne sont **alimentées par aucun flux** de [sync-config.yaml](../powersync/sync-config.yaml) : `transactions`, `state_report_sent_email`, `pop_images` (les images POP sont lues par l'API `/api/state-report/objets-images`, donc en ligne seulement). À l'inverse, `constat_validation` est synchronisée mais absente d'AppSchema, donc ignorée.
 > - Toute nouvelle table synchronisée doit être ajoutée à AppSchema **et** à la publication PostgreSQL `powersync` (voir le [README](../README.md#migrations)).
@@ -294,19 +295,20 @@ sequenceDiagram
     Sync->>DB: après 500 ms sans frappe, UPDATE des seuls champs modifiés
     DB->>Q: opération CRUD mise en file
     Q->>C: dès que connecté
-    loop pour chaque opération du lot
-        C->>API: une requête par opération
+    loop une opération à la fois
+        C->>API: une requête
+        C->>Q: complete de cette opération
     end
-    C->>Q: complete
 ```
 
-Points de code : [SyncForm.tsx](../packages/frontend/src/components/SyncForm.tsx#L17-L48), [Connector.ts](../packages/frontend/src/db/Connector.ts#L22-L41).
+Points de code : [SyncForm.tsx](../packages/frontend/src/components/SyncForm.tsx#L17-L48), [Connector.ts](../packages/frontend/src/db/Connector.ts#L23-L96).
 
 > Règles cachées :
 > - **Délai de 500 ms** puis écriture locale, avec un dernier envoi forcé au **démontage** du formulaire pour ne rien perdre en quittant la page. Le même mécanisme existe pour la fenêtre d'une partie visitée ([ConstatDetaille.tsx](../packages/frontend/src/features/state-report/steps/ConstatDetaille.tsx#L286-L316)).
 > - `getDiff` ignore les valeurs non primitives (objets, tableaux) : seuls les champs scalaires sont synchronisés.
 > - **Fusion des modifications distantes** ([useFormWithFocus.tsx](../packages/frontend/src/hooks/useFormWithFocus.tsx)) : quand une ligne change en base (autre appareil, collègue), chaque champ modifié est réinjecté dans le formulaire, **sauf** le champ qui a le focus et qui a déjà été modifié localement. Côté serveur, la règle est **le dernier qui écrit gagne**, sans détection de conflit (test `sync.spec.ts`).
-> - `uploadData` envoie les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur HTTP sur une opération bloque le lot, que PowerSync réessaiera ; un refus du serveur (droits) arrive en HTTP 200 et n'est pas vu (voir [08](08-synchronisation-hors-ligne.md)).
+> - `uploadData` envoie et acquitte les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur réseau ou 5xx garde l'opération dans la file, que PowerSync réessaiera ; une même erreur 4xx reçue 5 fois de suite met l'opération de côté (voir [08 § 4.3](08-synchronisation-hors-ligne.md#43-envoi-des-écritures--uploaddata)).
+> - **Écritures refusées** : un refus du serveur (HTTP 200 `success:false`) ou une opération mise de côté est enregistré localement ([rejectedWrites.ts](../packages/frontend/src/features/sync/rejectedWrites.ts)). Le bandeau [RejectedWritesBanner.tsx](../packages/frontend/src/features/sync/RejectedWritesBanner.tsx), affiché en haut de toutes les pages pour un agent connecté, dit « Une modification n'a pas pu être enregistrée. » (ou « N modifications n'ont pas pu être enregistrées. ») ; « Voir le détail » liste le document, la date et le motif ; « J'ai compris » vide la liste. La liste est dans le `localStorage` (clé `patrinotes/rejected-writes`, 50 entrées au plus), partagée entre onglets et effacée par la déconnexion.
 > - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation (30 s au plus), puis affiche une erreur si la ligne est toujours absente.
 > - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées** : le commentaire et les destinataires d'une alerte créée pendant la session sont conservés à l'enregistrement.
 > - Les identifiants sont générés **côté client** : `report-<uuid v4>` pour les CR (le préfixe `report-` est une convention historique), uuid v4 pour les CE et les parties visitées, uuid v7 pour les pièces jointes et les délégations.
@@ -333,7 +335,7 @@ Plusieurs colonnes stockent des structures sous forme de **chaînes avec sépara
 
 ### 9.1 Configuration
 
-[vite.config.ts](../packages/frontend/vite.config.ts) : `VitePWA` en stratégie **`injectManifest`**, *service worker* sur mesure [src/service-worker/sw.ts](../packages/frontend/src/service-worker/sw.ts), `registerType: "autoUpdate"`, activé aussi en développement.
+[vite.config.ts](../packages/frontend/vite.config.ts) : `VitePWA` en stratégie **`injectManifest`**, *service worker* sur mesure [src/service-worker/sw.ts](../packages/frontend/src/service-worker/sw.ts), `registerType: "prompt"`, activé aussi en développement.
 
 | Élément | Valeur |
 | --- | --- |
@@ -356,16 +358,18 @@ flowchart LR
     Q3 -- non --> Net["Réseau direct, API, tuiles, S3"]
 ```
 
-- `skipWaiting()` à l'installation et `clients.claim()` à l'activation : le nouveau SW prend la main immédiatement.
+- Un nouveau SW installé **attend** : il n'appelle `skipWaiting()` que sur le message `SKIP_WAITING` envoyé par la page (§ 9.3), puis `clients.claim()` à l'activation.
 - `cleanupOutdatedCaches()` supprime les précaches des versions précédentes.
 - En production, les **navigations sont en NetworkFirst** : après un déploiement, l'`index.html` récent (et ses nouveaux noms de *chunks*) est servi dès que le réseau répond. Hors ligne, c'est l'`index.html` précaché qui est servi.
 - Les appels API, le WebSocket PowerSync, les tuiles cartographiques et S3 **ne sont pas mis en cache** par le SW.
 
 ### 9.3 Mise à jour et reprise sur *chunk* périmé
 
-Côté page ([main.tsx](../packages/frontend/src/main.tsx#L23-L102)) :
+Côté page ([main.tsx](../packages/frontend/src/main.tsx#L25-L110)) :
 
-1. `registerSW({ onNeedRefresh: () => window.location.reload() })` : **rechargement automatique** dès qu'une nouvelle version est détectée, **sans prévenir l'utilisateur**.
+1. `registerSW({ onNeedRefresh })` mémorise qu'une nouvelle version attend ([appUpdate.ts](../packages/frontend/src/features/update/appUpdate.ts)). [UpdateBanner.tsx](../packages/frontend/src/features/update/UpdateBanner.tsx) décide quand l'activer :
+   - sur les **pages de consultation** (accueil, fiches monument et objet, statistiques, pages légales), si aucun champ n'a le focus, la page se recharge tout de suite sur la nouvelle version ;
+   - **partout ailleurs** (compte-rendu ou constat en cours, pages PDF et d'envoi, compte, service, connexion, inscription…), un bandeau « Une nouvelle version de Patrinotes est disponible. » propose « Recharger » : l'agent choisit le moment.
 2. Reprise sur *chunk* périmé : après un déploiement, une ancienne page peut demander un *chunk* haché qui n'existe plus. Le code intercepte `vite:preloadError`, ainsi que les rejets non gérés dont le message correspond à `dynamically imported module|Importing a module script failed|error loading dynamically` (cas des `import()` de react-dsfr), puis :
    - **tentative 1** : simple rechargement (`sessionStorage["chunk-reload-attempt"] = 1`) ;
    - **tentative 2** : désinscription de tous les SW, suppression de **tous** les caches, puis rechargement ;
@@ -373,7 +377,7 @@ Côté page ([main.tsx](../packages/frontend/src/main.tsx#L23-L102)) :
    Le compteur est effacé **5 secondes après l'événement `load`**.
 
 > Pièges :
-> - Le rechargement automatique peut survenir **pendant une saisie**. La sauvegarde locale (500 ms) limite la perte, mais un champ en cours de frappe peut être perdu.
+> - Tant que l'agent ne recharge pas, la version déjà chargée continue de tourner. Elle doit rester compatible avec le backend déployé : par exemple, les versions qui ne transmettent pas le type et la taille des photos ne peuvent plus en déposer (400 sur l'URL de dépôt) tant qu'elles n'ont pas accepté la mise à jour.
 > - Le chunk admin n'est pas précaché : `/admin` n'est pas disponible hors ligne, ce qui est voulu.
 > - Le serveur de production (`vite preview`, § 14) doit servir `sw.js` et `index.html` **sans cache HTTP longue durée** pour que la mise à jour fonctionne. La configuration des en-têtes sur l'infrastructure cible est à vérifier.
 > - L'ancien domaine Compte-rendu VIF utilise [`crvif-redirection/sw.js`](../crvif-redirection/sw.js) pour désinscrire l'ancien SW et rediriger les clients.
@@ -389,11 +393,11 @@ Côté page ([main.tsx](../packages/frontend/src/main.tsx#L23-L102)) :
 | Processus asynchrones | Machines XState | `attachmentUploadMachine`, `thumbnailMachine`, `speechToTextMachine`, `menuMachine` (menu, aide, clauses) |
 | Préférences locales | `localStorage` | Voir ci-dessous |
 
-Clés `localStorage` : `scheme` (forcé à `light`), `crvif/version`, `crvif/update-popup`, `crvif/no-report-alert-closed`, `patrinotes/home-document` (`compte-rendus` ou `constats`), `patrinotes/home-scope` (`my` ou `service`), `chunk-reload-attempt` (dans `sessionStorage`).
+Clés `localStorage` : `scheme` (forcé à `light`), `crvif/version`, `crvif/update-popup`, `crvif/no-report-alert-closed`, `patrinotes/home-document` (`compte-rendus` ou `constats`), `patrinotes/home-scope` (`my` ou `service`), `patrinotes/rejected-writes` (écritures refusées), `chunk-reload-attempt` (dans `sessionStorage`).
 
 Bases IndexedDB : `crvif-sync.db` (SQLite PowerSync, sauf si OPFS est utilisé), `crvif-attachments` (fichiers), `auth` (jetons), `toSync`, `toUpload`, `uploadStatus` (magasins d'images de [idb.ts](../packages/frontend/src/features/idb.ts), alimentés par aucun code).
 
-> Règle cachée : `searchStore.scope` vaut **`"all"`** par défaut, alors que les onglets de l'accueil ont pour identifiants `my` et `service`. Au premier lancement, aucun onglet ne correspond donc à la valeur courante (à confirmer visuellement). Le repli `?? "my"` ne s'applique pas, puisque `"all"` n'est pas nul.
+> Règle cachée : quand aucun onglet n'est mémorisé, l'accueil s'ouvre sur « Mes documents » (`searchStore.scope = "my"`, [SearchModal.tsx](../packages/frontend/src/components/SearchModal.tsx#L142)).
 
 ## 11. Fonctionnalités par dossier `features/`
 
@@ -424,7 +428,7 @@ S'y ajoutent les courriels obligatoires des **alertes « visitées »** dont l'e
 3. **effet de bord dans la requête** : si aucun plan de situation n'existe, il est **généré et enregistré** comme pièce jointe (`ensurePlanSituationAttachment`). Hors ligne, `planSituationOffline = true` et le PDF est produit sans plan ;
 4. génération du HTML **une seule fois** (`getStateReportHtmlString` du paquet `pdf`), puis du PDF ;
 5. destinataires préremplis : courriel du propriétaire, du représentant et destinataires par défaut. L'envoi sous couvert est activé par défaut si l'utilisateur a configuré un validateur ;
-6. envoi : `POST /api/pdf/state-report/upload-url` → `PUT` du PDF sur S3 → `POST /api/pdf/state-report` (destinataires, taille, alertes sélectionnées, `needValidation`).
+6. envoi : `POST /api/pdf/state-report/upload-url` (taille du PDF) → `PUT` du PDF sur S3 (statut vérifié) → attente de la file d'écritures locales (30 s au plus) → `POST /api/pdf/state-report` (destinataires, taille, alertes sélectionnées, `needValidation`).
 Le téléchargement local appelle `POST /api/pdf/state-report/log-download` pour les statistiques.
 
 > Règles cachées :
@@ -480,12 +484,14 @@ flowchart LR
     Comp --> Save["attachmentQueue.saveFile : IndexedDB, local_uri"]
     Save --> Ins["INSERT de la ligne *_attachment, is_deprecated = 0"]
     Ins --> Watch["watchAttachments détecte le nouvel id"]
-    Watch --> Up["Envoi : GET URL signée puis PUT S3, toutes les 30 s ou immédiat"]
+    Watch --> Up["Envoi : GET URL signée avec type et taille, puis PUT S3 vérifié, toutes les 30 s ou immédiat"]
 ```
 
 - [attachmentUploadMachine.ts](../packages/frontend/src/features/upload/machines/attachmentUploadMachine.ts) gère un fichier unique (`idle → compressing → saving → inserting → idle`, ou `failed` avec relance ou abandon). [useBatchUpload.ts](../packages/frontend/src/features/upload/hooks/useBatchUpload.ts) traite plusieurs fichiers en parallèle, avec annulation et relance sans redemander le fichier. [useAttachmentImages.ts](../packages/frontend/src/features/upload/hooks/useAttachmentImages.ts) unifie les tables de pièces jointes.
 - **Ordre volontaire** : le fichier est écrit localement **avant** l'insertion de la ligne en base, pour que la file de pièces jointes trouve toujours un fichier déjà présent.
-- [pendingUploadsStore.ts](../packages/frontend/src/features/upload/pendingUploadsStore.ts) : registre en mémoire des envois en cours, par document parent. Il bloque « Créer le CR » et « Finaliser le constat ». Un envoi **en échec reste bloquant** jusqu'à ce que l'utilisateur l'abandonne explicitement.
+- [pendingUploadsStore.ts](../packages/frontend/src/features/upload/pendingUploadsStore.ts) : registre en mémoire des envois en cours, par document parent. Il bloque « Créer le CR » et « Finaliser le constat ». Un envoi **en échec reste bloquant** jusqu'à ce que l'utilisateur le supprime ou le réessaie.
+- **Plan de l'édifice** ([ConstatGeneral.tsx](../packages/frontend/src/features/state-report/steps/ConstatGeneral.tsx)) : il passe par le même chemin que les photos. Un fichier refusé ou en échec reste affiché avec son message, « Réessayer » et la suppression.
+- **Limites** ([uploadLimits.ts](../packages/frontend/src/features/upload/uploadLimits.ts)) : après compression, la photo est refusée si son type (lu dans ses premiers octets) n'est pas JPEG, PNG, WebP ou HEIC/HEIF (« Format de fichier non accepté. ») ou si elle dépasse 20 Mo (« Fichier trop volumineux (20 Mo maximum). »). Le message s'affiche sur la vignette. Le serveur applique les mêmes règles et les signe dans l'URL de dépôt.
 - **Annotation** ([KonvaDrawingCanvas.tsx](../packages/frontend/src/features/upload/KonvaDrawingCanvas.tsx)) : dessin à main levée en couleurs et épaisseurs au choix, zoom et déplacement, annulation, légende. À l'enregistrement, le tracé est **incrusté** dans une nouvelle image JPEG (qualité 0,9) à la taille d'origine : l'ancienne photo est rendue obsolète et l'opération est **irréversible**. Fermer la fenêtre (Échap, clic à l'extérieur) **enregistre** les modifications en cours.
 - Suppression d'une photo : le fichier local est supprimé et la ligne passe à `is_deprecated = 1`. Le fichier S3 n'est pas supprimé : `deleteFile` de l'adaptateur distant est une fonction vide.
 - Nommage des clés S3 : `<id parent>/images/<uuidv7>.jpg` ; les images de localisation utilisent `<id partie visitée>/localisation/<uuidv7>.jpg`, et ce segment de chemin sert à les **identifier**.
@@ -502,7 +508,7 @@ Le champ fichier est vidé **dès la sélection** : on peut rechoisir le même f
 
 | Fonction | Fichier | Source de données |
 | --- | --- | --- |
-| Fond « plan » vectoriel | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx#L14) | `tiles.openfreemap.org` (style *liberty* et polices) |
+| Fond « plan » vectoriel | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx#L15) | `tiles.openfreemap.org` (style *liberty* et polices) |
 | Fond satellite | idem | IGN Géoplateforme, WMTS `ORTHOIMAGERY.ORTHOPHOTOS` |
 | Parcelles cadastrales | idem | `openmaptiles.geo.data.gouv.fr/data/cadastre.json` |
 | Géocodage | `geocode`, [address.tsx](../packages/frontend/src/features/address.tsx) | `api-adresse.data.gouv.fr` |
@@ -519,7 +525,7 @@ Le champ fichier est vidé **dès la sélection** : on peut rechoisir le même f
 
 ### 11.6 `text-editor/`
 
-Éditeur TipTap ([TextEditorContext.tsx](../packages/frontend/src/features/text-editor/TextEditorContext.tsx)) : StarterKit, souligné, couleur, taille de police, images, tableaux, colonnes, liens, filet horizontal. La CSS spécifique aux constats (`stateReportExtraCss`) vient du paquet `pdf`. Il sert à la mise en page des CR. Le constat produit son HTML mais n'expose pas d'écran d'édition. [ConstatPdf.edit.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.edit.tsx) existe, mais la table `contentMap` de la route du constat n'a pas d'entrée `edit`. Or `validateSearch` accepte `mode=edit` : une URL `/constat/<id>/pdf?mode=edit` ferait donc planter la page (à confirmer).
+Éditeur TipTap 3 ([TextEditorContext.tsx](../packages/frontend/src/features/text-editor/TextEditorContext.tsx)) : StarterKit, souligné, couleur, taille de police, images, lignes et cellules de tableau, liens, filet horizontal ; les blocs de colonnes des modèles sont conservés tels quels par le nœud `customHTML`. La CSS spécifique aux constats (`stateReportExtraCss`) vient du paquet `pdf`. Il sert à la mise en page des CR. Le constat produit son HTML mais n'expose pas d'écran d'édition. [ConstatPdf.edit.tsx](../packages/frontend/src/features/state-report/pdf/ConstatPdf.edit.tsx) existe, mais la route du constat n'a que les modes `view`, `send` et `sent` : une URL `/constat/<id>/pdf?mode=edit` ramène à la prévisualisation.
 
 ### 11.7 `audio-record/` (dictée)
 
@@ -550,7 +556,7 @@ Le champ fichier est vidé **dès la sélection** : on peut rechoisir le même f
 
 ## 13. Supervision et mesure d'audience
 
-- **Sentry** : actif seulement en production et si `VITE_SENTRY_DSN` est défini. 10 % des transactions, `sendDefaultPii: false`, ni journaux ni fil d'Ariane console, et `beforeSend` qui retire l'utilisateur et masque les clés de type mot de passe, jeton, courriel ou destinataires. Le connecteur PowerSync n'écrit ni les jetons ni les opérations de synchronisation dans la console. L'`ErrorBoundary` racine envoie les erreurs React avec la pile des composants.
+- **Sentry** : actif seulement en production et si `VITE_SENTRY_DSN` est défini. Environnement = `VITE_SENTRY_ENVIRONMENT` (défaut `production`), version = `window.APP_VERSION`. 10 % des transactions, collecte de données désactivée (`dataCollection`), ni journaux ni fil d'Ariane console, et `beforeSend` qui retire l'utilisateur et masque les clés de type mot de passe, jeton, courriel ou destinataires. Les écritures refusées par le serveur y sont signalées (table, opération, motif). Le connecteur PowerSync n'écrit ni les jetons ni les opérations de synchronisation dans la console. L'`ErrorBoundary` racine envoie les erreurs React avec la pile des composants.
 - **Matomo** : `stats.beta.gouv.fr`, `siteId` 123, suivi des liens activé par `enableLinkTracking()` à chaque rendu d'`App`. La politique de confidentialité le déclare en mode « exempté ».
 - `TanStackDevtools` est monté dans l'arbre en permanence (sans effet visible en production, à confirmer).
 
@@ -583,7 +589,8 @@ En production, l'étape `frontend` du [Dockerfile](../Dockerfile) construit l'ap
 | Rechercher un monument | oui, si `pop_stream` a été synchronisé | Données limitées aux départements de l'utilisateur |
 | Consulter une fiche MH ou objet | oui, en partie | Constats des autres services, unités patrimoniales et photos POP en ligne seulement |
 | Choisir une unité patrimoniale | non | `GET /api/up/monument` ; hors ligne, constat sur l'ensemble du monument |
-| Signaler une alerte ou annoter un objet depuis une fiche | oui | Envoi par courriel au retour du réseau |
+| Signaler une alerte ou annoter un objet depuis une fiche | oui | Envoi par courriel par le serveur dès que la ligne est synchronisée |
+| Se déconnecter | oui, sauf s'il reste des envois en attente | La déconnexion vide l'appareil ; hors ligne, elle est refusée tant que des modifications ou photos ne sont pas envoyées |
 | Voir les photos d'un objet POP | non | `GET /api/state-report/objets-images` |
 | Ajouter et annoter des photos | oui | Envoi différé par la file de pièces jointes |
 | Voir les photos d'un document jamais ouvert en ligne | non | Flux de pièces jointes à la demande |
@@ -597,24 +604,25 @@ En production, l'étape `frontend` du [Dockerfile](../Dockerfile) construit l'ap
 Récapitulatif des points qui surprennent un nouvel arrivant. Les détails figurent dans les sections précédentes.
 
 1. **Configuration tout ou rien** : une seule variable `VITE_*` obligatoire manquante, même inutilisée (`VITE_AUTH_*`), désactive toute la configuration.
-2. **Bilan quinquennal jamais affiché** : `nature_visite` est enregistrée en minuscules (`"partielle (préciser)"`), alors que la question n'est affichée que si `nature === "Partielle (préciser)"`, avec une majuscule ([ContexteVisite.tsx](../packages/frontend/src/features/state-report/steps/ContexteVisite.tsx#L239-L284)). La question n'apparaît donc jamais (défaut).
+2. La question **« bilan quinquennal » n'est pas posée** ; la colonne `bilan_quinquennal` reste dans le schéma local pour les clients déjà installés (voir [06 § 6.2](06-modele-de-donnees.md#62-incohérences-de-type-connues)).
 3. Un **CE créé reste masqué** (`disabled = 1`) tant qu'aucun monument n'est choisi.
 4. **Lecture seule d'un CE** dès qu'un PDF existe, sauf refus du validateur ; seul le créateur peut le modifier. Les CR suivent la règle créateur, rédacteur ou délégation.
 5. « Supprimer » est une **suppression logique** (`disabled = 1`), malgré le message « irréversible ».
-6. La **duplication d'un CR** conserve `attachment_id` : la copie paraît « Envoyée ».
+6. La **duplication d'un CR** donne un brouillon : ni le PDF, ni `attachment_id`, ni `pdf_size` ne sont recopiés.
 7. Les **photos ne sont disponibles hors ligne** que pour les documents ouverts en ligne sur l'appareil.
 8. **« Réinitialiser les données locales »** efface les modifications non synchronisées (la fenêtre de confirmation en donne le nombre) et n'est pas disponible hors ligne.
-9. La **déconnexion ne vide pas** la base locale.
-10. **Rechargement automatique** à chaque nouvelle version, sans confirmation.
+9. La **déconnexion vide l'appareil**, après avoir averti des envois en attente ; elle est refusée hors ligne s'il en reste.
+10. **Nouvelle version** : rechargement automatique sur les pages de consultation, bandeau « Recharger » ailleurs.
 11. Une **alerte « Sécurité »** a toujours une adresse « Mairie » vide au départ (champ absent du service).
 12. Les **séparateurs dans les colonnes texte** (`/`, `:`, `,`, `;`) ne sont pas échappés (§ 8.4).
-13. L'onglet de l'accueil vaut **`"all"`** par défaut alors que les onglets sont `my` et `service`.
-14. Sentry n'envoie que les exceptions, filtrées.
+13. L'accueil s'ouvre sur **« Mes documents »** quand aucun onglet n'est mémorisé.
+14. Sentry n'envoie que les exceptions et les écritures refusées, filtrées.
 15. Les **fichiers S3 ne sont jamais supprimés** par le client (`deleteFile` vide), même quand la photo est supprimée ou remplacée.
 16. Les **en-têtes PDF** sont découpés en lignes selon le nombre de mots.
 17. Les constantes de `/stats` sont **écrites en dur** (1 102 agents, libellés « créés en 2026 », 46 000 immeubles).
 18. **Tout membre d'un service** peut modifier les paramètres du service (interface et serveur, choix de l'équipe).
 19. Un compte ancien sans service (`service_id = "no-service"`) affiche une fenêtre bloquante de choix du service.
+20. Les **écritures refusées** par le serveur s'affichent dans un bandeau jusqu'à « J'ai compris ».
 
 ## 17. Dette technique relevée
 
@@ -622,7 +630,6 @@ Récapitulatif des points qui surprennent un nouvel arrivant. Les détails figur
 - Ressources *a priori* inutilisées dans `public/` : `pdfjs/` (la visionneuse importe `pdfjs-dist` directement), `wa-sqlite-async.*`, `vite.svg`, une image « Tableau de bord mon compte rendu VIF (1).png ». Également des magasins IndexedDB inutilisés (`toSync`, `toUpload`, `uploadStatus`) et le fichier [service-worker.d.ts](../packages/frontend/src/service-worker.d.ts) marqué « DEPRECIATED » (à confirmer avant suppression).
 - Code mort ou commenté : `Layout.AppHeader` (code après le `return`), le bouton « Je donne mon avis » (Typeform), la génération manuelle du plan de situation, `get80PercentOfTokenLifespan`, l'abonnement `swEnv.js` jamais importé.
 - `index.html` déclare deux jeux de favicons et deux manifestes (DSFR `node_modules` et `/manifest.webmanifest`).
-- Le backend déclare `@react-pdf/renderer` 3.x, `react-pdf-html`, `canvas`, `react`, `react-dom` et `jsdom`, qu'aucun code n'importe : le rendu PDF se fait uniquement dans le navigateur (4.x). Ce sont des dépendances mortes à retirer. Voir [09](09-documents-pdf-cartes-emails.md).
 - Un effet de bord (génération et écriture du plan de situation) se trouve dans une `queryFn` TanStack Query.
 - Beaucoup de `@ts-ignore` et de `as any` autour des composants DSFR et MUI.
 - [packages/frontend/README.md](../packages/frontend/README.md) est le README générique du modèle Vite.

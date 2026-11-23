@@ -19,7 +19,7 @@ L'application est éditée par la **Direction générale des patrimoines et de l
 
 ## 2. Contexte beta.gouv.fr et historique
 
-- Patrinotes est une **startup d'État** du programme beta.gouv.fr. Le pied de page renvoie vers le code source public `github.com/betagouv/patrinotes` ([Layout.tsx](../packages/frontend/src/features/Layout.tsx#L132)), sous **licence Etalab 2.0**. La mesure d'audience passe par l'instance Matomo de beta.gouv.fr (`stats.beta.gouv.fr`, site 123, [main.tsx](../packages/frontend/src/main.tsx#L132-L136)).
+- Patrinotes est une **startup d'État** du programme beta.gouv.fr. Le pied de page renvoie vers le code source public `github.com/betagouv/patrinotes` ([Layout.tsx](../packages/frontend/src/features/Layout.tsx#L137)), sous **licence Etalab 2.0**. La mesure d'audience passe par l'instance Matomo de beta.gouv.fr (`stats.beta.gouv.fr`, site 123, [main.tsx](../packages/frontend/src/main.tsx#L142-L145)).
 - Le produit s'appelait **« Compte-rendu VIF »** (ancien nom du produit, sans sigle particulier). Il ne couvrait alors que les comptes-rendus des UDAP, puis a été étendu aux constats d'état et renommé Patrinotes. Plusieurs traces de cet historique restent dans le code :
   - le bandeau de la page d'inscription : « Compte-rendu VIF est désormais intégré à Patrinotes ! Retrouvez vos documents en créant un nouveau compte, avec le même courriel » ([inscription.tsx](../packages/frontend/src/routes/inscription.tsx#L9-L19)) ;
   - le préfixe `crvif` des noms de base locale (`crvif-sync.db`, `crvif-attachments`) et des clés `localStorage` (`crvif/version`…) ;
@@ -135,7 +135,7 @@ stateDiagram-v2
 Libellés affichés (badges de [StateReportListItem.tsx](../packages/frontend/src/features/state-report/StateReportListItem.tsx#L153-L160)) : « Brouillon », « En attente de validation », « Envoyé », « Refusé ». Le CR n'a que deux statuts, « Brouillon » et « Envoyé ».
 
 > Règles cachées :
-> - Un CE est **en lecture seule** dès qu'un PDF a été produit (`attachment_id` non nul), **sauf** si le validateur l'a refusé (`validation_status = "declined"`). Dans l'interface, seul le **créateur** peut le modifier ([utils.ts](../packages/frontend/src/features/state-report/utils.ts)) ; le serveur accepte aussi les personnes à qui le créateur a donné délégation. Le serveur applique la même règle de lecture seule : il refuse toute modification d'un constat envoyé, sauf sa suppression.
+> - Un CE est **en lecture seule** dès qu'un PDF a été produit (`attachment_id` non nul), **sauf** si le validateur l'a refusé (`validation_status = "declined"`). Seul le **créateur** peut le modifier, dans l'interface ([utils.ts](../packages/frontend/src/features/state-report/utils.ts)) comme sur le serveur : la délégation ne s'applique pas aux CE. Le serveur applique la même règle de lecture seule : il refuse toute modification d'un constat envoyé, sauf sa suppression.
 > - Un CR peut être modifié par son créateur, par la personne indiquée comme rédacteur, ou par tout collègue qui a reçu une **délégation** du créateur ([useCanEditReport.tsx](../packages/frontend/src/hooks/useCanEditReport.tsx)).
 > - La « suppression » est une **suppression logique** (`disabled = 1`), alors que la fenêtre de confirmation annonce une action « irréversible ».
 > - Un nouveau CE est créé **masqué** (`disabled = 1`). Il n'apparaît dans les listes qu'une fois un monument choisi. Un constat abandonné avant ce choix reste invisible dans la base.
@@ -213,13 +213,13 @@ D'après les tests de bout en bout ([constat-with-alerts.spec.ts](../tests/const
 - **Dictée vocale** : bouton « Dicter » sur les champs longs, via l'API de reconnaissance vocale du navigateur, en français.
 - **Cartes** : localisation du monument, sélection de parcelles cadastrales, plan de situation automatique au 1/5 000, localisation des désordres par partie visitée.
 - **Partage au sein du service** : l'onglet « UDAP / CRMH / Service » de l'accueil montre les documents de tout le service ; « Mes documents » montre ceux de l'agent.
-- **Délégation** : un agent autorise des collègues de son service à créer, modifier et supprimer ses CR. L'interface ne l'applique pas aux CE, mais le serveur l'accepte pour les CE et les alertes de fiche.
+- **Délégation** : un agent autorise des collègues de son service à créer, modifier et supprimer ses CR (le serveur l'applique aussi à ses alertes de fiche). Elle ne s'applique pas aux CE.
 - **Clauses** : textes types (décision, contacts utiles, bonnes pratiques, type d'espace). Ils sont nationaux (`service_id = "ALL"`) ou propres au service ; une clause du service **remplace** la clause nationale de même clé et même intitulé.
 - **Liste blanche** : seuls les courriels préalablement autorisés peuvent créer un compte (modération *a priori* prévue par les CGU).
 
 ## 7. Pages légales et accessibilité
 
-Les pages légales sont **intégrées au code** de l'application (pas de CMS). Le pied de page y renvoie ([Layout.tsx](../packages/frontend/src/features/Layout.tsx#L104-L136)).
+Les pages légales sont **intégrées au code** de l'application (pas de CMS). Le pied de page y renvoie ([Layout.tsx](../packages/frontend/src/features/Layout.tsx#L112-L137)).
 
 | Page | Fichier | Contenu notable |
 | --- | --- | --- |

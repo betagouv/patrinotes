@@ -4,7 +4,7 @@ Ce document décrit comment Patrinotes authentifie ses utilisateurs, comment les
 
 Il s'adresse à l'équipe sécurité (RSSI, SSI du ministère), aux équipes d'exploitation chargées du transfert et aux développeurs. Les constats viennent de la lecture du code et du relevé de production du 17/11/2026 (lecture seule de Coolify, des bases PostgreSQL et de Keycloak) ; ce qui n'a pas pu être vérifié est signalé « à confirmer ». Les routes citées sont détaillées dans [04 — Backend et API](04-backend-api.md).
 
-> **Résumé pour un lecteur non technique.** Les agents se connectent avec un courriel et un mot de passe gérés par Keycloak, un logiciel libre de gestion des identités. Seules les adresses inscrites sur une **liste blanche** peuvent créer un compte. Chaque agent ne reçoit sur son appareil que les données de **son service** (UDAP, CRMH…). Le serveur contrôle aussi les **écritures** et l'accès aux **fichiers** par service, auteur et délégation. Restent à traiter avant une homologation : le durcissement de Keycloak en production, l'absence de limitation de débit, et le changement de service libre (voir §12).
+> **Résumé pour un lecteur non technique.** Les agents se connectent avec un courriel et un mot de passe gérés par Keycloak, un logiciel libre de gestion des identités. Seules les adresses inscrites sur une **liste blanche** peuvent créer un compte. Chaque agent ne reçoit sur son appareil que les données de **son service** (UDAP, CRMH…). Le serveur contrôle aussi les **écritures** et l'accès aux **fichiers** par service, auteur et délégation, limite le nombre d'essais de connexion et vide l'appareil à la déconnexion. Restent à traiter avant une homologation : le durcissement de Keycloak en production, l'identité fondée sur le courriel, les purges de données personnelles et le changement de service libre (voir §12).
 
 ---
 
@@ -41,7 +41,7 @@ flowchart LR
 
 Points clés :
 
-- **Un seul fournisseur de jetons : Keycloak.** Le backend ne signe **aucun** jeton applicatif. Les variables `JWT_SECRET`, `JWT_REFRESH_SECRET` et `TOKEN_LIFETIME` sont exigées au démarrage mais **jamais utilisées** ([envVars.ts](../packages/backend/src/envVars.ts#L32-L34)). `PS_JWT_SECRET`, transmis à PowerSync dans [docker-compose.yaml](../docker-compose.yaml), n'est pas non plus référencé par la configuration PowerSync.
+- **Un seul fournisseur de jetons : Keycloak.** Le backend ne signe **aucun** jeton applicatif. Les variables `JWT_SECRET`, `JWT_REFRESH_SECRET` et `TOKEN_LIFETIME` sont exigées au démarrage mais **jamais utilisées** ([envVars.ts](../packages/backend/src/envVars.ts#L34-L36)). `PS_JWT_SECRET`, transmis à PowerSync dans [docker-compose.yaml](../docker-compose.yaml), n'est pas non plus référencé par la configuration PowerSync.
 - **Le même jeton d'accès Keycloak** sert au backend et à PowerSync.
 - **Le backend fait office de proxy d'authentification** : le navigateur n'affiche pas la page de connexion Keycloak ; il envoie le mot de passe au backend, qui l'échange auprès de Keycloak (*Resource Owner Password Credentials*).
 
@@ -103,11 +103,13 @@ Comme la connexion passe par le formulaire de l'application et non par la page K
 | Appel | Déclencheur |
 | --- | --- |
 | `POST /admin/realms/<realm>/users` | Inscription (`/api/create-user`) |
-| `GET /users?email=` | Inscription, réinitialisation du mot de passe |
+| `GET /users?email=` | Inscription ; réinitialisation du mot de passe (recherche exacte, `exact=true`) |
 | `PUT /users/<id>/reset-password` | Réinitialisation du mot de passe |
 | `DELETE /users/<id>` | Uniquement dans les tests (`deleteUserByEmail`) |
 
 Ce compte de service peut gérer **tous** les utilisateurs du realm : son secret est le plus sensible de l'application.
+
+Le client applicatif sert aussi à la **révocation** du jeton hors ligne à la déconnexion (`POST …/protocol/openid-connect/revoke`, § 3.4).
 
 ---
 
@@ -130,12 +132,13 @@ sequenceDiagram
     U->>U: stockage dans IndexedDB, base "auth"
 ```
 
-Détails ([authService.ts](../packages/backend/src/services/authService.ts#L125-L163)) :
+Détails ([authService.ts](../packages/backend/src/services/authService.ts#L116-L155)) :
 
-- **Authentification du client** : le backend envoie à la fois `client_secret` et une `client_assertion` (JWT HS256 signé avec `AUTH_CLIENT_SECRET`, `iss`=`sub`=client id, `aud` = URL du realm, `exp` = +30 s, `jti` aléatoire) — méthode `client-secret-jwt` ([authService.ts](../packages/backend/src/services/authService.ts#L275-L287)).
+- **Authentification du client** : le backend envoie à la fois `client_secret` et une `client_assertion` (JWT HS256 signé avec `AUTH_CLIENT_SECRET`, `iss`=`sub`=client id, `aud` = URL du realm, `exp` = +30 s, `jti` aléatoire) — méthode `client-secret-jwt` ([authService.ts](../packages/backend/src/services/authService.ts#L271-L283)).
 - **`scope=offline_access`** : le jeton de rafraîchissement est un **jeton hors ligne** (*offline token*). Il ne dépend pas de la session SSO et reste valable jusqu'à son expiration d'inactivité hors ligne (réglage du realm, § 2.2 bis). C'est ce qui permet l'usage hors ligne prolongé de la PWA.
-- `expiresAt` est calculé **côté backend** à 80 % de la durée de vie ([authService.ts](../packages/backend/src/services/authService.ts#L301)).
-- Erreurs : le message Keycloak « Invalid user credentials » est traduit en « Courriel ou mot de passe incorrect ».
+- `expiresAt` est calculé **côté backend** à 80 % de la durée de vie ([authService.ts](../packages/backend/src/services/authService.ts#L297)).
+- Erreurs : le message Keycloak « Invalid user credentials » est traduit en « Courriel ou mot de passe incorrect ». Le journal ne garde que le statut et la réponse de Keycloak, jamais le courriel ni les options de la requête (qui contiennent le mot de passe).
+- **Limitation de débit** : 10 essais par 15 minutes pour une même adresse, 200 par 15 minutes pour une même adresse IP (§ 6.1).
 
 ### 3.2 Utilisation du jeton
 
@@ -146,7 +149,7 @@ Détails ([authService.ts](../packages/backend/src/services/authService.ts#L125-
 
 ### 3.3 Rafraîchissement
 
-[Connector.ts](../packages/frontend/src/db/Connector.ts#L49-L97) :
+[Connector.ts](../packages/frontend/src/db/Connector.ts#L98-L152) :
 
 - Avant chaque appel d'API et à chaque demande d'identifiants par PowerSync, `getTokenOrRefresh` compare `expiresAt` à l'heure courante. S'il est dépassé, il appelle `POST /api/refresh-token` (non authentifié). Une seule requête de rafraîchissement est lancée à la fois (promesse partagée), car Keycloak peut faire tourner le jeton de rafraîchissement.
 - Si le backend renvoie **401**, les jetons sont effacés et une fenêtre « session expirée » invite à se reconnecter.
@@ -154,11 +157,17 @@ Détails ([authService.ts](../packages/backend/src/services/authService.ts#L125-
 
 ### 3.4 Déconnexion
 
-`useLogout` ([AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx#L113-L122)) efface les jetons localement. **Aucun appel à Keycloak** n'est fait : le jeton hors ligne reste valable côté serveur jusqu'à son expiration. Les données synchronisées (base SQLite locale) et les photos en cache **restent sur l'appareil** : seule la commande « Supprimer les données locales » du menu Aide les efface (voir [08 § 8](08-synchronisation-hors-ligne.md#8-cycle-de-vie-de-la-base-locale)).
+La déconnexion ([LogoutDialogs.tsx](../packages/frontend/src/features/auth/LogoutDialogs.tsx)) **vide l'appareil** :
+
+1. Elle compte d'abord les modifications et photos pas encore envoyées. S'il y en a, une fenêtre propose « Attendre » ou « Se déconnecter quand même » (elles seraient perdues) ; **hors ligne, la déconnexion est refusée** tant qu'elles ne sont pas envoyées.
+2. En ligne, le frontend appelle `POST /api/logout` avec le jeton de rafraîchissement : le backend le **révoque auprès de Keycloak**, ce qui met fin à la session hors ligne. Cet appel ne bloque jamais la déconnexion (ignoré hors ligne, erreurs ignorées, 3 s au plus).
+3. Elle efface ensuite tout ce que « Réinitialiser les données locales » efface ([resetLocalData.ts](../packages/frontend/src/features/menu/resetLocalData.ts)) : base SQLite, photos en cache, jetons, `localStorage`. Seul le code de l'application reste en cache, pour que la page de connexion s'ouvre hors ligne. Les autres onglets ouverts sont rechargés.
+
+Voir aussi [08 § 8](08-synchronisation-hors-ligne.md#8-cycle-de-vie-de-la-base-locale).
 
 ### 3.5 Connexion par redirection OIDC
 
-Aucune route n'échange de code d'autorisation OIDC : le seul moyen de créer un compte est `/api/create-user`, soumis à la liste blanche. La connexion par ProConnect et par code fait l'objet d'une PR en relecture (#82), non fusionnée.
+Aucune route n'échange de code d'autorisation OIDC : le seul moyen de créer un compte est `/api/create-user`, soumis à la liste blanche. La connexion par ProConnect et par code fait l'objet d'un développement en relecture, non fusionné (voir [14 § 3.3](14-migration-vers-infra-ministere.md)).
 
 ---
 
@@ -194,9 +203,10 @@ L'utilisateur applicatif est retrouvé par `user.email = claim email du jeton`. 
 
 ### 4.4 Mot de passe
 
-- **Validation** : seulement dans le formulaire d'inscription (8 caractères minimum, majuscule, minuscule, chiffre, caractère spécial). Le backend et le modèle de realm n'imposent **aucune politique**. La route de réinitialisation accepte n'importe quel mot de passe.
-- **Réinitialisation** : lien aléatoire (UUID v4, 122 bits), stocké **haché en MD5**, valable **24 h**, à usage unique ([userService.ts](../packages/backend/src/services/userService.ts#L37-L91)). Le MD5 est acceptable ici vu l'entropie du secret, mais un SHA-256 serait préférable pour l'homologation. La fonction intégrée de Keycloak (« mot de passe oublié ») n'est pas utilisée.
-- **Énumération de comptes** : `/api/send-reset-password` répond par une erreur 403 si l'adresse est inconnue et par un message de succès sinon. Il est donc possible de tester l'existence d'une adresse.
+- **Politique** : 8 caractères minimum, une majuscule, une minuscule, un chiffre et un caractère spécial. Elle est appliquée par les formulaires d'inscription et de réinitialisation **et par le serveur** : `/api/create-user` et `/api/reset-password` refusent (400) un mot de passe qui ne la respecte pas ([passwordPolicy.ts](../packages/backend/src/features/passwordPolicy.ts)). Le modèle de realm n'en définit aucune.
+- **Réinitialisation** : lien aléatoire (UUID v4, 122 bits), stocké **haché en SHA-256**, valable **24 h**, à usage unique ([userService.ts](../packages/backend/src/services/userService.ts#L57-L117)). Une empreinte MD5 est encore acceptée, pour les liens émis avant le prochain déploiement et le temps de leur validité (voir [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). Le compte Keycloak est retrouvé par une recherche exacte sur le courriel. La fonction intégrée de Keycloak (« mot de passe oublié ») n'est pas utilisée.
+- **Pas d'énumération de comptes** : `/api/send-reset-password` répond toujours « Si un compte existe pour cette adresse, un courriel vient d'être envoyé. », que l'adresse ait un compte ou non.
+- **Consentement** : la date d'acceptation des CGU est enregistrée à l'inscription (`internal_user.cgu_accepted_at`).
 
 ---
 
@@ -231,15 +241,30 @@ Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans 
 
 | Mesure | État |
 | --- | --- |
-| Validation des schémas | TypeBox sur la plupart des routes (types simples, pas de format `email`, pas de longueur maximale). Les routes `/api/upload/attachment*` lisent `request.query` sans schéma, mais le chemin est contrôlé (format, pas de `..`). `/api/upload-data` accepte `data: Any`, dont seuls les noms de colonnes sont vérifiés |
+| Validation des schémas | TypeBox sur la plupart des routes (types simples, pas de format `email`, pas de longueur maximale). Une requête refusée par le schéma reçoit **400** « Requête invalide », sans détail du schéma. La lecture relayée `/api/upload/attachment` lit `request.query` sans schéma, mais le chemin est contrôlé (format, pas de `..`). `/api/upload-data` accepte `data: Any`, dont seuls les noms de colonnes sont vérifiés |
 | Injection SQL | Kysely paramètre les valeurs et échappe les identifiants. Les seules chaînes SQL brutes (`sql\`…\``) des statistiques interpolent des paramètres liés. Pas d'injection SQL identifiée |
 | Injection HTML dans les courriels | Protégée : toutes les saisies insérées dans le HTML des courriels sont échappées ([escapeHtml.ts](../packages/backend/src/features/mail/escapeHtml.ts)) |
-| CORS | `origin: "*"` ([router.ts](../packages/backend/src/router.ts#L43-L45)), sans cookies. L'authentification par en-tête limite le risque CSRF, mais n'importe quel site peut appeler l'API avec un jeton volé |
-| Limitation de débit | **Aucune** (`@fastify/rate-limit` absent). Les routes publiques (connexion, inscription, réinitialisation, validation, liens courts, statistiques publiques) sont exposées sans limite. La protection contre la force brute dépend de Keycloak |
-| En-têtes de sécurité | Aucun (`helmet` absent) côté backend. À traiter au niveau du proxy inverse (Traefik en production, configuration des en-têtes non relevée) |
-| Taille des requêtes | Limite par défaut de Fastify (1 Mio pour le corps JSON). `maxParamLength` porté à 5000. Le plugin multipart (15 Mo) est enregistré mais aucune route ne l'utilise |
+| CORS | Seules les origines `FRONTEND_URL` et `CORS_ORIGINS` (liste séparée par des virgules) sont autorisées ; en développement et en test, toute origine `localhost` l'est aussi ([httpSecurity.ts](../packages/backend/src/features/httpSecurity.ts), [router.ts](../packages/backend/src/router.ts#L54-L63)). Méthodes `GET, HEAD, PUT, PATCH, POST, DELETE`, sans cookies. Une requête sans en-tête `Origin` (curl, serveur à serveur) n'est pas concernée |
+| Limitation de débit | Voir § 6.1 |
+| En-têtes de sécurité | Ajoutés à chaque réponse de l'API : `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, et `Strict-Transport-Security` (1 an) hors développement et test. Pas de CSP côté API (elle sert du JSON et des redirections) ; la CSP du frontend reste à définir |
+| Taille des requêtes | Limite par défaut de Fastify (1 Mio pour le corps JSON). `maxParamLength` porté à 5000. Les fichiers ne passent pas par le backend (§ 7) |
+| Adresse du client | `request.ip` est l'adresse vue par le dernier proxy de confiance : le backend fait confiance à `TRUST_PROXY_HOPS` proxys (1 par défaut, Traefik). Un client ne peut donc pas choisir son adresse avec son propre en-tête `X-Forwarded-For` |
 | Messages d'erreur | Message générique en production ; pile d'appel renvoyée en développement uniquement |
 | Interface Swagger | Non exposée |
+
+### 6.1 Limitation de débit
+
+[rateLimit.ts](../packages/backend/src/features/rateLimit.ts) (`@fastify/rate-limit`, compteurs en mémoire du processus) :
+
+| Règle | Routes | Limite | Clé |
+| --- | --- | --- | --- |
+| Connexion, inscription, mot de passe oublié | `/api/login-user`, `/api/create-user`, `/api/send-reset-password`, `/api/reset-password` | **10 essais par 15 min** par adresse de courriel, et **200 par 15 min** par adresse IP | Courriel normalisé (si le corps en contient un) et IP. Chaque essai compte, réussi ou non |
+| Routes publiques | Page de validation (`/api/constat-validation/*`), liens courts `/attachment/:id`, statistiques publiques, `/api/logout` | **60 par minute** | IP |
+| API authentifiée | Toutes les routes protégées par jeton, dont `/api/upload-data` | **1 200 par minute** | Utilisateur |
+
+Au-delà, le serveur répond **429** avec l'en-tête `Retry-After` et le message « Trop de tentatives, réessayez dans quelques minutes. », affiché par les formulaires. Ces refus ne sont pas envoyés à Sentry. La limitation est désactivée quand `NODE_ENV=test` (les tests de bout en bout se connectent souvent depuis `localhost`).
+
+Les compteurs sont propres à chaque processus : avec plusieurs réplicas, chacun compte de son côté. La limite par IP suppose que `TRUST_PROXY_HOPS` corresponde au nombre réel de proxys devant le backend : trop bas, tous les agents partagent l'adresse du proxy ; trop haut, un client peut choisir son adresse.
 
 ---
 
@@ -256,13 +281,15 @@ Source : [sync-config.yaml](../powersync/sync-config.yaml). Le détail est dans 
 
 | Mécanisme | Authentification | Durée | Contrôle |
 | --- | --- | --- | --- |
-| URL PUT présignée (`/api/upload/attachment/presigned-url`) | Jeton | 1 h | Le premier segment du chemin désigne le document (compte-rendu, constat, section, alerte, alerte de fiche) : refus si ce document est d'un autre service. **Acceptée si le document n'est pas encore en base** (photos déposées avant la ligne). Ni taille ni type contrôlés |
-| URL PUT présignée des PDF (`/api/pdf/*/upload-url`) | Jeton | 1 h | Chemin imposé par le serveur ; refus si le document existe et que l'utilisateur ne peut pas le modifier (auteur ou délégation) |
+| URL PUT présignée (`/api/upload/attachment/presigned-url`) | Jeton | 1 h | Le premier segment du chemin désigne le document (compte-rendu, constat, section, alerte, alerte de fiche) : refus si ce document est d'un autre service. **Acceptée si le document n'est pas encore en base** (photos déposées avant la ligne). Le client déclare le type et la taille du fichier ; ils sont contrôlés puis **signés dans l'URL**, et le stockage refuse un autre type ou une autre taille |
+| URL PUT présignée des PDF (`/api/pdf/*/upload-url`) | Jeton | 1 h | Chemin imposé par le serveur ; refus si le document existe et que l'utilisateur ne peut pas le modifier ; type PDF et taille signés dans l'URL |
 | Lecture relayée (`/api/upload/attachment?filePath=`) | Jeton | — | Document du service de l'utilisateur seulement (403 sinon, 404 si inconnu) |
-| Lien court `/attachment/:id` (courriels) | **Aucune** | **90 jours** | Identifiant base62 d'un entier aléatoire de 48 bits (`crypto.randomInt`). Pas de limitation de débit contre l'énumération. Le fichier est relayé ou une URL présignée (1 h) est renvoyée |
+| Lien court `/attachment/:id` (courriels) | **Aucune** | **90 jours** | Identifiant base62 d'un entier aléatoire de 48 bits (`crypto.randomInt`), 60 requêtes par minute et par IP. Le fichier est relayé ou une URL présignée (1 h) est renvoyée |
 | Lien court `/attachment/:id` du courriel envoyé après acceptation par le validateur | **Aucune** | **90 jours** | Même mécanisme que la ligne précédente |
-| URL présignée GET de la page de validation | Jeton de validation | 1 h | Donnée au validateur pour consulter le PDF |
-| Page de validation `/api/constat-validation/:token` | Jeton de validation (UUID v4) | 7 jours tant qu'en attente, **illimitée ensuite** | — |
+| URL présignée GET de la page de validation | Jeton de validation | 1 h | Donnée au validateur pour consulter le PDF, **tant que la demande est en attente** |
+| Page de validation `/api/constat-validation/:token` | Jeton de validation (UUID v4) | 7 jours tant qu'en attente | Après acceptation ou refus, la page ne renvoie plus que la décision et sa date : ni le constat ni le PDF (410 sur la route du PDF) |
+
+**Fichiers acceptés** ([uploadLimits.ts](../packages/backend/src/features/uploadLimits.ts)) : photos JPEG, PNG, WebP ou HEIC/HEIF de **20 Mo** au plus, PDF de **50 Mo** au plus. Un autre format reçoit 400 « Format de fichier non accepté. », un fichier trop gros 400 « Fichier trop volumineux (… Mo maximum). ». Le frontend fait le même contrôle avant l'envoi ([uploadLimits.ts](../packages/frontend/src/features/upload/uploadLimits.ts)).
 
 Les noms de fichiers sont générés par le client (identifiants UUID) ou par le backend (horodatage). Aucun antivirus ni contrôle du contenu n'est appliqué aux fichiers déposés. Le type des photos d'alerte est forcé à `image/png` dans les courriels.
 
@@ -277,16 +304,16 @@ Les noms de fichiers sont générés par le client (identifiants UUID) ou par le
 | Tables | **Liste blanche** : documents et leurs lignes filles, alertes et corrections des fiches, `delegation`, `user_settings`, `user` (son profil), `service` (son service), `service_instructeurs`, `suggested_email` (suppression seule), `pdf_snapshot`. `whitelist`, `internal_user`, `user_dept`, `transactions`, `attachment_redirection`, `constat_validation`, `pop_*` sont refusées |
 | Colonnes | Liste par table ; une colonne inconnue fait refuser l'opération. Les colonnes de propriété et d'état d'envoi (`service_id`, auteur, `attachment_id`, `pdf_size`, `validation_status`, `sent_at`) sont fixées par le serveur |
 | Service | La ligne doit appartenir au service de l'utilisateur |
-| Auteur et délégation | Un compte-rendu, un constat ou une alerte de fiche n'est modifiable que par son auteur (ou le rédacteur d'un compte-rendu) ou par une personne à qui l'auteur a donné délégation. Une alerte de fiche envoyée n'est pas modifiable ; une annotation peut être complétée depuis son constat jusqu'à son envoi |
+| Auteur et délégation | Un compte-rendu ou une alerte de fiche n'est modifiable que par son auteur (ou le rédacteur d'un compte-rendu) ou par une personne à qui l'auteur a donné délégation. Un **constat** n'est modifiable que par son **auteur**, comme dans l'interface : la délégation ne s'y applique pas. Une alerte de fiche envoyée n'est pas modifiable ; une annotation peut être complétée depuis son constat jusqu'à son envoi |
+| Création rejouée | Un `PUT` reçu pour une ligne qui existe déjà (réponse perdue, l'appareil renvoie la création) est appliqué comme une mise à jour, avec les mêmes contrôles qu'un `PATCH`. Les tables sans `PATCH` le refusent |
 | Constat envoyé | Un constat dont le PDF existe n'est pas modifiable (ni ses sections, alertes et pièces jointes), sauf s'il a été refusé par le validateur ; seul l'indicateur de suppression `disabled` reste modifiable ([syncService.ts](../packages/backend/src/services/syncService.ts)) |
 
-Un refus est répondu en HTTP 200 `{success:false}` (comme une erreur SQL, pour ne pas bloquer la file du client) et signalé à Sentry. Le détail des règles est dans [04 §6.2](04-backend-api.md).
+Un refus est répondu en HTTP 200 `{success:false, reason}` (pour ne pas bloquer la file du client) et signalé à Sentry. Le motif nomme une table, une opération ou des colonnes, jamais des données. Le frontend l'enregistre et l'affiche à l'agent dans un bandeau (voir [08 § 4.3](08-synchronisation-hors-ligne.md#43-envoi-des-écritures--uploaddata)). Le détail des règles est dans [04 §6.2](04-backend-api.md).
 
 Risques restants :
 
 - `data` n'est pas validé en valeur (seulement en noms de colonnes) ;
-- tout membre d'un service peut modifier les paramètres du service, dont les adresses de courriel institutionnelles utilisées pour les alertes (choix assumé) ;
-- un refus est invisible pour l'agent (voir [08](08-synchronisation-hors-ligne.md)).
+- tout membre d'un service peut modifier les paramètres du service, dont les adresses de courriel institutionnelles utilisées pour les alertes (choix assumé).
 
 Chaque opération est **tracée** dans `transactions` avec l'identifiant de l'utilisateur avant d'être appliquée. Cette table n'est pas modifiable par les clients.
 
@@ -306,8 +333,8 @@ Chaque opération est **tracée** dans `transactions` avec l'identifiant de l'ut
 
 - Les secrets sont fournis par **variables d'environnement** (fichier `.env` à la racine en développement, variables Coolify en production). Aucun gestionnaire de secrets n'est intégré au code.
 - Aucun secret n'est commité : `.env.dist` ne contient que des noms. Les variables `VITE_*` sont **publiques** par construction : `createEnvFile.ts` écrit toutes les variables `VITE_*` dans `env.js`, servi au navigateur. Il ne faut jamais nommer un secret `VITE_…`.
-- Connexions **sans TLS** vers PostgreSQL (`ssl: false` en dur dans [db.ts](../packages/backend/src/db/db.ts#L11) et `drizzle.config.ts`) et entre PowerSync et PostgreSQL (`sslmode: disable`). C'est le cas en production (réseau Docker interne), où MongoDB tourne aussi **sans authentification**. Acceptable sur un réseau privé de conteneurs, à revoir si la base est distante.
-- La télémétrie PowerSync n'est **pas désactivée** (`disable_telemetry_sharing: false`, et la clé est d'ailleurs mal indentée sous `client_auth`). À désactiver pour l'hébergement ministériel.
+- **TLS vers PostgreSQL** : réglé par `DATABASE_SSL` (défaut `false`) pour le backend et les migrations ([db.ts](../packages/backend/src/db/db.ts#L11-L12), `drizzle.config.ts`) ; à `true`, la connexion est chiffrée et le certificat vérifié avec les autorités du système (`sslmode` et `sslrootcert` dans `DATABASE_URL` restent prioritaires). PowerSync se règle à part (`sslmode` dans `powersync-config.yaml`, `disable` dans le dépôt). En production (réseau Docker interne), les connexions sont sans TLS et MongoDB tourne **sans authentification**. Acceptable sur un réseau privé de conteneurs, à revoir si la base est distante.
+- La télémétrie PowerSync est désactivée dans le dépôt (`telemetry.disable_telemetry_sharing: true`, à la racine de `powersync-config.yaml`). La production utilise le fichier déposé dans Coolify, qu'il faut mettre à jour (voir [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)).
 
 ---
 
@@ -337,37 +364,41 @@ Autres emplacements : la base MongoDB interne de PowerSync (copie des données s
 
 - **Conservation** : la [politique de confidentialité](../packages/frontend/src/routes/politique-confidentialite.tsx) annonce 2 ans après la dernière connexion pour les comptes et comptes-rendus, et 1 an pour la traçabilité. **Aucun mécanisme de purge** n'existe dans le code (ni tâche planifiée, ni suppression de compte). La table `transactions` et les liens courts ne sont jamais purgés. La suppression des documents est **logique** (`disabled = true`).
 - **Dernière connexion** : elle n'est pas enregistrée dans la base applicative (seulement dans les sessions Keycloak), ce qui empêche d'appliquer la durée annoncée.
-- **CGU** : le champ `cgu` est demandé à l'inscription mais **n'est pas enregistré**. `newsletter` est enregistré dans `internal_user` ; l'équipe exporte la liste des abonnés et l'importe dans Brevo à la main (aucun export dans le code).
-- **Sous-traitants** : la politique de confidentialité cite OVH et Brevo. Le code utilise aussi **Sentry** et Scaleway (stockage objet, SMTP, sauvegardes), qui n'y figurent pas. En production, Sentry n'est configuré que côté frontend, sur `sentry.incubateur.net` (instance beta.gouv). OVH n'héberge que le DNS. L'hébergement actuel est un VPS privé (Coolify). La liste est à mettre à jour lors du transfert.
+- **CGU** : la date d'acceptation est enregistrée à l'inscription (`internal_user.cgu_accepted_at`), ce qui prouve le consentement. Les comptes créés avant l'ajout de cette colonne n'en ont pas. `newsletter` est enregistré dans `internal_user` ; l'équipe exporte la liste des abonnés et l'importe dans Brevo à la main (aucun export dans le code).
+- **Sous-traitants** : la politique de confidentialité cite OVH et Brevo. Le code utilise aussi **Sentry** et Scaleway (stockage objet, SMTP, sauvegardes), qui n'y figurent pas. En production (relevé du 17/11/2026), Sentry n'est configuré que côté frontend, sur `sentry.incubateur.net` (instance beta.gouv). OVH n'héberge que le DNS. L'hébergement actuel est un VPS privé (Coolify). La liste est à mettre à jour lors du transfert.
 - **Droits des personnes** : aucune fonction d'export ou de suppression des données d'un agent. Les données des tiers (propriétaires, demandeurs) sont dans des champs libres et des PDF.
 
 ### 10.3 Données personnelles dans les journaux et la supervision
 
 | Source | Contenu | Fichier |
 | --- | --- | --- |
-| Sentry backend (non branché en production) | Exceptions avec méthode et modèle de route ; message de refus d'écriture de synchronisation (table, opération, identifiants, motif). `beforeSend` retire corps, cookies, chaîne de requête et utilisateur, et masque les clés de type mot de passe, jeton, secret, courriel, destinataires | [sentry.ts](../packages/backend/src/features/sentry.ts), [router.ts](../packages/backend/src/router.ts) |
-| Sentry frontend | Exceptions seulement (ni journaux console ni fil d'Ariane console) ; `beforeSend` retire l'utilisateur et masque les mêmes clés | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
-| Journaux backend (`debug`, actifs par défaut) | Courriel à la connexion et à l'inscription, destinataires des alertes, URL des requêtes (chemins de fichiers) ; `console.log` du détail des erreurs Keycloak | [authService.ts](../packages/backend/src/services/authService.ts) |
+| Sentry backend (non branché en production au 17/11/2026) | Exceptions avec méthode et modèle de route ; message de refus d'écriture de synchronisation (table, opération, identifiant, motif) ; échecs d'envoi d'alertes. `beforeSend` retire corps, cookies, chaîne de requête et utilisateur, masque les clés de type mot de passe, jeton, secret, courriel, destinataires, et masque les adresses de courriel dans les messages d'exception. `dataCollection` restrictif | [sentry.ts](../packages/backend/src/features/sentry.ts), [router.ts](../packages/backend/src/router.ts) |
+| Sentry frontend | Exceptions seulement (ni journaux console ni fil d'Ariane console) ; écritures refusées par le serveur (table, opération, motif) ; `beforeSend` retire l'utilisateur et masque les mêmes clés | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
+| Journaux backend (`debug`, actifs par défaut) | Méthode et **modèle de route** des requêtes (jamais l'URL complète, qui peut contenir un jeton de validation, un identifiant de lien court ou un lien de réinitialisation) ; identifiants d'utilisateurs et de documents ; nombre de destinataires des alertes ; statut et réponse des erreurs Keycloak. Les courriels n'y figurent pas, sauf masqués (`a****e@…`) pour un refus de liste blanche | [router.ts](../packages/backend/src/router.ts), [authService.ts](../packages/backend/src/services/authService.ts) |
 
-Sentry ne reçoit ni corps de requête, ni cookies, ni jetons, ni journaux console. En production, seul le frontend envoie des événements. Le masquage repose sur les **noms de clés** : une donnée personnelle rangée sous une autre clé (un titre, un nom) n'est pas masquée.
+Sentry ne reçoit ni corps de requête, ni cookies, ni jetons, ni journaux console. En production (relevé du 17/11/2026), seul le frontend envoie des événements. Le masquage repose sur les **noms de clés** : une donnée personnelle rangée sous une autre clé (un titre, un nom) n'est pas masquée.
 
 ---
 
 ## 11. Dépendances et chaîne d'approvisionnement
 
-Résultat de `pnpm audit --prod` sur le paquet backend, à la date de rédaction : **88 vulnérabilités connues** (2 critiques, 56 élevées, 27 modérées, 3 faibles), en grande partie transitives. Les plus significatives pour ce service :
+Versions des composants principaux :
 
-| Composant | Version | Problème | Correction |
-| --- | --- | --- | --- |
-| `fastify` | 4.29.1 | Plusieurs avis « élevés » (contournement de validation, contournement d'authentification sur des URL malformées) ; la branche 4 n'est plus maintenue | Migrer vers Fastify 5 (≥ 5.12.2) |
-| `nodemailer` | 6.10.1 | Déni de service dans l'analyse des adresses, injection SMTP | ≥ 10.0.6 |
-| `kysely` | 0.27.6 | Injections dans des usages spécifiques (MySQL, chemins JSON) non utilisés ici | ≥ 0.28.17 |
-| `@sentry/node` | 7.x | Version majeure ancienne | 8 ou plus |
-| `proxy-addr`, `tar`, `fast-uri`, `ws`, `@fastify/busboy`… | transitives | Divers | Mises à jour |
-| Image `node:20.11-alpine` | Node 20 | Plus maintenu depuis avril 2026 | Node 22 LTS ou plus |
-| `journeyapps/powersync-service:latest` | non épinglée | Mise à jour non maîtrisée | Épingler une version |
+| Composant | Version |
+| --- | --- |
+| Node (image et CI) | 22 LTS (`node:22.23-alpine`) |
+| `fastify` | 5 (`@fastify/cors` 11, `@fastify/swagger` 9, `@fastify/rate-limit`) |
+| `@sentry/node`, `@sentry/react` | 11 |
+| `nodemailer` | 10 |
+| `kysely` | 0.28 (backend, frontend et tests, même version que le pilote PowerSync) |
+| `zod` | 4 |
+| `maplibre-gl` | 6 |
+| TipTap | 3 |
+| `journeyapps/powersync-service` | `latest`, non épinglée |
 
-La CI ([.github/workflows](../.github/workflows)) construit et publie les images Docker sur `ghcr.io` à chaque push sur `main`, `development` et `compte-rendu-vif`, **sans** tests automatiques (les tests de bout en bout sont déclenchés à la main), sans analyse de dépendances ni d'image. `canvas` (module natif) impose une chaîne de compilation dans l'image.
+Des `overrides` à la racine ([package.json](../package.json)) imposent des versions corrigées de dépendances transitives, sans changer de version majeure. L'image ne contient ni module natif, ni chaîne de compilation, ni bibliothèques Cairo.
+
+La CI ([main.yml](../.github/workflows/main.yml)) lance les **tests unitaires du backend** avant de construire les images : elles ne sont publiées que s'ils passent. Elle lance aussi `pnpm audit --prod` à chaque push ; le rapport est écrit dans le résumé du job et **ne bloque pas** la publication. Il n'y a pas d'analyse d'image. Les tests de bout en bout restent lancés à la main. Voir [10](10-infrastructure-et-deploiement.md) § 3.
 
 ---
 
@@ -385,31 +416,35 @@ La CI ([.github/workflows](../.github/workflows)) construit et publie les images
 - Sentry filtré (`beforeSend`, pas de données personnelles par défaut).
 - Requêtes SQL **paramétrées** (Kysely), schémas d'entrée TypeBox sur la plupart des routes.
 - Piste d'audit des écritures (`transactions`) et des téléchargements de PDF.
-- Liens de réinitialisation aléatoires, hachés, à usage unique, valables 24 h.
+- Liens de réinitialisation aléatoires, hachés en SHA-256, à usage unique, valables 24 h ; même réponse que l'adresse ait un compte ou non ; politique de mot de passe appliquée par le serveur.
+- **Limitation de débit** sur la connexion, l'inscription, le mot de passe oublié, les routes publiques et l'API.
+- CORS limité au frontend, en-têtes de sécurité sur toutes les réponses de l'API.
+- Fichiers déposés limités en type et en taille (signés dans l'URL de dépôt).
+- Déconnexion qui révoque le jeton hors ligne et vide l'appareil.
+- Lien de validation qui ne donne plus accès au constat après décision ; 20 destinataires au plus par envoi de courriel.
+- Journaux sans jetons, sans URL complètes et sans courriels en clair.
 - Aucun secret dans le dépôt ; erreurs génériques en production.
+- Tests unitaires du backend lancés en CI avant toute publication d'image.
 - Interface conforme au DSFR, y compris un thème Keycloak DSFR.
 
 ### 12.2 Points de vigilance (par priorité)
 
 | Priorité | Constat | Recommandation |
 | --- | --- | --- |
-| **Élevée** | Aucune limitation de débit dans le backend | `@fastify/rate-limit` ou limitation au proxy |
 | **Élevée** | Durcissement de Keycloak et de l'infrastructure de production (§ 2.2 bis) | Détail et recommandations dans le relevé de sécurité transmis au ministère, hors dépôt |
-| **Élevée** | Dépendances vulnérables, Fastify 4 en fin de vie, CI sans tests ni audit (§11) | Plan de montée de version, `pnpm audit` et analyse d'image en CI |
+| Moyenne | Audit des dépendances non bloquant, pas d'analyse d'image, image PowerSync non épinglée (§11) | Traiter les avis signalés par l'audit, épingler PowerSync, analyser les images |
 | Moyenne | `/api/change-service` sans contrôle : n'importe quel agent peut lire les données de n'importe quel service (§5.2) | Choix assumé, changements journalisés. À réexaminer pour l'homologation |
 | Moyenne | Utilisateur identifié par son courriel et non par le `sub` Keycloak (§4.3) | Stocker le `sub` et l'utiliser comme identité pivot |
-| Moyenne | Fichiers déposés sans contrôle de taille ni de type ; dépôt accepté pour un document pas encore en base (§7) | Limiter taille et type dans l'URL présignée ; contrôler le contenu |
+| Moyenne | Dépôt accepté pour un document pas encore en base ; contenu des fichiers non contrôlé (§7) | Contrôler le contenu (antivirus) si le ministère l'exige |
 | Moyenne | Fichiers de configuration PowerSync déposés à la main dans Coolify (§ 5.1) | Les déployer avec l'application |
 | Moyenne | Pas de rôle de réplication dédié pour PowerSync ; MongoDB sans authentification dans la configuration fournie | Rôle de réplication dédié, limité aux tables publiées ; authentification MongoDB |
-| Moyenne | Liens courts publics de 90 jours (48 bits d'aléa), page de validation consultable sans limite après décision | Raccourcir la durée, augmenter l'aléa, limiter le débit, expirer les jetons de validation traités |
-| Moyenne | Écritures refusées ou en erreur perdues sans message pour l'agent (§8) | Répondre en erreur, afficher l'échec |
-| Moyenne | Un utilisateur peut envoyer des courriels à des destinataires arbitraires depuis l'adresse de l'application | Journaliser et limiter les envois |
-| Moyenne | Déconnexion sans révocation du jeton hors ligne ; données locales conservées | Appeler le *logout* / la révocation Keycloak ; purger la base locale à la déconnexion |
+| Moyenne | Liens courts publics de 90 jours (48 bits d'aléa) ; nom du demandeur dans le nom du PDF de compte-rendu | Raccourcir la durée si le métier l'accepte, augmenter l'aléa, nom de fichier neutre |
+| Moyenne | Un agent peut envoyer des courriels depuis l'adresse de l'application à des destinataires de son choix (20 au plus par envoi) | Journal dédié des envois si le ministère l'exige |
 | Moyenne | Retrait de la liste blanche sans effet sur les comptes existants | Désactiver le compte Keycloak en même temps |
-| Moyenne | Aucune purge RGPD, CGU non enregistrées, sous-traitants incomplets (Sentry, SMTP) | Tâche de purge, enregistrement du consentement, mise à jour de la politique |
+| Moyenne | Aucune purge RGPD, sous-traitants incomplets (Sentry, SMTP) | Tâche de purge, mise à jour de la politique |
 | Moyenne | Compte de service d'administration aux droits larges (la production utilise bien un realm dédié, `patrinotes`) | Droits minimaux (`manage-users` seulement sur ce realm) |
-| Faible | CORS `*`, pas d'en-têtes de sécurité, connexions internes sans TLS, télémétrie PowerSync active | Restreindre l'origine au domaine du frontend, en-têtes au proxy, TLS si réseau non maîtrisé, `disable_telemetry_sharing: true` |
-| Faible | Énumération des comptes via la réinitialisation ; MD5 pour le lien | Réponse identique dans tous les cas ; SHA-256 |
+| Faible | Jetons stockés en IndexedDB sans CSP sur le frontend ; connexions internes sans TLS par défaut | CSP au serveur du frontend ; `DATABASE_SSL=true` si le réseau n'est pas maîtrisé |
+| Faible | Limitation de débit en mémoire, par processus | Stockage partagé (Redis) ou limitation au proxy si plusieurs réplicas |
 | Faible | Variables `JWT_*` inutilisées mais obligatoires ; `.env.dist` désynchronisé | Nettoyage |
 
 ### 12.3 Éléments à fournir lors du transfert (non présents dans le dépôt)
