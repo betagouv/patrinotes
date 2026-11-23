@@ -21,8 +21,10 @@ export class UserService {
     }
 
     const previous = await db.selectFrom("user").select("service_id").where("id", "=", userId).executeTakeFirst();
+    const deptNumbers = service[0].dept_numbers?.split(",").map((num) => num.trim());
 
     // Joining any service is allowed (decision of 2026-11-04): each change is recorded in the audit log.
+    // One transaction: the service and its departments (POP monuments) change together or not at all.
     await db.transaction().execute(async (trx) => {
       await trx.updateTable("user").set({ service_id: serviceId }).where("id", "=", userId).execute();
       await trx
@@ -39,19 +41,16 @@ export class UserService {
           created_at: new Date().toISOString(),
         })
         .execute();
-    });
 
-    const deptNumbers = service[0].dept_numbers?.split(",").map((num) => num.trim());
-
-    if (deptNumbers && deptNumbers.length) {
-      debug("Updating departments for user", userId, "to", deptNumbers);
-      await db.transaction().execute(async (trx) => {
+      if (deptNumbers && deptNumbers.length) {
+        debug("Updating departments for user", userId, "to", deptNumbers);
         await trx.deleteFrom("user_dept").where("user_id", "=", userId).execute();
         for (const deptNumber of deptNumbers) {
           await trx.insertInto("user_dept").values({ user_id: userId, dept_number: deptNumber }).execute();
         }
-      });
-    }
+      }
+    });
+
     return { message: "Le service a été changé avec succès" };
   }
 
