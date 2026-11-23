@@ -23,8 +23,8 @@ client_auth:
   issuer: "http://keycloak:8080/realms/master"
   audience: ["account"]
 
-  # Settings for telemetry reporting
-  # See https://docs.powersync.com/self-hosting/telemetry
-  telemetry:
-    # Opt out of reporting anonymized usage metrics to PowerSync telemetry service
-    disable_telemetry_sharing: false
+# Settings for telemetry reporting (root key, not under client_auth)
+# See https://docs.powersync.com/maintenance-ops/self-hosting/usage-reporting
+telemetry:
+  # Opt out of reporting anonymized usage metrics to PowerSync telemetry service
+  disable_telemetry_sharing: true
