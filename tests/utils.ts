@@ -226,7 +226,16 @@ export const finalizeConstat = async (page: Page) => {
   if (await proportion.isVisible()) await proportion.check({ force: true });
 
   await page.getByRole("button", { name: "Finaliser le constat" }).click();
+  await waitForPdfPreview(page);
+};
+
+/**
+ * After "Finaliser le constat": the PDF preview waits for the attachment stream to be synchronised
+ * (3 to 10 s) before "Continuer" can be used, longer than the default action timeout.
+ */
+export const waitForPdfPreview = async (page: Page) => {
   await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+  await expect(page.getByRole("button", { name: "Continuer" })).toBeEnabled({ timeout: 30_000 });
 };
 
 export const cleanupDb = async () => {

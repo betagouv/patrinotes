@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { mockUsers, signup, fillMinimalConstat, finalizeConstat } from "./utils";
+import { mockUsers, signup, fillMinimalConstat, finalizeConstat, waitForPdfPreview } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
@@ -456,7 +456,7 @@ test.describe("Alerts with validation flow", () => {
     const finalizeButton = page.getByRole("button", { name: "Finaliser le constat" });
     await finalizeButton.waitFor();
     await finalizeButton.click();
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await waitForPdfPreview(page);
     await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
 

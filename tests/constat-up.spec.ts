@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { mockUsers, signup, login, openMonumentFiche, startConstatFromFiche } from "./utils";
+import { mockUsers, signup, login, openMonumentFiche, startConstatFromFiche, waitForPdfPreview } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { hasUpLeftForRapport } from "../packages/frontend/src/features/up/rapportGroupe.utils";
@@ -284,7 +284,7 @@ test.describe("Constat d'état sur un MH complexe", () => {
     await finaliserJardin.getByRole("button", { name: "Passer et finaliser" }).click();
 
     // one preview for both constats
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await waitForPdfPreview(page);
     await expect(page.getByText("Prévisualisation du rapport (2 constats)")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Ces 2 constats seront envoyés ensemble")).toBeVisible();
     await expect(page.getByText("Chapitre 1 :")).toBeVisible();
@@ -378,7 +378,7 @@ test.describe("Constat d'état sur un MH complexe", () => {
     await fillCouverture(page);
     await fillConstatGeneral(page);
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await waitForPdfPreview(page);
     await expect(page.getByText("Prévisualisation du constat")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/seront envoyés ensemble/)).toHaveCount(0);
 

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup, startConstatFromFiche } from "./utils";
+import { mockUsers, signup, startConstatFromFiche, waitForPdfPreview } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 import { v4 } from "uuid";
@@ -82,7 +82,7 @@ test.describe("Constat validation flow", () => {
     if (await page.getByRole("radio", { name: "50%" }).first().isVisible())
       await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await waitForPdfPreview(page);
 
     // Step 5: PDF preview → send mode
     await page.getByRole("button", { name: "Continuer" }).click();
@@ -272,7 +272,7 @@ test.describe("Constat validation flow", () => {
     if (await page.getByRole("radio", { name: "50%" }).first().isVisible())
       await page.getByRole("radio", { name: "50%" }).first().check({ force: true });
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await waitForPdfPreview(page);
 
     await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));

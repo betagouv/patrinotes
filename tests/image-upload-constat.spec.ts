@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockUsers, signup, startConstatFromFiche } from "./utils";
+import { mockUsers, signup, startConstatFromFiche, waitForPdfPreview } from "./utils";
 import { resetDatabase } from "./setup";
 import { db } from "../packages/backend/src/db/db";
 
@@ -173,7 +173,7 @@ test.describe("Image upload — constat flow", () => {
     // Step 8: Finalize constat → PDF view → send
     // ---------------------------------------------------------------------------
     await page.getByRole("button", { name: "Finaliser le constat" }).click();
-    await page.waitForURL((url) => url.pathname.includes("/pdf") && url.search.includes("mode=view"));
+    await waitForPdfPreview(page);
 
     await page.getByRole("button", { name: "Continuer" }).click();
     await page.waitForURL((url) => url.search.includes("mode=send"));
