@@ -6,6 +6,7 @@ import { generateOpenApi, initFastify } from "./router";
 import { makeDebug } from "./features/debug";
 import { initPopImmeubles, initPopObjets } from "./features/data/pop";
 import { db } from "./db/db";
+import { startAlertDeliveryJob } from "./features/alertDelivery";
 
 const debug = makeDebug("index");
 
@@ -28,7 +29,12 @@ const start = async () => {
 
   debug(`Server listening on ${ENV.PORT}`);
 
+  // retries of alert emails (constat alerts that failed, fiche alerts not sent by their author's browser);
+  // off in end-to-end tests, which check the emails sent at each step
+  const stopAlertDelivery = isTest ? () => {} : startAlertDeliveryJob();
+
   onHmr(async () => {
+    stopAlertDelivery();
     await fastifyInstance.close();
   });
 };

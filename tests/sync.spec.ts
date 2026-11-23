@@ -298,4 +298,52 @@ test.describe.serial("Sync (upload-data) access control", () => {
     ).toBe("Forbidden");
     await upload(request, a.token, { id: delegationId, type: "delegation", op: "DELETE" });
   });
+
+  test("a fiche alert submitted through sync is emailed by the server, once (DAT-10)", async ({ request }) => {
+    const mailpit = `http://localhost:${process.env.MAILPIT_WEB_PORT ?? "3018"}`;
+    const recipient = `alerte-fiche-${Date.now()}@example.com`;
+    const alertId = "monument-alert-sync-" + Date.now();
+    const draft = await upload(request, a.token, {
+      id: alertId,
+      type: "monument_alert",
+      op: "PUT",
+      data: {
+        kind: "alerte",
+        status: "draft",
+        reference_pop: "PA00000000",
+        titre_edifice: "Église de test",
+        alert: "Sécurité",
+        should_send: 1,
+        additional_emails: recipient,
+        created_at: new Date().toISOString(),
+      },
+    });
+    expect(draft.success).toBe(true);
+
+    // validated on a device that will never call POST /api/monument-alert/send
+    const submitted = await upload(request, a.token, {
+      id: alertId,
+      type: "monument_alert",
+      op: "PATCH",
+      data: { status: "submitted", submitted_at: new Date().toISOString() },
+    });
+    expect(submitted.success).toBe(true);
+
+    const findMails = async () => {
+      const { messages } = await (await request.get(`${mailpit}/api/v1/messages`)).json();
+      return (messages ?? []).filter((m: any) => m.To.some((to: { Address: string }) => to.Address === recipient));
+    };
+    await expect.poll(async () => (await findMails()).length, { timeout: 15_000 }).toBe(1);
+    await expect
+      .poll(async () => (await db.selectFrom("monument_alert").select("sent_at").where("id", "=", alertId).executeTakeFirst())?.sent_at)
+      .not.toBeNull();
+
+    // the browser's call afterwards does not send it again
+    const send = await request.post(`${BACKEND_URL}/api/monument-alert/send`, {
+      headers: { Authorization: `Bearer ${a.token}` },
+      data: { id: alertId },
+    });
+    expect((await send.json()).status).toBe("sent");
+    expect(await findMails()).toHaveLength(1);
+  });
 });

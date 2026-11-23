@@ -199,6 +199,11 @@ export const stateReportAlert = pgTable("state_report_alert", {
   service_id: text("service_id"),
   mandatoryEmails: text("mandatory_emails"),
   additionalEmails: text("additional_emails"),
+  // server-side delivery of the alert email (not synced to the client schema): sent once, failures retried by
+  // the backend job (features/alertDelivery.ts) a limited number of times
+  sentAt: timestamp("sent_at", { mode: "string" }),
+  sendAttempts: integer("send_attempts").notNull().default(0),
+  lastSendAttemptAt: timestamp("last_send_attempt_at", { mode: "string" }),
 });
 
 export const stateReportAlertAttachment = pgTable("state_report_alert_attachment", {
@@ -685,6 +690,8 @@ export const monumentAlert = pgTable(
     createdAt: timestamp("created_at", { mode: "string" }),
     submittedAt: timestamp("submitted_at", { mode: "string" }),
     sentAt: timestamp("sent_at", { mode: "string" }),
+    // failed sends by the backend job (features/alertDelivery.ts), which stops after a few
+    sendAttempts: integer("send_attempts").notNull().default(0),
     service_id: text("service_id"),
     // constat during which an annotation was made (reopened from that constat's objets)
     stateReportId: text("state_report_id"),

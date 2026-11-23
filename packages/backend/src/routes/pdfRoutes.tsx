@@ -1,7 +1,7 @@
 import { Type, type FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { authenticate } from "./authMiddleware";
 import { Database, db } from "../db/db";
-import { sendReportMail, sendStateReportMail, sendAlertEmail, sendValidationRequestMail } from "../features/mail";
+import { sendReportMail, sendStateReportMail, sendValidationRequestMail } from "../features/mail";
 import { addDays } from "date-fns";
 import { generatePresignedUrl } from "../services/uploadService";
 import { Service } from "../../../frontend/src/db/AppSchema";
@@ -18,6 +18,8 @@ import { getPDFInMailName } from "@patrinotes/pdf";
 import { createAttachmentRedirection } from "../features/attachmentRedirection";
 import { canEditReport, canEditStateReport, findReport, findStateReport } from "../features/sync/syncPolicy";
 import { assertRecipientLimit } from "../features/recipients";
+import { getAlertRecipients } from "../features/alertRecipients";
+import { sendStateReportAlert } from "../features/alertDelivery";
 import { assertUploadAllowed, PDF_TYPE } from "../features/uploadLimits";
 
 const debug = makeDebug("pdf-plugin");
@@ -397,7 +399,7 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     const alertsToSend = alerts?.length
       ? await db
           .selectFrom("state_report_alert")
-          .select(["id", "state_report_id"])
+          .select(["id", "state_report_id", "sent_at"])
           .where(
             "id",
             "in",
@@ -406,28 +408,19 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
           .execute()
       : [];
     const alertReportIds = new Map(alertsToSend.map((a) => [a.id, a.state_report_id]));
+    const alreadySent = new Set(alertsToSend.filter((a) => !!a.sent_at).map((a) => a.id));
     // an alert not uploaded yet by the client belongs to the constat being sent, as before rapports groupés
     const getAlertReport = (alertId: string) =>
       alertReportIds.has(alertId) ? (reportsById.get(alertReportIds.get(alertId)!) ?? null) : stateReportQuery;
+    // never an alert already emailed (a previous send of the constat, or the retry job)
     const unsentAlerts = (alerts || []).filter((alert) => {
       const report = getAlertReport(alert.id);
-      return !!report && !report.alerts_sent;
+      return !!report && !report.alerts_sent && !alreadySent.has(alert.id);
     });
 
     if (unsentAlerts.length > 0) {
-      const alertsAttachmentsQuery = await db
-        .selectFrom("state_report_alert_attachment")
-        .selectAll()
-        .where(
-          "state_report_alert_id",
-          "in",
-          unsentAlerts.map((a) => a.id),
-        )
-        .where("is_deprecated", "=", false)
-        .where("is_ignored", "=", false)
-        .execute();
-
-      // A constat whose alert failed to send keeps alerts_sent false, so a later send of it retries its alerts.
+      // A constat whose alert failed to send keeps alerts_sent false: the backend job retries that alert
+      // (features/alertDelivery.ts), and a later send of the constat tries it too, never the ones already sent.
       const reportIdsWithFailedAlert = new Set<string>();
 
       for (const alert of unsentAlerts) {
@@ -435,18 +428,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
         const alertStateReport = getAlertReport(alert.id)! as Selectable<Database["state_report"]>;
 
         try {
-          const alertRecipients = getAlertRecipients(alert);
-
-          const alertAttachments = alertsAttachmentsQuery.filter((a) => a.state_report_alert_id === alert.id);
-
-          await sendAlertEmail({
-            to: alertRecipients.join(","),
-            stateReport: alertStateReport,
-            alert: { ...alert, attachments: alertAttachments as any[], should_send: 1 },
-            user,
-          });
-
-          debug(`Alert email sent for alert ${alert.id} to ${alertRecipients.length} recipient(s)`);
+          const sent = await sendStateReportAlert({ alert, stateReport: alertStateReport, user });
+          if (sent) debug(`Alert email sent for alert ${alert.id} to ${getAlertRecipients(alert).length} recipient(s)`);
         } catch (alertError) {
           sentry?.captureException(alertError, { extra: { alertId: alert.id } });
           console.error(`Failed to send alert email for alert ${alert.id}:`, alertError);
@@ -565,15 +548,6 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     });
     return url;
   });
-};
-
-/** Recipients of a constat alert: its mandatory services' emails and the additional ones, deduplicated. */
-export const getAlertRecipients = (alert: { mandatory_emails: string | null; additional_emails: string | null }) => {
-  const mandatoryEmails = deserializeMandatoryEmails(alert.mandatory_emails || "");
-  const additionalEmails = alert.additional_emails
-    ? alert.additional_emails.split(",").map((e) => e.trim().toLowerCase())
-    : [];
-  return Array.from(new Set([...mandatoryEmails.map((e) => e.email.toLowerCase()), ...additionalEmails]));
 };
 
 type StateReportRow = Selectable<Database["state_report"]> & { createdByName?: string | null };

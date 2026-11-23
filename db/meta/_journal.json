@@ -323,6 +323,13 @@
       "when": 1795446084118,
       "tag": "0045_attachments_is_deprecated_null",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1795446369871,
+      "tag": "0046_alert_delivery",
+      "breakpoints": true
     }
   ]
 }

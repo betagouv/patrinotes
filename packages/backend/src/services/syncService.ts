@@ -8,6 +8,7 @@ import { sentry } from "../features/sentry";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/db";
 import { maskEmail } from "../features/email";
+import { scheduleMonumentAlertDelivery } from "../features/alertDelivery";
 
 const debug = makeDebug("sync-service");
 
@@ -135,7 +136,7 @@ export class SyncService {
     if (!Object.hasOwn(syncPolicies, table)) return refuse(`table ${table} non modifiable`);
 
     try {
-      return await db.transaction().execute(async (trx) => {
+      const result = await db.transaction().execute(async (trx) => {
         const existing = (await trx
           .selectFrom(table as any)
           .selectAll()
@@ -206,6 +207,13 @@ export class SyncService {
 
         return { success: true };
       });
+
+      // A fiche alert validated (possibly offline) is emailed by the server as soon as it is synced, without
+      // depending on the author's browser coming back online (DAT-10). Photos not stored yet: the job retries.
+      if (result.success && table === "monument_alert" && op !== "DELETE" && data.status === "submitted") {
+        scheduleMonumentAlertDelivery(id);
+      }
+      return result;
     } catch (e) {
       debug("Error on applyCrud", e);
 
