@@ -17,7 +17,7 @@ import sentImage from "../assets/sent.svg";
 import { EmailInput } from "../components/EmailInput";
 import { getDiff } from "../components/SyncForm";
 import { useUser } from "../contexts/AuthContext";
-import { Clause_v2, Pictures, Report, Service } from "../db/AppSchema";
+import { Clause_v2, Report, Service } from "../db/AppSchema";
 import { attachmentLocalStorage, attachmentQueue, db, useDbQuery } from "../db/db";
 import { getImageDimensions } from "../utils";
 import { useChipOptions } from "../features/chips/useChipOptions";

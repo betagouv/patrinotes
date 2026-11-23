@@ -6,7 +6,6 @@ import {
   delegation,
   report,
   tmpPictures,
-  pictures,
   sentEmail,
   stateReport,
   userDept,
@@ -60,20 +59,12 @@ export const reportRelations = relations(report, ({ one, many }) => ({
     references: [user.id],
   }),
   tmpPictures: many(tmpPictures),
-  pictures: many(pictures),
   sentEmails: many(sentEmail),
 }));
 
 export const tmpPicturesRelations = relations(tmpPictures, ({ one }) => ({
   report: one(report, {
     fields: [tmpPictures.reportId],
-    references: [report.id],
-  }),
-}));
-
-export const picturesRelations = relations(pictures, ({ one }) => ({
-  report: one(report, {
-    fields: [pictures.reportId],
     references: [report.id],
   }),
 }));

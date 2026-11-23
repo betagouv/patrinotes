@@ -8,7 +8,6 @@ streams:
     priority: 1
     queries:
       - SELECT * FROM clause_v2 WHERE service_id = 'ALL'
-      - SELECT * FROM pictures
 
   service_stream:
     auto_subscribe: true

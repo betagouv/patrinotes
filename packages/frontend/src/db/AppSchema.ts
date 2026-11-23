@@ -85,13 +85,6 @@ const clause_v2 = new Table({
   text: column.text,
 });
 
-const pictures = new Table({
-  reportId: column.text,
-  url: column.text,
-  createdAt: column.text,
-  finalUrl: column.text,
-});
-
 const transactions = new Table({
   id: column.text,
   entity_id: column.text,
@@ -501,7 +494,6 @@ export const AppSchema = new Schema({
   pdf_snapshot,
   service_instructeurs,
   clause_v2,
-  pictures,
   transactions,
   sent_email,
   suggested_email,
@@ -543,7 +535,6 @@ export type Delegation = Database["delegation"];
 export type PdfSnapshot = Database["pdf_snapshot"];
 export type ServiceInstructeurs = Database["service_instructeurs"];
 export type Clause_v2 = Database["clause_v2"];
-export type Pictures = Database["pictures"];
 export type Transactions = Database["transactions"];
 export type SentEmail = Database["sent_email"];
 export type SuggestedEmail = Database["suggested_email"];

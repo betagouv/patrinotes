@@ -38,7 +38,6 @@ export type Database = {
   state_report_sent_email: Kyselify<typeof tables.stateReportSentEmail>;
   suggested_email: Kyselify<typeof tables.suggestedEmail>;
   user_settings: Kyselify<typeof tables.userSettings>;
-  merimee: Kyselify<typeof tables.merimee>;
   pop_immeubles: Kyselify<typeof tables.popImmeubles>;
   pop_objets: Kyselify<typeof tables.popObjets>;
   state_report: Kyselify<typeof tables.stateReport>;
