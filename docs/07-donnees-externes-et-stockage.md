@@ -57,7 +57,7 @@ flowchart LR
 Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts). Route : `GET /api/up/monument` ([04 §4.10](04-backend-api.md)).
 
 - L'API reçoit en `POST` un filtre de type MongoDB (`{UPI_REFERENCE_MERIMEE: "PA…"}` pour la racine, `{$or: [{_id: {$in: […]}}]}` pour les enfants, par lots de 50). Elle ne connaît que le lien parent → enfants : l'arbre est lu **niveau par niveau** (10 niveaux et 1 000 UP au plus).
-- Elle répond **404 au lieu d'une liste vide** quand rien ne correspond : le backend le traite comme « aucune UP ». Avant le 29/10/2026, tout monument sans UP renvoyait une 502.
+- Elle répond **404 au lieu d'une liste vide** quand rien ne correspond : le backend le traite comme « aucune UP ».
 - Délai de 5 s, une nouvelle tentative. Les réponses sont gardées dans `up_cache` pendant `UP_CACHE_TTL_HOURS` (24 h) ; si l'API ne répond pas, le cache périmé est servi.
 - Elle n'est **joignable que depuis le réseau de production** (filtrage d'adresse IP, *à confirmer pour l'hébergement cible*). En développement et en test, `UP_API_MODE=mock` lit [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json), qui contient des réponses réelles allégées et le monument de test `TEST00003` (hiérarchie profonde).
 - Seule la référence Mérimée est envoyée : aucune donnée personnelle ne sort.
@@ -119,7 +119,6 @@ Limites :
 
 - **Aucune suppression** : une notice retirée de POP (déclassement, fusion) **reste** dans la base et sur les postes.
 - **Aucun filtre** : toute la France est importée. Le tri par département se fait dans les règles PowerSync (`departement_format_numerique` ∈ départements de l'agent).
-- La suppression du fichier utilisait `path/win32` et plantait après l'import des immeubles, si bien que `pop_objets` n'était jamais importée. Corrigé le 21/10/2026 (PR #79).
 - `last_image_check_at` n'est **pas** remis à zéro lors d'un réimport.
 
 ### 2.3 Lien entre immeubles et objets
@@ -142,12 +141,14 @@ Quand l'agent choisit un monument, certains champs POP sont **copiés** dans le 
 
 ### 2.4 Code mort lié à POP
 
-- [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) (`@ts-nocheck`) remplissait la table `merimee` depuis la *datasette* de Collectif Objets (`COLLECTIF_OBJETS_DATASETTE_URL`, variable retirée). Il n'est plus appelé. La table `merimee` (environ 130 colonnes au format POP historique) est donc **figée** ou vide (*à confirmer*).
+- [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) (`@ts-nocheck`) remplissait la table `merimee` depuis la *datasette* de Collectif Objets (`COLLECTIF_OBJETS_DATASETTE_URL`, variable retirée). Il n'est plus appelé. La table `merimee` (environ 130 colonnes au format POP historique) est vide en production et peut être supprimée.
 - `initPopDatasette` et `fetchPopDatasetteCSV` (table `merimee_to_memoire`, supprimée en migration 0008) sont commentés ou inutilisés.
 
 ---
 
 ## 3. Récupération des images POP (« scraping »)
+
+> Cette récupération automatique est **abandonnée** : le code décrit ci-dessous est inutilisé et l'équipe prévoit d'afficher les images POP via le protocole **IIIF**. La description sert à la reprise du code existant.
 
 POP ne publie pas les URL des images dans ses CSV. Patrinotes **lit la page HTML publique** de chaque notice pour en extraire la première image ([pop.ts#L233](../packages/backend/src/features/data/pop.ts#L233)).
 
@@ -167,9 +168,9 @@ POP ne publie pas les URL des images dans ses CSV. Patrinotes **lit la page HTML
 - **Les immeubles importés après la migration 0007 ne sont jamais traités.** La migration a fixé `last_image_check_at = now()` pour les immeubles existants. Les nouveaux immeubles ont `NULL`, et la requête des immeubles ne retient pas `NULL` (contrairement à celle des objets) ([pop.ts#L147](../packages/backend/src/features/data/pop.ts#L147)).
 - La date de référence « hier 00:00 UTC » est calculée **au chargement du module**. Elle reste figée tant que le processus tourne.
 - Une réponse **HTTP 400** fait passer à la notice suivante. **Toute autre erreur** (404, 429, 5xx, délai dépassé) **arrête tout le traitement**. Le lot en cours n'est alors pas marqué comme vérifié.
-- La méthode dépend de la **structure HTML** de POP (classe `swiper-slide`, style en ligne `margin-top:5px`). Une refonte du site POP casse l'extraction sans erreur explicite : les images ne sont plus trouvées. Une API ou un export officiel des médias POP serait plus robuste (*à étudier avec le ministère, propriétaire de POP*).
-- **Rythme** : environ 10 requêtes par seconde au maximum vers un site du ministère. Il n'y a pas d'accord de service connu ; à valider avec l'équipe POP.
-- **Aspect juridique** : seule l'**URL** de l'image est stockée, **pas le fichier**. Les images sont affichées par **lien direct** depuis les serveurs POP ([MonumentHistorique.tsx#L475](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L475)), avec leur crédit (`copyright`) enregistré mais **pas affiché** dans cette vignette. Les conditions de réutilisation des photographies POP (droits d'auteur des photographes, mentions obligatoires) sont **à confirmer** avec le service juridique avant tout usage plus large (par exemple dans un PDF).
+- La méthode dépend de la **structure HTML** de POP (classe `swiper-slide`, style en ligne `margin-top:5px`). Une refonte du site POP casse l'extraction sans erreur explicite : les images ne sont plus trouvées. Le passage prévu à IIIF supprime cette dépendance.
+- **Rythme** : environ 10 requêtes par seconde au maximum vers un site du ministère. L'équipe POP a accepté la récupération de ses pages et l'affichage direct de ses photos.
+- **Aspect juridique** : seule l'**URL** de l'image est stockée, **pas le fichier**. Les images sont affichées par **lien direct** depuis les serveurs POP ([MonumentHistorique.tsx#L475](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L475)), avec leur crédit (`copyright`) enregistré mais **pas affiché** dans cette vignette. L'équipe POP a accepté cet affichage direct. Les conditions de réutilisation des photographies POP (droits d'auteur des photographes, mentions obligatoires) restent **à confirmer** avant tout usage plus large (par exemple dans un PDF).
 - Le rattrapage d'images est **désactivé au démarrage** (`// await initPopImages();` dans [index.ts#L21](../packages/backend/src/index.ts#L21)). Seul le script manuel le lance.
 - **En production, la récupération n'a jamais tourné** (relevé du 17/11/2026 : `pop_images` vide, `last_image_check_at` vide partout) : aucune photo d'objet ne s'affiche aujourd'hui.
 - Côté navigateur, la table `pop_images` n'est pas synchronisée. Les images des objets sont demandées en ligne via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)) : **hors ligne, pas d'image**, et une vignette par défaut `/objet-sans-image.png` s'affiche.
@@ -219,7 +220,7 @@ Bucket unique, **un seul préfixe racine `attachment/`**, puis l'identifiant du 
         └── images/<uuidv7>.jpg               photos
 ```
 
-Le **premier segment** de la clé désigne le document : depuis le 4/11/2026, c'est lui qui décide de l'accès (service du document, [attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)). Ce format ne doit pas changer.
+Le **premier segment** de la clé désigne le document : c'est lui qui décide de l'accès (service du document, [attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)). Ce format ne doit pas changer.
 
 - Les colonnes `attachment_id` des tables `*_attachment`, `report.attachment_id`, `state_report.attachment_id` et `constat_validation.pdf_path` contiennent la clé **sans** le préfixe `attachment/`. Le backend l'ajoute ([uploadService.ts#L21](../packages/backend/src/services/uploadService.ts#L21)). `attachment_redirection.s3_key` contient la clé **avec** le préfixe.
 - `<epoch>` est en secondes. Chaque envoi produit un **nouveau PDF**. Les anciens restent dans le stockage, et `attachment_id` du document pointe sur le dernier.
@@ -268,7 +269,7 @@ Points d'attention :
 
 - **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L64](../packages/frontend/src/db/db.ts#L64)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
 - **Pas de limite de taille côté serveur** pour les envois présignés. La limite de 15 Mo de `@fastify/multipart` ne s'applique à aucune route existante, puisque les fichiers ne transitent plus par le backend.
-- **Contrôle d'appartenance** (depuis le 4/11/2026, PR #86) : lecture et écriture limitées au service du document désigné par le premier segment de la clé. Exception : une URL d'écriture est délivrée pour un document **pas encore en base**, car les photos peuvent partir avant la ligne. Avant cette date, tout utilisateur authentifié pouvait lire ou écraser n'importe quel fichier.
+- **Contrôle d'appartenance** : lecture et écriture limitées au service du document désigné par le premier segment de la clé. Exception : une URL d'écriture est délivrée pour un document **pas encore en base**, car les photos peuvent partir avant la ligne.
 - `getReportPDF` prend **le premier** `report_attachment` en `.pdf` rangé sous `<reportId>/`, **sans tri** : après plusieurs envois, il peut renvoyer un ancien PDF ([uploadService.ts](../packages/backend/src/services/uploadService.ts)).
 - Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit (`getAttachment`), ce qui échoue s'il est absent.
 - Les URL présignées de lecture (`generatePresignedUrl`) ré-encodent chaque segment du chemin après signature ([uploadService.ts#L125](../packages/backend/src/services/uploadService.ts#L125)) pour gérer les noms avec caractères spéciaux.
@@ -359,8 +360,8 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 | --- | --- |
 | Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net`, `pop.culture.gouv.fr` et l'API Dataspace des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Dataspace filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
 | Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, `pop.culture.gouv.fr` (images), point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
-| API Adresse | Le service `api-adresse.data.gouv.fr` redirige déjà vers la Géoplateforme de l'IGN (`data.geopf.fr/geocodage`). Le géocodage du plan de situation ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)) l'interroge directement depuis le 10/11/2026 ; reste à migrer [address.tsx](../packages/frontend/src/features/address.tsx), qui n'encode pas la requête dans l'URL (`encodeURIComponent` manquant). |
-| Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées, vider `pop_objets` si Palissy doit être rafraîchi, et corriger le filtre `NULL` des immeubles. |
+| API Adresse | Le service `api-adresse.data.gouv.fr` redirige déjà vers la Géoplateforme de l'IGN (`data.geopf.fr/geocodage`). Le géocodage du plan de situation ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)) l'interroge directement ; reste à migrer [address.tsx](../packages/frontend/src/features/address.tsx), qui n'encode pas la requête dans l'URL (`encodeURIComponent` manquant). |
+| Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées et vider `pop_objets` si Palissy doit être rafraîchi. Les images POP passeront par IIIF plutôt que par la récupération des pages (§ 3). |
 | Stockage | Copier le bucket à l'identique, configurer le CORS, définir une durée de conservation, garder le bucket privé. |
 | Liens courts | Maintenir l'ancien `BACKEND_URL` au moins 90 jours après la bascule. |
 | Ancien domaine | Garder ou retirer `crvif-redirection` en connaissance de cause. |

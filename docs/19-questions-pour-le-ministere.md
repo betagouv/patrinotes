@@ -32,7 +32,7 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 | M9 | Quel relais **SMTP**, avec quelle adresse d'expédition autorisée ? Qui configure SPF, DKIM et DMARC ? | Aujourd'hui : Scaleway Transactional Email. Un changement de relais impose de reconfigurer le domaine d'envoi. | Hôte, port, mode TLS, expéditeur. | Non |
 | M10 | Quelles sorties HTTPS sont autorisées depuis les serveurs et depuis le réseau des agents ? | Cartes (OpenFreeMap, IGN, cadastre), géocodage (API Adresse), données POP, supervision. La liste est au [§ 4.8 du chapitre 14](14-migration-vers-infra-ministere.md#48-matrice-des-flux-réseau). | Validation de la matrice des flux, ou liste des refus. | Non |
 | M11 | Quelle **supervision** et quelle collecte des journaux ? Garde-t-on Sentry ? | Nous utilisons Sentry pour les erreurs du frontend et du backend. | Outil retenu et rétention. | Non |
-| M12 | Quelle politique de **sauvegarde** et quels objectifs de reprise (RPO, RTO) ? Qui teste les restaurations ? | Aujourd'hui : sauvegarde quotidienne de la base (depuis le 28/10/2026), 7 jours en local, 90 jours sur S3, jamais restaurée pour test. Aucune sauvegarde des photos et PDF n'est visible côté serveur. | RPO, RTO, et qui porte la sauvegarde de la base et du stockage. | Non |
+| M12 | Quelle politique de **sauvegarde** et quels objectifs de reprise (RPO, RTO) ? Qui teste les restaurations ? | Aujourd'hui : sauvegarde quotidienne de la base, 7 jours en local, 90 jours sur S3, sans test de restauration. Aucune sauvegarde des photos et PDF n'est visible côté serveur. | RPO, RTO, et qui porte la sauvegarde de la base et du stockage. | Non |
 | M13 | Quel coffre de **secrets** pour les variables de production ? | Une quinzaine de secrets (base, S3, SMTP, identité, Sentry). | Outil et procédure de saisie. | Non |
 
 ## 2. Identité (équipe d'infrastructure et RSSI)
@@ -47,7 +47,7 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 | # | Question | Pourquoi on la pose | Bloquante |
 | --- | --- | --- | --- |
 | M16 | Quel est le **calendrier d'homologation** et qui la prononce ? Quel référentiel (RGS, MonServiceSécurisé) ? | L'homologation doit être acquise avant la bascule. L'état des mesures MonServiceSécurisé est suivi par l'équipe. | **Oui** |
-| M17 | Quelles corrections de la liste des risques ([16](16-risques-et-dette-technique.md)) sont exigées **avant** homologation ? | Les failles les plus graves (contrôle d'accès de la synchronisation, jetons et données envoyés à Sentry) sont corrigées et en production depuis le 17/11/2026. Il en reste d'autres. | **Oui** |
+| M17 | Quelles corrections de la liste des risques ([16](16-risques-et-dette-technique.md)) sont exigées **avant** homologation ? | Le contrôle d'accès côté serveur et le filtrage des données envoyées à Sentry sont en place. La liste contient les points restants, classés par niveau. | **Oui** |
 | M18 | TLS est-il exigé entre l'application et la base de données à l'intérieur du réseau du ministère ? | Le code le désactive aujourd'hui ; l'activer est une petite modification à prévoir. | Non |
 | M19 | Une politique de mot de passe et une protection contre la force brute sont-elles exigées (scénario Keycloak) ? | À définir pour la cible. Sans objet si ProConnect est retenu. | Non |
 
@@ -58,7 +58,7 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 | M20 | La **dictée vocale** (sous Chrome, l'audio est traité par un service de Google) est-elle acceptable ? | Fonction utilisée sur le terrain ; elle transmet la voix à un tiers. | Non |
 | M21 | Le fond de carte **OpenFreeMap** (service non étatique) est-il acceptable, ou faut-il passer sur les fonds IGN ? | Les terminaux des agents appellent ce service à chaque affichage de carte. | Non |
 | M22 | Qui met à jour les **mentions légales et la politique de confidentialité** ? | Elles citent OVH et Brevo, alors que l'application utilise Scaleway (stockage et courriel), Sentry et Matomo. | Non |
-| M23 | Un agent peut-il librement **changer de service** dans l'application ? Tout membre d'un service peut-il en modifier les paramètres ? | C'est le cas aujourd'hui. Le changement de service donne accès aux données du nouveau service ; il est désormais tracé dans un journal. | Non |
+| M23 | Un agent peut-il librement **changer de service** dans l'application ? Tout membre d'un service peut-il en modifier les paramètres ? | C'est le cas aujourd'hui. Le changement de service donne accès aux données du nouveau service ; il est tracé dans un journal. | Non |
 | M24 | Quelle **fenêtre de bascule** convient (période creuse de visites) ? Qui prévient les agents ? | La bascule interrompt l'application quelques heures. Les agents doivent synchroniser avant. | Non |
 
 ## 5. Réponses attendues

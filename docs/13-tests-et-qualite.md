@@ -5,9 +5,8 @@ formatage, lint), les **conventions** observées dans le code et l'historique Gi
 pas à pas pour un nouveau développeur. Il termine par les **zones non couvertes** par les tests.
 
 En résumé : la qualité repose aujourd'hui **surtout sur une suite e2e Playwright** (17 fichiers de specs) qui démarre
-une pile complète en Docker. Elle a été réparée le 4/11/2026 (PR #84 : **72 tests sur 72** passent), puis complétée
-par les specs des fiches. Quelques **tests unitaires** vitest existent côté backend depuis octobre 2026 (§ 4). La CI
-de test reste **manuelle**.
+une pile complète en Docker. Quelques **tests unitaires** vitest existent côté backend (§ 4). La CI de test est
+**manuelle**.
 
 ---
 
@@ -64,7 +63,7 @@ flowchart LR
 | `timeout` | 30 s par test (plusieurs tests le portent à 60 s, 90 s ou 120 s) | — |
 | `forbidOnly` | en CI | Un `test.only` oublié fait échouer la CI. |
 | `trace` | `on-first-retry` | Les traces ne sont produites qu'en CI (seul endroit avec des relances). |
-| `serviceWorkers: "block"` et `storageState` avec `crvif/version = 1` | depuis le 4/11/2026 | L'application se recharge à la première visite et à chaque nouveau service worker, ce qui effaçait la saisie en cours d'un test. Les tests démarrent donc comme un visiteur connu, **sans service worker** : le cache hors ligne n'est pas testé. |
+| `serviceWorkers: "block"` et `storageState` avec `crvif/version = 1` | — | L'application se recharge à la première visite et à chaque nouveau service worker, ce qui effacerait la saisie en cours d'un test. Les tests démarrent donc comme un visiteur connu, **sans service worker** : le cache hors ligne n'est pas testé. |
 | `actionTimeout` / `navigationTimeout` | 10 s / 15 s | Une étape bloquée échoue en quelques secondes au lieu d'attendre la fin du test. |
 | Rapporteurs | `html` (sans ouverture) + `list` | Rapport dans `playwright-report/` |
 | Projets | **Chromium desktop uniquement** ; Firefox, WebKit et mobiles en commentaire | Safari iOS et Android, cibles réelles des agents sur le terrain, ne sont **pas testés**. |
@@ -217,8 +216,7 @@ Comportements à connaître :
   `compte-rendu-vif`) **ne dépend pas** des tests : une image cassée peut être publiée.
 
 > [!NOTE]
-> `pnpm/action-setup@v4` sans version explicite lit le champ `packageManager` du `package.json` : `pnpm@10.12.4`
-> depuis le 4/11/2026 (PR #84).
+> `pnpm/action-setup@v4` sans version explicite lit le champ `packageManager` du `package.json` : `pnpm@10.12.4`.
 
 **Proposition** : déclencher `tests.yml` sur `pull_request` vers `main` et `development`, ajouter un job `tsc --noEmit`
 (scripts `check` du backend et du frontend), et conditionner `main.yml` au succès des tests.
@@ -347,10 +345,8 @@ gitGraph
 
 | Branche | Rôle observé |
 | --- | --- |
-| `main` | Production. Image GHCR `…-main:{backend,frontend}`. Reçoit aussi des **correctifs directs** : à la date de lecture, `main` a 2 commits absents de `development` (`c9896b2`, `36aa251`). |
-| `development` | Intégration et préproduction (image `…-development:*`). À la date de lecture, elle a **11 commits d'avance** sur `main`. |
-
-> Depuis le 17/11/2026, `main` et `development` **divergent** : les correctifs de sécurité des PR #83 et #86 sont sur les deux branches, par des commits différents (repris un à un sur `main`, puis adaptés à son schéma par `559f208`). La prochaine fusion de `development` vers `main` devra en tenir compte.
+| `main` | Production. Image GHCR `…-main:{backend,frontend}`. Reçoit parfois des **correctifs directs**, rapportés ensuite dans `development`. |
+| `development` | Intégration et préproduction (image `…-development:*`). Elle contient tout `main` et est **en avance** sur lui : fiches monument (MH, UP, objet), recherche de monument sur l'accueil et corrections côté client, pas encore déployées en production. |
 | `compte-rendu-vif` | Ancien nom du produit. Toujours dans `main.yml`, dernier commit en **novembre 2025** : branche probablement abandonnée (à confirmer), dont on peut retirer le déclencheur. |
 | `feat/*`, `fix/*`, `refactor/*` | Branches de fonctionnalité |
 | `poc/*` (`electricsql`, `replicache`, `triplit`, `watermelon`, `automerge`, `hocuspocus`), `save/*`, `backup/*` | Essais de moteurs de synchronisation et sauvegardes historiques, **à archiver** |

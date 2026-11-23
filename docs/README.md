@@ -8,7 +8,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 2. **Servir de base à l'homologation** de sécurité (analyse de risques, flux, données personnelles) ;
 3. **Accueillir de nouveaux développeurs** et donner aux interlocuteurs non techniques une vue d'ensemble.
 
-> **État du document : au 17/11/2026**, branche `development`. Il a été rédigé vers le 20/10/2026 à partir d'une lecture complète du code, puis mis à jour le 17/11/2026 (contrôle d'accès du 4/11, filtrage Sentry, fiches MH, UP et objet du 10/11) et confronté au **relevé de production du 17/11/2026** (lecture seule de Coolify, des bases, de Keycloak et des DNS). La production déploie `main`, qui a reçu les correctifs de sécurité le 17/11/2026 mais pas encore les fiches. La configuration de production (Coolify, realm Keycloak, publication PostgreSQL, stockage objet) n'est pas dans le dépôt. Ce que le relevé n'a pas pu établir est marqué « à confirmer » et repris dans [18 — Questions ouvertes](18-questions-ouvertes.md).
+> **État du document : au 23/11/2026.** Il décrit le code de la branche `development` (préproduction) à cette date, et la production telle que l'a établie le **relevé de production du 17/11/2026** (lecture seule de Coolify, des bases, de Keycloak et des DNS), inchangée depuis. La production déploie `main` ; `development` a en plus les fiches monument (MH, UP, objet) et des corrections qui évitent des pertes de données côté client. La configuration de production (Coolify, realm Keycloak, publication PostgreSQL, stockage objet) n'est pas dans le dépôt. Ce que le relevé n'a pas pu établir est marqué « à confirmer » et repris dans [18 — Questions ouvertes](18-questions-ouvertes.md).
 
 ## Sommaire
 
@@ -50,9 +50,9 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 5. **Le domaine du frontend porte les données locales** des agents : en changer fait perdre les écritures non synchronisées.
 6. **Keycloak** gère les comptes, mais le navigateur ne lui parle jamais : le backend fait l'intermédiaire. Keycloak peut donc rester sur un réseau interne.
 7. **Le frontend tourne avec `vite preview`**, avec une liste de domaines autorisés codée en dur : un nouveau domaine impose une modification du code.
-8. **Le serveur contrôle les droits** (correctif du 4/11/2026, en production depuis le 17/11/2026) : tables et colonnes modifiables, service, auteur et délégation sur `/api/upload-data`, fichiers, PDF et flux de pièces jointes limités au service du document ; Sentry ne reçoit plus ni jetons ni mots de passe (reste à purger les événements antérieurs). Restent : durcissement du Keycloak de production, limitation de débit. Voir [16](16-risques-et-dette-technique.md).
+8. **Le serveur contrôle les droits** : tables et colonnes modifiables, service, auteur et délégation sur `/api/upload-data` ; fichiers, PDF et flux de pièces jointes limités au service du document ; Sentry ne reçoit ni jetons ni mots de passe. Restent à traiter : réglages de sécurité du Keycloak de production, limitation de débit. Voir [16](16-risques-et-dette-technique.md).
 9. **Des écritures peuvent se perdre sans message** (erreur SQL ou refus de droits renvoyés en HTTP 200). Voir [08](08-synchronisation-hors-ligne.md).
-10. **Aucune tâche planifiée ni purge**, ni dans le dépôt ni dans Coolify. Les sauvegardes sont planifiées dans Coolify (base de production depuis le 28/10/2026 : quotidienne, 7 jours en local et 90 jours sur S3), mais **aucune restauration n'a été testée** et le bucket de fichiers n'est pas sauvegardé. Le déploiement est manuel et non tracé. Voir [12](12-exploitation-et-supervision.md).
+10. **Aucune tâche planifiée ni purge**, ni dans le dépôt ni dans Coolify. Les sauvegardes sont planifiées dans Coolify (base de production : quotidienne, 7 jours en local et 90 jours sur S3), mais **aucune restauration n'a été testée** et le bucket de fichiers n'est pas sauvegardé. Le déploiement est manuel et non tracé. Voir [12](12-exploitation-et-supervision.md).
 
 ## Conventions du dossier
 

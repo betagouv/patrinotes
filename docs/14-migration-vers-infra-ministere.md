@@ -41,7 +41,7 @@ Les phases 2 et 3 se déroulent **en parallèle** : la première est portée par
 2. Mesurer : `pg_database_size` des deux bases, taille du bucket, nombre d'objets, version PostgreSQL, version effective de PowerSync (journal de démarrage), consommation des services (`docker stats`, taille des volumes) pour recaler le dimensionnement du § 4.2.
 3. Relever l'état de la publication : `SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';` et des slots : `SELECT * FROM pg_replication_slots;`.
 4. Relever l'émetteur réel des jetons (décoder un jeton d'accès, champ `iss`) et le realm.
-5. Rechercher d'éventuelles URL absolues de l'ancien hébergement stockées en base, par exemple `SELECT count(*) FROM pictures WHERE url LIKE '%<ancien hôte S3>%' OR "finalUrl" LIKE '%<ancien hôte S3>%';` (table historique synchronisée à tous les utilisateurs) et le domaine des `pop_images.url`.
+5. Rechercher d'éventuelles URL absolues de l'ancien hébergement stockées en base. Les tables historiques `pictures` et `merimee` sont vides en production et peuvent être supprimées ; `pop_images` est vide aussi.
 6. Relever la configuration CORS du bucket Scaleway (`aws s3api get-bucket-cors`) et les noms de domaine actuels du backend, de PowerSync et de S3.
 7. Répondre aux [questions ouvertes](18-questions-ouvertes.md) qui dépendent de la production.
 
@@ -70,7 +70,7 @@ Les phases 2 et 3 se déroulent **en parallèle** : la première est portée par
 | Domaines | Conserver `*.patrinotes.beta.gouv.fr` / domaine `culture.gouv.fr` | Conserver le domaine du frontend (données locales liées à l'origine). | 3 |
 | Serveur du frontend | `vite preview` (actuel) / nginx ou proxy du ministère | Remplacer à terme ; garder l'existant pour la bascule. | Après migration |
 | Forge et registre | GitHub + `ghcr.io` / forge et registre du ministère | Voir § 3.1. | 2 |
-| Supervision | Sentry (instance ?), journaux, métriques | Préciser l'instance Sentry et la rétention ; envoi des corps de requêtes à examiner (RGPD). | 3 |
+| Supervision | Sentry (instance ?), journaux, métriques | Préciser l'instance Sentry et la rétention (RGPD). | 3 |
 | Mesure d'audience | Matomo `stats.beta.gouv.fr` / Matomo du ministère | Changer impose une modification de code (`siteId` en dur). | 2 |
 | SMTP | Relais du ministère / prestataire actuel | Relais du ministère avec expéditeur autorisé. | 3 |
 | Sauvegardes | Fréquence, rétention, tests de restauration | PostgreSQL quotidien + PITR, S3 versionné. | 3 |
@@ -122,13 +122,13 @@ Déduit de [authService.ts](../packages/backend/src/services/authService.ts), [k
 | Revendications utilisées | `email` (**clé de rattachement** à la table `user`, et filtre de toutes les règles PowerSync via `auth.parameter('email')`), `name` ou `preferred_username` (nom affiché à la création). Aucun rôle ni groupe : le rôle administrateur est en base (`internal_user.role`). | Revendications standard OIDC. |
 | PowerSync | Accepte **le même jeton d'accès** que le backend, vérifié par JWKS. | Nécessite un JWT signé avec JWKS publié. |
 
-Le flux *authorization code* (`/api/authenticate`) n'existe plus : la route, inutilisée, a été supprimée le 4/11/2026.
+Le code de production n'a pas de flux *authorization code*.
 
 Le navigateur n'appelle jamais Keycloak (déduction à confirmer en relevant les journaux d'accès). Keycloak peut donc être déployé **sans exposition publique**, joignable uniquement par le backend et PowerSync. La console d'administration doit rester accessible aux administrateurs (VPN ou réseau d'administration).
 
 #### 3.3.2 Scénario A (recommandé si le calendrier le permet) — sortir de Keycloak avant la migration
 
-La PR [#82](https://github.com/betagouv/patrinotes/pull/82) (en cours de revue) remplace Keycloak par **ProConnect** et une **connexion par code reçu par courriel**. Le backend émet ses propres jetons (RS256, JWKS publié par le backend, audience `patrinotes`), que PowerSync vérifie ; inscription et mot de passe oublié disparaissent, la liste blanche est conservée. Elle prévoit une transition sans déconnexion : pendant au moins 30 jours, les jetons Keycloak existants sont échangés contre une session du backend.
+La PR [#82](https://github.com/betagouv/patrinotes/pull/82) (en relecture, non fusionnée) remplace Keycloak par **ProConnect** et une **connexion par code reçu par courriel**. Le backend émet ses propres jetons (RS256, JWKS publié par le backend, audience `patrinotes`), que PowerSync vérifie ; inscription et mot de passe oublié disparaissent, la liste blanche est conservée. Elle prévoit une transition sans déconnexion : pendant au moins 30 jours, les jetons Keycloak existants sont échangés contre une session du backend.
 
 Séquence, **entièrement sur l'hébergement actuel** :
 
@@ -293,7 +293,6 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | Backend | Relais SMTP | 465 / 587 | Chaque envoi | Oui |
 | Backend (scénario A) | ProConnect | 443 | Chaque connexion (jeton, *userinfo*, JWKS) | Oui |
 | Backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` | 443 | Import POP (`FORCE_REFETCH_POP=true` ou `pnpm backend import-pop`) | Ponctuel |
-| Backend | `pop.culture.gouv.fr` | 443 | Récupération des images POP (`import-pop` uniquement ; désactivé au démarrage) | Ponctuel |
 | Backend | Sentry | 443 | Si `SENTRY_DSN` (non défini en production ; le frontend utilise `sentry.incubateur.net`) | Optionnel |
 | PowerSync | Télémétrie JourneyApps | 443 | `disable_telemetry_sharing: false` | **À désactiver** (§ 3.2) |
 | Hôtes d'exécution | Registre d'images (`ghcr.io` aujourd'hui) | 443 | Déploiement | Oui (ou registre du ministère) |
@@ -307,8 +306,7 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | `openmaptiles.geo.data.gouv.fr` | Parcelles cadastrales | [MapLibre.tsx#L17](../packages/frontend/src/features/map/MapLibre.tsx#L17) |
 | `data.geopf.fr` | Orthophotos IGN (WMTS) | [MapLibre.tsx#L26](../packages/frontend/src/features/map/MapLibre.tsx#L26) |
 | `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx#L132-L136](../packages/frontend/src/main.tsx#L132-L136) |
-| Sentry | Erreurs et journaux du navigateur, si `VITE_SENTRY_DSN` | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
-| Hôtes des images POP | URL stockées dans `pop_images.url` (domaine relevé en phase 1) | [pop.ts](../packages/backend/src/features/data/pop.ts) |
+| Sentry | Erreurs du navigateur, si `VITE_SENTRY_DSN` | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 
 Liens simples (navigation, pas d'appel automatique) : `patrinotes.beta.gouv.fr` (FAQ), `pop.culture.gouv.fr`, `culture.gouv.fr`, `legifrance.gouv.fr`, Typeform (questionnaire).
 
@@ -341,7 +339,7 @@ Points d'attention :
 - Les **slots de réplication ne sont pas transférés** : PowerSync en créera un nouveau sur la cible. Sur l'ancienne base, le slot de PowerSync doit être supprimé (`pg_drop_replication_slot`) après la bascule définitive (phase 6), sinon l'ancien serveur accumule du WAL.
 - Le schéma `drizzle` (table `__drizzle_migrations`) fait partie du dump : au premier démarrage, le backend ne rejouera que les migrations postérieures. **Ne pas** recréer la base vide puis lancer les migrations pour ensuite charger les données.
 - Comparer le nombre de lignes des principales tables (`user`, `report`, `state_report`, `*_attachment`, `pop_immeubles`, `pop_objets`) entre source et cible.
-- Les tables POP peuvent aussi être reconstruites depuis data.gouv.fr, mais `pop_images` (récupérée lentement par *scraping*) doit être transférée.
+- Les tables POP peuvent aussi être reconstruites depuis les exports POP (`pop_images` est vide en production).
 
 ### 5.2 MongoDB (stockage PowerSync)
 

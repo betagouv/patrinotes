@@ -88,7 +88,7 @@ Schéma de référence : [envVars.ts#L24-L61](../packages/backend/src/envVars.ts
 | --- | --- | --- | --- | --- | --- |
 | `FORCE_REFETCH_POP` | Non | `false` | Si `true` (chaîne insensible à la casse), au démarrage : téléchargement de `merimee.csv` et `palissy.csv` depuis `ministere-culture.s3.sbg.io.cloud.ovh.net`, import dans `pop_immeubles` (toujours) et `pop_objets` (**seulement si la table est vide**). Bloque l'ouverture du port pendant l'import. À remettre à `false` ensuite. | `false` | Non |
 | `SENTRY_DSN` | Non | — | DSN Sentry du backend. Absent → Sentry désactivé. **Absent en production** : seul le frontend remonte ses erreurs. `tracesSampleRate: 0.1` en dur, données personnelles filtrées par `beforeSend` ([sentry.ts](../packages/backend/src/features/sentry.ts)). | — | Sensible |
-| `UP_API_MODE` | Non | `mock` | `live` : appel réel de l'API Dataspace des unités patrimoniales ; `mock` : données de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json). La production (`main`) ne contient pas encore cette fonction (relevé du 17/11/2026) : à poser à `live` lors de la livraison de `development`. | `live` | Non |
+| `UP_API_MODE` | Non | `mock` | `live` : appel réel de l'API Dataspace des unités patrimoniales ; `mock` : données de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json). Cette fonction est présente dans `development`, pas encore déployée en production : à poser à `live` lors de sa livraison. | `live` | Non |
 | `UP_API_URL` | Non | `https://api-ext.stg.cloud.culture.fr/dataspace/patrinote/up` | Point d'accès de l'API Dataspace. Joignable seulement depuis le réseau de production. | idem | Non |
 | `UP_API_KEY` | Si `UP_API_MODE=live` | — | Clé de l'API Dataspace (en-tête `apiKey`). Le démarrage échoue si elle manque en mode `live`. | — | **Oui** |
 | `UP_CACHE_TTL_HOURS` | Non | `24` | Durée de fraîcheur du cache `up_cache`. Au-delà, l'API est rappelée ; le cache périmé sert de secours si elle ne répond pas. | `24` | Non |
@@ -306,4 +306,4 @@ Relevé de production du 17/11/2026 (aucun secret relevé ni reproduit).
 | Stockage objet | `MINIO_URL=https://patrinotes-prod.s3.fr-par.scw.cloud`, `MINIO_BUCKET=patrinotes-prod` ; restes `AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod` | bucket `patrimoine-embarque-preprod` |
 | Sentry | `VITE_SENTRY_DSN` (hôte `sentry.incubateur.net`) ; **pas de `SENTRY_DSN` backend** | — |
 | PowerSync | `POWERSYNC_CONFIG_PATH=/config/config.yaml`, `PS_PORT=3003`, `NODE_ENV=production` ; connexion avec l'utilisateur `postgres` | `auth.user_id()` au lieu de `auth.parameter('email')` dans les règles |
-| Unités patrimoniales | sans objet : la production (`main`) ne contient pas encore cette fonction | — |
+| Unités patrimoniales | sans objet : fonction pas encore déployée en production | — |

@@ -21,7 +21,7 @@ migration vers l'infrastructure du ministère.
 >
 > **La production tourne sur `main`, pas sur `development`** : ses règles de synchronisation n'ont pas les tables des
 > fiches (§ 3.2) et sa base n'a que 37 migrations. Le contrôle de service sur les flux de pièces jointes y est en
-> revanche en place depuis le 17/11/2026.
+> place.
 
 ---
 
@@ -140,8 +140,7 @@ Fichier : [powersync/powersync-config.yaml](../powersync/powersync-config.yaml)
    antérieure — à confirmer). Ne pas le confondre avec le mécanisme réel (JWKS Keycloak).
 5. L'image est en **`:latest`** : un redémarrage peut tirer une version majeure différente. Le format
    `config.edition: 3` / `streams:` (« Sync Streams ») exige une version récente du service. **Épingler la version**
-   (1.20.5 en production) lors de la migration. Le conteneur de production a été redémarré le 17/11/2026 et a gardé
-   la 1.20.5.
+   (1.20.5 en production) lors de la migration.
 6. **Les deux fichiers sont déposés à la main** sur le serveur de production
    (`/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/`), sans lien avec la CI. Toute modification des règles demande
    de recopier le fichier puis de redémarrer PowerSync.
@@ -240,18 +239,17 @@ Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écr
 
 ### 3.2 Règles cachées des streams
 
-> [!WARNING]
-> **Écart entre le dépôt et la production.** Le `sync-config.yaml` de production est celui de `main`. Le relevé du
-> 17/11/2026 a montré qu'il n'avait pas le contrôle de service sur les flux de pièces jointes : il a été mis à jour le
-> soir même (quatre requêtes de pièces jointes filtrées par le service de l'utilisateur), et PowerSync redémarré
-> (toujours 1.20.5, nouveau slot `powersync_5_86e0`, l'ancien supprimé). Par rapport à `development`, il lui manque
-> encore `monument_correction`, `monument_alert` et `monument_alert_attachment`. La préproduction identifiait
-> l'utilisateur par `auth.user_id()` au lieu de `auth.parameter('email')` au moment du relevé. Livrer les fiches en
-> production imposera de recopier ce fichier à la main et de redémarrer PowerSync, après les migrations 0037 à 0039.
+> [!NOTE]
+> **Écart entre le dépôt et la production.** Le `sync-config.yaml` de production est celui de `main` : les flux de
+> pièces jointes y sont filtrés par le service de l'utilisateur, mais il n'a pas `monument_correction`,
+> `monument_alert` et `monument_alert_attachment` (présents dans `development`, pas encore déployés en production).
+> Au relevé de production du 17/11/2026, la préproduction identifiait l'utilisateur par `auth.user_id()` au lieu de
+> `auth.parameter('email')`. Livrer les fiches en production imposera de recopier ce fichier sur le serveur et de
+> redémarrer PowerSync, après les migrations 0037 à 0039.
 
-- **Données référentielles sans filtre** : `SELECT * FROM pictures` envoie **toutes les lignes de `pictures`, de tous
-  les services, à tous les utilisateurs**. Table héritée (anciennes photos de compte-rendu) ; à vérifier qu'elle est
-  vide ou à filtrer (risque de fuite inter-services + volume).
+- **Données référentielles sans filtre** : `SELECT * FROM pictures` envoie toutes les lignes de `pictures`, de tous
+  les services, à tous les utilisateurs. Cette table héritée (anciennes photos de compte-rendu) est vide en
+  production et peut être supprimée, avec sa requête dans `global_stream`.
 - **Filtre `is_deprecated = 0`** : la suppression d'une photo est un **soft delete** (`is_deprecated = 1` côté client,
   par ex. [useAttachmentImages.ts#L223](../packages/frontend/src/features/upload/hooks/useAttachmentImages.ts#L223)).
   La ligne disparaît alors des streams, donc des autres appareils. Les booléens PostgreSQL sont convertis par PowerSync
@@ -263,9 +261,8 @@ Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écr
   métadonnées des pièces jointes passent par des streams à la demande. Après fermeture de l'écran, PowerSync conserve
   l'abonnement pendant une durée de rétention (TTL, 24 h par défaut dans le SDK — **à confirmer** selon la version),
   puis les lignes sont retirées et les fichiers locaux deviennent « archivés » (cf. § 5).
-- **Contrôle d'appartenance sur les paramètres d'abonnement** (depuis le 4/11/2026, PR #86) : `state_report_id` /
-  `report_id` sont fournis par le client ; les requêtes vérifient maintenant que le **document** appartient au service
-  de l'utilisateur. Le contrôle passe par le document et non par la pièce jointe, car des lignes anciennes n'ont pas
+- **Contrôle d'appartenance sur les paramètres d'abonnement** : `state_report_id` / `report_id` sont fournis par le
+  client ; les requêtes vérifient que le **document** appartient au service de l'utilisateur. Le contrôle passe par le document et non par la pièce jointe, car des lignes anciennes n'ont pas
   de `service_id`.
 - **Changement de service** : `POST /api/change-service`
   ([userService.ts](../packages/backend/src/services/userService.ts)) met à jour `user.service_id` (et le trace dans
@@ -276,8 +273,7 @@ Les streams à la demande sont ouverts par le hook `useSyncStream` dans les écr
   `user_dept` sont conservés** : l'agent continue de recevoir le référentiel POP de son ancien service. Les deux
   écritures ne sont pas dans une même transaction.
 - **Compte sans service** (`service_id = 'no-service'`, service technique créé au démarrage du backend, invisible,
-  département vide) : cas des comptes créés par l'ancienne route `/api/authenticate`, supprimée le 4/11/2026 ;
-  l'inscription actuelle affecte directement un service. Tant qu'un tel compte n'a pas choisi de service, il ne reçoit
+  département vide) : des comptes anciens n'ont pas de service ; l'inscription actuelle en affecte directement un. Tant qu'un tel compte n'a pas choisi de service, il ne reçoit
   que `global_stream`, ses propres données utilisateur et le service `no-service`.
 - **Départements POP** : le rapprochement `departement_format_numerique IN my_depts` est une égalité de chaînes ; le
   format de `dept_numbers` (ex. `01` vs `1`, `2A`) doit correspondre exactement à celui du CSV POP (**à confirmer** par
@@ -365,8 +361,8 @@ Il n'y a **aucune logique de conflit explicite** : c'est du **« dernier arrivé
 colonne** (les `PATCH` ne contiennent que les champs modifiés). Deux agents modifiant des champs différents d'un même
 constat ne se gênent pas ; deux agents modifiant le même champ hors ligne : la valeur de celui qui se reconnecte en
 dernier écrase l'autre, sans avertissement. Les droits d'édition (créateur, rédacteur, délégation) sont vérifiés
-côté interface ([useCanEditReport.tsx](../packages/frontend/src/hooks/useCanEditReport.tsx)) et, depuis le
-4/11/2026, aussi par le serveur (§ 6).
+côté interface ([useCanEditReport.tsx](../packages/frontend/src/hooks/useCanEditReport.tsx)) et par le serveur
+(§ 6).
 
 Lorsqu'une écriture est rejetée par le serveur (erreur SQL ou droits insuffisants), la valeur locale reste affichée
 jusqu'au prochain checkpoint, où PowerSync **remplace l'état local par l'état serveur** : la modification disparaît
@@ -429,9 +425,10 @@ compte-rendu) ; c'est à la fois l'id local et le suffixe de la clé S3.
 - **Ligne et fichier voyagent séparément** : la ligne métier part par la file CRUD (immédiate), le fichier par
   l'AttachmentQueue (toutes les 30 s). Un autre appareil peut recevoir la ligne avant que le fichier soit en S3 →
   téléchargement en 404, retenté à la passe suivante (**à confirmer** : politique de nouvel essai du SDK).
-- **Photo ignorée au second choix du même fichier** : corrigé le 4/11/2026 (PR #85, dans `development`, pas encore en production). Le champ fichier n'était vidé
-  qu'après un envoi réussi ; rechoisir le même fichier pendant un envoi ou après un échec ne faisait rien. Il est
-  maintenant vidé dès la sélection ([UploadImageButton.tsx](../packages/frontend/src/features/upload/UploadImageButton.tsx)).
+- **Second choix du même fichier** : le champ fichier est vidé dès la sélection
+  ([UploadImageButton.tsx](../packages/frontend/src/features/upload/UploadImageButton.tsx)), ce qui permet de
+  rechoisir la même photo pendant un envoi ou après un échec (présent dans `development`, pas encore déployé en
+  production).
 - `getAttachmentUrl` crée un blob typé `image/png` quel que soit le format réel (sans effet pratique pour l'affichage).
 - `watchAttachments` ignore le `signal` d'annulation (watcher jamais arrêté — sans conséquence car unique).
 - Stores IndexedDB hérités `toSync`, `toUpload`, `uploadStatus`
@@ -464,9 +461,7 @@ Algorithme `applyCrud(operation, user)` :
 
 Règles et absences notables :
 
-- **Contrôle d'autorisation par table, colonne et ligne** depuis le 4/11/2026 (PR #86). Avant, tout utilisateur
-  authentifié pouvait écrire dans n'importe quelle table sauf `internal_user`. Les valeurs elles-mêmes ne sont pas
-  validées.
+- **Contrôle d'autorisation par table, colonne et ligne**. Les valeurs elles-mêmes ne sont pas validées.
 - **Conversion de types implicite** : le client envoie des valeurs SQLite (booléens `0/1`, dates en texte) ;
   PostgreSQL les convertit (`'0'`/`'1'` acceptés pour `boolean`, ISO pour `timestamp`).
 - **Aucun effet de bord** dans la synchronisation : pas d'envoi de mail, pas de génération de PDF, pas de trigger
@@ -474,7 +469,7 @@ Règles et absences notables :
   **nécessitant le réseau** (cf. § 7.4).
 - Si l'utilisateur authentifié n'existe pas dans `user`, `applyCrud` renvoie `{ success: false, error: "Unauthorized" }`
   en HTTP 200 (le middleware laisse passer un jeton valide sans ligne `user`) : les écritures de cet appareil sont
-  perdues sans message. Avant le 4/11/2026, c'était une 500 répétée qui gelait la synchronisation.
+  perdues sans message.
 - Les écritures directes du backend en base (routes PDF, validation, changement de service, imports POP) **reviennent
   aux clients** par la réplication comme n'importe quelle modification.
 
@@ -622,8 +617,8 @@ envoyée qu'une fois, même si deux appareils réessaient. `sent_at` revient ens
 | **Déconnexion** (`useLogout`, [AuthContext.tsx#L113](../packages/frontend/src/contexts/AuthContext.tsx#L113)) | Efface uniquement les jetons et l'utilisateur. **La base SQLite, la file CRUD et les fichiers locaux sont conservés**, la connexion PowerSync reste ouverte (elle échoue faute de jeton). |
 | **Session expirée** (refresh refusé) | Idem, avec la modale « session expirée ». Les écritures en attente sont conservées et repartiront après reconnexion. |
 | **Changement d'utilisateur sur le même navigateur** | Les données de l'utilisateur précédent restent présentes jusqu'à ce que PowerSync recalcule les buckets du nouveau. **Les écritures en attente de l'utilisateur précédent sont envoyées avec le jeton du nouvel utilisateur** (et journalisées sous son `user_id`). Risque de confidentialité et d'imputabilité sur poste partagé. |
-| **« Supprimer les données locales »** (menu Aide, [HelpMenu.tsx#L17](../packages/frontend/src/features/menu/HelpMenu.tsx#L17)) | `clearDb()` (`disconnectAndClear` + `close`), désinscription des service workers, `localStorage.clear()`, **suppression de toutes les bases IndexedDB** (y compris les jetons et les photos non envoyées !), puis rechargement. **Les écritures non synchronisées sont perdues.** |
-| **Modification juste après l'inscription** | La ligne `service` ou `user` peut ne pas être encore arrivée : l'`UPDATE` local ne touchait aucune ligne et la modification était perdue. Corrigé le 4/11/2026 (PR #85, dans `development`, pas encore en production) : `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) attend la première synchronisation (30 s au plus) et affiche une erreur si la ligne manque toujours. |
+| **« Supprimer les données locales »** (menu Aide, [HelpMenu.tsx](../packages/frontend/src/features/menu/HelpMenu.tsx), [resetLocalData.ts](../packages/frontend/src/features/menu/resetLocalData.ts)) | Refusé hors ligne (l'application ne pourrait ni recharger ni retélécharger les données). La confirmation indique le nombre d'écritures et de photos non envoyées. Puis : arrêt de la file des pièces jointes, vidage de la base PowerSync (`disconnectAndClear`), des fichiers locaux et des jetons, suppression des autres bases IndexedDB, vidage du `localStorage` (sauf la version et le thème), désinscription des service workers, vidage des caches, rechargement des autres onglets et de la page. Chaque étape a un délai maximal et n'empêche pas les suivantes. **Les écritures non synchronisées sont perdues.** |
+| **Modification juste après l'inscription** | La ligne `service` ou `user` peut ne pas être encore arrivée. `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) attend la première synchronisation (30 s au plus) avant l'`UPDATE` local et affiche une erreur si la ligne manque toujours (présent dans `development`, pas encore déployé en production). |
 | **Montée de version applicative** | Contrôle `localStorage["crvif/version"]` ([AuthContext.tsx#L58](../packages/frontend/src/contexts/AuthContext.tsx#L58)) : s'il est absent, l'ancienne clé `crvif/auth` est supprimée, un popup de mise à jour est programmé, la version `1` est posée et la page rechargée. Ce n'est pas un versionnement de la base locale. |
 | **Modification d'`AppSchema`** | Pas de migration locale : PowerSync recrée les vues à partir du nouveau schéma au démarrage. Ajouter une colonne déjà présente dans `SELECT *` la rend visible immédiatement ; supprimer une colonne la masque. Renommer une table ou une colonne côté serveur nécessite que les lignes soient renvoyées sous le nouveau nom (cf. § 9.1). |
 | **Modification de `sync-config.yaml`** | Au redémarrage, PowerSync détecte une nouvelle version des règles, retraite toutes les données en parallèle de l'ancienne version, puis bascule ; les clients re-téléchargent les buckets modifiés (**à confirmer** : fenêtre et coût selon le volume POP). |
@@ -728,9 +723,8 @@ CPU et mémoire du seul service PowerSync n'a pas été mesurée (ordre de grand
 
 - **Croissance du slot de réplication** : si PowerSync est arrêté (ou bloqué), PostgreSQL **conserve tout le WAL**
   depuis la dernière position confirmée du slot, sans limite par défaut → saturation disque de la base principale.
-  C'est le réglage de production (`max_slot_wal_keep_size = -1`, relevé du 17/11/2026) ; le slot `powersync_5_86e0`
-  (recréé au redémarrage du 17/11/2026) y est actif. Sur la base de l'ancienne application CR VIF, sur le même serveur, un slot inactif retient déjà
-  46 Mo de WAL.
+  C'est le réglage de production (`max_slot_wal_keep_size = -1`, relevé du 17/11/2026), où le slot `powersync_5_86e0`
+  est actif. Sur la base de l'ancienne application CR VIF, sur le même serveur, un slot inactif retient 46 Mo de WAL.
   Mesures : définir `max_slot_wal_keep_size` (le slot sera invalidé au-delà, PowerSync refera alors un snapshot
   complet) ; **supprimer les slots orphelins** après une perte de Mongo ou une désinstallation de PowerSync
   (`SELECT pg_drop_replication_slot('<nom>')` — les slots PowerSync sont préfixés `powersync_`) ; superviser :
@@ -775,5 +769,5 @@ CPU et mémoire du seul service PowerSync n'a pas été mesurée (ordre de grand
 12. `issuer` et `telemetry` de `powersync-config.yaml` sont sans effet ; `PS_JWT_SECRET` inutilisé.
 13. La déconnexion ne purge pas la base locale ; la purge (menu Aide) détruit aussi les écritures non envoyées.
 14. Les routes d'envoi PDF lisent PostgreSQL alors que le PDF est construit sur les données locales.
-15. `pictures` est synchronisée intégralement pour tous les utilisateurs.
+15. `pictures` (vide en production) est synchronisée intégralement pour tous les utilisateurs.
 16. Un import POP forcé provoque le re-téléchargement du référentiel par tous les clients.

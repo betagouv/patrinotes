@@ -105,7 +105,7 @@ Détails ([index.ts](../packages/backend/src/index.ts)) :
 
 1. **Chargement de l'environnement** ([envVars.ts](../packages/backend/src/envVars.ts#L7-L11)) : charge `../../.env` (ou `../../.env.test` si `NODE_ENV=test`) **relativement au répertoire courant**, c'est-à-dire la racine du dépôt quand on lance depuis `packages/backend`. Si le fichier n'existe pas (production en conteneur), seules les variables du processus comptent.
 2. **Validation zod** ([envVars.ts](../packages/backend/src/envVars.ts#L24-L63)) : toute variable obligatoire absente provoque une exception au chargement du module.
-3. **Service « no-service »** ([index.ts](../packages/backend/src/index.ts#L34-L39)) : une ligne `service` d'identifiant `no-service`, invisible (`visible=false`), est créée si elle manque. Elle servait aux comptes créés par l'ancienne route `/api/authenticate` (supprimée le 4/11/2026) ; le frontend affiche encore un choix de service obligatoire pour les comptes qui y sont rattachés.
+3. **Service « no-service »** ([index.ts](../packages/backend/src/index.ts#L34-L39)) : une ligne `service` d'identifiant `no-service`, invisible (`visible=false`), est créée si elle manque. Elle sert aux comptes anciens qui n'ont pas de service ; le frontend leur affiche un choix de service obligatoire.
 4. **Import POP optionnel** si `FORCE_REFETCH_POP=true` (voir §8).
 5. **Fastify** écoute sur `0.0.0.0:${PORT}`.
 
@@ -181,7 +181,7 @@ Légende « Auth » : **Public** = aucun contrôle ; **Jeton** = en-tête `Autho
 | POST | `/api/refresh-token` | Public | Corps `{refreshToken}`. *Refresh grant* Keycloak. 401 « Session expirée » si Keycloak refuse |
 | POST | `/api/send-reset-password` | Public | Corps `{email}`. Génère un lien de réinitialisation valable 24 h et l'envoie par courriel |
 | POST | `/api/reset-password` | Public | Corps `{temporaryLink,newPassword}`. Vérifie le lien, change le mot de passe dans Keycloak, invalide le lien |
-| POST | `/api/change-service` | Jeton | Corps `{service_id}`. Change le service de l'utilisateur sans autre vérification que l'existence du service (choix assumé, décision du 4/11/2026), **journalise le changement** dans `transactions` (`op = CHANGE_SERVICE`, ancien et nouveau service), puis remplace ses départements (`user_dept`) |
+| POST | `/api/change-service` | Jeton | Corps `{service_id}`. Change le service de l'utilisateur sans autre vérification que l'existence du service (choix assumé de l'équipe), **journalise le changement** dans `transactions` (`op = CHANGE_SERVICE`, ancien et nouveau service), puis remplace ses départements (`user_dept`) |
 | GET | `/api/created-at` | Jeton | Date de création du compte (`internal_user.createdAt`), `null` si absente |
 
 ### 4.3 Données de référence — [staticDataRoutes.ts](../packages/backend/src/routes/staticDataRoutes.ts), [stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)
@@ -221,6 +221,7 @@ Le contrôle ([attachmentAccess.ts](../packages/backend/src/features/attachmentA
 | POST | `/api/pdf/state-report` | Jeton | **Envoi d'un constat d'état** (alertes, validation éventuelle, rapport groupé) : voir §6.5. Réservé à qui peut modifier le constat |
 | GET | `/api/pdf/state-report` | Jeton | Query `stateReportId`. PDF courant (`state_report.attachment_id`) en base64. Un autre service n'y a accès que si le monument est dans l'un de ses départements (403 sinon). Erreur 500 (et non 404) si absent |
 | POST | `/api/pdf/state-report/log-download` | Jeton | Corps `{stateReportId}`. Trace un téléchargement dans `constat_pdf_download` |
+| POST | `/api/pdf/state-report/share-link` | Jeton | Corps `{stateReportId, pdfPath}`. Crée un **lien court public** (90 jours) vers un PDF de constat déjà déposé sur S3, pour le bouton « Copier le lien » de l'écran du PDF. `pdfPath` doit être sous `<stateReportId>/` (400 sinon). Même règle d'accès que `GET /api/pdf/state-report` |
 
 ### 4.7 Validation des constats — [validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts)
 
@@ -249,6 +250,8 @@ Il n'existe **aucune route** pour promouvoir un administrateur, supprimer un uti
 
 ### 4.10 Fiches monument — [upRoutes.ts](../packages/backend/src/routes/upRoutes.ts), [monumentAlertRoutes.ts](../packages/backend/src/routes/monumentAlertRoutes.ts)
 
+Ces deux routes sont présentes dans `development`, pas encore déployées en production.
+
 | Méthode | Chemin | Auth | Rôle et logique notable |
 | --- | --- | --- | --- |
 | GET | `/api/up/monument` | Jeton | Query `reference` (Mérimée). Arbre des **unités patrimoniales** du monument, ou `null` s'il n'est pas découpé. Lu dans l'API Dataspace (une requête pour la racine, puis une par niveau), mis en cache dans `up_cache` (`UP_CACHE_TTL_HOURS`). Si l'API ne répond pas, le cache périmé est servi ; sans cache, **502** « service des unités patrimoniales indisponible ». En mode `mock`, les données viennent de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json) |
@@ -272,7 +275,7 @@ Règles de calcul cachées des statistiques :
 - Les documents `disabled = true` (suppression logique) sont exclus partout.
 - Un service est **UDAP** si son identifiant contient `udap`, **CRMH** s'il contient `crmh` (recherche `ilike` sur `service.id`, et non sur le nom). Un « déploiement » = un service de ce type ayant au moins un constat.
 - Statistiques UDAP par département : **seul le premier département** de `service.dept_numbers` est pris en compte.
-- **Abandon** : document créé il y a plus de **21 jours** sans PDF. Pour les constats, critère `attachment_id IS NULL` ; pour les comptes-rendus, critère sur la colonne historique `pdf IS NULL` (et non `attachment_id`). *À confirmer : cette différence est-elle voulue ?*
+- **Abandon** : document créé il y a plus de **21 jours** sans PDF. Pour les constats, critère `attachment_id IS NULL` ; pour les comptes-rendus, critère sur la colonne `pdf IS NULL`. La pièce jointe d'un constat et le PDF d'un compte-rendu sont la même notion (le document envoyé) : la différence de colonne n'est pas une incohérence.
 - **Utilisateur actif** sur la période : a envoyé au moins un document (table `sent_email` ou `state_report_sent_email`).
 - Le suivi des téléchargements n'existe que depuis l'introduction de `constat_pdf_download` ; l'API renvoie `downloadTrackingSince` pour l'indiquer.
 
@@ -302,14 +305,14 @@ Code mort dans `UploadService` : `uploadAttachment`, `addPDFToReport` (qui const
 
 L'identifiant pivot entre Keycloak et la base métier est **l'adresse de courriel** (claim `email`), et non l'identifiant Keycloak (`sub`) :
 
-- `getUserFromToken` vérifie le jeton puis cherche `user.email = <claim email>` avec une **égalité stricte, sensible à la casse** ([authService.ts](../packages/backend/src/services/authService.ts#L113-L119)).
+- `getUserFromToken` vérifie le jeton puis cherche `user.email` égal au claim `email` **normalisé** (espaces retirés, minuscules, `normalizeEmail` de [email.ts](../packages/backend/src/features/email.ts)) ([authService.ts](../packages/backend/src/services/authService.ts)).
 - Le résultat est enrichi de la ligne `service` complète (`user.service`).
 - L'identifiant local `user.id` est un **UUID v7** généré par le backend.
 
 Conséquences cachées :
 
-- Keycloak met les courriels en minuscules. Si un utilisateur s'inscrit avec des majuscules, `user.email` est stocké tel que saisi : le jeton (en minuscules) ne retrouve plus l'utilisateur et toutes les routes renvoient 403. *Comportement de Keycloak à confirmer sur l'instance cible.*
-- `/api/login-user` recherche l'utilisateur local avec le courriel **saisi**. Un compte Keycloak sans ligne `user` provoque une erreur 500 (`populateService(undefined)`).
+- Les courriels sont stockés en minuscules et sans espaces (`user`, `internal_user`, `whitelist`). La même normalisation s'applique à l'inscription, à la connexion, à la liste blanche (ajout par l'administration et contrôle à l'inscription) et à la demande de réinitialisation du mot de passe : la casse saisie n'a pas d'effet.
+- `/api/login-user` recherche l'utilisateur local avec le courriel saisi, normalisé. Un compte Keycloak sans ligne `user` provoque une erreur 500 (`populateService(undefined)`).
 - `/api/refresh-token` peut renvoyer `user: null` si la ligne locale a disparu. Le schéma de réponse exige un objet : *comportement exact à confirmer (probable erreur 500)*.
 
 ### 6.2 Point d'entrée PowerSync `/api/upload-data`
@@ -341,12 +344,14 @@ flowchart TD
 Règles et constats importants :
 
 1. **Journal d'audit systématique** : chaque opération, même refusée ou en échec, est d'abord copiée dans la table `transactions` (données complètes en JSON, utilisateur, horodatage). Cette table grossit sans limite et contient des données personnelles (voir [05](05-authentification-securite.md)). La colonne `transactions.error` n'est jamais renseignée.
-2. **Contrôle d'accès par table** (depuis le 4/11/2026, PR #86) : [syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts) liste **les seules tables modifiables** ; toute autre table (`whitelist`, `internal_user`, `user_dept`, `transactions`, `attachment_redirection`, `constat_validation`…) est refusée avant toute requête. Pour chaque table, la politique fixe :
+2. **Contrôle d'accès par table** : [syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts) liste **les seules tables modifiables** ; toute autre table (`whitelist`, `internal_user`, `user_dept`, `transactions`, `attachment_redirection`, `constat_validation`…) est refusée avant toute requête. Pour chaque table, la politique fixe :
    - les **opérations** permises (par exemple `user` et `service` : `PATCH` seulement ; `suggested_email` : `DELETE` seulement) ;
    - les **colonnes** acceptées (celles du schéma client, vérifié par un test) ; une colonne inconnue fait refuser l'opération ;
    - les **colonnes serveur** (`service_id`, auteur, `attachment_id`, `pdf_size`, `validation_status`, `sent_at`…), forcées par le serveur à la création et ignorées en modification ;
    - les **colonnes figées** après création (document parent, `user.service_id`, `service.dept_numbers`) ;
-   - la **règle de droit** : la ligne doit être du service de l'utilisateur ; un document (compte-rendu, constat, alerte de fiche) n'est modifiable que par son auteur, son rédacteur (compte-rendu) ou une personne à qui l'auteur a donné **délégation** ; ses lignes filles suivent le droit du document. `user` : son propre profil ; `service` : son propre service (tout membre, décision du 4/11/2026) ; `delegation` : ses propres délégations, vers un collègue du même service.
+   - la **règle de droit** : la ligne doit être du service de l'utilisateur ; un document (compte-rendu, constat, alerte de fiche) n'est modifiable que par son auteur, son rédacteur (compte-rendu) ou une personne à qui l'auteur a donné **délégation** ; ses lignes filles suivent le droit du document. `user` : son propre profil ; `service` : son propre service (tout membre, choix de l'équipe) ; `delegation` : ses propres délégations, vers un collègue du même service.
+   - **Constat verrouillé** ([syncService.ts](../packages/backend/src/services/syncService.ts)) : dès qu'un constat a un PDF (`attachment_id` non nul), sauf si le validateur l'a refusé, toute écriture sur lui ou ses lignes filles (parties visitées, alertes, pièces jointes) est refusée. Seul `disabled` reste modifiable (suppression). C'est la même règle que la lecture seule de l'interface.
+   - **Réglages utilisateur** : une seule ligne `user_settings` par couple (utilisateur, service). Un `PUT` ou un `PATCH` venant d'un autre appareil est appliqué à la ligne existante au lieu d'en créer une nouvelle.
 3. **Pas de validation métier fine** : `data` reste de type `Any` ; seuls les noms de colonnes sont contrôlés, les valeurs sont filtrées par les contraintes PostgreSQL.
 4. **Erreurs et refus silencieux** : une erreur SQL **ou un refus de droits** renvoie **HTTP 200** avec `{success:false}` (choix explicite : un 4xx bloquerait la file du client). Le client ne regarde pas ce champ et retire l'opération de sa file : l'écriture est **perdue** côté serveur. PowerSync renvoie ensuite l'état serveur, ce qui annule la modification locale. Traces : la ligne `transactions` (sans l'erreur), un journal `debug` et, pour un refus, un message Sentry « Écriture de synchronisation refusée » (table, opération, identifiants, motif).
 5. **Transaction par opération seulement** : chaque opération est appliquée dans sa propre transaction SQL, mais les opérations d'une même transaction PowerSync (`tx_id`) restent appliquées une par une. Un échec partiel est possible.
@@ -375,13 +380,13 @@ sequenceDiagram
 Règles cachées :
 
 - **Le compte Keycloak est créé avec `username = nom affiché`** (« Prénom Nom ») et `firstName = nom` ; `lastName` n'est pas renseigné. *À confirmer : avec `registrationEmailAsUsername` actif dans le realm, Keycloak peut remplacer le username par le courriel ; sinon deux homonymes produiraient un conflit 409.*
-- Si une ligne `user` existe déjà pour ce courriel (par exemple créée par l'ancienne route `/api/authenticate`), elle est **mise à jour** et son `id` est conservé.
+- Si une ligne `user` existe déjà pour ce courriel (compte ancien), elle est **mise à jour** et son `id` est conservé.
 - Si l'étape locale échoue après la création Keycloak, le compte Keycloak reste orphelin (pas de compensation).
 - Le mot de passe n'est **pas validé côté backend** : seules la politique du realm Keycloak et le formulaire (8 caractères, majuscule, minuscule, chiffre, caractère spécial) s'appliquent.
 - `changeService` ([userService.ts](../packages/backend/src/services/userService.ts)) : chaque changement est tracé dans `transactions` (`type = user`, `op = CHANGE_SERVICE`, `data = {from, to}`). `service.dept_numbers` est une **liste de numéros de départements séparés par des virgules**. Les lignes `user_dept` de l'utilisateur sont remplacées par cette liste. Ces lignes pilotent la synchronisation des données POP (monuments et objets des départements du service). **Si le service n'a pas de `dept_numbers`, les anciens départements sont conservés**, ce qui laisse des données POP d'un ancien service.
 - Les paramètres utilisateur `user_settings` sont indexés par **(utilisateur, service)** : changer de service fait « perdre » les paramètres (dont la validation par un tiers) jusqu'au retour dans le service d'origine.
 
-**Réinitialisation du mot de passe** ([userService.ts](../packages/backend/src/services/userService.ts#L37-L91)) : le lien est un UUID v4 aléatoire stocké **haché en MD5** dans `internal_user.temporaryLink`, valable 24 h et à usage unique. Le nouveau mot de passe est poussé dans Keycloak via l'API d'administration (`temporary: false`). La recherche se fait dans `internal_user` : un utilisateur sans `internal_user` ne peut pas réinitialiser son mot de passe par ce biais.
+**Réinitialisation du mot de passe** ([userService.ts](../packages/backend/src/services/userService.ts#L37-L91)) : c'est le parcours de réinitialisation en service, la plupart des agents se connectant par courriel et mot de passe. Le lien est un UUID v4 aléatoire stocké **haché en MD5** dans `internal_user.temporaryLink`, valable 24 h et à usage unique. Le nouveau mot de passe est poussé dans Keycloak via l'API d'administration (`temporary: false`). La recherche se fait dans `internal_user` : un utilisateur sans `internal_user` ne peut pas réinitialiser son mot de passe par ce biais.
 
 ### 6.4 Envoi d'un compte-rendu (`POST /api/pdf/report`)
 
@@ -398,13 +403,15 @@ Le PDF est généré **dans le navigateur**, déposé par le navigateur sur S3 v
 
 ```mermaid
 flowchart TD
-    S["POST /api/pdf/state-report"] --> A["state_report_attachment et state_report.attachment_id = pdfPath"]
+    S["POST /api/pdf/state-report"] --> VE{"needValidation sans adresse de validateur ?"}
+    VE -- oui --> VX["409, rien n'est envoyé"]
+    VE -- non --> A["state_report_attachment et state_report.attachment_id = pdfPath"]
     A --> R["Destinataires en minuscules, plus l'expéditeur"]
     R --> AL{"alerts_sent déjà vrai ?"}
     AL -- non --> AL2["Pour chaque alerte should_send : courriel aux destinataires obligatoires et complémentaires, photos en ligne"]
     AL2 --> AL3["alerts_sent = true"]
     AL -- oui --> V
-    AL3 --> V{"needValidation et validation activée dans user_settings ?"}
+    AL3 --> V{"needValidation ?"}
     V -- oui --> V1["constat_validation pending, jeton 7 jours"]
     V1 --> V2["Courriel au validateur, validation_status = pending"]
     V2 --> V3["Renvoie un lien court"]
@@ -420,10 +427,10 @@ Règles cachées :
 - **Rapport groupé** (MH complexe) : quand le constat porte un `rapport_id`, le PDF contient tous les constats actifs du rapport, et l'envoi les marque tous (`getGroupedStateReports`). Si la liste envoyée par le client ne correspond plus au rapport en base, l'envoi est refusé (409 « Le rapport a changé »).
 - **Les alertes ne partent qu'une seule fois** par constat (`state_report.alerts_sent`) et **avant** toute validation : un constat soumis à validation, puis refusé, a déjà déclenché ses alertes.
 - Destinataires d'une alerte = `mandatory_emails` (format sérialisé, décodé par `deserializeMandatoryEmails` de `@patrinotes/pdf`) ∪ `additional_emails`, sans doublon, en minuscules. Les photos jointes sont celles qui ne sont ni dépréciées ni ignorées ; leur type est forcé à `image/png`. L'échec d'une alerte est journalisé et envoyé à Sentry mais **n'interrompt pas** l'envoi.
-- La validation n'est déclenchée que si les trois conditions sont réunies : `needValidation` dans la requête, `user_settings.validation_enabled` et `user_settings.validation_email` pour le **couple (utilisateur, service courant)**.
+- **Envoi sous couvert** : quand la requête porte `needValidation`, le serveur prend l'adresse du validateur dans `user_settings` du **couple (utilisateur, service courant)** si la validation y est activée et l'adresse valide, sinon l'adresse `validationEmail` transmise par le navigateur (sa copie locale des réglages peut ne pas être encore synchronisée). Sans adresse valide, l'envoi est refusé (409) **avant tout effet** (pièce jointe, alertes, courriels) : un constat demandé sous couvert ne part jamais directement. Si plusieurs lignes de réglages existent, celle qui active la validation est prise en priorité.
 - En mode validation, les destinataires sont mémorisés dans `constat_validation.recipients` et le courriel final part à l'acceptation. `suggested_email` n'est pas alimenté dans ce cas.
 - Dans le parcours sans validation, **deux** liens courts sont créés (un pour le courriel, un renvoyé à l'appelant).
-- Le texte des courriels annonce un lien « valable 1 mois », alors que le lien court expire à **90 jours** et que l'URL présignée envoyée après acceptation d'une validation expire à **7 jours**.
+- Le lien court expire à **90 jours**. Le texte des courriels annonce encore un lien « valable 1 mois » ; sa correction en « 90 jours » est en cours. L'URL présignée envoyée après acceptation d'une validation expire à **7 jours**.
 
 ### 6.6 Courriels
 
@@ -451,14 +458,15 @@ Il n'y a **ni file d'attente ni nouvelle tentative** : l'envoi est synchrone dan
 
 Défini sur le plugin `/api` ([router.ts](../packages/backend/src/router.ts#L58-L69)) :
 
-- Toute erreur est écrite sur `console.error` et envoyée à Sentry avec **seulement la méthode et le modèle de route** (ni corps, ni paramètres, depuis le 4/11/2026, PR #83).
+- Toute erreur est écrite sur `console.error` et envoyée à Sentry avec **seulement la méthode et le modèle de route** (ni corps, ni paramètres).
 - `AppError(status, message)` ([errors.ts](../packages/backend/src/features/errors.ts)) → réponse `{error: message}` avec le statut voulu. Le frontend affiche `error.data.error`.
 - Toute autre erreur → **500** `{error: "Une erreur s'est produite"}`, avec `stack` et `message` en plus si `NODE_ENV=development`.
 
 Conséquences cachées :
 
 - Les **erreurs de validation TypeBox** de Fastify ne sont pas des `AppError` : un corps invalide produit une **500** et non une 400. *À confirmer par un test.*
-- Les routes de validation lèvent des `AppError` depuis le 4/11/2026 (PR #84) : lien inconnu → 404, lien expiré → 410. Auparavant, des objets littéraux `{statusCode}` donnaient une 500, et la page de validation recevait `{}` (schéma de réponse `Type.Any()` lu par Fastify 4 comme un objet vide). Le piège demeure : **un schéma de réponse `Type.Any()` vide la réponse** ; `GET /api/pdf/state-report` en a encore un mais renvoie une chaîne, qui n'est pas concernée.
+- Les routes de validation lèvent des `AppError` : lien inconnu → 404, lien expiré → 410.
+- Piège : **un schéma de réponse `Type.Any()` vide la réponse** (Fastify 4 le lit comme un objet vide). `GET /api/pdf/state-report` en a un mais renvoie une chaîne, qui n'est pas concernée.
 - `AppError` n'hérite pas d'`Error` (pas de pile d'appel dans Sentry).
 - La route `/attachment/:id` est hors du plugin `/api` : ses erreurs inattendues suivent le format par défaut de Fastify.
 
@@ -471,7 +479,7 @@ Conséquences cachées :
 
 ### 7.3 Sentry
 
-[sentry.ts](../packages/backend/src/features/sentry.ts) : initialisé seulement si `NODE_ENV !== "development"` **et** `SENTRY_DSN` est défini. Depuis le 4/11/2026 (PR #83) : 10 % des transactions, `sendDefaultPii: false`, pas de fil d'Ariane console, et un filtre `beforeSend` qui retire le corps, les cookies et la chaîne de requête, l'utilisateur, et masque toute clé ressemblant à un mot de passe, un jeton, un secret, un courriel ou des destinataires. Les messages informatifs envoyés à chaque courriel ont été supprimés ; seuls restent les exceptions et le message de refus d'écriture de synchronisation (§6.2).
+[sentry.ts](../packages/backend/src/features/sentry.ts) : initialisé seulement si `NODE_ENV !== "development"` **et** `SENTRY_DSN` est défini. 10 % des transactions, `sendDefaultPii: false`, pas de fil d'Ariane console, et un filtre `beforeSend` qui retire le corps, les cookies et la chaîne de requête, l'utilisateur, et masque toute clé ressemblant à un mot de passe, un jeton, un secret, un courriel ou des destinataires. Sentry ne reçoit que les exceptions et le message de refus d'écriture de synchronisation (§6.2).
 
 ---
 
@@ -486,14 +494,13 @@ Il n'existe **aucune tâche planifiée** (ni cron, ni file de tâches) dans le b
 | --- | --- | --- | --- |
 | Immeubles | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv` (séparateur `|`) | `pop_immeubles` | Upsert par lots de 500 sur `reference` (`id` = `reference`), **toujours exécuté** |
 | Objets | `…/POP/palissy.csv` | `pop_objets` | **Ignoré si la table contient déjà une ligne** : pour réimporter, il faut la vider |
-| Images | Pages HTML `https://pop.culture.gouv.fr/notice/<merimee/palissy>/<référence>` (*scraping*) | `pop_images` | Lots de 50, pause de 100 ms entre notices, **première image seulement** ; HTTP 400 ignoré ; dépend de la structure HTML de POP (`.swiper-slide`) |
+| Images (abandonné, voir ci-dessous) | Pages HTML `https://pop.culture.gouv.fr/notice/<merimee/palissy>/<référence>` (*scraping*, accepté par l'équipe POP) | `pop_images` | Lots de 50, pause de 100 ms entre notices, **première image seulement** ; HTTP 400 ignoré ; dépend de la structure HTML de POP (`.swiper-slide`) |
 
 Détails cachés de l'import ([pop.ts](../packages/backend/src/features/data/pop.ts), [KyselyBatchWriter.ts](../packages/backend/src/features/data/KyselyBatchWriter.ts)) :
 
 - Les en-têtes CSV sont mis en minuscules et seules les colonnes existant dans la table (introspection) sont conservées.
 - Doublons de référence dans un même lot : seule la première occurrence est gardée.
-- Images : les immeubles dont `last_image_check_at` est `NULL` ne sont **jamais** sélectionnés (la condition `< hier` exclut `NULL`), contrairement aux objets. *À confirmer : est-ce voulu ?*
-- L'appel `initPopImages()` est commenté dans le démarrage normal : les images ne sont importées que par la commande manuelle.
+- Images : la récupération automatique des photos POP (`last_image_check_at`) est **abandonnée**. Le code reste mais est inutilisé (l'appel `initPopImages()` est commenté au démarrage) ; l'équipe prévoit d'afficher les images par le protocole **IIIF**. L'équipe POP a accepté la récupération de ses pages et l'affichage direct de ses photos.
 - [_merimee.ts](../packages/backend/src/features/data/_merimee.ts) (préfixe `_`) est un ancien import depuis une instance *datasette* de Collectif Objets ; il n'est plus appelé et sa variable `COLLECTIF_OBJETS_DATASETTE_URL` est commentée.
 
 ---
@@ -513,7 +520,7 @@ flowchart LR
 - `client:json` lance `vite-node ./src/index.ts --create-only` : `initFastify()` est construit, `fastify.swagger()` est sérialisé dans `openapi.json` **du répertoire courant** (`packages/backend`), puis le processus s'arrête. Toutes les variables d'environnement obligatoires doivent être présentes (validation zod), mais aucune connexion à la base n'est ouverte : le pool `pg` est paresseux et `initEmptyService` n'est pas appelé. *À confirmer en pratique.*
 - `client:ts` lance `typed-openapi ./packages/backend/openapi.json --output ./packages/frontend/src/api.gen.ts`.
 - Côté frontend, [api.ts](../packages/frontend/src/api.ts) enveloppe le client généré : ajout automatique du jeton (avec rafraîchissement préalable si nécessaire), sauf pour `unauthenticatedApi`. Les types `RouterInputs` et `RouterOutputs` sont dérivés du fichier généré.
-- `openapi.json` et `api.gen.ts` sont **commités**, mais **ne sont plus cohérents** : `api.gen.ts` contient `/api/monument-alert/send`, absent d'`openapi.json`, et les deux décrivent encore `/api/authenticate`, supprimée. Le frontend dérive le type `AuthUser` de cette route ([api.ts](../packages/frontend/src/api.ts)) : régénérer le client sans corriger ce type casse la compilation. Il n'y a aucun contrôle en CI : oublier `pnpm client:generate` après une modification de route ne casse pas le build, mais donne des types faux côté frontend.
+- `openapi.json` et `api.gen.ts` sont **commités** et correspondent aux routes du backend. Le frontend dérive le type `AuthUser` de la réponse de `/api/login-user` ([api.ts](../packages/frontend/src/api.ts)). Il n'y a aucun contrôle en CI : oublier `pnpm client:generate` après une modification de route ne casse pas le build, mais donne des types faux côté frontend.
 - Les routes sans schéma de réponse (`/api/upload/attachment`, `/api/upload/attachment/size`, `/attachment/:id`) sont typées `unknown`. Les composants de schéma ne sont pas factorisés (`Schemas` vide).
 
 ---
@@ -541,13 +548,13 @@ Le paquet déclare `exports: "./src/router.ts"` : les tests importent directemen
 | --- | --- | --- |
 | 1 | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DATAGOUV_API` sont obligatoires au démarrage mais inutilisées | `envVars.ts` |
 | 2 | Sans `NODE_ENV=development` explicite, le backend se comporte comme en production (liste blanche, Sentry) | `envVars.ts` |
-| 3 | Le service `no-service` est créé au démarrage (héritage de `/api/authenticate`, supprimée) | `index.ts` |
-| 4 | L'identité locale est retrouvée par **courriel exact** (sensible à la casse) | `authService.ts` |
+| 3 | Le service `no-service` est créé au démarrage (comptes anciens sans service) | `index.ts` |
+| 4 | L'identité locale est retrouvée par **courriel** (normalisé en minuscules), et non par l'identifiant Keycloak | `authService.ts` |
 | 5 | `/api/upload-data` : tables, colonnes et droits contrôlés, mais refus et erreurs SQL renvoient 200 et les écritures sont perdues sans message | `syncPolicy.ts`, `syncService.ts` |
 | 6 | Chaque écriture client est copiée intégralement dans `transactions` (sans purge) | `syncService.ts` |
 | 7 | Les erreurs de validation de schéma deviennent des 500 | `router.ts` |
 | 8 | Un jeton absent ou invalide → 403, jamais 401 (sauf `refresh-token` → 401) | `authMiddleware.ts` |
-| 9 | Liens courts publics, valables 90 jours, alors que le courriel annonce « 1 mois » | `attachmentRedirectRoutes.ts`, `mail.ts` |
+| 9 | Liens courts publics, valables 90 jours (le texte « 1 mois » des courriels est en cours de correction) | `attachmentRedirectRoutes.ts`, `mail.ts` |
 | 10 | Validation d'un constat : jeton de 7 jours, mais page consultable sans limite une fois traitée | `validationRoutes.ts` |
 | 11 | Constat en validation : déjà compté comme « envoyé » (attachment_id renseigné) ; alertes déjà parties | `pdfRoutes.tsx` |
 | 12 | L'expéditeur est toujours ajouté aux destinataires | `pdfRoutes.tsx` |

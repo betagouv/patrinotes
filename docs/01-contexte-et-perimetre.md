@@ -57,7 +57,7 @@ Chaque utilisateur est rattaché à **un seul service** à la fois (table `servi
 
 > Règle cachée : ce type est **déduit d'une sous-chaîne du nom** du service (`includes("crmh")`, puis `"drac"`, puis `"udap"`). Renommer un service peut donc changer les libellés de l'interface.
 
-Un compte sans service porte la valeur spéciale `service_id = "no-service"` (anciens comptes créés par une route d'authentification supprimée le 4/11/2026 ; l'inscription actuelle affecte un service). Une fenêtre bloquante « Sélectionnez votre service » s'affiche alors à chaque chargement, tant qu'aucun service n'est choisi ([UdapSelection.tsx](../packages/frontend/src/features/UdapSelection.tsx#L11-L21)).
+Des comptes anciens n'ont pas de service : ils portent la valeur spéciale `service_id = "no-service"` (l'inscription actuelle affecte toujours un service). Une fenêtre bloquante « Sélectionnez votre service » s'affiche alors à chaque chargement, tant qu'aucun service n'est choisi ([UdapSelection.tsx](../packages/frontend/src/features/UdapSelection.tsx#L11-L21)).
 
 ### 3.3 Destinataires externes (non utilisateurs)
 
@@ -135,7 +135,7 @@ stateDiagram-v2
 Libellés affichés (badges de [StateReportListItem.tsx](../packages/frontend/src/features/state-report/StateReportListItem.tsx#L153-L160)) : « Brouillon », « En attente de validation », « Envoyé », « Refusé ». Le CR n'a que deux statuts, « Brouillon » et « Envoyé ».
 
 > Règles cachées :
-> - Un CE est **en lecture seule** dès qu'un PDF a été produit (`attachment_id` non nul), **sauf** si le validateur l'a refusé (`validation_status = "declined"`). Dans l'interface, seul le **créateur** peut le modifier ([utils.ts](../packages/frontend/src/features/state-report/utils.ts)) ; le serveur accepte aussi les personnes à qui le créateur a donné délégation.
+> - Un CE est **en lecture seule** dès qu'un PDF a été produit (`attachment_id` non nul), **sauf** si le validateur l'a refusé (`validation_status = "declined"`). Dans l'interface, seul le **créateur** peut le modifier ([utils.ts](../packages/frontend/src/features/state-report/utils.ts)) ; le serveur accepte aussi les personnes à qui le créateur a donné délégation. Le serveur applique la même règle de lecture seule : il refuse toute modification d'un constat envoyé, sauf sa suppression.
 > - Un CR peut être modifié par son créateur, par la personne indiquée comme rédacteur, ou par tout collègue qui a reçu une **délégation** du créateur ([useCanEditReport.tsx](../packages/frontend/src/hooks/useCanEditReport.tsx)).
 > - La « suppression » est une **suppression logique** (`disabled = 1`), alors que la fenêtre de confirmation annonce une action « irréversible ».
 > - Un nouveau CE est créé **masqué** (`disabled = 1`). Il n'apparaît dans les listes qu'une fois un monument choisi. Un constat abandonné avant ce choix reste invisible dans la base.
@@ -172,7 +172,7 @@ Le bouton « Créer un constat d'état » de l'accueil crée directement le cons
 
 ### 5.2 Parcours : consulter une fiche monument ou objet
 
-Depuis le 10/11/2026, l'accueil propose une **recherche de monument** (édifices, objets mobiliers, ou carte). Elle ouvre :
+L'accueil propose une **recherche de monument** (édifices, objets mobiliers, ou carte). Cette recherche et les fiches sont présentes dans `development`, pas encore déployées en production. Elle ouvre :
 
 - la **fiche MH** (`/monument/<référence Mérimée>`) : informations POP corrigées par le service, constats antérieurs (tous services, en ligne), alertes et annotations, objets mobiliers, arbre de l'ensemble patrimonial avec le nombre de constats par UP ;
 - la **fiche UP** (même page, paramètre `up`) pour une unité patrimoniale d'un MH complexe ;
@@ -189,7 +189,7 @@ Depuis une fiche, l'agent peut **créer un constat** prérempli, **compléter le
 
 ### 5.4 Parcours : validation d'un constat (validateur externe)
 
-Dans « Mon compte », l'agent active « Envoyer les constats sous couvert de validation » et renseigne le nom, le prénom et le courriel du validateur. À l'envoi, l'interrupteur « Envoi sous-couvert » est activé par défaut. Le validateur reçoit un lien vers `/constat-validation/<jeton>`. Sans se connecter, il y consulte le PDF puis choisit « Oui, envoyer le constat » ou « Non, ne pas envoyer le constat ». Un commentaire est proposé en cas de refus. Un lien expiré renvoie le code HTTP 410 ; un lien inconnu ou déjà traité est rejeté ([constat-validation.$token.tsx](../packages/frontend/src/routes/constat-validation.$token.tsx)).
+Dans « Mon compte », l'agent active « Envoyer les constats sous couvert de validation » et renseigne le nom, le prénom et le courriel du validateur. À l'envoi, l'interrupteur « Envoi sous-couvert » est activé par défaut. Le validateur reçoit un lien vers `/constat-validation/<jeton>`. Sans se connecter, il y consulte le PDF puis choisit « Oui, envoyer le constat » ou « Non, ne pas envoyer le constat ». Un commentaire est proposé en cas de refus. Un constat demandé « sous couvert » ne part jamais directement : si le serveur ne trouve pas l'adresse du validateur, il refuse l'envoi. Un lien expiré renvoie le code HTTP 410 ; un lien inconnu ou déjà traité est rejeté ([constat-validation.$token.tsx](../packages/frontend/src/routes/constat-validation.$token.tsx)).
 
 D'après les tests de bout en bout ([constat-with-alerts.spec.ts](../tests/constat-with-alerts.spec.ts)), les alertes partent **dès la première soumission** et ne sont **pas renvoyées** après un refus du validateur.
 
@@ -204,7 +204,7 @@ D'après les tests de bout en bout ([constat-with-alerts.spec.ts](../tests/const
 | Administration | `/admin` | Gestion de la liste blanche et des utilisateurs, avec export. L'accès est vérifié côté serveur (`/api/admin/me`, refus HTTP 403) |
 | Statistiques | `/stats` | Indicateurs publics, plus des indicateurs détaillés pour les administrateurs |
 
-> Point d'attention pour l'homologation : **tout membre d'un service** peut modifier les paramètres du service depuis `/service` (en-têtes PDF, courriels des alertes, clauses, services instructeurs). Ni l'interface ni le serveur ne vérifient de rôle : c'est un choix (décision du 4/11/2026). Le serveur limite la modification au **propre service** de l'agent (voir [05 §8](05-authentification-securite.md)).
+> Point d'attention pour l'homologation : **tout membre d'un service** peut modifier les paramètres du service depuis `/service` (en-têtes PDF, courriels des alertes, clauses, services instructeurs). Ni l'interface ni le serveur ne vérifient de rôle : c'est un choix de l'équipe. Le serveur limite la modification au **propre service** de l'agent (voir [05 §8](05-authentification-securite.md)).
 
 ## 6. Fonctionnalités transverses
 

@@ -41,7 +41,7 @@ flowchart TD
 - pnpm est installé globalement en version **10.12.4** ([Dockerfile#L16](../Dockerfile#L16)).
 
 > [!WARNING]
-> **Version de pnpm.** Depuis le 4/11/2026 (PR #84), le [package.json](../package.json) racine déclare `"packageManager": "pnpm@10.12.4"`, la même version que le Dockerfile. La CI de tests (`pnpm/action-setup@v4` sans version explicite) la lit dans ce champ ; sans lui, corepack prenait une version plus récente qui ignore la configuration pnpm du `package.json`. Seul le [README](../README.md#L6) indique encore `pnpm = 8.4.0` : à corriger.
+> **Version de pnpm.** Le [package.json](../package.json) racine déclare `"packageManager": "pnpm@10.12.4"`, la même version que le Dockerfile. La CI de tests (`pnpm/action-setup@v4` sans version explicite) la lit dans ce champ ; sans lui, corepack prendrait une version plus récente qui ignore la configuration pnpm du `package.json`. Seul le [README](../README.md#L6) indique `pnpm = 8.4.0` : à corriger.
 
 > [!NOTE]
 > **Version de Node.** L'image fige `node:20.11` ; le README demande `node >= 20` ; la CI E2E utilise Node 20. Node 20 n'est plus maintenu depuis avril 2026 : la montée vers Node 22 ou 24 LTS est à faire avant ou pendant le transfert.
@@ -122,7 +122,7 @@ Règles cachées :
 - **Le tag est le nom du composant (`backend` / `frontend`) et non une version.** Chaque `push` écrase le tag précédent : il n'existe **aucun tag immuable** (SHA de commit, numéro de version). Revenir en arrière suppose de connaître le *digest* de l'image précédente ou de reconstruire un ancien commit (voir § 8).
 - Aucun test, *lint* ni contrôle de type n'est exécuté avant la publication : un commit qui casse le build échoue la CI, mais un commit qui compile et casse le fonctionnement est publié.
 - Aucun scan de vulnérabilités ni signature d'image.
-- La CI ne déclenche pas le déploiement. D'après le relevé de production du 17/11/2026, **tous les déploiements sont lancés à la main depuis l'interface Coolify** (ni webhook, ni appel d'API, pas de déploiement automatique). Coolify enregistre `commit = HEAD` : **la version déployée n'est tracée nulle part**. Les images ne portent pas non plus le label `org.opencontainers.image.revision`. Les correctifs de sécurité des PR #83 et #86 ont été repris sur `main` et déployés le 17/11/2026 vers 22 h 50.
+- La CI ne déclenche pas le déploiement. D'après le relevé de production du 17/11/2026, **tous les déploiements sont lancés à la main depuis l'interface Coolify** (ni webhook, ni appel d'API, pas de déploiement automatique). Coolify enregistre `commit = HEAD` : **la version déployée n'est tracée nulle part**. Les images ne portent pas non plus le label `org.opencontainers.image.revision`.
 - La branche `compte-rendu-vif` porte l'ancien nom du produit. Elle alimente la préproduction abandonnée de l'ancienne application (§ 6.0, résidus), dont le backend tourne en boucle d'erreur.
 
 ### 3.2 Tests de bout en bout — `tests.yml`
@@ -200,7 +200,7 @@ Même pile que le développement, avec les différences suivantes ([docker-compo
 | `client_auth.audience` | `["account"]` | Audience par défaut des jetons d'accès Keycloak. |
 | `telemetry.disable_telemetry_sharing` | `false` | **La télémétrie anonyme vers JourneyApps est active** (flux sortant). |
 
-En production, les deux fichiers ont été **déposés à la main** dans `/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/` et montés dans `/config/` (relevé de production du 17/11/2026). `powersync-config.yaml` (modifié le 26/04/2026) ne diffère du dépôt que par `jwks_uri` et `issuer`, qui pointent sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`. `sync-config.yaml` est celui de `main`, pas celui de `development` : voir [08](08-synchronisation-hors-ligne.md) § 3. Il a été mis à jour à la main le 17/11/2026 (contrôle de service sur les flux de pièces jointes), dans Coolify et dans le fichier monté, puis PowerSync redémarré. La CI ne déploie pas ces fichiers.
+En production, les deux fichiers ont été **déposés à la main** dans `/data/coolify/services/a4koswck4g8ggcwc4wsw4oc8/` et montés dans `/config/` (relevé de production du 17/11/2026). `powersync-config.yaml` ne diffère du dépôt que par `jwks_uri` et `issuer`, qui pointent sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`. `sync-config.yaml` est celui de `main`, pas celui de `development` : voir [08](08-synchronisation-hors-ligne.md) § 3. Il est tenu à jour à la main, dans Coolify et dans le fichier monté. La CI ne déploie pas ces fichiers.
 
 ## 5. Reliquats d'hébergements antérieurs
 
@@ -239,7 +239,7 @@ Un seul serveur porte tout : tous les domaines ci-dessous y pointent. Trois proj
 | --- | --- | --- |
 | Frontend | `ghcr.io/betagouv/patrinotes-main:frontend` (`vite preview`, port 4173) — `https://app.patrinotes.beta.gouv.fr` | `patrinotes-development:frontend` — `https://patrinotes.incubateur.net` |
 | Backend | `patrinotes-main:backend` (port 3002) — `https://api.patrinotes.beta.gouv.fr` | `patrinotes-development:backend` — `https://api.patrinotes.incubateur.net` |
-| PowerSync | `journeyapps/powersync-service:latest` (= **1.20.5**, port 3003), redémarré le 17/11/2026 — `https://sync.patrinotes.beta.gouv.fr` | 1.20.5 — `https://sync.patrinotes.incubateur.net` |
+| PowerSync | `journeyapps/powersync-service:latest` (= **1.20.5**, port 3003) — `https://sync.patrinotes.beta.gouv.fr` | 1.20.5 — `https://sync.patrinotes.incubateur.net` |
 | MongoDB (PowerSync) | `mongo:7.0` (7.0.31, *replica set* `rs0`), interne | idem |
 | PostgreSQL applicatif | `postgres:17-alpine` (**17.8**), interne | PostgreSQL 17.6, interne |
 | Keycloak | `quay.io/keycloak/keycloak:`**`26.7.2`** + sa propre instance `postgres:16-alpine` (projet `keycloak-auth`) — `https://auth.patrinotes.beta.gouv.fr`, realm **`patrinotes`** | Keycloak partagé avec la production (à séparer) |
@@ -367,10 +367,10 @@ sequenceDiagram
     Note over CF: frontend : génération env.js puis vite preview
 ```
 
-- Il n'y a ni numéro de version publié, ni changelog, ni étiquette Git de version. Le relevé de production du 17/11/2026 a retrouvé la version déployée (`6b0d588`, images du 16/11/2026) seulement par recoupement des dates de construction.
-- Les modifications de `sync-config.yaml` et `powersync-config.yaml` sont à recopier à la main sur le serveur, puis PowerSync à redémarrer : ce fut le cas le 17/11/2026, et la livraison des fiches l'exigera de nouveau (migrations 0037 à 0039, nouvelles tables publiées).
-- **`main` et `development` divergent** depuis le 17/11/2026 : les correctifs de sécurité y sont présents par des commits différents (repris un à un sur `main`, avec une adaptation des règles d'écriture au schéma de `main`). La prochaine fusion de `development` vers `main` devra résoudre ces doublons. La version visible côté client est `window.APP_VERSION` (version de `packages/frontend/package.json` + horodatage du build).
-- Les clients PWA récupèrent la nouvelle version au chargement suivant en ligne (service worker en `autoUpdate`, navigation *network-first*, rechargement forcé si un *chunk* JS ancien est introuvable — commits `a58df3d`, `50d14ce`).
+- Il n'y a ni numéro de version publié, ni changelog, ni étiquette Git de version. La version déployée ne se retrouve que par recoupement des dates de construction des images. La version visible côté client est `window.APP_VERSION` (version de `packages/frontend/package.json` + horodatage du build).
+- Les modifications de `sync-config.yaml` et `powersync-config.yaml` sont à recopier à la main sur le serveur, puis PowerSync à redémarrer. La livraison des fiches l'exigera (migrations 0037 à 0039, nouvelles tables publiées).
+- `development` est en avance sur `main` : il contient tout `main`, plus les fiches monument MH / UP / objet, la recherche de monument sur l'accueil et des corrections qui évitent des pertes de données côté client.
+- Les clients PWA récupèrent la nouvelle version au chargement suivant en ligne (service worker en `autoUpdate`, navigation *network-first*, rechargement forcé si un *chunk* JS ancien est introuvable).
 - Avant de livrer une migration touchant des tables synchronisées : vérifier la publication `powersync`, le schéma client [AppSchema.ts](../packages/frontend/src/db/AppSchema.ts) et les règles [sync-config.yaml](../powersync/sync-config.yaml) ([README](../README.md#L107-L113)).
 
 ### 8.2 Retour arrière

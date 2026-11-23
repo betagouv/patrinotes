@@ -134,7 +134,7 @@ flowchart TB
 
 > Règles cachées :
 > - `AuthProvider` affiche un indicateur de chargement plein écran tant que les jetons n'ont pas été relus depuis IndexedDB (`apiStore.loaded`).
-> - Au premier lancement (pas de clé `crvif/version` dans `localStorage`), `AuthProvider` **supprime l'ancienne authentification `crvif/auth`**, positionne `crvif/update-popup` et `crvif/version = "1"`, puis **recharge la page**. Il s'agit d'une migration héritée de Compte-rendu VIF ([AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx#L57-L65)). Vider le `localStorage` (y compris par « Réinitialiser les données locales ») provoque donc un rechargement supplémentaire.
+> - Au premier lancement (pas de clé `crvif/version` dans `localStorage`), `AuthProvider` **supprime l'ancienne authentification `crvif/auth`**, positionne `crvif/update-popup` et `crvif/version = "1"`, puis **recharge la page**. Il s'agit d'une migration héritée de Compte-rendu VIF ([AuthContext.tsx](../packages/frontend/src/contexts/AuthContext.tsx#L57-L65)). Vider le `localStorage` provoque donc un rechargement supplémentaire ; « Réinitialiser les données locales » conserve `crvif/version` pour l'éviter.
 > - `setupPowersync()` est appelé **même sans utilisateur connecté**. `fetchCredentials` lève alors « No token found » et PowerSync réessaie (à confirmer : bruit dans les journaux Sentry).
 
 ## 5. Configuration d'exécution (env.js)
@@ -204,6 +204,7 @@ Le routage utilise **TanStack Router** avec des routes basées sur des fichiers 
 | `/accessibilite`, `/mentions-legales`, `/politique-confidentialite`, `/cgu` | fichiers du même nom | public | Pages légales (voir [01](01-contexte-et-perimetre.md#7-pages-légales-et-accessibilité)) |
 
 > Règles cachées :
+> - Les routes `/monument` et `/objet` et la recherche de monument de l'accueil sont présentes dans `development`, pas encore déployées en production.
 > - Les gardes sont des **composants**, pas des `beforeLoad` : `EnsureUser` redirige vers `/connexion` si `auth.user` est nul ; `RedirectIfUser` redirige vers `?redirect=` ou `/`. Les routes de constat n'ont pas de garde explicite : sans session, la base locale est vide et la page renvoie vers `/`. La sécurité réelle repose sur les règles de synchronisation et sur le backend.
 > - L'URL porte l'état d'écran (`step`, `mode`, `tab`). Une valeur invalide est silencieusement remplacée par la valeur par défaut (`validateSearch`).
 > - L'étape `documents` existe dans le schéma mais n'a **aucun écran** : `ButtonsSwitch` renvoie `null` et le sommaire ne la propose pas.
@@ -242,7 +243,7 @@ Points de code : [ApiStore.ts](../packages/frontend/src/ApiStore.ts), [Connector
 > - Les jetons sont stockés dans **IndexedDB** (base `auth`, magasin `access`, clés `accessToken`, `refreshToken`, `expiresAt`, `user` en JSON). Ils sont donc lisibles par tout script exécuté sur l'origine : le risque XSS est à prendre en compte dans l'homologation.
 > - Les appels concurrents se partagent **une seule promesse de rafraîchissement** (`refreshPromise`), pour ne pas faire tourner deux fois le même *refresh token*.
 > - Seul un **401** sur `/api/refresh-token` déconnecte l'utilisateur. Une erreur réseau (hors ligne) laisse la session intacte : l'agent continue à travailler localement.
-> - `get80PercentOfTokenLifespan` existe mais n'est plus utilisée : le rafraîchissement n'intervient qu'**après** l'expiration (`expiresAt < now`).
+> - `expiresAt` est calculé par le backend à **80 %** de la durée de vie du jeton ; le client rafraîchit dès que cette date est dépassée (`expiresAt < now`). La fonction frontend `get80PercentOfTokenLifespan` est importée par le connecteur mais jamais appelée.
 > - La déconnexion (`useLogout`) efface les jetons mais **ne vide pas la base SQLite locale** : les données du service restent sur l'appareil jusqu'à la prochaine connexion ou une réinitialisation (point d'attention sur un poste partagé).
 > - L'utilisateur stocké (`auth.user`, avec son `service`) est une **copie figée au moment de la connexion**. `useLiveUser` et `useLiveService` la complètent avec les lignes synchronisées `user` et `service` ; `useRefreshUser` la met à jour après une modification du service.
 > - La page `/stats` appelle `ofetch` directement avec le jeton (et non le client typé), et la page de validation appelle le backend sans jeton.
@@ -269,7 +270,7 @@ Tables locales (27) : `report`, `service`, `user`, `delegation`, `pdf_snapshot`,
 
 | Flux | Abonnement | Contenu côté client |
 | --- | --- | --- |
-| `global_stream` | automatique | Clauses nationales (`ALL`), `pictures` |
+| `global_stream` | automatique | Clauses nationales (`ALL`), `pictures` (table vide en production, supprimable) |
 | `service_stream` | automatique | Service, collègues (id, nom, service), services instructeurs, clauses du service, courriels envoyés, courriels suggérés, corrections des fiches |
 | `user_stream` | automatique | Délégations, `pdf_snapshot`, `user_settings` de l'utilisateur |
 | `reports_stream` | automatique | Tous les CR, CE, parties visitées, alertes, alertes et annotations des fiches **du service** |
@@ -307,8 +308,9 @@ Points de code : [SyncForm.tsx](../packages/frontend/src/components/SyncForm.tsx
 > - `getDiff` ignore les valeurs non primitives (objets, tableaux) : seuls les champs scalaires sont synchronisés.
 > - **Fusion des modifications distantes** ([useFormWithFocus.tsx](../packages/frontend/src/hooks/useFormWithFocus.tsx)) : quand une ligne change en base (autre appareil, collègue), chaque champ modifié est réinjecté dans le formulaire, **sauf** le champ qui a le focus et qui a déjà été modifié localement. Côté serveur, la règle est **le dernier qui écrit gagne**, sans détection de conflit (test `sync.spec.ts`).
 > - `uploadData` envoie les opérations **une par une**, dans l'ordre. Il **ignore** les opérations sans données qui ne sont pas des suppressions. Une erreur HTTP sur une opération bloque le lot, que PowerSync réessaiera ; un refus du serveur (droits) arrive en HTTP 200 et n'est pas vu (voir [08](08-synchronisation-hors-ligne.md)).
-> - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation puis affiche une erreur au lieu de perdre la modification (corrigé le 4/11/2026, PR #85, dans `development`, pas encore en production).
-> - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées**, et non plus aux alertes chargées à l'ouverture du panneau : une alerte créée pendant la session perdait son commentaire et ses destinataires, et n'était donc pas envoyée (corrigé le 4/11/2026, PR #85, dans `development`, pas encore en production).
+> - Le profil (`/compte`) et les paramètres du service (`/service`) passent par `updateSyncedRow` ([db.ts](../packages/frontend/src/db/db.ts)) : juste après l'inscription, si la ligne n'est pas encore arrivée, l'écran attend la première synchronisation puis affiche une erreur au lieu de perdre la modification.
+> - Les alertes d'un constat sont enregistrées en comparant le formulaire aux **lignes stockées** : une alerte créée pendant la session garde son commentaire et ses destinataires.
+> - Ces deux comportements, comme le champ photo vidé dès la sélection (§ 11.4), sont présents dans `development`, pas encore déployés en production.
 > - Les identifiants sont générés **côté client** : `report-<uuid v4>` pour les CR (le préfixe `report-` est une convention historique), uuid v4 pour les CE et les parties visitées, uuid v7 pour les pièces jointes et les délégations.
 > - Un CE est créé avec `disabled = 1` et `version = 2`. Il ne devient visible (`disabled = 0`) qu'au choix d'un monument ([ImmeubleAutocomplete.tsx](../packages/frontend/src/features/ImmeubleAutocomplete.tsx#L71-L93)). Un CR est créé directement avec `disabled = 0`.
 > - **Suppression = `disabled = 1`** (suppression logique), pour les CR comme pour les CE.
@@ -438,7 +440,7 @@ Le téléchargement local appelle `POST /api/pdf/state-report/log-download` pour
 
 ### 11.2 `fiche/` (fiches MH, UP et objet mobilier)
 
-Ajoutées le 10/11/2026. Elles lisent surtout la base locale, donc fonctionnent en grande partie hors ligne.
+Présentes dans `development`, pas encore déployées en production. Elles lisent surtout la base locale, donc fonctionnent en grande partie hors ligne.
 
 | Fiche | Contenu | Sources |
 | --- | --- | --- |
@@ -454,7 +456,7 @@ Actions depuis une fiche :
 
 > Règles cachées :
 > - Une référence Mérimée qui n'a pas le format `PA00000000` (monuments de test) est quand même retrouvée depuis une fiche objet, qui accepte aussi une URL POP dans le champ du monument.
-> - Les images des objets d'une fiche ont leur propre **clé de cache** TanStack Query (`fiche-objets-images`). Elles partageaient auparavant celle de l'étape Informations du constat, dont la requête est différente (corrigé le 10/11/2026).
+> - Les images des objets d'une fiche ont leur propre **clé de cache** TanStack Query (`fiche-objets-images`), distincte de celle de l'étape Informations du constat, dont la requête est différente.
 > - Les unités patrimoniales ne sont **pas disponibles hors ligne** (message dans la fiche).
 
 ### 11.3 `report/` et routes `/edit`, `/pdf` (compte-rendu)
@@ -492,7 +494,7 @@ flowchart LR
 
 Paramètres de la file de pièces jointes ([db.ts](../packages/frontend/src/db/db.ts)) : synchronisation **toutes les 30 s**, téléchargement automatique des fichiers référencés, conservation de **100** fichiers archivés. L'observation porte sur les cinq tables `*_attachment` (dont `monument_alert_attachment`) avec `is_deprecated = 0`. L'extension est déduite de l'identifiant, avec `jpg` par défaut.
 
-Le champ fichier est vidé **dès la sélection** : rechoisir le même fichier pendant un envoi ou après un échec ne faisait rien (corrigé le 4/11/2026, PR #85, dans `development`, pas encore en production).
+Le champ fichier est vidé **dès la sélection** : on peut rechoisir le même fichier pendant un envoi ou après un échec.
 
 > Pièges :
 > - `getAttachmentUrl` force le type `image/png`, quel que soit le format réel.
@@ -513,8 +515,8 @@ Le champ fichier est vidé **dès la sélection** : rechoisir le même fichier p
 > Règles cachées :
 > - Centre par défaut de la carte de choix du monument : géolocalisation (délai de 8 s), sinon le dernier monument de l'utilisateur, sinon le dernier monument du service, sinon **le ministère de la Culture à Paris** (2,3376 ; 48,8637).
 > - Ordre de repli des coordonnées du plan de situation : coordonnées saisies → coordonnées WGS84 de la notice POP → géocodage de l'adresse POP → géocodage de l'adresse saisie ([planSituationAttachment.ts](../packages/frontend/src/features/state-report/planSituationAttachment.ts#L16-L50)).
-> - **Aucune carte ne fonctionne hors ligne** : les tuiles ne sont pas mises en cache. `PlanSituationOfflineError` est levée seulement si l'appareil est **réellement** hors ligne. Depuis le 10/11/2026, une tuile IGN en erreur n'interrompt plus la capture, le délai est de 30 s, et les autres échecs ont leur propre message et partent dans Sentry (avant, toute erreur de carte s'affichait comme « hors ligne »).
-> - Le géocodage du plan de situation interroge la Géoplateforme avec une adresse nettoyée : elle refusait les adresses POP de plus de 200 caractères ou commençant par une ponctuation.
+> - **Aucune carte ne fonctionne hors ligne** : les tuiles ne sont pas mises en cache. `PlanSituationOfflineError` est levée seulement si l'appareil est **réellement** hors ligne. Une tuile IGN en erreur n'interrompt pas la capture, le délai est de 30 s, et les autres échecs ont leur propre message et partent dans Sentry.
+> - Le géocodage du plan de situation interroge la Géoplateforme avec une adresse nettoyée, car elle refuse les adresses de plus de 200 caractères ou commençant par une ponctuation (cas de certaines adresses POP).
 > - [address.tsx](../packages/frontend/src/features/address.tsx) n'encode pas la requête dans l'URL, contrairement à `geocode`.
 
 ### 11.6 `text-editor/`
@@ -529,8 +531,7 @@ Le champ fichier est vidé **dès la sélection** : rechoisir le même fichier p
 
 ### 11.8 `menu/`, `auth/`, `chips/` et composants transverses
 
-- **Menu** ([menuMachine.tsx](../packages/frontend/src/features/menu/menuMachine.tsx)) : états `closed`, `main`, `help`, `clauses`. L'aide propose « **Réinitialiser les données locales** » ([HelpMenu.tsx](../packages/frontend/src/features/menu/HelpMenu.tsx#L17-L29)) : `disconnectAndClear` de PowerSync, désinscription des SW, `localStorage.clear()`, suppression de **toutes** les bases IndexedDB, puis rechargement.
-  > Danger : les modifications **pas encore envoyées** au serveur (file CRUD, photos pas encore téléversées) sont **perdues définitivement**, sans avertissement. La suppression des jetons déconnecte aussi l'utilisateur.
+- **Menu** ([menuMachine.tsx](../packages/frontend/src/features/menu/menuMachine.tsx)) : états `closed`, `main`, `help`, `clauses`. L'aide propose « **Réinitialiser les données locales** » ([HelpMenu.tsx](../packages/frontend/src/features/menu/HelpMenu.tsx), [resetLocalData.ts](../packages/frontend/src/features/menu/resetLocalData.ts)). L'action est refusée hors ligne (l'application ne pourrait ni recharger ni télécharger les données). La fenêtre de confirmation indique le nombre de modifications et de photos pas encore envoyées, qui seront perdues. Ensuite : arrêt de la file de pièces jointes, `disconnectAndClear` de PowerSync, vidage des bases ouvertes (fichiers, jetons) et suppression des autres bases IndexedDB, vidage du `localStorage` (sauf `crvif/version` et `scheme`), désinscription des SW, suppression des caches, puis rechargement de l'onglet et des autres onglets ouverts. Chaque étape a un délai maximal et un échec n'empêche pas les suivantes. La suppression des jetons déconnecte l'utilisateur.
 - **Puces / clauses** ([useChipOptions.tsx](../packages/frontend/src/features/chips/useChipOptions.tsx)) : clés `decision` (choix unique), `contacts-utiles`, `bonnes-pratiques`, `type-espace` (choix multiples). Une clause du service **remplace** la clause `ALL` de même `key` et même `value`. Les `\n` littéraux du texte sont convertis en `<br />`. Dans les messages d'information, `**texte**` est converti en gras (`transformBold`, inséré avec `dangerouslySetInnerHTML`).
 - **Paramètres du service** ([service.tsx](../packages/frontend/src/routes/service.tsx#L105-L129)) : les intitulés d'en-tête du PDF sont découpés en lignes **selon le nombre de mots** : bloc Marianne = 1 mot / 3 mots / reste ; DRAC = 4 mots / reste ; service = 3 mots / reste. Les retours à la ligne saisis sont remplacés par des espaces.
 - **Exports ZIP** (« Télécharger mes CE / CR ») : un appel `GET /api/pdf/state-report` ou `/api/pdf/report` **par document**, en base64 dans un ZIP construit dans le navigateur. Ils nécessitent le réseau ; l'interface conseille le Wi-Fi.
@@ -551,7 +552,7 @@ Le champ fichier est vidé **dès la sélection** : rechoisir le même fichier p
 
 ## 13. Supervision et mesure d'audience
 
-- **Sentry** : actif seulement en production et si `VITE_SENTRY_DSN` est défini. Depuis le 4/11/2026 (PR #83) : 10 % des transactions, `sendDefaultPii: false`, ni journaux ni fil d'Ariane console, et `beforeSend` qui retire l'utilisateur et masque les clés de type mot de passe, jeton, courriel ou destinataires. Les `console.log` qui exposaient les jetons et les opérations de synchronisation ont été retirés du connecteur. L'`ErrorBoundary` racine envoie les erreurs React avec la pile des composants.
+- **Sentry** : actif seulement en production et si `VITE_SENTRY_DSN` est défini. 10 % des transactions, `sendDefaultPii: false`, ni journaux ni fil d'Ariane console, et `beforeSend` qui retire l'utilisateur et masque les clés de type mot de passe, jeton, courriel ou destinataires. Le connecteur PowerSync n'écrit ni les jetons ni les opérations de synchronisation dans la console. L'`ErrorBoundary` racine envoie les erreurs React avec la pile des composants.
 - **Matomo** : `stats.beta.gouv.fr`, `siteId` 123, suivi des liens activé par `enableLinkTracking()` à chaque rendu d'`App`. La politique de confidentialité le déclare en mode « exempté ».
 - `TanStackDevtools` est monté dans l'arbre en permanence (sans effet visible en production, à confirmer).
 
@@ -604,19 +605,18 @@ Récapitulatif des points qui surprennent un nouvel arrivant. Les détails figur
 5. « Supprimer » est une **suppression logique** (`disabled = 1`), malgré le message « irréversible ».
 6. La **duplication d'un CR** conserve `attachment_id` : la copie paraît « Envoyée ».
 7. Les **photos ne sont disponibles hors ligne** que pour les documents ouverts en ligne sur l'appareil.
-8. **« Réinitialiser les données locales »** efface les modifications non synchronisées sans avertissement.
+8. **« Réinitialiser les données locales »** efface les modifications non synchronisées (la fenêtre de confirmation en donne le nombre) et n'est pas disponible hors ligne.
 9. La **déconnexion ne vide pas** la base locale.
 10. **Rechargement automatique** à chaque nouvelle version, sans confirmation.
 11. Une **alerte « Sécurité »** a toujours une adresse « Mairie » vide au départ (champ absent du service).
 12. Les **séparateurs dans les colonnes texte** (`/`, `:`, `,`, `;`) ne sont pas échappés (§ 8.4).
 13. L'onglet de l'accueil vaut **`"all"`** par défaut alors que les onglets sont `my` et `service`.
-14. Sentry n'envoie que les exceptions, filtrées (depuis le 4/11/2026).
+14. Sentry n'envoie que les exceptions, filtrées.
 15. Les **fichiers S3 ne sont jamais supprimés** par le client (`deleteFile` vide), même quand la photo est supprimée ou remplacée.
 16. Les **en-têtes PDF** sont découpés en lignes selon le nombre de mots.
 17. Les constantes de `/stats` sont **écrites en dur** (1 102 agents, libellés « créés en 2026 », 46 000 immeubles).
-18. **Tout membre d'un service** peut modifier les paramètres du service (interface et serveur, décision du 4/11/2026).
-19. Un compte avec `service_id = "no-service"` affiche une fenêtre bloquante de choix du service (cas des anciens comptes créés par `/api/authenticate`, supprimée).
-20. Le type `AuthUser` est dérivé de `/api/authenticate` dans le client généré, alors que la route n'existe plus côté serveur ([api.ts](../packages/frontend/src/api.ts)).
+18. **Tout membre d'un service** peut modifier les paramètres du service (interface et serveur, choix de l'équipe).
+19. Un compte ancien sans service (`service_id = "no-service"`) affiche une fenêtre bloquante de choix du service.
 
 ## 17. Dette technique relevée
 
@@ -624,7 +624,7 @@ Récapitulatif des points qui surprennent un nouvel arrivant. Les détails figur
 - Ressources *a priori* inutilisées dans `public/` : `pdfjs/` (la visionneuse importe `pdfjs-dist` directement), `wa-sqlite-async.*`, `vite.svg`, une image « Tableau de bord mon compte rendu VIF (1).png ». Également des magasins IndexedDB hérités (`toSync`, `toUpload`, `uploadStatus`) et le fichier [service-worker.d.ts](../packages/frontend/src/service-worker.d.ts) marqué « DEPRECIATED » (à confirmer avant suppression).
 - Code mort ou commenté : `Layout.AppHeader` (code après le `return`), le bouton « Je donne mon avis » (Typeform), la génération manuelle du plan de situation, `get80PercentOfTokenLifespan`, l'abonnement `swEnv.js` jamais importé.
 - `index.html` déclare deux jeux de favicons et deux manifestes (DSFR `node_modules` et `/manifest.webmanifest`).
-- `@react-pdf/renderer` 3.x est encore déclaré dans le backend, alors que le rendu PDF se fait uniquement dans le navigateur (4.x) depuis le commit `fd87550`. C'est une dépendance morte à retirer. Voir [09](09-documents-pdf-cartes-emails.md).
+- `@react-pdf/renderer` 3.x est encore déclaré dans le backend, alors que le rendu PDF se fait uniquement dans le navigateur (4.x). C'est une dépendance morte à retirer. Voir [09](09-documents-pdf-cartes-emails.md).
 - Un effet de bord (génération et écriture du plan de situation) se trouve dans une `queryFn` TanStack Query.
 - Beaucoup de `@ts-ignore` et de `as any` autour des composants DSFR et MUI.
 - [packages/frontend/README.md](../packages/frontend/README.md) est le README générique du modèle Vite.

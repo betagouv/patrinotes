@@ -6,7 +6,7 @@ Source de vérité : [schema.ts](../packages/backend/src/db/schema.ts) (Drizzle)
 
 > Les informations ci-dessous viennent de la lecture du code de `development` et du relevé de production du 17/11/2026 (lecture seule de la base de production : publication, migrations, volumétrie). Les points déduits mais non vérifiés sur une base réelle sont signalés par « *à confirmer* ».
 >
-> **La production a 3 migrations de retard** : elle est sur `main` (migrations 0000 à 0036), sans les tables et colonnes des unités patrimoniales et des fiches (0037 à 0039).
+> **La production déploie `main`** (migrations 0000 à 0036). Les tables et colonnes des unités patrimoniales et des fiches (migrations 0037 à 0039) sont dans `development`, pas encore déployées en production.
 
 ---
 
@@ -471,7 +471,7 @@ Les identifiants sont générés **par le client** (navigateur, hors ligne) ou p
 
 Valeurs spéciales :
 
-- `no-service` : service technique créé automatiquement au démarrage du backend s'il n'existe pas ([index.ts#L34](../packages/backend/src/index.ts#L34)), avec `visible = false`. Il accueille les utilisateurs créés par le parcours OIDC avant qu'ils choisissent un service.
+- `no-service` : service technique créé automatiquement au démarrage du backend s'il n'existe pas ([index.ts#L34](../packages/backend/src/index.ts#L34)), avec `visible = false`. Des comptes anciens n'ont pas de service et y sont rattachés.
 - `ALL` (dans `clause_v2.service_id` seulement) : clause nationale, visible par tous les services.
 
 ---
@@ -498,8 +498,8 @@ Un service est une UDAP (unité départementale de l'architecture et du patrimoi
 | Table | Colonne | Sens |
 | --- | --- | --- |
 | `user` | `id`, `name` 🔒, `email` 🔒 (unique), `service_id`, `job` 🔒 (fonction déclarée) | Agent. **L'adresse électronique est la clé de jointure avec Keycloak et avec PowerSync** (`auth.parameter('email')`). |
-| `internal_user` | `email` 🔒, `role` (`user` ou `admin`), `temporaryLink` (empreinte MD5 du jeton de réinitialisation), `temporaryLinkExpiresAt` (+1 jour), `newsletter`, `createdAt` | Données de compte. `role = 'admin'` ouvre `/api/admin` ([adminMiddleware.ts](../packages/backend/src/routes/adminMiddleware.ts)). La colonne `password` a été supprimée en 0003 : l'authentification est déléguée à Keycloak. **Il n'y a une ligne `internal_user` que pour les comptes créés par le formulaire d'inscription**, pas pour ceux créés par le parcours OIDC. |
-| `whitelist` | `email` 🔒, `createdAt` | Adresses autorisées à s'inscrire. La comparaison est **sensible à la casse**. Le contrôle est **désactivé en développement** ([authService.ts#L336](../packages/backend/src/services/authService.ts#L336)). |
+| `internal_user` | `email` 🔒, `role` (`user` ou `admin`), `temporaryLink` (empreinte MD5 du jeton de réinitialisation), `temporaryLinkExpiresAt` (+1 jour), `newsletter`, `createdAt` | Données de compte. `role = 'admin'` ouvre `/api/admin` ([adminMiddleware.ts](../packages/backend/src/routes/adminMiddleware.ts)). La colonne `password` a été supprimée en 0003 : l'authentification est déléguée à Keycloak. La réinitialisation du mot de passe en service passe par cette table (jeton haché, 24 h, mot de passe poussé dans Keycloak). **Il n'y a une ligne `internal_user` que pour les comptes créés par le formulaire d'inscription** ; des comptes anciens n'en ont pas. |
+| `whitelist` | `email` 🔒, `createdAt` | Adresses autorisées à s'inscrire. La comparaison ignore la casse et les espaces. Le contrôle est **désactivé en développement** ([authService.ts](../packages/backend/src/services/authService.ts)). |
 | `user_dept` | `user_id`, `dept_number` | Départements couverts par l'agent. Recalculée par `changeService` : suppression puis réinsertion à partir de `service.dept_numbers`. Si le nouveau service n'a **aucun** département, les anciennes lignes **sont conservées** ([userService.ts#L22](../packages/backend/src/services/userService.ts#L22)). |
 
 ### 5.3 `delegation`, `user_settings`, `service_instructeurs`, `suggested_email`, `clause_v2`
@@ -522,7 +522,7 @@ Un service est une UDAP (unité départementale de l'architecture et du patrimoi
 
 `pdf_snapshot` contient le **brouillon HTML** du PDF modifié par l'utilisateur (`html`) et une copie JSON du CR (`report`). Il y a une ligne par couple (CR, utilisateur), supprimée puis recréée à chaque sauvegarde ([pdf.$reportId.tsx#L168](../packages/frontend/src/routes/pdf.$reportId.tsx#L168)).
 
-`pictures` est l'**ancienne** table des photos de CR, remplacée par `report_attachment`. Elle est toujours synchronisée **en entier vers tous les utilisateurs** (`SELECT * FROM pictures` dans `global_stream`). *À confirmer* : son contenu en production, et sa suppression si elle n'est plus utile.
+`pictures` est l'**ancienne** table des photos de CR, remplacée par `report_attachment`. Elle est toujours synchronisée **en entier vers tous les utilisateurs** (`SELECT * FROM pictures` dans `global_stream`). Elle est vide en production et peut être supprimée.
 
 ### 5.5 `state_report` — constat d'état (CE)
 
@@ -605,7 +605,7 @@ Chaque opération envoyée par un navigateur (`POST /api/upload-data`) est **d'a
 
 - La table **grossit sans limite** et contient une copie de toutes les données saisies, donc des données personnelles. Aucune purge n'est prévue.
 - La colonne `error` n'est **jamais remplie**. En cas d'échec SQL, le backend répond HTTP 200 avec `{ success: false }`. Le navigateur considère alors le lot comme traité ([Connector.ts](../packages/frontend/src/db/Connector.ts)) : **l'écriture est perdue sans erreur visible**. Seul `transactions.data` permet de la retrouver.
-- Depuis le 4/11/2026, seules les tables listées dans [syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts) sont modifiables, avec contrôle du service, de l'auteur et des colonnes ; `transactions` elle-même ne l'est plus. Voir [05 §8](05-authentification-securite.md).
+- Seules les tables listées dans [syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts) sont modifiables, avec contrôle du service, de l'auteur et des colonnes ; `transactions` elle-même ne l'est pas. Voir [05 §8](05-authentification-securite.md).
 - Le backend y inscrit aussi chaque **changement de service** (`type = user`, `op = CHANGE_SERVICE`, `data = {from, to}`).
 
 ### 7.2 `attachment_redirection` — liens courts des courriels
@@ -643,7 +643,7 @@ La publication est créée vide par [0_create-publication.sql](../db/init/0_crea
 | `state_report_attachment`, `visited_section_attachment`, `state_report_alert_attachment` | ✅ 0003/0004/0011 | `state_report_attachments_stream`, **à la demande** (`state_report_id` d'un CE du service) | ✅ | `is_deprecated = 0` |
 | `pop_immeubles`, `pop_objets` | ✅ 0001/0006 | `pop_stream` (départements de l'utilisateur) | ✅ | priorité 3 (la plus basse) |
 | `user_dept` | ✅ 0001 | utilisée comme **paramètre** de `pop_stream` | ❌ | |
-| `constat_validation` | ❌ **absente des migrations et de la publication de production** (relevé du 17/11/2026) | `reports_stream` (`id, state_report_id, status, service_id`) | ❌ | Règle sans effet : la table n'est pas répliquée : ajout manuel ?). |
+| `constat_validation` | ❌ **absente des migrations et de la publication de production** (relevé du 17/11/2026) | `reports_stream` (`id, state_report_id, status, service_id`) | ❌ | Règle sans effet tant que la table n'est pas répliquée (*à confirmer : ajout manuel à la publication ?*). |
 | `transactions` | ✅ 0000 | — | ✅ | publiée mais lue par aucun flux : chaque écriture passe inutilement dans la réplication ; jamais téléchargée |
 | `state_report_sent_email`, `pop_images` | ❌ | — | ✅ | toujours vides côté navigateur ; les images POP passent par l'API `/api/state-report/objets-images`. |
 | `internal_user`, `whitelist`, `attachment_redirection`, `constat_pdf_download`, `merimee`, `up_cache` | ❌ | — | ❌ | serveur uniquement |
@@ -686,7 +686,7 @@ Mesures du relevé de production du 17/11/2026. Base applicative : **719 Mo** (v
 | `state_report` | 1 214 | — | usage |
 | `state_report_attachment` | 952 | — | usage |
 | `user` / `service` | 261 / 118 | — | inscriptions |
-| `pop_images`, `pictures`, `merimee` | **0** | — | vides : la récupération des images n'a jamais tourné, les deux autres sont des vestiges |
+| `pop_images`, `pictures`, `merimee` | **0** | — | vides : la récupération automatique des images POP est abandonnée (l'équipe prévoit d'afficher les images via le protocole IIIF) ; `pictures` et `merimee` peuvent être supprimées |
 | Navigateur | — | — | toutes les notices POP des départements de l'agent, téléchargées au premier démarrage |
 
 Qualité des données POP : 42 immeubles et **4 541 objets** ont autre chose qu'une date dans `date_de_la_derniere_mise_a_jour` (texte d'une autre colonne, caractères mal encodés) : décalage de colonnes ou problème d'encodage à l'import (voir [12](12-exploitation-et-supervision.md) § 7.1).
