@@ -41,7 +41,9 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
 
   const duplicateMutation = useMutation({
     mutationFn: async () => {
-      const payload = omit(report, ["id", "createdAt", "pdf", "title", "createdByName"]);
+      // The copy is a draft: nothing of the original's sending (PDF, stored file, size) is carried over,
+      // otherwise it would show as sent until the next sync.
+      const payload = omit(report, ["id", "createdAt", "pdf", "attachment_id", "pdf_size", "title", "createdByName"]);
 
       return db
         .insertInto("report")
@@ -53,7 +55,9 @@ export const ReportActions = forwardRef<HTMLDivElement, { report: ReportWithUser
           redactedBy: user.name,
           redactedById: user.id,
           createdBy: user.id,
-          pdf: undefined,
+          pdf: null,
+          attachment_id: null,
+          pdf_size: null,
         })
         .execute();
     },
