@@ -46,8 +46,6 @@ export const PDF = () => {
   const navigate = useNavigate();
   const generatePdfMutation = useMutation({
     mutationFn: async ({ htmlString, recipients }: { htmlString: string; recipients: string }) => {
-      const { uploadUrl, pdfPath } = await api.post("/api/pdf/report/upload-url", { body: { reportId } });
-
       const pictures = (reportQuery.data?.pictures ?? []).map((p: any) => ({
         url: p.url,
         label: p.label,
@@ -64,6 +62,11 @@ export const PDF = () => {
           />
         ) as any,
       ).toBlob();
+
+      // the PDF size is signed in the upload URL
+      const { uploadUrl, pdfPath } = await api.post("/api/pdf/report/upload-url", {
+        body: { reportId, size: blob.size },
+      });
 
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",

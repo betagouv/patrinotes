@@ -250,10 +250,6 @@ export const constatPdfMutations = {
         validationEmail,
       }: SendConstatForm) => {
         const alertsToSend = alerts.filter((a) => selectedAlertIds.includes(a.id));
-        const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
-          body: { stateReportId: constatId },
-        });
-
         const blob = await pdf(
           React.createElement(StateReportPDFDocument, {
             htmlString: htmlString!,
@@ -261,6 +257,11 @@ export const constatPdfMutations = {
             service: service as any,
           }) as any,
         ).toBlob();
+
+        // the PDF size is signed in the upload URL
+        const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
+          body: { stateReportId: constatId, size: blob.size },
+        });
 
         const uploadResponse = await fetch(uploadUrl, {
           method: "PUT",

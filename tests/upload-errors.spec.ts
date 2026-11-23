@@ -117,29 +117,55 @@ test.describe("Upload robustness", () => {
     });
     expect((await reportResp.json()).success).toBe(true);
 
-    const filePath = `${reportId}/images/${Date.now()}.txt`;
+    const filePath = `${reportId}/images/${Date.now()}.jpg`;
     const content = "hello attachment round-trip";
+    const size = Buffer.byteLength(content);
+
+    // the type and size are checked before the URL is given (05 § 7)
+    const gifResp = await request.get(`${BACKEND_URL}/api/upload/attachment/presigned-url`, {
+      headers,
+      params: { filePath, contentType: "image/gif", size },
+    });
+    expect(gifResp.status()).toBe(400);
+    expect((await gifResp.json()).error).toBe("Format de fichier non accepté.");
+    const tooLargeResp = await request.get(`${BACKEND_URL}/api/upload/attachment/presigned-url`, {
+      headers,
+      params: { filePath, contentType: "image/jpeg", size: 20 * 1024 * 1024 + 1 },
+    });
+    expect(tooLargeResp.status()).toBe(400);
+    expect((await tooLargeResp.json()).error).toBe("Fichier trop volumineux (20 Mo maximum).");
+    const withoutSizeResp = await request.get(`${BACKEND_URL}/api/upload/attachment/presigned-url`, {
+      headers,
+      params: { filePath },
+    });
+    // refused by the route schema (answered 500 by the app's error handler, like any invalid request)
+    expect(withoutSizeResp.ok()).toBeFalsy();
 
     const presignedResp = await request.get(`${BACKEND_URL}/api/upload/attachment/presigned-url`, {
       headers,
-      params: { filePath },
+      params: { filePath, contentType: "image/jpeg", size },
     });
     expect(presignedResp.ok()).toBeTruthy();
     const { url } = await presignedResp.json();
 
-    const putResp = await request.put(url, { data: content });
+    // ...and signed in the URL: the storage refuses another size or another type
+    const biggerResp = await request.put(url, { data: content + "!", headers: { "Content-Type": "image/jpeg" } });
+    expect(biggerResp.status()).toBe(403);
+    const otherTypeResp = await request.put(url, { data: content, headers: { "Content-Type": "text/html" } });
+    expect(otherTypeResp.status()).toBe(403);
+
+    const putResp = await request.put(url, { data: content, headers: { "Content-Type": "image/jpeg" } });
     expect(putResp.ok()).toBeTruthy();
 
     const sizeResp = await request.get(`${BACKEND_URL}/api/upload/attachment/size`, { headers, params: { filePath } });
     expect(sizeResp.ok()).toBeTruthy();
-    const { size } = await sizeResp.json();
-    expect(size).toBe(Buffer.byteLength(content));
+    expect((await sizeResp.json()).size).toBe(size);
 
     const getResp = await request.get(`${BACKEND_URL}/api/upload/attachment`, { headers, params: { filePath } });
     expect(getResp.ok()).toBeTruthy();
     expect(await getResp.text()).toBe(content);
 
-    const unknownPath = `${reportId}/images/does-not-exist-${Date.now()}.txt`;
+    const unknownPath = `${reportId}/images/does-not-exist-${Date.now()}.jpg`;
     const missingGetResp = await request.get(`${BACKEND_URL}/api/upload/attachment`, {
       headers,
       params: { filePath: unknownPath },

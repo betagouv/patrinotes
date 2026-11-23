@@ -18,6 +18,7 @@ import { getPDFInMailName } from "@patrinotes/pdf";
 import { createAttachmentRedirection } from "../features/attachmentRedirection";
 import { canEditReport, canEditStateReport, findReport, findStateReport } from "../features/sync/syncPolicy";
 import { assertRecipientLimit } from "../features/recipients";
+import { assertUploadAllowed, PDF_TYPE } from "../features/uploadLimits";
 
 const debug = makeDebug("pdf-plugin");
 
@@ -47,7 +48,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     "/report/upload-url",
     {
       schema: {
-        body: Type.Object({ reportId: Type.String() }),
+        // size of the PDF, signed in the upload URL
+        body: Type.Object({ reportId: Type.String(), size: Type.Number() }),
         response: {
           200: Type.Object({ uploadUrl: Type.String(), pdfPath: Type.String() }),
         },
@@ -57,9 +59,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       const { reportId } = request.body;
       await assertCanEditReportIfStored(request.user!, reportId);
       const pdfPath = reportId + "/compte_rendu_" + Math.round(Date.now() / 1000) + ".pdf";
+      const { size } = assertUploadAllowed({ contentType: PDF_TYPE, size: request.body.size, accept: "pdf" });
       const uploadUrl = await request.services.upload.getPresignedUploadUrl({
         filePath: pdfPath,
-        contentType: "application/pdf",
+        contentType: PDF_TYPE,
+        contentLength: size,
       });
       return { uploadUrl, pdfPath };
     },
@@ -260,7 +264,8 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     "/state-report/upload-url",
     {
       schema: {
-        body: Type.Object({ stateReportId: Type.String() }),
+        // size of the PDF, signed in the upload URL
+        body: Type.Object({ stateReportId: Type.String(), size: Type.Number() }),
         response: {
           200: Type.Object({ uploadUrl: Type.String(), pdfPath: Type.String() }),
         },
@@ -270,9 +275,11 @@ export const pdfPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
       const { stateReportId } = request.body;
       await assertCanEditStateReportIfStored(request.user!, stateReportId);
       const pdfPath = stateReportId + "/constat_d_etat_" + Math.round(Date.now() / 1000) + ".pdf";
+      const { size } = assertUploadAllowed({ contentType: PDF_TYPE, size: request.body.size, accept: "pdf" });
       const uploadUrl = await request.services.upload.getPresignedUploadUrl({
         filePath: pdfPath,
-        contentType: "application/pdf",
+        contentType: PDF_TYPE,
+        contentLength: size,
       });
       return { uploadUrl, pdfPath };
     },

@@ -15,6 +15,7 @@ import Bowser from "bowser";
 import { LocalStorageAdapter } from "@powersync/web";
 import { last } from "pastable";
 import { api } from "../api";
+import { getUploadContentType } from "../features/upload/uploadLimits";
 
 const browser = Bowser.getParser(window.navigator.userAgent);
 const isFirefox = browser.getBrowser().name === "Firefox";
@@ -51,11 +52,13 @@ export const attachmentRemoteStorage = {
 
     return data;
   },
-  uploadFile: async (data: ArrayBuffer, attachment: { id: string }) => {
+  uploadFile: async (data: ArrayBuffer, attachment: { id: string; mediaType?: string }) => {
+    // the type (read from the bytes) and the size are checked by the server and signed in the URL
+    const contentType = getUploadContentType(data, attachment.mediaType);
     const { url } = await api.get("/api/upload/attachment/presigned-url", {
-      query: { filePath: attachment.id },
+      query: { filePath: attachment.id, contentType, size: data.byteLength },
     });
-    const response = await fetch(url, { method: "PUT", body: new Blob([data]) });
+    const response = await fetch(url, { method: "PUT", body: new Blob([data]), headers: { "Content-Type": contentType } });
     // Throwing keeps the attachment queued for upload: the attachment queue retries it on its next pass
     // instead of marking a file that never reached S3 as synced.
     if (!response.ok) {

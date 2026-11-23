@@ -11,6 +11,7 @@ import path from "node:path";
 import { NoSuchKey } from "@aws-sdk/client-s3";
 import { v4 } from "uuid";
 import { assertCanReadAttachment, assertCanUploadAttachment } from "../features/attachmentAccess";
+import { assertUploadAllowed } from "../features/uploadLimits";
 
 const debug = makeDebug("upload");
 const pump = util.promisify(pipeline);
@@ -22,15 +23,21 @@ export const uploadPlugin: FastifyPluginAsyncTypebox = async (fastify, _) => {
     "/attachment/presigned-url",
     {
       schema: {
-        querystring: Type.Object({ filePath: Type.String() }),
+        // the client gives the type and size of the file; they are checked, then signed in the URL
+        querystring: Type.Object({ filePath: Type.String(), contentType: Type.String(), size: Type.Number() }),
         response: { 200: Type.Object({ url: Type.String() }) },
       },
     },
     async (request, reply) => {
-      const { filePath } = request.query as any;
+      const { filePath, contentType, size } = request.query;
       if (!filePath) throw new AppError(400, "No filePath provided");
       await assertCanUploadAttachment(request.user, filePath);
-      const url = await request.services.upload.getPresignedUploadUrl({ filePath });
+      const file = assertUploadAllowed({ contentType, size });
+      const url = await request.services.upload.getPresignedUploadUrl({
+        filePath,
+        contentType: file.contentType,
+        contentLength: file.size,
+      });
       reply.send({ url });
     },
   );

@@ -43,10 +43,31 @@ export const checkStorage = async ({ abortSignal }: { abortSignal?: AbortSignal 
 };
 
 export class UploadService {
-  async getPresignedUploadUrl({ filePath, contentType }: { filePath: string; contentType?: string }) {
+  /**
+   * Upload URL for one file whose type and size were checked (assertUploadAllowed): both are signed, so the storage
+   * refuses (403) a body of another size or another Content-Type header.
+   */
+  async getPresignedUploadUrl({
+    filePath,
+    contentType,
+    contentLength,
+  }: {
+    filePath: string;
+    contentType: string;
+    contentLength: number;
+  }) {
     const key = addAttachmentPrefix(filePath);
-    const command = new PutObjectCommand({ Bucket: publicBucketUrl, Key: key, ContentType: contentType });
-    return getSignedUrl(presignClient as any, command as any, { expiresIn: 3600 });
+    const command = new PutObjectCommand({
+      Bucket: publicBucketUrl,
+      Key: key,
+      ContentType: contentType,
+      ContentLength: contentLength,
+    });
+    return getSignedUrl(presignClient as any, command as any, {
+      expiresIn: 3600,
+      // content-length is signed whenever set; content-type only when listed here
+      signableHeaders: new Set(["content-type"]),
+    });
   }
 
   async uploadAttachment({ buffer, filePath }: { buffer: Buffer; filePath: string }) {

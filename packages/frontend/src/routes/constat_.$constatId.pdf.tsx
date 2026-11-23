@@ -445,7 +445,7 @@ const DownloadMenu = ({
 
     const url = (async () => {
       const { uploadUrl, pdfPath } = await api.post("/api/pdf/state-report/upload-url", {
-        body: { stateReportId: constatId },
+        body: { stateReportId: constatId, size: blob.size },
       });
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",

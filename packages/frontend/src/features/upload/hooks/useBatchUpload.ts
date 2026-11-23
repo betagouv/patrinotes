@@ -4,6 +4,7 @@ import { attachmentQueue } from "../../../db/db";
 import { processImage } from "../UploadReportImage";
 import type { MinimalAttachment } from "../UploadImage";
 import { registerPendingUpload, unregisterPendingUpload } from "../pendingUploadsStore";
+import { UploadLimitError } from "../uploadLimits";
 
 export type BatchUploadProgress = { current: number; total: number };
 
@@ -16,6 +17,7 @@ export type BatchUpload = {
 };
 
 const errorMessageFor = (error: unknown): string => {
+  if (error instanceof UploadLimitError) return error.message;
   const message = error instanceof Error ? error.message : String(error);
   if (/mime|type|image/i.test(message)) {
     return "Ce fichier n'est pas une image valide.";

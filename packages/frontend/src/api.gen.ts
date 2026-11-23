@@ -207,7 +207,7 @@ export namespace Endpoints {
     method: "GET";
     path: "/api/upload/attachment/presigned-url";
     parameters: {
-      query: { filePath: string };
+      query: { filePath: string; contentType: string; size: number };
     };
     response: { url: string };
   };
@@ -227,7 +227,7 @@ export namespace Endpoints {
     method: "POST";
     path: "/api/pdf/report/upload-url";
     parameters: {
-      body: { reportId: string };
+      body: { reportId: string; size: number };
     };
     response: { uploadUrl: string; pdfPath: string };
   };
@@ -305,7 +305,7 @@ export namespace Endpoints {
     method: "POST";
     path: "/api/pdf/state-report/upload-url";
     parameters: {
-      body: { stateReportId: string };
+      body: { stateReportId: string; size: number };
     };
     response: { uploadUrl: string; pdfPath: string };
   };
@@ -452,7 +452,7 @@ export namespace Endpoints {
     parameters: {
       path: { token: string };
     };
-    response: {
+    response: Partial<{
       stateReport: Partial<{
         id: string | Schemas.null | Array<string | Schemas.null>;
         titre_edifice: string | Schemas.null | Array<string | Schemas.null>;
@@ -460,9 +460,9 @@ export namespace Endpoints {
         date_visite: string | Schemas.null | Array<string | Schemas.null>;
       }>;
       pdfUrl: string;
-      status?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-      comment?: string | Schemas.null | Array<string | Schemas.null> | undefined;
-    };
+      status: string | Schemas.null | Array<string | Schemas.null>;
+      decidedAt: string | Schemas.null | Array<string | Schemas.null>;
+    }>;
   };
   export type get_ApiconstatValidationTokenpdf = {
     method: "GET";

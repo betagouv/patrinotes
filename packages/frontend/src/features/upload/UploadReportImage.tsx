@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import imageCompression from "browser-image-compression";
+import { assertPhotoAllowed } from "./uploadLimits";
 import { Box, Stack, Typography } from "@mui/material";
 import { Flex } from "#components/ui/Flex.tsx";
 import { Badge, Button } from "#components/MUIDsfr.tsx";
@@ -279,7 +280,10 @@ export const processImage = async (file: File) => {
     };
 
     const compressedFile = await imageCompression(file, options);
-    return compressedFile.arrayBuffer();
+    const data = await compressedFile.arrayBuffer();
+    // same limits as the server, on the bytes that will be uploaded (after compression)
+    assertPhotoAllowed(data);
+    return data;
   } catch (error) {
     console.error("Error processing image:", error);
     throw error;
