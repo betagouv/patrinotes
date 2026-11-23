@@ -4,6 +4,7 @@ import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
 import { db } from "../db/db";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { sql } from "kysely";
 import { sentry } from "../features/sentry";
 
 const debug = makeDebug("upload");
@@ -109,6 +110,10 @@ export class UploadService {
       .where("report_id", "=", reportId)
       .where("attachment_id", "like", "%.pdf")
       .selectAll()
+      // a report sent several times has one PDF per send: take the latest one
+      // (names are timestamped, compte_rendu_<seconds>.pdf, which breaks ties on created_at)
+      .orderBy(sql`created_at desc nulls last`)
+      .orderBy("attachment_id", "desc")
       .execute();
     // the PDF is stored under the report's own folder; an attachment row pointing elsewhere is ignored
     const attachment = attachments.find((a) => a.attachment_id.startsWith(reportId + "/"));
