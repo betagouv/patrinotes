@@ -1,4 +1,11 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, NotFound } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  HeadBucketCommand,
+  NotFound,
+} from "@aws-sdk/client-s3";
 import { ENV } from "../envVars";
 import { makeDebug } from "../features/debug";
 import { AppError } from "../features/errors";
@@ -29,6 +36,11 @@ export const upload = async () => {};
 const bucketUrl = `${ENV.MINIO_URL}/${ENV.MINIO_BUCKET}`;
 const publicBucketUrl = `${publicEndpoint}/${ENV.MINIO_BUCKET}`;
 const addAttachmentPrefix = (filePath: string) => "attachment/" + filePath;
+
+/** Readiness probe: the bucket exists and the backend credentials can reach it (throws otherwise). */
+export const checkStorage = async ({ abortSignal }: { abortSignal?: AbortSignal } = {}) => {
+  await client.send(new HeadBucketCommand({ Bucket: bucketUrl }), { abortSignal });
+};
 
 export class UploadService {
   async getPresignedUploadUrl({ filePath, contentType }: { filePath: string; contentType?: string }) {

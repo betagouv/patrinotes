@@ -22,6 +22,7 @@ import { validationPlugin } from "./routes/validationRoutes";
 import { adminPlugin } from "./routes/adminRoutes";
 import { statsPlugin } from "./routes/statsRoutes";
 import { attachmentRedirectPlugin } from "./routes/attachmentRedirectRoutes";
+import { checkReadiness } from "./features/health";
 
 const debug = makeDebug("fastify");
 
@@ -53,6 +54,12 @@ export const initFastify = async () => {
 
   fastifyInstance.get("/health", async (_, reply) => {
     reply.status(200).send({ status: "ok" });
+  });
+
+  // Readiness: PostgreSQL and S3 answer. /health stays a liveness probe (the process answers).
+  fastifyInstance.get("/health/ready", async (_, reply) => {
+    const { ready, checks } = await checkReadiness();
+    reply.status(ready ? 200 : 503).send({ status: ready ? "ok" : "error", checks });
   });
 
   fastifyInstance.register(

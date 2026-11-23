@@ -10,6 +10,9 @@ export const makeDb = ({ connectionString }: { connectionString: string }) => {
     connectionString,
     ssl: false,
   });
+  // An idle client losing its connection (PostgreSQL restart, failover) emits "error" on the pool:
+  // without a listener the whole process crashes. The pool drops that client and reconnects on the next query.
+  pool.on("error", (error) => console.error("PostgreSQL idle client error:", error.message));
 
   const dialect = new PostgresDialect({
     pool,

@@ -12,6 +12,12 @@ export namespace Endpoints {
     parameters: never;
     response: unknown;
   };
+  export type get_Healthready = {
+    method: "GET";
+    path: "/health/ready";
+    parameters: never;
+    response: unknown;
+  };
   export type post_ApirefreshToken = {
     method: "POST";
     path: "/api/refresh-token";
@@ -757,6 +763,7 @@ export namespace Endpoints {
 export type EndpointByMethod = {
   get: {
     "/health": Endpoints.get_Health;
+    "/health/ready": Endpoints.get_Healthready;
     "/api/created-at": Endpoints.get_ApicreatedAt;
     "/api/services": Endpoints.get_Apiservices;
     "/api/upload/attachment/presigned-url": Endpoints.get_ApiuploadattachmentpresignedUrl;
