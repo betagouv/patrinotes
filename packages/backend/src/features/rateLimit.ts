@@ -15,13 +15,13 @@ const ONE_MINUTE = 60 * 1000;
 
 /**
  * Limits (SEC-06):
- * - login, signup, forgotten password: 10 attempts per 15 min per email address, and 50 per 15 min per IP;
+ * - login, signup, forgotten password: 10 attempts per 15 min per email address, and 200 per 15 min per IP;
  * - other public routes (constat validation, short links, public statistics): 60 per minute per IP;
  * - authenticated API (sync upload included): 1,200 per minute per user.
  */
 export const rateLimits = {
   authEmail: { max: 10, timeWindow: FIFTEEN_MINUTES },
-  authIp: { max: 50, timeWindow: FIFTEEN_MINUTES },
+  authIp: { max: 200, timeWindow: FIFTEEN_MINUTES },
   public: { max: 60, timeWindow: ONE_MINUTE },
   user: { max: 1200, timeWindow: ONE_MINUTE },
 } as const;

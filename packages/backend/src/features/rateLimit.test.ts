@@ -43,19 +43,19 @@ describe("rate limits (SEC-06)", () => {
     expect((await login(app, "autre@culture.gouv.fr", "198.51.100.7")).statusCode).toBe(200);
   });
 
-  it("allows 50 attempts per IP in 15 minutes, whatever the address", async () => {
+  it("allows 200 attempts per IP in 15 minutes, whatever the address", async () => {
     const app = await makeApp();
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 200; i++) {
       expect((await login(app, `agent${i}@culture.gouv.fr`)).statusCode).toBe(200);
     }
-    expect((await login(app, "agent50@culture.gouv.fr")).statusCode).toBe(429);
+    expect((await login(app, "agent200@culture.gouv.fr")).statusCode).toBe(429);
     // the client IP comes from the last proxy hop: another client is not affected
-    expect((await login(app, "agent50@culture.gouv.fr", "203.0.113.2")).statusCode).toBe(200);
+    expect((await login(app, "agent200@culture.gouv.fr", "203.0.113.2")).statusCode).toBe(200);
   });
 
   it("reads the client IP from the proxy hop, not from an address chosen by the client", async () => {
     const app = await makeApp();
-    for (let i = 0; i < 50; i++) await login(app, `a${i}@culture.gouv.fr`, `10.0.0.${i}, 203.0.113.9`);
+    for (let i = 0; i < 200; i++) await login(app, `a${i}@culture.gouv.fr`, `10.0.${i >> 8}.${i & 255}, 203.0.113.9`);
     // the forged first address changes, the address seen by the proxy stays the same
     expect((await login(app, "b@culture.gouv.fr", "10.9.9.9, 203.0.113.9")).statusCode).toBe(429);
   });
