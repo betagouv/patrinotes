@@ -60,8 +60,9 @@ export class UserService {
       .where("email", "=", normalizeEmail(email))
       .selectAll()
       .execute();
-    const user = userResults[0]!;
-    assertUserExists(user, "Aucun utilisateur avec ce courriel n'a été trouvé.");
+    const user = userResults[0];
+    // Same answer whether the address has an account or not, so the form cannot tell which addresses exist (SEC-13).
+    if (!user?.id) return { message: RESET_LINK_SENT_MESSAGE };
 
     const temporaryLink = crypto.randomUUID();
     const temporaryLinkExpiresAt = addDays(new Date(), 1).toISOString();
@@ -74,12 +75,9 @@ export class UserService {
       .where("id", "=", user.id)
       .execute();
 
-    await sendPasswordResetMail({ email: user!.email, temporaryLink });
+    await sendPasswordResetMail({ email: user.email, temporaryLink });
 
-    return {
-      message:
-        "Votre demande de récupération de mot de passe a été transmise. Vous recevrez un couriel dans quelques instants.",
-    };
+    return { message: RESET_LINK_SENT_MESSAGE };
   }
 
   async resetPassword({ temporaryLink, newPassword }: { temporaryLink: string; newPassword: string }) {
@@ -121,11 +119,7 @@ export class UserService {
   }
 }
 
-const assertUserExists = (user: any, errorDescription?: string) => {
-  if (!user || !user.id) {
-    throw new AppError(403, "Le courriel ou le mot de passe est incorrect");
-  }
-};
+export const RESET_LINK_SENT_MESSAGE = "Si un compte existe pour cette adresse, un courriel vient d'être envoyé.";
 
 const md5 = (data: string) => crypto.createHash("md5").update(data).digest("hex");
 const sha256 = (data: string) => crypto.createHash("sha256").update(data).digest("hex");

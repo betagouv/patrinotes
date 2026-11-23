@@ -5,6 +5,8 @@ import { db } from "../packages/backend/src/db/db";
 
 const MAILPIT_WEB_PORT = process.env.MAILPIT_WEB_PORT ?? "3018";
 
+const RESET_LINK_SENT_MESSAGE = "Si un compte existe pour cette adresse, un courriel vient d'être envoyé.";
+
 test.describe("Auth error paths", () => {
   test.beforeAll(async ({ browser }) => {
     await resetDatabase();
@@ -122,12 +124,21 @@ test.describe("Auth error paths", () => {
 
     await request.delete(`http://localhost:${MAILPIT_WEB_PORT}/api/v1/messages`);
 
+    // An unknown address gets the same answer as a known one, and no email (SEC-13)
+    await page.goto("./reset-password");
+    await page.getByLabel("Courriel").fill("personne-inconnue@culture.gouv.fr");
+    await page.getByRole("button", { name: "Valider" }).click();
+    await expect(page.getByText(RESET_LINK_SENT_MESSAGE)).toBeVisible({ timeout: 10_000 });
+    const unknownResp = await request.get(`http://localhost:${MAILPIT_WEB_PORT}/api/v1/messages`);
+    expect((await unknownResp.json()).messages ?? []).toHaveLength(0);
+
     await page.goto("./reset-password");
     await page.getByLabel("Courriel").fill(mockUsers[1].email);
     await page.getByRole("button", { name: "Valider" }).click();
     await expect(page.locator("[class*='MuiAlert-standardSuccess'], .fr-alert--success")).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.getByText(RESET_LINK_SENT_MESSAGE)).toBeVisible();
 
     const messagesResp = await request.get(`http://localhost:${MAILPIT_WEB_PORT}/api/v1/messages`);
     const { messages } = await messagesResp.json();
