@@ -14,7 +14,8 @@ import { uploadPlugin } from "./routes/uploadRoutes";
 import { sentry } from "./features/sentry";
 import { syncPlugin } from "./routes/syncRoutes";
 import { authPlugin } from "./routes/authRoutes";
-import { isDev } from "./envVars";
+import { ENV, isDev, isProd } from "./envVars";
+import { makeCorsOriginChecker, registerSecurityHeaders } from "./features/httpSecurity";
 import { stateReportPlugin } from "./routes/stateReportRoutes";
 import { upPlugin } from "./routes/upRoutes";
 import { monumentAlertPlugin } from "./routes/monumentAlertRoutes";
@@ -43,9 +44,16 @@ export const initFastify = async () => {
     },
   });
 
-  fastifyInstance.register(cors, {
-    origin: "*",
+  const isAllowedOrigin = makeCorsOriginChecker({
+    frontendUrl: ENV.FRONTEND_URL,
+    extraOrigins: ENV.CORS_ORIGINS,
+    allowLocalhost: !isProd,
   });
+  fastifyInstance.register(cors, {
+    origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
+  });
+
+  registerSecurityHeaders(fastifyInstance, { hsts: isProd });
 
   fastifyInstance.addHook("onRequest", async (request) => {
     debug(request.method, request.url);

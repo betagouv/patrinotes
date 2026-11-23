@@ -36,6 +36,8 @@ const envSchema = z.object({
   PORT: stringOrNumberAsNumber.default(3001),
   DEBUG: z.string().default("cr-vif:*"),
   FRONTEND_URL: z.string(),
+  // extra browser origins allowed by CORS, comma-separated (FRONTEND_URL is always allowed)
+  CORS_ORIGINS: z.string().optional(),
   BACKEND_URL: z.string(),
   EMAIL_HOST: z.string(),
   EMAIL_PORT: stringOrNumberAsNumber.default(465),
