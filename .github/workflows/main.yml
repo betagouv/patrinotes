@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - development
+      - staging
       - compte-rendu-vif
 
 env:
