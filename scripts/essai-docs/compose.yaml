@@ -1,0 +1,73 @@
+name: docs-essai
+x-ver: &ver v6.1.0
+services:
+  postgresql:
+    image: postgres:16
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"], interval: 1s, timeout: 2s, retries: 300}
+    env_file: [work/env.d/postgresql, work/env.d/common]
+    environment: [PGDATA=/var/lib/postgresql/data/pgdata]
+    volumes: [./work/data/pg:/var/lib/postgresql/data/pgdata]
+  redis:
+    image: redis:8
+  yhub-valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--maxmemory-policy", "volatile-lru", "--appendonly", "yes"]
+    healthcheck: {test: ["CMD", "valkey-cli", "ping"], interval: 1s, timeout: 2s, retries: 60}
+    volumes: [./work/data/valkey:/data]
+  mailcatcher:
+    image: sj26/mailcatcher:latest
+  minio:
+    image: pgsty/silo:latest
+    user: "1000"
+    command: server /data
+    env_file: [work/env.d/minio]
+    volumes: [./work/data/minio:/data]
+    healthcheck: {test: ["CMD", "mc", "ready", "local"], interval: 2s, timeout: 5s, retries: 60}
+  createbuckets:
+    image: pgsty/mc:latest
+    env_file: [work/env.d/minio]
+    depends_on: {minio: {condition: service_healthy}}
+    entrypoint: ["sh", "-c", "mc alias set m http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD && mc mb --ignore-existing m/docs-media-storage && mc version enable m/docs-media-storage"]
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: [start-dev, --import-realm, --health-enabled=true]
+    env_file: [work/env.d/keycloak]
+    volumes: [./work/realm.json:/opt/keycloak/data/import/realm.json:ro, ./work/data/keycloak:/opt/keycloak/data/h2]
+    ports: ["${BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_PORT:-5471}:8080"]
+  backend:
+    image: lasuite/impress-backend:v6.1.0
+    user: "1000"
+    restart: always
+    env_file: [work/env.d/common, work/env.d/backend, work/env.d/yprovider, work/env.d/postgresql]
+    volumes: [./work/keys/private.pem:/keys/private.pem:ro]
+    healthcheck: {test: ["CMD", "python", "manage.py", "check"], interval: 15s, timeout: 30s, retries: 20, start_period: 10s}
+    depends_on: {postgresql: {condition: service_healthy}, redis: {condition: service_started}}
+  celery:
+    image: lasuite/impress-backend:v6.1.0
+    user: "1000"
+    restart: always
+    command: ["celery", "-A", "impress.celery_app", "worker", "-l", "INFO"]
+    env_file: [work/env.d/common, work/env.d/backend, work/env.d/yprovider, work/env.d/postgresql]
+    volumes: [./work/keys/private.pem:/keys/private.pem:ro]
+    depends_on: {backend: {condition: service_healthy}}
+  yhub:
+    image: lasuite/impress-yhub:v6.1.0
+    user: "1000:1000"
+    restart: always
+    env_file: [work/env.d/common, work/env.d/yhub]
+    volumes: [./work/keys/yhub-private.pem:/keys/yhub-private.pem:ro]
+    healthcheck: {test: ["CMD", "node", "-e", "fetch('http://localhost:3002/collaboration/ready/v1').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"], interval: 15s, timeout: 5s, retries: 20, start_period: 10s}
+    depends_on: {postgresql: {condition: service_healthy}, yhub-valkey: {condition: service_healthy}}
+  y-provider:
+    image: lasuite/impress-y-provider:v6.1.0
+    user: "1000"
+    env_file: [work/env.d/common, work/env.d/yprovider]
+  frontend:
+    image: lasuite/impress-frontend:v6.1.0
+    user: "101"
+    entrypoint: [/docker-entrypoint.sh]
+    command: ["nginx", "-g", "daemon off;"]
+    env_file: [work/env.d/common]
+    volumes: [./default.conf.template:/etc/nginx/templates/docs.conf.template:ro]
+    ports: ["${BIND_ADDRESS:-127.0.0.1}:${DOCS_PORT:-5470}:8083"]
+    depends_on: {backend: {condition: service_healthy}, yhub: {condition: service_healthy}}
