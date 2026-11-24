@@ -78,6 +78,7 @@ export default defineConfig({
       "compte-rendu-vif.incubateur.net",
       ".compte-rendu-vif.incubateur.net",
       "patrinotes.incubateur.net",
+      "staging.patrinotes.incubateur.net",
     ],
   },
   build: {
