@@ -1,6 +1,6 @@
 # 18 — Questions ouvertes
 
-Points encore à trancher ou à relever avant le transfert. Les faits établis (relevé de production du 17/11/2026, réponses de l'équipe) sont intégrés dans les chapitres concernés ; ce document ne garde que ce qui reste à faire. Les questions qui dépendent du ministère sont regroupées dans [19 — Questions à poser au ministère](19-questions-pour-le-ministere.md), un document fait pour lui être envoyé.
+Points encore à trancher ou à relever avant le transfert. Les faits établis par le relevé de production du 17/11/2026 sont intégrés dans les chapitres concernés ; ce document ne garde que ce qui reste à faire. Les questions qui dépendent du ministère sont regroupées dans [19 — Questions à poser au ministère](19-questions-pour-le-ministere.md).
 
 Colonne « Bloquant » : nécessaire au transfert.
 
@@ -9,54 +9,20 @@ Colonne « Bloquant » : nécessaire au transfert.
 | # | Sujet | État connu | Reste à faire | Bloquant |
 | --- | --- | --- | --- | --- |
 | P1 | Configuration Coolify | Projet `patrimoine-embarque` (environnements `production` et `preprod`), déploiement manuel depuis l'interface, tags d'image fixes, version déployée non tracée. Détail dans [10](10-infrastructure-et-deploiement.md) § 6.0. | Archiver un export de la configuration (variables, volumes, fichiers montés) au début de la phase 1. | Non |
-| P2 | Fichiers PowerSync | Déposés manuellement dans Coolify. `powersync-config.yaml` pointe sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes` ; `sync-config.yaml` est celui de `main`, qui lit encore `pictures`. | Au prochain déploiement, recopier les deux fichiers du dépôt **avant** les migrations ([12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)) ; à terme, les déployer avec l'application. | Oui |
-| P3 | Réglages Keycloak | Realm `patrinotes` (216 comptes), thème DSFR, courriel comme identifiant. Réglages de sécurité dans le relevé transmis au ministère (hors dépôt). | Prévu avant le transfert : protection contre la force brute, politique de mot de passe, console d'administration restreinte (voir [05](05-authentification-securite.md)). | Oui |
-| P5 | Réglages PostgreSQL | PostgreSQL 17.8, `wal_level=logical`, `max_slot_wal_keep_size=-1` (sans plafond), un seul slot actif. | Plafonner le WAL retenu ; créer un rôle de réplication dédié. | Oui |
-| P6 | Publication `powersync` | 24 tables. `constat_validation` n'y est pas, et la configuration de synchronisation du dépôt ne la lit pas (celle de production, issue de `main`, la lit encore, sans effet). `transactions` y est sans être lue. | Recopier la configuration du dépôt (P2) ; retirer `transactions` de la publication si aucun flux n'en a besoin. | Non |
-| P7 | Migrations 0000 et 0001 | L'empreinte enregistrée pour 0000 ne correspond pas au fichier du dépôt ; sans effet (drizzle ne revérifie pas les empreintes). | Ne pas rejouer les migrations sur une base vide pendant le transfert : restaurer le dump (voir [14 § 5.1](14-migration-vers-infra-ministere.md#51-postgresql)). | Non |
-| P8 | Stockage objet | Scaleway, bucket `patrinotes-prod`, région `fr-par`, non listable anonymement. L'origine de production est autorisée en CORS (`GET, HEAD, POST, PUT, DELETE`), les autres origines testées sont refusées. | Relever dans la console Scaleway la liste exacte des origines CORS, la taille du bucket et la présence d'un versionnage. | Oui |
-| P9 | Domaine d'envoi | `smtp.tem.scw.cloud:465`, expéditeur `noreply@patrinotes.beta.gouv.fr`. SPF correct, DMARC en `p=none`, sélecteur DKIM non trouvé publiquement. | Relever le DKIM dans la console Scaleway ; passer DMARC en `quarantine`. Mettre à jour la politique de confidentialité (elle cite Brevo et OVH). | Non |
-| P10 | Sentry | Instance `sentry.incubateur.net` (beta.gouv), frontend seulement : le backend n'a pas de DSN. Le code envoie l'environnement et la version des événements. | Au prochain déploiement : `SENTRY_DSN` sur le backend, `SENTRY_ENVIRONMENT` et `VITE_SENTRY_ENVIRONMENT` à `preprod` en préproduction ([12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)) ; vérifier la rétention ; choisir l'outil cible avec le ministère (M11). | Non |
-| P12 | Sauvegardes | Base applicative : quotidienne, 7 jours en local, 90 jours sur S3. Keycloak : quotidienne, sans limite de durée. Le S3 de sauvegarde est dans le même compte et la même région que les données. Pas de sauvegarde des photos et PDF, de MongoDB (reconstructible) ni des fichiers de configuration. | Tester une restauration (prévu avant le transfert) ; sauvegarder ou versionner le bucket ; sortir les sauvegardes du compte Scaleway des données. | Oui |
-| P14 | Version de PowerSync | 1.20.5, tirée par le tag `latest`. | Épingler la version (phase 2). | Non |
-| P18 | Proxys devant le backend | Traefik termine TLS ; la présence d'un autre proxy devant lui (CDN, répartiteur) n'a pas été relevée. | Confirmer le nombre de proxys pour régler `TRUST_PROXY_HOPS` (1 ou 2) avant le prochain déploiement. | Non |
-| P15 | Préproduction et ancienne application | La préproduction (`development`, `patrinotes.incubateur.net`) s'authentifie sur le Keycloak de production. Des services de l'ancienne application CR VIF tournent encore sur le serveur ; seule la redirection de `app.compte-rendu-vif.beta.gouv.fr` est utile. | Donner à la préproduction son propre Keycloak ou realm ; arrêter les services CR VIF après une dernière sauvegarde (prévu avant le transfert) ; versionner la page de redirection réelle (elle diffère de [crvif-redirection/](../crvif-redirection/)). | Non |
-| P17 | Import POP | Manuel, aucune tâche planifiée. Dernières notices : 06/05/2026 pour les immeubles, 31/07/2025 pour les objets. 4 541 objets ont une date de mise à jour illisible (colonnes décalées ou encodage). | Planifier l'import et corriger le décalage de colonnes. | Non |
+| P2 | Fichiers PowerSync | Déposés manuellement dans Coolify. `powersync-config.yaml` pointe sur `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes` ; `sync-config.yaml` est celui de `main`, qui lit encore `pictures`. | Au prochain déploiement, recopier les deux fichiers du dépôt **avant** les migrations ; à terme, les déployer avec l'application. | Oui |
+| P3 | Réglages Keycloak | Realm `patrinotes` (216 comptes), thème DSFR, courriel comme identifiant. Les réglages de sécurité du realm sont consignés dans le relevé de sécurité transmis au ministère. | Activer la protection contre la force brute, imposer une politique de mot de passe, restreindre la console d'administration au réseau d'administration (voir [05](05-authentification-securite.md) et SEC-19 dans [16](16-risques-et-dette-technique.md)). | Oui |
+| P4 | Réglages PostgreSQL | PostgreSQL 17.8, `wal_level=logical`, `max_slot_wal_keep_size=-1` (sans plafond), un seul slot actif. | Plafonner le WAL retenu ; créer un rôle de réplication dédié. | Oui |
+| P5 | Publication `powersync` | 24 tables. `constat_validation` n'y est pas, et la configuration de synchronisation du dépôt ne la lit pas (celle de production, issue de `main`, la lit encore, sans effet). `transactions` y est sans être lue. | Recopier la configuration du dépôt (P2) ; retirer `transactions` de la publication si aucun flux n'en a besoin. | Non |
+| P6 | Migrations 0000 et 0001 | L'empreinte enregistrée pour 0000 ne correspond pas au fichier du dépôt ; sans effet (drizzle ne revérifie pas les empreintes). | Ne pas rejouer les migrations sur une base vide pendant le transfert : restaurer le dump (voir [14 § 5.1](14-migration-vers-infra-ministere.md#51-postgresql)). | Non |
+| P7 | Stockage objet | Scaleway, bucket `patrinotes-prod`, région `fr-par`, non listable anonymement. L'origine de production est autorisée en CORS (`GET, HEAD, POST, PUT, DELETE`), les autres origines testées sont refusées. | Relever dans la console Scaleway la liste exacte des origines CORS, la taille du bucket et la présence d'un versionnage. | Oui |
+| P8 | Domaine d'envoi | `smtp.tem.scw.cloud:465`, expéditeur `noreply@patrinotes.beta.gouv.fr`. SPF correct, DMARC en `p=none`, sélecteur DKIM non trouvé publiquement. | Relever le DKIM dans la console Scaleway ; passer DMARC en `quarantine`. Mettre à jour la politique de confidentialité (elle cite Brevo et OVH). | Non |
+| P9 | Sentry | Instance `sentry.incubateur.net` (beta.gouv), frontend seulement : le backend n'a pas de DSN. Le code envoie l'environnement et la version des événements. | Au prochain déploiement : `SENTRY_DSN` sur le backend, `SENTRY_ENVIRONMENT` et `VITE_SENTRY_ENVIRONMENT` à `preprod` en préproduction ; vérifier la rétention ; choisir l'outil cible avec le ministère (M11). | Non |
+| P10 | Sauvegardes | Base applicative : quotidienne, 7 jours en local, 90 jours sur S3. Keycloak : quotidienne, sans limite de durée. Le S3 de sauvegarde est dans le même compte et la même région que les données. Pas de sauvegarde des photos et PDF, de MongoDB (reconstructible) ni des fichiers de configuration. | Tester une restauration ; sauvegarder ou versionner le bucket ; sortir les sauvegardes du compte Scaleway des données. | Oui |
+| P11 | Version de PowerSync | 1.20.5, tirée par le tag `latest`. | Épingler la version (phase 2). | Non |
+| P12 | Préproduction et ancienne application | La préproduction (`development`, `patrinotes.incubateur.net`) s'authentifie sur le Keycloak de production. Des services de l'ancienne application CR VIF tournent encore sur le serveur ; seule la redirection de `app.compte-rendu-vif.beta.gouv.fr` est utile. | Donner à la préproduction son propre Keycloak ou realm ; arrêter les services CR VIF après une dernière sauvegarde ; versionner la page de redirection réelle (elle diffère de [crvif-redirection/](../crvif-redirection/)). | Non |
+| P13 | Import POP | Manuel, aucune tâche planifiée. Dernières notices : 06/05/2026 pour les immeubles, 31/07/2025 pour les objets. 4 541 objets ont une date de mise à jour illisible (colonnes décalées ou encodage). | Planifier l'import et corriger le décalage de colonnes. | Non |
+| P14 | Proxys devant le backend | Traefik termine TLS ; la présence d'un autre proxy devant lui (CDN, répartiteur) n'a pas été relevée. | Confirmer le nombre de proxys pour régler `TRUST_PROXY_HOPS` (1 ou 2) avant le prochain déploiement. | Non |
 
 ## 2. Choix pour la cible
 
-Ces questions relèvent du ministère. Elles sont reformulées pour lui dans [19](19-questions-pour-le-ministere.md) (numéros M1 à M24).
-
-| # | Question | Voir | Bloquant |
-| --- | --- | --- | --- |
-| C1 | Réplication logique autorisée sur le PostgreSQL du ministère ? | M1, M2 | Oui |
-| C2 | MongoDB ou stockage PostgreSQL pour PowerSync ? | M6 | Oui |
-| C3 | Keycloak transféré, ProConnect ou annuaire ministériel ? | M14, M15 | Oui |
-| C4 | S3 du ministère joignable depuis les navigateurs et par des destinataires externes ? | M4 | Oui |
-| C5 | Domaines conservés ? | M5 | Oui |
-| C6 | Forge et registre d'images ? | M7 | Oui |
-| C7 | Supervision, journaux, Matomo ? | M11 | Non |
-| C8 | RPO et RTO ? | M12 | Non |
-| C9 | Corrections de sécurité exigées avant homologation ? | M16, M17 | Oui |
-| C10 | Dictée vocale (Google) et fond de carte OpenFreeMap acceptables ? | M20, M21 | Non |
-
-## 3. Fonctionnel : points tranchés par l'équipe
-
-| # | Sujet | Réponse |
-| --- | --- | --- |
-| F2 | Changement de service libre | Voulu, et journalisé dans `transactions`. À faire valider par le ministère (M23). |
-| F3 | Modification des paramètres d'un service par n'importe quel membre | Voulue, limitée au service de l'agent ; les départements ne sont pas modifiables. |
-| F4 | Calcul « abandonné » : colonne `pdf` pour un compte-rendu, `attachment_id` pour un constat | Même notion : la pièce jointe d'un constat est le PDF envoyé, comme le PDF d'un compte-rendu. |
-| F5 | Images POP | Affichage prévu par le protocole IIIF. |
-| F7 | Réinitialisation du mot de passe par `internal_user` | En service : c'est le parcours de réinitialisation des agents, qui se connectent pour la plupart par courriel et mot de passe. |
-| F8 | Lettre d'information | La liste des abonnés est exportée et importée dans Brevo à la main par l'équipe. |
-| F9 | Échelle du plan de situation | 1:5000, considérée correcte (non mesurée sur papier). |
-| F10 | Affichage direct des photos POP | Accepté par l'équipe POP. |
-| F11 | Durée des liens publics (courriels et bouton « Copier le lien » d'un constat) | 90 jours, voulu ; les courriels l'indiquent, y compris après acceptation par le valideur. |
-
-## 4. Techniques, vérifiées en exécutant le code
-
-| # | Question | Réponse |
-| --- | --- | --- |
-| T4 | Peut-on générer un PDF hors ligne sur un appareil neuf ? | Oui, avec les données présentes sur l'appareil (vérifié manuellement : constat et compte-rendu créés hors ligne). Le plan de situation IGN est omis hors ligne, avec un avertissement. |
-| T7 | Une photo dont la ligne arrive avant le fichier finit-elle par s'afficher ? | Oui : nouvel essai toutes les 30 s, affichage sans action dès que le fichier est en S3. |
+Les choix qui relèvent du ministère (réplication logique, stockage de PowerSync, identité, stockage objet, domaines, forge et registre, supervision, RPO et RTO, exigences d'homologation, dictée vocale et fond de carte) sont formulés dans [19 — Questions à poser au ministère](19-questions-pour-le-ministere.md), questions M1 à M24 ; les questions bloquantes y sont signalées.

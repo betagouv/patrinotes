@@ -10,7 +10,7 @@ Ce document donne la vue d'ensemble de Patrinotes : les composants, leurs respon
 | **Application web progressive (PWA)** | Front React + Vite, *service worker* qui met en cache l'application. Installable sur mobile et tablette. | La gestion des versions (vieux *chunks* JS, `env.js`) demande un soin particulier. Voir [03 — Frontend](03-frontend-pwa.md). |
 | **Lecture par synchronisation, écriture par API** | Les lectures passent par le flux PowerSync (WebSocket). Les écritures passent par un `POST` vers le backend, qui les applique dans PostgreSQL. | PostgreSQL reste la **seule source de vérité**. PowerSync n'écrit jamais dans la base. |
 | **Monorepo TypeScript** | pnpm workspace : `backend`, `frontend`, `pdf` (code partagé). | Les gabarits PDF sont les mêmes côté navigateur (aperçu) et côté serveur (génération). |
-| **Contrat d'API typé** | Fastify + TypeBox, OpenAPI généré, client typé généré (`typed-openapi`). | Toute modification d'une route doit être suivie de `pnpm client:generate`. |
+| **Contrat d'API typé** | Fastify + TypeBox, OpenAPI généré, client typé généré pour le frontend. | Le frontend et le backend partagent un contrat d'API vérifié à la compilation. |
 | **Socle « État »** | Système de design de l'État (DSFR, `@codegouvfr/react-dsfr`), thème Keycloak DSFR. | Respect de la charte de l'État et du RGAA. |
 
 ## 2. Vue des composants
@@ -89,9 +89,9 @@ sequenceDiagram
     A->>A: écrit dans le SQLite local
 ```
 
-> Le backend **ne signe aucun jeton**. Tous les jetons sont émis par Keycloak. Le même *access token* sert pour le backend (en-tête `Bearer`, vérifié via JWKS) et pour PowerSync. Les variables `JWT_SECRET`, `JWT_REFRESH_SECRET`, `TOKEN_LIFETIME` et `PS_JWT_SECRET` sont des restes inutilisés, mais les deux premières restent obligatoires au démarrage. Voir [05](05-authentification-securite.md).
+> Le backend **ne signe aucun jeton**. Tous les jetons sont émis par Keycloak. Le même *access token* sert pour le backend (en-tête `Bearer`, vérifié via JWKS) et pour PowerSync. Voir [05](05-authentification-securite.md).
 
-Les règles d'accès se trouvent dans [sync-config.yaml](../powersync/sync-config.yaml). Elles reposent sur le claim `email` du jeton. Un agent reçoit :
+Les règles d'accès se trouvent dans [sync-config.yaml](../powersync/sync-config.yaml) et sont détaillées en [08](08-synchronisation-hors-ligne.md). Elles reposent sur le claim `email` du jeton. En résumé, un agent reçoit :
 
 - les données globales : clauses nationales (`service_id = 'ALL'`) ;
 - les données de **son service** : service, collègues, clauses, e-mails suggérés, comptes-rendus (`report`), constats (`state_report`) et leurs sous-objets, alertes et corrections des fiches monument ;
@@ -129,7 +129,7 @@ sequenceDiagram
 
 ### 3.4 Données patrimoniales
 
-Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images` contient des URL de photos POP, lues par les fiches objet ; elle est vide ; l'affichage des images POP par IIIF est prévu. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou par le script `pnpm backend import-pop`. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
+Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images`, prévue pour les URL de photos POP, est vide : les images POP ne sont pas affichées. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import n'est pas planifié : il se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou à la main. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
 
 ## 4. Organisation du dépôt
 
@@ -144,7 +144,7 @@ Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobilier
 | [scripts](../scripts) | Scripts de remise à zéro et de chargement de la base |
 | [crvif-redirection](../crvif-redirection) | Page de redirection de l'ancien domaine « Compte-rendu VIF » |
 | [Dockerfile](../Dockerfile), [docker-compose.yaml](../docker-compose.yaml) | Images et environnement de développement |
-| [.github/workflows](../.github/workflows) | Construction des images (ghcr.io), tests e2e manuels |
+| [.github/workflows](../.github/workflows) | Intégration continue : tests unitaires du backend, audit des dépendances, construction des images (ghcr.io) ; tests de bout en bout lancés à la main |
 
 Taille indicative : environ 35 000 lignes de TypeScript et TSX, hors code généré et dépendances.
 
@@ -152,21 +152,20 @@ Taille indicative : environ 35 000 lignes de TypeScript et TSX, hors code géné
 
 | Choix | Pourquoi (constaté ou déduit) | Alternatives écartées ou passées |
 | --- | --- | --- |
-| PowerSync | Travail sur le terrain (monuments, églises, zones blanches) : il faut un vrai mode hors ligne, avec une base locale requêtable en SQL. | ElectricSQL (des variables sans usage `ELECTRIC_PORT`, `VITE_ELECTRIC_URL` figurent dans `.env.dist`). |
+| PowerSync | Travail sur le terrain (monuments, églises, zones blanches) : il faut un vrai mode hors ligne, avec une base locale requêtable en SQL. | ElectricSQL. |
 | PostgreSQL avec réplication logique | Exigé par PowerSync pour suivre les changements. | — |
 | Keycloak | Comptes locaux (inscription, mot de passe oublié) sans dépendre d'un fournisseur d'identité externe pendant la phase beta. | ProConnect ou un annuaire ministériel : à étudier pour la cible, voir [14](14-migration-vers-infra-ministere.md). |
 | Gabarits PDF en React partagés | Aperçu hors ligne identique au document final. | Génération seulement côté serveur (pas d'aperçu hors ligne). |
 | Stockage objet S3 | Photos et PDF volumineux, hors de la base. | — |
 
-## 6. Environnements
+## 6. Environnements et intégration continue
 
 | Environnement | Déclenchement | Image |
 | --- | --- | --- |
-| Développement local | `docker compose up -d`, puis `pnpm backend dev` et `pnpm frontend dev` | — |
-| Branche `development` | `push` sur la branche | `ghcr.io/<dépôt>-development:backend` et `:frontend` |
-| Branche `main` (production) | `push` sur la branche | `ghcr.io/<dépôt>-main:backend` et `:frontend` |
-| Branche `compte-rendu-vif` | `push` sur la branche | `ghcr.io/<dépôt>-compte-rendu-vif:*`. Branche historique, à confirmer. |
+| Développement local | `docker compose up -d`, puis backend et frontend lancés en mode développement | — |
+| Préproduction | `push` sur la branche `development` | `ghcr.io/<dépôt>-development:backend` et `:frontend` |
+| Production | `push` sur la branche `main` | `ghcr.io/<dépôt>-main:backend` et `:frontend` |
 
-Le déploiement actuel (VPS avec Coolify) récupère ces images. Le détail est dans [10 — Infrastructure](10-infrastructure-et-deploiement.md).
+À chaque `push` sur ces branches, le workflow [main.yml](../.github/workflows/main.yml) lance les **tests unitaires du backend**, qui conditionnent la publication des images, et un **audit des dépendances de production** (`pnpm audit --prod`), dont le résultat est seulement signalé et ne bloque pas la publication. Les tests de bout en bout ([tests.yml](../.github/workflows/tests.yml)) se lancent à la main. Le workflow construit aussi les images d'une branche historique `compte-rendu-vif` (usage à confirmer).
 
-La production déploie la branche `main`, la préproduction la branche `development`.
+Le déploiement actuel (VPS avec Coolify) récupère ces images ; il est manuel. Le détail est dans [10 — Infrastructure](10-infrastructure-et-deploiement.md).

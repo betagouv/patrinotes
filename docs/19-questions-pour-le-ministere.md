@@ -1,6 +1,6 @@
 # 19 — Questions à poser au ministère
 
-Ce document rassemble les questions dont les réponses dépendent du ministère de la Culture, et non de l'équipe Patrinotes. Il est fait pour être **envoyé tel quel** aux interlocuteurs concernés (hébergement, sécurité, protection des données, métier), sans avoir à lire le reste du dossier.
+Ce document rassemble les questions dont les réponses dépendent du ministère de la Culture, et non de l'équipe Patrinotes. Il se lit sans le reste du dossier et s'adresse aux interlocuteurs concernés (hébergement, sécurité, protection des données, métier).
 
 Les réponses conditionnent le plan de transfert décrit dans [14 — Migration](14-migration-vers-infra-ministere.md). Les questions marquées **bloquante** doivent être tranchées avant que l'équipe d'hébergement ne commence à construire l'environnement cible (phase 3).
 
@@ -46,9 +46,9 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 
 | # | Question | Pourquoi on la pose | Bloquante |
 | --- | --- | --- | --- |
-| M16 | Quel est le **calendrier d'homologation** et qui la prononce ? Quel référentiel (RGS, MonServiceSécurisé) ? | L'homologation doit être acquise avant la bascule. Le dossier MonServiceSécurisé est en cours de remplissage par l'équipe ; les échanges avec le RSSI du ministère ont commencé. | **Oui** |
-| M17 | Quelles corrections de la liste des risques ([16](16-risques-et-dette-technique.md)) sont exigées **avant** homologation ? | Le contrôle d'accès côté serveur et le filtrage des données envoyées à Sentry sont en place. La liste contient les points restants, classés par niveau. | **Oui** |
-| M18 | TLS est-il exigé entre l'application et la base de données à l'intérieur du réseau du ministère ? | Le code le désactive aujourd'hui ; l'activer est une petite modification à prévoir. | Non |
+| M16 | Quel est le **calendrier d'homologation** et qui la prononce ? Quel référentiel (RGS, MonServiceSécurisé) ? | L'homologation doit être acquise avant la bascule. | **Oui** |
+| M17 | Quelles corrections de la liste des risques ([16](16-risques-et-dette-technique.md)) sont exigées **avant** homologation ? | Le chapitre 16 décrit les contrôles en place (droits vérifiés par le serveur, limitation de débit, filtrage des données envoyées à Sentry) et les risques restants, classés par niveau. | **Oui** |
+| M18 | TLS est-il exigé entre l'application et la base de données à l'intérieur du réseau du ministère ? Si oui, avec quelle autorité de certification ? | TLS est désactivé par défaut. Il s'active par configuration : `DATABASE_SSL=true` pour le backend et les migrations, `sslmode` pour PowerSync. | Non |
 | M19 | Une politique de mot de passe et une protection contre la force brute sont-elles exigées (scénario Keycloak) ? | À définir pour la cible. Sans objet si ProConnect est retenu. | Non |
 
 ## 4. Protection des données (DPD) et métier
@@ -58,7 +58,7 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 | M20 | La **dictée vocale** (sous Chrome, l'audio est traité par un service de Google) est-elle acceptable ? | Fonction utilisée sur le terrain ; elle transmet la voix à un tiers. | Non |
 | M21 | Le fond de carte **OpenFreeMap** (service non étatique) est-il acceptable, ou faut-il passer sur les fonds IGN ? | Les terminaux des agents appellent ce service à chaque affichage de carte. | Non |
 | M22 | Qui met à jour les **mentions légales et la politique de confidentialité** ? | Elles citent OVH et Brevo, alors que l'application utilise Scaleway (stockage et courriel), Sentry et Matomo. | Non |
-| M23 | Un agent peut-il librement **changer de service** dans l'application ? Tout membre d'un service peut-il en modifier les paramètres ? | C'est le cas aujourd'hui. Le changement de service donne accès aux données du nouveau service ; il est tracé dans un journal. | Non |
+| M23 | Un agent peut-il librement **changer de service** dans l'application ? Tout membre d'un service peut-il en modifier les paramètres ? | C'est le cas aujourd'hui (choix fonctionnel). Le changement de service donne accès aux données du nouveau service ; il est tracé dans un journal. Un agent ne modifie que les paramètres de son propre service (en-têtes PDF, adresses d'alerte, clauses, services instructeurs), pas ses départements. | Non |
 | M24 | Quelle **fenêtre de bascule** convient (période creuse de visites) ? Qui prévient les agents ? | La bascule interrompt l'application quelques heures. Les agents doivent synchroniser avant. | Non |
 
 ## 5. Réponses attendues

@@ -1,8 +1,8 @@
 # 04 — Backend et API
 
-Ce document décrit en détail le service backend de Patrinotes (`packages/backend`) : sa pile technique, sa séquence de démarrage, l'organisation du code, **toutes** les routes HTTP exposées, les services métier, le point d'entrée de synchronisation PowerSync (`/api/upload-data`), la gestion des erreurs et des journaux, ainsi que la chaîne de génération du client d'API typé utilisé par le frontend.
+Ce document décrit en détail le service backend de Patrinotes (`packages/backend`) : sa pile technique, sa séquence de démarrage, l'organisation du code, **toutes** les routes HTTP exposées, les services métier, le point d'entrée de synchronisation PowerSync (`/api/upload-data`), la gestion des erreurs et des journaux, et la tâche périodique.
 
-Il s'adresse aux développeurs qui reprennent le code et aux équipes d'exploitation du ministère. Les aspects d'authentification et de sécurité sont approfondis dans [05 — Authentification et sécurité](05-authentification-securite.md). Les règles sont tirées de la lecture du code ; ce qui relève de l'interprétation est signalé « à confirmer ».
+Il s'adresse aux développeurs qui reprennent le code et aux équipes d'exploitation du ministère. Les aspects d'authentification et de sécurité sont approfondis dans [05 — Authentification et sécurité](05-authentification-securite.md). Ce qui relève de l'interprétation est signalé « à confirmer ». Les règles implicites sont regroupées en [15](15-regles-cachees-et-pieges.md), les risques en [16](16-risques-et-dette-technique.md).
 
 > **Rôle du backend en une phrase.** Le backend est une API Node.js (Fastify) qui : relaie l'authentification vers Keycloak, applique dans PostgreSQL les écritures envoyées par les clients hors ligne, délivre des URL de dépôt et de lecture des fichiers (S3/MinIO), enregistre les PDF générés **par le navigateur** et envoie les courriels (comptes-rendus, constats d'état, alertes, validation). Il ne sert **pas** les lectures métier courantes : elles passent par PowerSync (voir [08 — Synchronisation](08-synchronisation-hors-ligne.md)).
 
@@ -28,11 +28,9 @@ Versions effectivement résolues dans [pnpm-lock.yaml](../pnpm-lock.yaml) (les p
 | Variables d'env. | `dotenv`, `dotenv-expand`, `zod` | 16.6.1 / 11.0.7 / 4.6.7 | Chargement et validation au démarrage |
 | Journaux | `debug` | 4.4.3 | Espace de noms `cr-vif:*` |
 | Import POP | `csv-parser` | 3.2.0 | Import des CSV Mérimée/Palissy |
-| Build | `tsup` | 8.5.1 | Bundle ESM `dist/index.js` |
-| Dév. | `vite-node`, `vitest`, `typescript` | 1.6.1 / 2.1.9 / 5.9.3 | Exécution avec rechargement à chaud, tests unitaires |
 | Partagé | `@patrinotes/pdf` (workspace) | — | Fonctions communes (noms de fichiers PDF, désérialisation des alertes et préconisations) |
 
-Le code appelle l'API d'administration Keycloak à la main avec `ofetch`. `react`, `react-dom`, `@react-pdf/renderer` et `react-pdf-html` restent dans les dépendances : le bundle les charge à l'exécution au travers de `@patrinotes/pdf` (modules externes de `tsup`), bien que le PDF soit généré **côté navigateur** puis déposé sur S3 (voir §6.4). `reflect-metadata` est déclarée sans être importée.
+Le code appelle l'API d'administration Keycloak directement en HTTP. `react` et `@react-pdf/renderer` restent dans les dépendances, chargés au travers de `@patrinotes/pdf`, bien que le backend ne produise aucun PDF.
 
 Image d'exécution : `node:22.23-alpine`, sans bibliothèque native ni chaîne de compilation, voir [Dockerfile](../Dockerfile).
 
@@ -40,40 +38,9 @@ Image d'exécution : `node:22.23-alpine`, sans bibliothèque native ni chaîne d
 
 ## 2. Organisation du code
 
-```
-packages/backend/
-├── data/udap.json          # Ancienne liste de 96 services (id, département) — non lue par le code
-├── public/                 # Logos Marianne et polices, lus à l'exécution pour les courriels
-├── openapi.json            # Contrat généré (commité), source de api.gen.ts
-├── drizzle.config.ts       # Configuration drizzle-kit (migrations écrites dans ../../db)
-├── docker-start.sh         # Point d'entrée de l'image : migration puis serveur
-├── tsup.config.ts          # Build ESM ; react, @react-pdf en externe
-├── vite.config.ts          # Pour vite-node en développement
-└── src/
-    ├── index.ts            # Point d'entrée : démarrage ou génération OpenAPI
-    ├── router.ts           # Construction de l'instance Fastify, enregistrement des plugins
-    ├── envVars.ts          # Chargement .env et validation zod
-    ├── hmr.ts              # Arrêt propre de Fastify lors du rechargement à chaud
-    ├── db/
-    │   ├── schema.ts       # Schéma Drizzle (source de vérité des tables)
-    │   ├── relations.ts    # Relations Drizzle (non utilisées à l'exécution)
-    │   └── db.ts           # Instance Kysely + type Database
-    ├── routes/             # Un plugin Fastify par domaine + middlewares d'authentification
-    ├── services/           # Classes de service injectées dans chaque requête
-    └── features/
-        ├── auth/keycloak.ts    # Client de l'API d'administration Keycloak
-        ├── data/               # Import des données POP (Mérimée, Palissy)
-        ├── mail/ , mail.ts     # Gabarits et envoi des courriels (habillage DSFR)
-        ├── bordereau.ts        # Corps du courriel d'envoi d'un constat d'état
-        ├── alertDelivery.ts    # Envoi et reprise des alertes (tâche périodique)
-        ├── rateLimit.ts, httpSecurity.ts, health.ts
-        ├── uploadLimits.ts, recipients.ts, passwordPolicy.ts
-        ├── sentry.ts, debug.ts, errors.ts
-```
+Le code est dans [`packages/backend/src`](../packages/backend/src) : un plugin Fastify par domaine dans `routes/`, des services dans `services/`, le schéma de la base dans [db/schema.ts](../packages/backend/src/db/schema.ts) (source de vérité des tables, migrations générées dans [`db/`](../db)), et les fonctions métier dans `features/` (courriels, alertes, limitation de débit, contrôle des fichiers, import POP, Sentry).
 
-Le dossier [public/](../packages/backend/public) contient `Marianne-Light@2x.png`, `Marianne-Dark@2x.png` (logos insérés en pièces jointes *inline* dans chaque courriel), `marianne.png`, `marianne_footer.png` et les polices Marianne (`fonts/*.ttf`). **Règle cachée** : [dsfrMailWrapper.ts](../packages/backend/src/features/mail/dsfrMailWrapper.ts) lit `path.join(process.cwd(), "public")`. Le processus doit donc être lancé depuis `packages/backend` (c'est le cas avec `pnpm backend start`), sinon le premier envoi de courriel échoue. Le build `tsup --publicDir` copie aussi `public/` dans `dist/`.
-
-Le dossier [data/](../packages/backend/data) contient [udap.json](../packages/backend/data/udap.json) : une liste historique de 96 services (identifiant, nom de département, autres champs vides). Il n'est référencé par aucun code. Le même dossier sert aussi de **répertoire temporaire** à l'import POP (`./data/merimee.csv`, `./data/palissy.csv`, supprimés après import).
+> Contrainte d'exploitation : les logos et polices des courriels sont lus dans le dossier `public/` du **répertoire courant**. Le processus doit être lancé depuis `packages/backend` (c'est le cas dans l'image), sinon le premier envoi de courriel échoue. L'import POP utilise aussi `./data/` comme répertoire temporaire.
 
 ---
 
@@ -86,31 +53,25 @@ sequenceDiagram
     participant P as Processus Node
     participant E as envVars.ts
     participant DB as PostgreSQL
-    participant POP as data.gouv.fr
+    participant POP as Exports POP (S3 OVH du ministère)
     participant F as Fastify
     P->>E: import, chargement .env puis validation zod
     Note over E: arrêt immédiat si une variable obligatoire manque
-    alt argument --create-only
-        P->>F: initFastify puis swagger()
-        F-->>P: écriture de openapi.json
-        P->>P: process.exit 0
-    else démarrage normal
-        P->>DB: initEmptyService : crée le service "no-service" s'il manque
-        opt FORCE_REFETCH_POP = true
-            P->>POP: téléchargement merimee.csv puis upsert pop_immeubles
-            P->>POP: palissy.csv puis pop_objets, seulement si la table est vide
-        end
-        P->>F: initFastify, enregistrement des plugins
-        F->>F: listen sur 0.0.0.0 et PORT, 3001 par défaut
-        P->>P: tâche d'envoi des alertes, toutes les 15 min (sauf NODE_ENV=test)
+    P->>DB: initEmptyService : crée le service "no-service" s'il manque
+    opt FORCE_REFETCH_POP = true
+        P->>POP: téléchargement merimee.csv puis upsert pop_immeubles
+        P->>POP: palissy.csv puis pop_objets, seulement si la table est vide
     end
+    P->>F: initFastify, enregistrement des plugins
+    F->>F: listen sur 0.0.0.0 et PORT, 3001 par défaut
+    P->>P: tâche d'envoi des alertes, toutes les 15 min (sauf NODE_ENV=test)
 ```
 
 Détails ([index.ts](../packages/backend/src/index.ts)) :
 
-1. **Chargement de l'environnement** ([envVars.ts](../packages/backend/src/envVars.ts#L7-L11)) : charge `../../.env` (ou `../../.env.test` si `NODE_ENV=test`) **relativement au répertoire courant**, c'est-à-dire la racine du dépôt quand on lance depuis `packages/backend`. Si le fichier n'existe pas (production en conteneur), seules les variables du processus comptent.
-2. **Validation zod** ([envVars.ts](../packages/backend/src/envVars.ts#L24-L76)) : toute variable obligatoire absente provoque une exception au chargement du module.
-3. **Service « no-service »** ([index.ts](../packages/backend/src/index.ts#L42-L47)) : une ligne `service` d'identifiant `no-service`, invisible (`visible=false`), est créée si elle manque. Elle sert aux comptes anciens qui n'ont pas de service ; le frontend leur affiche un choix de service obligatoire.
+1. **Chargement de l'environnement** ([envVars.ts](../packages/backend/src/envVars.ts)) : fichier `.env` à la racine du dépôt s'il existe, sinon (conteneur) variables du processus seulement.
+2. **Validation** : toute variable obligatoire absente arrête le démarrage.
+3. **Service « no-service »** ([index.ts](../packages/backend/src/index.ts)) : une ligne `service` d'identifiant `no-service`, invisible (`visible=false`), est créée si elle manque. Elle sert aux comptes anciens qui n'ont pas de service ; le frontend leur affiche un choix de service obligatoire.
 4. **Import POP optionnel** si `FORCE_REFETCH_POP=true` (voir §8).
 5. **Fastify** écoute sur `0.0.0.0:${PORT}`.
 6. **Tâche d'envoi des alertes** ([alertDelivery.ts](../packages/backend/src/features/alertDelivery.ts)) : première exécution une minute après le démarrage, puis toutes les 15 minutes (voir §8). Désactivée quand `NODE_ENV=test`.
@@ -119,58 +80,32 @@ Les migrations **ne sont pas** lancées par le backend lui-même : l'image Docke
 
 ### 3.2 Modes d'exécution (`NODE_ENV`)
 
-| Variable | Calcul ([envVars.ts](../packages/backend/src/envVars.ts#L13-L15)) | Effets |
+| Variable | Calcul | Effets |
 | --- | --- | --- |
 | `isDev` | `NODE_ENV === "development"` | Liste blanche désactivée, Sentry désactivé, pile d'erreur renvoyée au client |
 | `isTest` | `NODE_ENV === "test"` | Charge `.env.test` |
 | `isProd` | ni dev ni test | Sentry actif si `SENTRY_DSN` est défini |
 
-**Piège** : `isDev` est calculé à partir de `process.env.NODE_ENV` après chargement du `.env`, et non à partir de la valeur par défaut du schéma zod (`"development"`). Si `NODE_ENV` n'est défini nulle part, l'application se comporte comme en **production** (liste blanche active, Sentry actif). `pnpm backend dev` ne fixe pas `NODE_ENV` et [.env.dist](../.env.dist) ne contient pas cette variable. La mention du README « la whitelist n'est pas active en développement » suppose donc que `NODE_ENV=development` soit ajouté au `.env`. De plus, le message « Running in … mode » est écrit **avant** le chargement du `.env` et peut afficher `undefined`.
+**Piège** : `isDev` est calculé à partir de `process.env.NODE_ENV` après chargement du `.env`, et non à partir de la valeur par défaut du schéma zod (`"development"`). Si `NODE_ENV` n'est défini nulle part, l'application se comporte comme en **production** (liste blanche active, Sentry actif).
 
-### 3.3 Variables d'environnement lues par le backend
+### 3.3 Variables d'environnement
 
-| Variable | Obligatoire | Usage réel dans le code |
-| --- | --- | --- |
-| `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` (5432) | oui | Utilisées seulement par `drizzle.config.ts` (migrations) |
-| `DATABASE_URL` | oui | Connexion Kysely ([db.ts](../packages/backend/src/db/db.ts#L9-L13)) |
-| `DATABASE_SSL` (false) | non | TLS vers PostgreSQL (backend et migrations) |
-| `FRONTEND_URL` | oui | Liens dans les courriels (réinitialisation, validation, constat) ; origine autorisée par CORS |
-| `CORS_ORIGINS` | non | Autres origines autorisées par CORS, séparées par des virgules |
-| `TRUST_PROXY_HOPS` (1) | non | Nombre de proxys inverses devant le backend, pour retrouver l'adresse IP du client (limitation de débit) |
-| `BACKEND_URL` | oui | URL publique des liens courts `/attachment/:id` |
-| `EMAIL_HOST`, `EMAIL_PORT` (465), `EMAIL_USER`, `EMAIL_PASSWORD`, `EMAIL_EMITTER` | oui | SMTP (option `secure` non fixée ; comportement TLS à confirmer selon le port) |
-| `MINIO_URL`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY` | oui | Client S3 (région `us-east-1` en dur, *path style*) |
-| `MINIO_PUBLIC_URL` | non | Point d'accès utilisé pour **signer** les URL présignées quand le stockage est joint par une autre adresse que `MINIO_URL` (reverse proxy) |
-| `UP_API_MODE` (`mock`), `UP_API_URL`, `UP_API_KEY`, `UP_CACHE_TTL_HOURS` (24) | non (`UP_API_KEY` obligatoire si `UP_API_MODE=live`) | API Dataspace des unités patrimoniales (§4.9) |
-| `VITE_AUTH_URL`, `VITE_AUTH_REALM`, `VITE_AUTH_CLIENT_ID` | oui | Keycloak (partagées avec le frontend) |
-| `AUTH_CLIENT_SECRET` | oui | Secret du client Keycloak applicatif (signature HS256 de l'assertion client) |
-| `AUTH_ADMIN_CLIENT_ID`, `AUTH_ADMIN_CLIENT_SECRET` | oui | Compte de service Keycloak pour l'API d'administration |
-| `SENTRY_DSN` | non | Active Sentry hors développement |
-| `SENTRY_ENVIRONMENT` | non | Environnement des événements Sentry (défaut : `NODE_ENV`, donc `production` dans l'image) |
-| `SENTRY_RELEASE` | non | Version des événements Sentry (posée par la CI au SHA du commit ; sinon `SOURCE_COMMIT` de Coolify, sinon la version du paquet) |
-| `PORT` (3001) | non | Port d'écoute |
-| `DEBUG` (`cr-vif:*`) | non | Espaces de noms de journalisation (activés **par défaut**, y compris en production) |
-| `FORCE_REFETCH_POP` (false) | non | Réimport POP au démarrage |
-| `NODE_ENV` | non | Voir §3.2 |
-| `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DATAGOUV_API` | **oui** | **Jamais lues par le code**. Elles doivent pourtant être définies (valeur quelconque), sinon le démarrage échoue |
-| `TOKEN_LIFETIME` (60m), `ASSETS_DIR` | non | Jamais lues |
+La référence des variables du backend (base, SMTP, stockage objet, Keycloak, CORS, `TRUST_PROXY_HOPS`, API Dataspace, Sentry) est en [11 — Configuration](11-configuration.md). Deux points concernent le démarrage :
 
-Remarque : [.env.dist](../.env.dist) est désynchronisé (il mentionne `AWS_*`, `KEYCLOAK_CLIENT_SECRET`, `VITE_ELECTRIC_URL`… mais pas `BACKEND_URL`, `AUTH_ADMIN_CLIENT_*`, `EMAIL_EMITTER`, `DATAGOUV_API`, `JWT_REFRESH_SECRET`). La liste ci-dessus, tirée de `envVars.ts`, fait foi.
+- `JWT_SECRET`, `JWT_REFRESH_SECRET` et `DATAGOUV_API` ne sont **jamais lues** mais restent **obligatoires** : sans elles (valeur quelconque), le démarrage échoue ;
+- `DEBUG` vaut `cr-vif:*` par défaut : les journaux applicatifs sont actifs en production (§7.2).
 
 ### 3.4 Construction de l'instance Fastify
 
-[router.ts](../packages/backend/src/router.ts) :
+[router.ts](../packages/backend/src/router.ts) assemble :
 
-- `fastify({ routerOptions: { maxParamLength: 5000 }, trustProxy })` : paramètres de chemin très longs autorisés ; confiance accordée à `TRUST_PROXY_HOPS` proxys pour calculer `request.ip`.
-- Compilateur de validation TypeBox, fournisseur de types TypeBox.
-- `@fastify/swagger` enregistré **en premier** (obligatoire pour qu'il capte toutes les routes). L'option `prefix: "/documentation"` est sans effet : aucune interface Swagger n'est exposée. L'import est nommé `swaggerUi` mais il s'agit bien de `@fastify/swagger`.
-- CORS limité à `FRONTEND_URL` et `CORS_ORIGINS` (toute origine `localhost` en développement et en test), méthodes `GET, HEAD, PUT, PATCH, POST, DELETE`.
-- En-têtes de sécurité ajoutés à chaque réponse (hook `onSend`, voir [05 § 6](05-authentification-securite.md#6-validation-des-entrées-et-exposition-http)).
-- Limitation de débit enregistrée (sans limite globale ; chaque route choisit sa règle).
-- Hook `onRequest` : journalise `METHODE` et le **modèle de route** (jamais l'URL complète) et injecte `request.services` (singletons, §5).
-- `GET /health` et `GET /health/ready` hors préfixe.
-- Un plugin encapsulé de préfixe `/api` qui porte le **gestionnaire d'erreurs** (§7) et enregistre, **dans cet ordre** : `auth`, `user`, `staticData`, `upload` (`/upload`), `pdf` (`/pdf`), `stateReport` (`/state-report`), `up` (`/up`), `monumentAlert` (`/monument-alert`), `validation`, `sync`, `admin` (`/admin`), `stats` (`/stats`).
-- `attachmentRedirectPlugin` **hors** du préfixe `/api` : la route `/attachment/:id` n'a donc pas le gestionnaire d'erreurs personnalisé.
+- la validation des requêtes par schémas TypeBox et la production du contrat OpenAPI (aucune interface Swagger n'est exposée) ;
+- **CORS** limité à `FRONTEND_URL` et `CORS_ORIGINS` (voir [11](11-configuration.md)) ;
+- des **en-têtes de sécurité** sur chaque réponse (voir [05 § 6](05-authentification-securite.md#6-validation-des-entrées-et-exposition-http)) ;
+- la **limitation de débit**, règle par règle (voir [05 § 6.1](05-authentification-securite.md#61-limitation-de-débit)) ; l'adresse IP du client est calculée en faisant confiance à `TRUST_PROXY_HOPS` proxys ;
+- un journal de chaque requête par **méthode et modèle de route** (jamais l'URL complète) ;
+- les sondes `GET /health` et `GET /health/ready` et la route des liens courts `/attachment/:id`, hors du préfixe `/api` ;
+- toutes les autres routes sous le préfixe `/api`, avec un gestionnaire d'erreurs commun (§7).
 
 ---
 
@@ -184,7 +119,7 @@ Légende « Auth » : **Public** = aucun contrôle ; **Jeton** = en-tête `Autho
 | --- | --- | --- | --- |
 | GET | `/health` | Public | Sonde de vie : renvoie `{status:"ok"}` dès que le processus répond, sans vérifier la base ni S3 |
 | GET | `/health/ready` | Public | Sonde de disponibilité ([health.ts](../packages/backend/src/features/health.ts)) : `select 1` sur PostgreSQL et `HeadBucket` sur le bucket, 3 s au plus chacun. 200 `{status:"ok", checks}` si les deux répondent, **503** sinon. `checks` vaut `ok` ou `error` pour `database` et `storage` ; la cause n'est écrite que dans les journaux du serveur |
-| GET | `/attachment/:id/:filename?` | Public (60/min par IP) | Lien court inséré dans les courriels. Recherche `attachment_redirection.id`. 404 si inconnu, **410 si créé il y a plus de 90 jours**. Si la ligne a un `name`, le backend **relaie le fichier** (`Content-Disposition: inline; filename="<name>"`). Sinon, il redirige (302) vers une URL S3 présignée valable 1 h. Le segment `filename` est purement cosmétique. [attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts) |
+| GET | `/attachment/:id/:filename?` | Public (limité par IP) | Lien court inséré dans les courriels, valable **90 jours** (410 au-delà). Le backend relaie le fichier ou redirige vers une URL S3 présignée d'une heure. Détail en [07](07-donnees-externes-et-stockage.md) |
 
 ### 4.2 Authentification et compte — [authRoutes.ts](../packages/backend/src/routes/authRoutes.ts), [userRoutes.ts](../packages/backend/src/routes/userRoutes.ts)
 
@@ -193,10 +128,10 @@ Légende « Auth » : **Public** = aucun contrôle ; **Jeton** = en-tête `Autho
 | POST | `/api/login-user` | Public (limité) | Corps `{email,password}`. *Password grant* Keycloak (`scope=offline_access`). Renvoie `{accessToken, refreshToken, expiresAt, user}`. C'est **la** méthode de connexion utilisée par le frontend |
 | POST | `/api/create-user` | Public (limité) | Inscription. Contrôle de la **liste blanche** (sauf en dev) et de la **politique de mot de passe** (400), création du compte Keycloak via l'API d'administration, création ou mise à jour de `user` et `internal_user` (rôle `user`, date d'acceptation des CGU), affectation du service et des départements, puis connexion automatique |
 | POST | `/api/refresh-token` | Public | Corps `{refreshToken}`. *Refresh grant* Keycloak. 401 « Session expirée » si Keycloak refuse |
-| POST | `/api/logout` | Public (60/min par IP) | Corps `{refreshToken}`. Révoque le jeton de rafraîchissement (jeton hors ligne) auprès de Keycloak. Renvoie `{revoked}` ; un jeton inconnu ou déjà révoqué donne `revoked: false`, jamais une erreur. Le jeton d'accès peut avoir expiré : le jeton de rafraîchissement fait foi |
+| POST | `/api/logout` | Public (limité par IP) | Corps `{refreshToken}`. Révoque le jeton de rafraîchissement (jeton hors ligne) auprès de Keycloak. Renvoie `{revoked}` ; un jeton inconnu ou déjà révoqué donne `revoked: false`, jamais une erreur. Le jeton d'accès peut avoir expiré : le jeton de rafraîchissement fait foi |
 | POST | `/api/send-reset-password` | Public (limité) | Corps `{email}`. Si l'adresse a un compte, génère un lien de réinitialisation valable 24 h et l'envoie par courriel. Répond **toujours** le même message, que l'adresse ait un compte ou non |
 | POST | `/api/reset-password` | Public (limité) | Corps `{temporaryLink,newPassword}`. Vérifie la politique de mot de passe (400) et le lien, change le mot de passe dans Keycloak, invalide le lien |
-| POST | `/api/change-service` | Jeton | Corps `{service_id}`. Change le service de l'utilisateur sans autre vérification que l'existence du service (choix assumé de l'équipe) et remplace ses départements (`user_dept`), en **une seule transaction** qui **journalise le changement** dans `transactions` (`op = CHANGE_SERVICE`, ancien et nouveau service) |
+| POST | `/api/change-service` | Jeton | Corps `{service_id}`. Change le service de l'utilisateur sans autre vérification que l'existence du service (choix fonctionnel) et remplace ses départements (`user_dept`), en **une seule transaction** qui **journalise le changement** dans `transactions` (`op = CHANGE_SERVICE`, ancien et nouveau service) |
 | GET | `/api/created-at` | Jeton | Date de création du compte (`internal_user.createdAt`), `null` si absente |
 
 ### 4.3 Données de référence — [staticDataRoutes.ts](../packages/backend/src/routes/staticDataRoutes.ts), [stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)
@@ -240,7 +175,7 @@ Le contrôle ([attachmentAccess.ts](../packages/backend/src/features/attachmentA
 
 ### 4.7 Validation des constats — [validationRoutes.ts](../packages/backend/src/routes/validationRoutes.ts)
 
-Routes **publiques** : l'authentification repose sur la seule connaissance du jeton (UUID v4) envoyé au validateur. Elles sont limitées à 60 requêtes par minute et par IP.
+Routes **publiques** : l'authentification repose sur la seule connaissance du jeton (UUID v4) envoyé au validateur. Elles sont soumises à la limite de débit des routes publiques.
 
 | Méthode | Chemin | Auth | Rôle et logique notable |
 | --- | --- | --- | --- |
@@ -275,23 +210,15 @@ Il n'existe **aucune route** pour promouvoir un administrateur, supprimer un uti
 
 | Méthode | Chemin | Auth | Rôle et logique notable |
 | --- | --- | --- | --- |
-| GET | `/api/stats/public` | **Public** (60/min par IP) | Indicateurs globaux. Période par défaut : les 3 derniers mois (`from`, `to` au format `AAAA-MM-JJ`) |
-| GET | `/api/stats/accounts` | **Public** (60/min par IP) | Créations de comptes par mois (par défaut depuis le 1er janvier) |
-| GET | `/api/stats/documents` | **Public** (60/min par IP) | Comptes-rendus et constats créés et envoyés par mois |
+| GET | `/api/stats/public` | **Public** (limité par IP) | Indicateurs globaux. Période par défaut : les 3 derniers mois (`from`, `to` au format `AAAA-MM-JJ`) |
+| GET | `/api/stats/accounts` | **Public** (limité par IP) | Créations de comptes par mois (par défaut depuis le 1er janvier) |
+| GET | `/api/stats/documents` | **Public** (limité par IP) | Comptes-rendus et constats créés et envoyés par mois |
 | GET | `/api/stats/admin` | Admin | Constats par service (envoyés, téléchargés, « utilisés »), documents abandonnés |
 | GET | `/api/stats/udap` | Admin | Indicateurs par département (services UDAP) |
 | GET | `/api/stats/crmh` | Admin | Indicateurs par région (services CRMH), via une table de codes région en dur |
 | GET | `/api/stats/jobs` | Admin | Répartition des utilisateurs par fonction (`user.job`) |
 
-Règles de calcul cachées des statistiques :
-
-- Un document est **« envoyé »** si `attachment_id IS NOT NULL`. Pour un constat soumis à validation, `attachment_id` est renseigné **dès la demande de validation**, avant toute acceptation, et le reste même en cas de refus (§6.5). Les compteurs « envoyés » incluent donc les constats en attente ou refusés.
-- Les documents `disabled = true` (suppression logique) sont exclus partout.
-- Un service est **UDAP** si son identifiant contient `udap`, **CRMH** s'il contient `crmh` (recherche `ilike` sur `service.id`, et non sur le nom). Un « déploiement » = un service de ce type ayant au moins un constat.
-- Statistiques UDAP par département : **seul le premier département** de `service.dept_numbers` est pris en compte.
-- **Abandon** : document créé il y a plus de **21 jours** sans PDF. Pour les constats, critère `attachment_id IS NULL` ; pour les comptes-rendus, critère sur la colonne `pdf IS NULL`. La pièce jointe d'un constat et le PDF d'un compte-rendu sont la même notion (le document envoyé) : la différence de colonne n'est pas une incohérence.
-- **Utilisateur actif** sur la période : a envoyé au moins un document (table `sent_email` ou `state_report_sent_email`).
-- Les téléchargements ne sont comptés qu'à partir de la date renvoyée dans `downloadTrackingSince`.
+Les compteurs « envoyés » des statistiques reposent sur `attachment_id IS NOT NULL` : ils incluent les constats en attente de validation ou refusés (§6.5). Les règles de calcul détaillées sont dans [statsRoutes.ts](../packages/backend/src/routes/statsRoutes.ts).
 
 ---
 
@@ -309,8 +236,6 @@ Les services sont des **singletons** créés au premier appel de `getServices()`
 | `StateReportService` | [stateReportService.ts](../packages/backend/src/services/stateReportService.ts) | Images POP par référence, constats d'un monument tous services confondus, accès d'un service à un monument (par département) |
 | `UpService` | [upService.ts](../packages/backend/src/services/upService.ts) | Arbre des unités patrimoniales (API Dataspace ou données de test, cache `up_cache`) |
 
-Code mort dans `UploadService` : `uploadAttachment`, `addPDFToReport` (qui construirait d'ailleurs une URL `https://https://…`), `getPDFName`, `getPictureName`, `upload`.
-
 ---
 
 ## 6. Fonctionnalités en détail
@@ -326,14 +251,14 @@ L'identifiant pivot entre Keycloak et la base métier est **l'adresse de courrie
 Conséquences cachées :
 
 - Les courriels sont stockés en minuscules et sans espaces (`user`, `internal_user`, `whitelist`). La même normalisation s'applique à l'inscription, à la connexion, à la liste blanche (ajout par l'administration et contrôle à l'inscription) et à la demande de réinitialisation du mot de passe : la casse saisie n'a pas d'effet.
-- `/api/login-user` recherche l'utilisateur local avec le courriel saisi, normalisé. Un compte Keycloak sans ligne `user` provoque une erreur 500 (`populateService(undefined)`).
+- Un compte Keycloak sans ligne `user` correspondante ne peut pas se connecter (erreur 500).
 - `/api/refresh-token` peut renvoyer `user: null` si la ligne locale a disparu. Le schéma de réponse exige un objet : *comportement exact à confirmer (probable erreur 500)*.
 
 ### 6.2 Point d'entrée PowerSync `/api/upload-data`
 
 Le frontend (connecteur PowerSync, [Connector.ts](../packages/frontend/src/db/Connector.ts)) lit sa file locale **une opération à la fois** (`getCrudBatch(1)`), l'envoie en une requête HTTP, puis l'acquitte (`complete()`) avant de passer à la suivante. Les opérations sans données (hors `DELETE`) sont ignorées côté client. Voir [08 § 4.3](08-synchronisation-hors-ligne.md#43-envoi-des-écritures--uploaddata) pour le traitement des refus et des erreurs répétées.
 
-Format attendu (TypeBox, [syncService.ts](../packages/backend/src/services/syncService.ts#L291-L298)) :
+Format attendu ([syncService.ts](../packages/backend/src/services/syncService.ts)) :
 
 ```json
 { "op_id": 12, "tx_id": 5, "id": "<id de la ligne>", "type": "<nom de table>", "op": "PUT | PATCH | DELETE", "data": { "...": "..." } }
@@ -366,7 +291,7 @@ Règles et constats importants :
    - les **colonnes** acceptées (celles du schéma client, vérifié par un test) ; une colonne inconnue fait refuser l'opération ;
    - les **colonnes serveur** (`service_id`, auteur, `attachment_id`, `pdf_size`, `validation_status`, `sent_at`…), forcées par le serveur à la création et ignorées en modification ;
    - les **colonnes figées** après création (document parent, `user.service_id`, `service.dept_numbers`) ;
-   - la **règle de droit** : la ligne doit être du service de l'utilisateur ; un compte-rendu ou une alerte de fiche n'est modifiable que par son auteur, son rédacteur (compte-rendu) ou une personne à qui l'auteur a donné **délégation** ; un **constat** n'est modifiable que par son **auteur** (la délégation ne s'y applique pas, comme dans l'interface) ; les lignes filles suivent le droit du document. `user` : son propre profil ; `service` : son propre service (tout membre, choix de l'équipe) ; `delegation` : ses propres délégations, vers un collègue du même service.
+   - la **règle de droit** : la ligne doit être du service de l'utilisateur ; un compte-rendu ou une alerte de fiche n'est modifiable que par son auteur, son rédacteur (compte-rendu) ou une personne à qui l'auteur a donné **délégation** ; un **constat** n'est modifiable que par son **auteur** (la délégation ne s'y applique pas, comme dans l'interface) ; les lignes filles suivent le droit du document. `user` : son propre profil ; `service` : son propre service (tout membre) ; `delegation` : ses propres délégations, vers un collègue du même service.
    - **Constat verrouillé** ([syncService.ts](../packages/backend/src/services/syncService.ts)) : dès qu'un constat a un PDF (`attachment_id` non nul), sauf si le validateur l'a refusé, toute écriture sur lui ou ses lignes filles (parties visitées, alertes, pièces jointes) est refusée. Seul `disabled` reste modifiable (suppression). C'est la même règle que la lecture seule de l'interface.
    - **Réglages utilisateur** : une seule ligne `user_settings` par couple (utilisateur, service). Un `PUT` ou un `PATCH` venant d'un autre appareil est appliqué à la ligne existante au lieu d'en créer une nouvelle.
 3. **Pas de validation métier fine** : `data` reste de type `Any` ; seuls les noms de colonnes sont contrôlés, les valeurs sont filtrées par les contraintes PostgreSQL.
@@ -405,7 +330,7 @@ Règles cachées :
 - `changeService` ([userService.ts](../packages/backend/src/services/userService.ts)) : le service, les départements et la trace sont écrits dans **une seule transaction**. Chaque changement est tracé dans `transactions` (`type = user`, `op = CHANGE_SERVICE`, `data = {from, to}`). `service.dept_numbers` est une **liste de numéros de départements séparés par des virgules**. Les lignes `user_dept` de l'utilisateur sont remplacées par cette liste. Ces lignes pilotent la synchronisation des données POP (monuments et objets des départements du service). **Si le service n'a pas de `dept_numbers`, les anciens départements sont conservés**, ce qui laisse des données POP d'un ancien service.
 - Les paramètres utilisateur `user_settings` sont indexés par **(utilisateur, service)** : changer de service fait « perdre » les paramètres (dont la validation par un tiers) jusqu'au retour dans le service d'origine.
 
-**Réinitialisation du mot de passe** ([userService.ts](../packages/backend/src/services/userService.ts#L57-L117)) : c'est le parcours de réinitialisation en service, la plupart des agents se connectant par courriel et mot de passe. Le lien est un UUID v4 aléatoire stocké **haché en SHA-256** dans `internal_user.temporaryLink`, valable 24 h et à usage unique. Une empreinte MD5 est encore acceptée, pour les liens émis avant le prochain déploiement : ce repli est à retirer une fois ces liens expirés (voir [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). Le compte Keycloak est retrouvé par une recherche **exacte** sur le courriel (`exact=true` ; la recherche par défaut de Keycloak est une recherche par sous-chaîne), puis le nouveau mot de passe y est poussé via l'API d'administration (`temporary: false`). La recherche se fait dans `internal_user` : un utilisateur sans `internal_user` ne peut pas réinitialiser son mot de passe par ce biais (il reçoit le même message, sans courriel).
+**Réinitialisation du mot de passe** ([userService.ts](../packages/backend/src/services/userService.ts)) : le lien est un UUID v4 aléatoire stocké **haché en SHA-256** dans `internal_user.temporaryLink`, valable 24 h et à usage unique. Les liens hachés en MD5 restent acceptés. Le compte Keycloak est retrouvé par une recherche **exacte** sur le courriel (`exact=true` ; la recherche par défaut de Keycloak est une recherche par sous-chaîne), puis le nouveau mot de passe y est poussé via l'API d'administration (`temporary: false`). La recherche se fait dans `internal_user` : un utilisateur sans `internal_user` ne peut pas réinitialiser son mot de passe par ce biais (il reçoit le même message, sans courriel).
 
 ### 6.4 Envoi d'un compte-rendu (`POST /api/pdf/report`)
 
@@ -415,7 +340,7 @@ Le PDF est généré **dans le navigateur**, déposé par le navigateur sur S3 v
 1. Relit le PDF sur S3 (pour vérifier son existence ; le contenu n'est pas utilisé).
 2. Transaction : insère `report_attachment` (id = `pdfPath`) et met à jour `report.attachment_id` et `pdf_size`.
 3. Destinataires : la chaîne reçue est découpée sur `,` et `;` ; **l'adresse de l'expéditeur est toujours ajoutée**.
-4. Crée un **lien court** `attachment_redirection` (identifiant base62 d'un entier aléatoire de 48 bits, avec un nom de fichier lisible) et envoie le courriel « Compte-rendu UDAP ».
+4. Crée un **lien court** public de 90 jours (voir [07](07-donnees-externes-et-stockage.md)) et envoie le courriel « Compte-rendu UDAP ».
 5. Pour chaque destinataire : ligne `sent_email` et tentative d'insertion dans `suggested_email` (erreur ignorée). Comme `suggested_email.email` est **unique globalement**, une adresse n'est suggérée qu'au **premier service** qui l'a utilisée.
 6. Renvoie une URL S3 présignée (1 h) du PDF.
 
@@ -481,7 +406,7 @@ Les autres courriels (compte-rendu, constat, validation) sont envoyés de façon
 
 ### 7.1 Gestionnaire d'erreurs
 
-Défini sur le plugin `/api` ([router.ts](../packages/backend/src/router.ts#L87-L115)) :
+Défini sur le plugin `/api` ([router.ts](../packages/backend/src/router.ts)) :
 
 - Dépassement d'une limite de débit → **429** avec `Retry-After`, ni journal d'erreur ni Sentry.
 - Requête refusée par le schéma TypeBox → **400** `{error: "Requête invalide"}`, sans détail du schéma ; un avertissement est journalisé avec le modèle de route ; pas d'envoi à Sentry.
@@ -492,7 +417,7 @@ Défini sur le plugin `/api` ([router.ts](../packages/backend/src/router.ts#L87-
 Conséquences cachées :
 
 - Les routes de validation lèvent des `AppError` : lien inconnu → 404, lien expiré ou constat déjà traité → 410.
-- `AppError` n'hérite pas d'`Error` (pas de pile d'appel dans Sentry).
+- Les erreurs métier (`AppError`) n'ont pas de pile d'appel dans Sentry.
 - La route `/attachment/:id` est hors du plugin `/api` : ses erreurs inattendues suivent le format par défaut de Fastify.
 
 ### 7.2 Journaux
@@ -520,7 +445,7 @@ Avec plusieurs réplicas, chaque processus exécute la tâche ; l'envoi reste un
 Il n'existe **aucune autre tâche planifiée** (ni cron, ni file de tâches). Les données POP sont importées :
 
 - au démarrage si `FORCE_REFETCH_POP=true` ;
-- ou manuellement avec `pnpm backend import-pop` (`vite-node ./src/features/data/pop.ts --standalone`), qui enchaîne immeubles et objets.
+- ou à la main, par un script du backend qui enchaîne immeubles et objets.
 
 | Étape | Source | Cible | Règle |
 | --- | --- | --- | --- |
@@ -531,69 +456,4 @@ Détails cachés de l'import ([pop.ts](../packages/backend/src/features/data/pop
 
 - Les en-têtes CSV sont mis en minuscules et seules les colonnes existant dans la table (introspection) sont conservées.
 - Doublons de référence dans un même lot : seule la première occurrence est gardée.
-- Images : `pop_images` (URL de photos POP, lue par les fiches objet) est vide et n'est alimentée par aucun import. L'affichage des images POP par IIIF est prévu ; l'équipe POP a donné son accord pour l'affichage direct de ses photos.
-
----
-
-## 9. Contrat OpenAPI et client typé
-
-```mermaid
-flowchart LR
-    A["Routes Fastify avec schémas TypeBox"] --> B["pnpm client:json<br/>backend dev --create-only"]
-    B --> C["packages/backend/openapi.json"]
-    C --> D["pnpm client:ts<br/>typed-openapi 0.4"]
-    D --> E["packages/frontend/src/api.gen.ts"]
-    E --> F["packages/frontend/src/api.ts<br/>createApiClient avec ofetch"]
-```
-
-- `pnpm client:generate` (racine) = `client:json` + `client:ts`.
-- `client:json` lance `vite-node ./src/index.ts --create-only` : `initFastify()` est construit, `fastify.swagger()` est sérialisé dans `openapi.json` **du répertoire courant** (`packages/backend`), puis le processus s'arrête. Toutes les variables d'environnement obligatoires doivent être présentes (validation zod), mais aucune connexion à la base n'est ouverte : le pool `pg` est paresseux et `initEmptyService` n'est pas appelé. *À confirmer en pratique.*
-- `client:ts` lance `typed-openapi ./packages/backend/openapi.json --output ./packages/frontend/src/api.gen.ts`.
-- Côté frontend, [api.ts](../packages/frontend/src/api.ts) enveloppe le client généré : ajout automatique du jeton (avec rafraîchissement préalable si nécessaire), sauf pour `unauthenticatedApi`. Les types `RouterInputs` et `RouterOutputs` sont dérivés du fichier généré.
-- `openapi.json` et `api.gen.ts` sont **commités** et correspondent aux routes du backend. Le frontend dérive le type `AuthUser` de la réponse de `/api/login-user` ([api.ts](../packages/frontend/src/api.ts)). Il n'y a aucun contrôle en CI : oublier `pnpm client:generate` après une modification de route ne casse pas le build, mais donne des types faux côté frontend.
-- Les routes sans schéma de réponse (`/api/upload/attachment`, `/api/upload/attachment/size`, `/attachment/:id`) sont typées `unknown`. Les composants de schéma ne sont pas factorisés (`Schemas` vide).
-
----
-
-## 10. Build, exécution et tests
-
-| Commande | Effet |
-| --- | --- |
-| `pnpm backend dev` | `vite-node --watch src/index.ts` ; à chaque modification, les rappels HMR ferment Fastify avant le rechargement ([hmr.ts](../packages/backend/src/hmr.ts)) |
-| `pnpm backend dev-test` | Idem avec `NODE_ENV=test` (`.env.test`) |
-| `pnpm backend build` | `tsup --publicDir` → `dist/index.js` (ESM) |
-| `pnpm backend start` | `NODE_ENV=production node ./dist/index.js` (l'image Docker passe par [docker-start.sh](../packages/backend/docker-start.sh)) |
-| `pnpm migration:generate` / `migration:up` | drizzle-kit `generate` / `migrate` (migrations dans [db/](../db)) |
-| `pnpm backend check` | `tsc --noEmit` |
-| `pnpm backend test` | vitest : tests unitaires des règles d'écriture ([syncPolicy.test.ts](../packages/backend/src/features/sync/syncPolicy.test.ts)), de l'accès aux fichiers, des limites (débit, fichiers, destinataires, mot de passe), de CORS, des alertes et de la migration 0045 (voir [13](13-tests-et-qualite.md)). **Lancés en CI** avant la construction des images |
-| `pnpm e2e` | Tests Playwright de bout en bout ([tests/](../tests)), déclenchés **manuellement** en CI (`workflow_dispatch`) |
-
-Le paquet déclare `exports: "./src/router.ts"` : les tests importent directement des modules du backend (par exemple `deleteUserByEmail`, l'instance `db`).
-
----
-
-## 11. Règles cachées et pièges — récapitulatif
-
-| # | Règle ou piège | Où |
-| --- | --- | --- |
-| 1 | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `DATAGOUV_API` sont obligatoires au démarrage mais inutilisées | `envVars.ts` |
-| 2 | Sans `NODE_ENV=development` explicite, le backend se comporte comme en production (liste blanche, Sentry) | `envVars.ts` |
-| 3 | Le service `no-service` est créé au démarrage (comptes anciens sans service) | `index.ts` |
-| 4 | L'identité locale est retrouvée par **courriel** (normalisé en minuscules), et non par l'identifiant Keycloak | `authService.ts` |
-| 5 | `/api/upload-data` : tables, colonnes et droits contrôlés ; refus et erreurs SQL renvoient 200 `success:false`, que le client signale à l'agent | `syncPolicy.ts`, `syncService.ts`, `Connector.ts` |
-| 6 | Chaque écriture client est copiée intégralement dans `transactions` (sans purge) | `syncService.ts` |
-| 7 | Un `PUT` sur une ligne existante est appliqué comme un `PATCH` | `syncPolicy.ts` |
-| 8 | Un jeton absent ou invalide → 403, jamais 401 (sauf `refresh-token` → 401) | `authMiddleware.ts` |
-| 9 | Liens courts publics, valables 90 jours (durée annoncée dans les courriels), y compris dans le courriel envoyé après acceptation par le validateur | `attachmentRedirectRoutes.ts`, `attachmentRedirection.ts`, `mail.ts` |
-| 10 | Validation d'un constat : jeton de 7 jours ; une fois la demande traitée, le lien ne montre plus que la décision | `validationRoutes.ts` |
-| 11 | Constat en validation : déjà compté comme « envoyé » (attachment_id renseigné) ; alertes déjà parties | `pdfRoutes.tsx` |
-| 12 | L'expéditeur est toujours ajouté aux destinataires | `pdfRoutes.tsx` |
-| 13 | `suggested_email` est unique globalement : une adresse n'est suggérée qu'au premier service | `schema.ts` |
-| 14 | `user_settings` dépend du couple (utilisateur, service) | `pdfRoutes.tsx` |
-| 15 | UDAP et CRMH sont reconnus par une sous-chaîne de `service.id` | `statsRoutes.ts` |
-| 16 | `pop_objets` n'est jamais réimporté si la table est non vide | `pop.ts` |
-| 17 | Le processus doit tourner depuis `packages/backend` (lecture de `public/`) | `dsfrMailWrapper.ts` |
-| 18 | Le conteneur s'arrête si la migration échoue | `docker-start.sh` |
-| 19 | `TRUST_PROXY_HOPS` doit correspondre au nombre de proxys devant le backend, sinon la limitation de débit par IP compte mal | `router.ts`, `rateLimit.ts` |
-| 20 | Courriels envoyés de façon synchrone après l'écriture en base ; seules les alertes sont reprises par la tâche périodique | `pdfRoutes.tsx`, `alertDelivery.ts` |
-| 21 | Limites de débit en mémoire, par processus, désactivées quand `NODE_ENV=test` | `rateLimit.ts` |
+- Images : `pop_images` (URL de photos POP) est vide et n'est alimentée par aucun import ; les images POP ne sont pas affichées.

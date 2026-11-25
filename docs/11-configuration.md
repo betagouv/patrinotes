@@ -1,6 +1,6 @@
 # 11 — Référence de configuration
 
-Ce document recense **toutes** les variables d'environnement lues par Patrinotes et ses dépendances, composant par composant, ainsi que les paramètres codés en dur qui devraient être configurables. Il a été établi en parcourant `process.env`, `import.meta.env`, `window.ENV`, les schémas de validation, les fichiers Compose, la configuration PowerSync, le gabarit de realm Keycloak et les scripts.
+Ce document recense **toutes** les variables d'environnement lues par Patrinotes et ses dépendances, composant par composant, ainsi que les paramètres codés en dur qui devraient être configurables.
 
 > [!CAUTION]
 > Aucune valeur secrète ne figure ici. Les exemples sont fictifs ou issus de [.env.test](../.env.test) (valeurs de test publiques). Les valeurs de production sont dans Coolify ; les valeurs **non secrètes** relevées lors du relevé de production du 17/11/2026 sont au § 10.
@@ -13,7 +13,7 @@ Légende : **Obl.** = obligatoire (le composant refuse de démarrer sans) ; **Se
 | --- | --- | --- |
 | Backend | `dotenv` + `dotenv-expand` chargent `../../.env` (ou `../../.env.test` si `NODE_ENV=test`), **chemin relatif au répertoire courant** (`packages/backend` avec `pnpm --filter`). Puis validation **Zod** stricte de `process.env` : une variable obligatoire absente fait planter le processus au démarrage. Les variables déjà présentes dans l'environnement ont priorité sur le fichier. | [envVars.ts](../packages/backend/src/envVars.ts) |
 | Migrations | `drizzle-kit` charge [drizzle.config.ts](../packages/backend/drizzle.config.ts), qui importe `envVars.ts` : **même validation complète que le backend**. | |
-| Frontend (développement) | Vite lit les variables `VITE_*` depuis la racine du monorepo (`envDir: "../.."`). | [vite.config.ts#L72](../packages/frontend/vite.config.ts#L72) |
+| Frontend (développement) | Vite lit les variables `VITE_*` depuis la racine du monorepo (`envDir: "../.."`). | [vite.config.ts](../packages/frontend/vite.config.ts) |
 | Frontend (production) | Au démarrage du conteneur, [createEnvFile.ts](../packages/frontend/scripts/createEnvFile.ts) écrit dans `dist/env.js` **toutes** les variables `VITE_*` de l'environnement (`window.ENV = {…}`). Le code lit `window.ENV` quand `import.meta.env.PROD` est vrai. Validation Zod **non bloquante** : en cas d'erreur, un message `Error parsing env vars` est écrit dans la console et `ENV` vaut `{}` (l'application démarre mais tous les appels échouent). | [envVars.ts](../packages/frontend/src/envVars.ts) |
 | PowerSync | Fichier YAML avec la balise `!env NOM`. | [powersync-config.yaml](../powersync/powersync-config.yaml) |
 | Keycloak (dev/test) | Variables `KC_*` natives + `envsubst` sur le gabarit de realm au démarrage. | [keycloak-entrypoint.sh](../tests/keycloak-entrypoint.sh), [realm-template.json](../tests/realm-template.json) |
@@ -25,13 +25,13 @@ Légende : **Obl.** = obligatoire (le composant refuse de démarrer sans) ; **Se
 
 ## 2. Backend (`packages/backend`)
 
-Schéma de référence : [envVars.ts#L24-L76](../packages/backend/src/envVars.ts#L24-L76).
+Schéma de référence : [envVars.ts](../packages/backend/src/envVars.ts).
 
 ### 2.1 Base de données
 
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
-| `DATABASE_URL` | Oui | — | Chaîne de connexion utilisée **à l'exécution** (pool `pg`, [db.ts#L9-L13](../packages/backend/src/db/db.ts#L9-L13)). `sslmode` et `sslrootcert` dans l'URL priment sur `DATABASE_SSL`. | `postgresql://patrinotes:***@pg:5432/patrinotes` | **Oui** (mot de passe) |
+| `DATABASE_URL` | Oui | — | Chaîne de connexion utilisée **à l'exécution** (pool `pg`, [db.ts](../packages/backend/src/db/db.ts)). `sslmode` et `sslrootcert` dans l'URL priment sur `DATABASE_SSL`. | `postgresql://patrinotes:***@pg:5432/patrinotes` | **Oui** (mot de passe) |
 | `DATABASE_SSL` | Non | `false` | `true` : connexion TLS vers PostgreSQL, certificat vérifié avec les autorités du système, pour le backend **et** les migrations. `false` : connexion non chiffrée (réseau Docker interne). PowerSync se règle à part (§ 4). | `true` si la base est distante | Non |
 | `POSTGRES_HOST` | Oui | — | Hôte utilisé **uniquement par les migrations** `drizzle-kit` (TLS selon `DATABASE_SSL`). | `pg` | Non |
 | `POSTGRES_PORT` | Non | `5432` | Port pour les migrations (et port publié du conteneur `pg` en dev). | `5432` | Non |
@@ -90,7 +90,7 @@ Schéma de référence : [envVars.ts#L24-L76](../packages/backend/src/envVars.ts
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
 | `FORCE_REFETCH_POP` | Non | `false` | Si `true` (chaîne insensible à la casse), au démarrage : téléchargement de `merimee.csv` et `palissy.csv` depuis `ministere-culture.s3.sbg.io.cloud.ovh.net`, import dans `pop_immeubles` (toujours) et `pop_objets` (**seulement si la table est vide**). Bloque l'ouverture du port pendant l'import. À remettre à `false` ensuite. | `false` | Non |
-| `SENTRY_DSN` | Non | — | DSN Sentry du backend. Absent → Sentry désactivé. Absent en production au relevé du 17/11/2026 (voir [12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). `tracesSampleRate: 0.1` en dur, données personnelles filtrées par `beforeSend` ([sentry.ts](../packages/backend/src/features/sentry.ts)). Le projet Sentry peut être le même que celui du frontend (`VITE_SENTRY_DSN`). | — | Sensible |
+| `SENTRY_DSN` | Non | — | DSN Sentry du backend. Absent → Sentry désactivé. Absent en production au relevé du 17/11/2026 : à poser au prochain déploiement. `tracesSampleRate: 0.1` en dur, données personnelles filtrées par `beforeSend` ([sentry.ts](../packages/backend/src/features/sentry.ts)). Le projet Sentry peut être le même que celui du frontend (`VITE_SENTRY_DSN`). | — | Sensible |
 | `SENTRY_ENVIRONMENT` | Non | `NODE_ENV` | Environnement des événements Sentry du backend. L'image posant `NODE_ENV=production` partout, mettre `preprod` en préproduction. | `preprod` | Non |
 | `SENTRY_RELEASE` | Non | `SOURCE_COMMIT`, sinon version du paquet | Version des événements Sentry. Posée dans l'image par la CI (SHA du commit) : rien à définir dans Coolify. | SHA de commit | Non |
 | `UP_API_MODE` | Non | `mock` | `live` : appel réel de l'API Dataspace des unités patrimoniales ; `mock` : données de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json). Doit valoir `live` en production. | `live` | Non |
@@ -107,15 +107,15 @@ Schéma de référence : [envVars.ts#L24-L76](../packages/backend/src/envVars.ts
 
 ## 3. Frontend (`packages/frontend`)
 
-Schéma de référence : [envVars.ts#L15-L23](../packages/frontend/src/envVars.ts#L15-L23). Toutes ces variables sont **publiques** et lues **à l'exécution** en production (aucune reconstruction nécessaire pour les changer).
+Schéma de référence : [envVars.ts](../packages/frontend/src/envVars.ts). Toutes ces variables sont **publiques** et lues **à l'exécution** en production (aucune reconstruction nécessaire pour les changer).
 
 | Variable | Obl. | Défaut | Description | Exemple | Secret |
 | --- | --- | --- | --- | --- | --- |
 | `VITE_BACKEND_URL` | Oui | — | URL publique de l'API (même valeur que `BACKEND_URL`). | `https://api.patrinotes.example` | Non |
 | `VITE_POWERSYNC_URL` | Oui | — | URL publique du service PowerSync (HTTP + WebSocket). | `https://sync.patrinotes.example` | Non |
-| `VITE_AUTH_URL` | Oui (schéma) | — | Validée mais **non utilisée** par le frontend. | idem backend | Non |
-| `VITE_AUTH_REALM` | Oui (schéma) | — | Validée mais non utilisée. | `master` | Non |
-| `VITE_AUTH_CLIENT_ID` | Oui (schéma) | — | Validée mais non utilisée. | `patrinotes` | Non |
+| `VITE_AUTH_URL` | Oui (schéma) | — | Validée mais **non utilisée** par le frontend. Son absence invalide pourtant **toute** la configuration (`ENV` vaut `{}`, y compris `VITE_BACKEND_URL`). | idem backend | Non |
+| `VITE_AUTH_REALM` | Oui (schéma) | — | Validée mais non utilisée ; même conséquence si elle manque. | `master` | Non |
+| `VITE_AUTH_CLIENT_ID` | Oui (schéma) | — | Validée mais non utilisée ; même conséquence si elle manque. | `patrinotes` | Non |
 | `VITE_SENTRY_DSN` | Non | — | DSN Sentry du navigateur (public par nature). Exceptions et écritures refusées, sans journaux console, données personnelles filtrées. En production : instance `sentry.incubateur.net`. | — | Non |
 | `VITE_SENTRY_ENVIRONMENT` | Non | `production` | Environnement des événements Sentry du navigateur. `preprod` en préproduction. | `preprod` | Non |
 
@@ -126,9 +126,6 @@ Variables spéciales et paramètres de build :
 | `import.meta.env.PROD` | Positionnée par Vite : `false` en `vite dev` (lecture de `import.meta.env`), `true` après `vite build` (lecture de `window.ENV`). |
 | `window.APP_VERSION` | Non configurable : écrite dans `dist/version.js` au build ([setVersion.ts](../packages/frontend/scripts/setVersion.ts)). |
 | `NODE_ENV` | Utilisée seulement par la librairie embarquée [dsfr-chart](../packages/frontend/dsfr-chart/) (remplacée au build). |
-
-> [!WARNING]
-> Bien qu'inutilisées, `VITE_AUTH_URL`, `VITE_AUTH_REALM` et `VITE_AUTH_CLIENT_ID` sont **obligatoires dans le schéma** : s'il en manque une seule, la validation échoue et **toute** la configuration est remplacée par `{}` (y compris `VITE_BACKEND_URL`).
 
 > [!NOTE]
 > Une erreur de configuration du frontend **ne bloque pas** son démarrage : vérifier après chaque déploiement le contenu de `https://<frontend>/env.js` et l'absence du message `Error parsing env vars` dans la console du navigateur.
@@ -142,7 +139,7 @@ Variables spéciales et paramètres de build :
 | `PS_PORT` | Oui | — | Port d'écoute. | `8080` (`3003` en production) | Non |
 | `PS_JWT_SECRET` | Non | — | Transmise par Compose (valeur de `JWT_SECRET`) mais **non référencée** dans [powersync-config.yaml](../powersync/powersync-config.yaml) : inutilisée. | — | Oui (par prudence) |
 
-Paramètres **codés en dur** dans le YAML (à externaliser ou adapter pour la cible) : URI MongoDB `mongodb://mongo:27017/powersync_demo` (sans authentification), `jwks_uri` et `issuer` pointant sur `http://keycloak:8080/realms/master`, audience `account`, `sslmode: disable`. La télémétrie est désactivée (`telemetry.disable_telemetry_sharing: true`, à la racine). En production (relevé du 17/11/2026), `jwks_uri` et `issuer` ont été modifiés à la main pour `https://auth.patrinotes.beta.gouv.fr/realms/patrinotes`, et le fichier déposé range le bloc de télémétrie sous `client_auth`, où il est ignoré : il est à recopier ([12 § 11](12-exploitation-et-supervision.md#11-avant-le-prochain-déploiement-en-production)). Voir [10 § 4.4](10-infrastructure-et-deploiement.md#44-configuration-powersync-versionnée).
+Paramètres **codés en dur** dans le YAML (à externaliser ou adapter pour la cible) : URI MongoDB `mongodb://mongo:27017/powersync_demo` (sans authentification), `jwks_uri` et `issuer` pointant sur `http://keycloak:8080/realms/master`, audience `account`, `sslmode: disable`. La télémétrie est désactivée (`telemetry.disable_telemetry_sharing: true`, à la racine). Le fichier et son état en production sont décrits en [10 § 4.4](10-infrastructure-et-deploiement.md#44-configuration-powersync-versionnée).
 
 > [!IMPORTANT]
 > **Cohérence de l'émetteur des jetons.** Le même jeton d'accès Keycloak est vérifié par le backend (émetteur attendu `${VITE_AUTH_URL}/realms/${VITE_AUTH_REALM}`) et par PowerSync (émetteur `client_auth.issuer`). Keycloak calcule l'`iss` à partir de son nom d'hôte (`KC_HOSTNAME`) ou, à défaut, de l'URL appelée. Il faut donc que **`VITE_AUTH_URL`, l'URL publique ou interne de Keycloak et `client_auth.issuer` désignent exactement la même URL**. Sinon : erreurs 403 sur l'API ou refus de connexion PowerSync. Les règles de synchronisation filtrent par `auth.parameter('email')` : le jeton doit contenir la revendication `email`.
@@ -160,7 +157,7 @@ Variables utilisées dans [docker-compose.yaml](../docker-compose.yaml) (mode d�
 | `KEYCLOAK_DB` | Oui (Compose) | — | Nom de la base Keycloak ; doit correspondre à [1_create_keycloak.sql](../db/init/1_create_keycloak.sql) (`keycloak`). | `keycloak` | Non |
 | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` | Oui (1er démarrage) | — | Administrateur initial. Noms dépréciés depuis Keycloak 26 au profit de `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` (à vérifier pour la version cible). | `admin` | **Oui** (mot de passe) |
 | `KC_HOSTNAME` | Production : oui | — | Nom d'hôte public ; détermine l'`iss` des jetons. En dev : `localhost`. | — | Non |
-| `KC_HOSTNAME_PORT` | Non | — | Port (dev). Réutilisé par `envsubst` dans l'attribut `jwks.url` du client applicatif. | `3013` | Non |
+| `KC_HOSTNAME_PORT` | Non | — | Port (dev). | `3013` | Non |
 | `KC_HOSTNAME_STRICT`, `KC_HOSTNAME_STRICT_HTTPS`, `KC_HOSTNAME_STRICT_BACKCHANNEL` | Non | — | `false` en dev. À revoir en production. | `false` | Non |
 | `KC_HTTP_ENABLED` | Non | — | `true` (HTTP derrière proxy). | `true` | Non |
 | `KC_HEALTH_ENABLED`, `KC_METRICS_ENABLED` | Non | — | Sondes `/health/ready` et métriques sur le port de gestion **9000**. | `true` | Non |
@@ -176,49 +173,13 @@ Variables utilisées dans [docker-compose.yaml](../docker-compose.yaml) (mode d�
 
 ## 6. Infrastructure de développement et de test (Compose)
 
-| Variable | Utilisée par | Description | Dev seulement ? |
-| --- | --- | --- | --- |
-| `POSTGRES_PORT` | `pg` | Port publié de PostgreSQL. | Oui |
-| `MINIO_USER`, `MINIO_PASSWORD` | `minio`, `minio-init` | Compte racine MinIO (`MINIO_ROOT_USER/PASSWORD`). Secret en production si MinIO est conservé. | Non si MinIO conservé |
-| `MINIO_SERVER_PORT`, `MINIO_CONSOLE_PORT` | `minio` | Ports publiés (API, console). | Oui |
-| `POWERSYNC_PORT` | `powersync` | Port publié. | Oui |
-| `KEYCLOAK_PORT` | `keycloak` | Port publié ; injecté dans `KC_HOSTNAME_PORT`. | Oui |
-| `ADMINER_PORT` | `adminer` | Port publié d'Adminer. | Oui |
-| `SMTP_PORT`, `SMTP_WEB_PORT` | `mailpit` | Ports SMTP et interface web de Mailpit. | Oui |
-| `HEALTHCHECK_PORT` | `healthcheck` (test) | Port du point d'attente nginx. | Oui |
-| `FRONTEND_PORT`, `BACKEND_PORT`, `DB_PORT`, `MAILPIT_PORT`, `MAILPIT_WEB_PORT` | `.env.test`, specs Playwright | Ports de la pile de test (3010–3019). | Oui |
-| `CI` | Playwright, [teardown.ts](../tests/teardown.ts) | Active les relances, `forbidOnly`, et la destruction de la pile en fin de test. | Oui |
+Les fichiers Compose de développement et de test lisent aussi des ports publiés (`POSTGRES_PORT`, `MINIO_SERVER_PORT`, `KEYCLOAK_PORT`, `SMTP_PORT`…) et le compte racine de MinIO (`MINIO_USER`, `MINIO_PASSWORD`). Ces variables ne concernent pas la production, sauf `MINIO_USER` et `MINIO_PASSWORD` si MinIO y est conservé (elles sont alors secrètes).
 
 ## 7. Écarts entre `.env.dist` et le code
 
-[.env.dist](../.env.dist) est le modèle censé être copié en `.env`. Il est **incomplet** et contient des variables sans usage.
+[.env.dist](../.env.dist), le modèle de fichier `.env`, est **obsolète** : il contient des variables sans usage (ElectricSQL, `AWS_*`, `KEYCLOAK_CLIENT_SECRET`…) et il lui manque une quinzaine de variables obligatoires. Le fichier [.env.test](../.env.test) est la référence la plus complète. Voir [16](16-risques-et-dette-technique.md).
 
-### 7.1 Présentes dans `.env.dist` mais inutilisées
-
-| Variable | Remarque |
-| --- | --- |
-| `ELECTRIC_PORT`, `VITE_ELECTRIC_URL` | Variables du moteur **ElectricSQL**, sans usage (voir aussi `.electric_migrations_*` dans [.gitignore](../.gitignore)). |
-| `PG_PROXY_PORT`, `PG_PROXY_PASSWORD` | Proxy PostgreSQL d'ElectricSQL, sans usage. |
-| `KEYCLOAK_CLIENT_SECRET` | Équivalent : `AUTH_CLIENT_SECRET`. |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_BUCKET_NAME`, `AWS_REGION`, `AWS_ENDPOINT` | Équivalent : `MINIO_*`. **Définies en production** (`AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod`, `AWS_ENDPOINT` = `MINIO_URL`), sans effet. Le SDK AWS pourrait lire `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` par défaut, mais le client reçoit ses identifiants explicitement ([uploadService.ts#L20-L31](../packages/backend/src/services/uploadService.ts#L20-L31)). |
-| `HTTP_PORT` | Équivalent : `PORT`. |
-| `COMPOSE_PROFILES` | Aucun profil n'est défini dans les fichiers Compose. |
-| `FRONTEND_PORT` | Utilisée seulement par Playwright. |
-| `JWT_SECRET` | Exigée par le schéma, mais sans usage fonctionnel (voir § 2.6). |
-| `DSFR_THEME_*` | Valides, mais lues par Keycloak et non par l'application ; aucun fichier Compose ne les transmet au conteneur Keycloak. |
-
-### 7.2 Utilisées par le code mais absentes de `.env.dist`
-
-| Variable | Conséquence si absente |
-| --- | --- |
-| `BACKEND_URL`, `EMAIL_EMITTER`, `AUTH_CLIENT_SECRET`, `AUTH_ADMIN_CLIENT_ID`, `AUTH_ADMIN_CLIENT_SECRET`, `JWT_REFRESH_SECRET`, `DATAGOUV_API` | **Le backend ne démarre pas** (Zod) et les migrations échouent. |
-| `VITE_POWERSYNC_URL` | Le frontend démarre mais la synchronisation est impossible. |
-| `PS_DATABASE_URL`, `POWERSYNC_PORT` | PowerSync ne démarre pas / port non publié en Compose. |
-| `KEYCLOAK_PORT`, `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DB`, `AUTH_CLIENT_ID` | Keycloak ne démarre pas correctement en Compose. |
-| `MINIO_SERVER_PORT`, `MINIO_CONSOLE_PORT`, `SMTP_PORT`, `SMTP_WEB_PORT` | Ports non publiés en Compose. |
-| `FORCE_REFETCH_POP`, `DEBUG`, `NODE_ENV` | Valeurs par défaut appliquées. |
-
-Le fichier [.env.test](../.env.test) est de fait la **référence la plus complète** ; il contient en outre deux variables sans effet : `DATABASE_REQUIRE_SSL` et `VITE_ALERTES_MH_ENABLED` (aucune lecture dans le code). Les commentaires de `.env.test` inversent aussi les valeurs d'exemple de `MINIO_ACCESS_KEY_ID` et `MINIO_SECRET_KEY` (sans conséquence).
+Variables `AWS_*` encore **définies en production** (`AWS_REGION=fr-par`, `AWS_BUCKET_NAME=patrinotes-prod`, `AWS_ENDPOINT` égale à `MINIO_URL`) : elles sont sans effet, car le client S3 reçoit ses identifiants explicitement ([uploadService.ts](../packages/backend/src/services/uploadService.ts)). Elles peuvent être retirées.
 
 ## 8. Paramètres codés en dur
 
@@ -226,25 +187,25 @@ Paramètres qui ne passent par aucune variable et dont un changement impose une 
 
 | Paramètre | Valeur | Emplacement |
 | --- | --- | --- |
-| Hôtes autorisés par `vite preview` | `app.patrinotes.beta.gouv.fr`, `app.patrinotes.incubateur.net`, `app.compte-rendu-vif.beta.gouv.fr`, `compte-rendu-vif.incubateur.net`, `.compte-rendu-vif.incubateur.net`, `patrinotes.incubateur.net` | [vite.config.ts#L74-L81](../packages/frontend/vite.config.ts#L74-L81) |
-| Matomo | `https://stats.beta.gouv.fr/`, `siteId: 123` | [main.tsx#L142-L145](../packages/frontend/src/main.tsx#L142-L145) |
+| Hôtes autorisés par `vite preview` | `app.patrinotes.beta.gouv.fr`, `app.patrinotes.incubateur.net`, `app.compte-rendu-vif.beta.gouv.fr`, `compte-rendu-vif.incubateur.net`, `.compte-rendu-vif.incubateur.net`, `patrinotes.incubateur.net` | [vite.config.ts](../packages/frontend/vite.config.ts) |
+| Matomo | `https://stats.beta.gouv.fr/`, `siteId: 123` | [main.tsx](../packages/frontend/src/main.tsx) |
 | TLS PostgreSQL de PowerSync | `sslmode: disable` | [powersync-config.yaml](../powersync/powersync-config.yaml) |
-| Client S3 | région `us-east-1`, `forcePathStyle: true`, `bucketEndpoint: true` | [uploadService.ts#L20-L31](../packages/backend/src/services/uploadService.ts#L20-L31) |
+| Client S3 | région `us-east-1`, `forcePathStyle: true`, `bucketEndpoint: true` | [uploadService.ts](../packages/backend/src/services/uploadService.ts) |
 | Durée des URL présignées | 3 600 s | [uploadService.ts](../packages/backend/src/services/uploadService.ts) |
 | Fichiers acceptés | photos JPEG, PNG, WebP, HEIC/HEIF de 20 Mo au plus ; PDF de 50 Mo au plus | [uploadLimits.ts](../packages/backend/src/features/uploadLimits.ts) (backend), [uploadLimits.ts](../packages/frontend/src/features/upload/uploadLimits.ts) (frontend) |
 | Destinataires d'un envoi | 20 au plus | [recipients.ts](../packages/backend/src/features/recipients.ts) |
-| Limitation de débit | connexion, inscription, mot de passe oublié : 10 essais / 15 min par adresse, 200 / 15 min par IP ; routes publiques : 60 / min par IP ; API connectée : 1 200 / min par utilisateur | [rateLimit.ts](../packages/backend/src/features/rateLimit.ts) |
+| Limitation de débit | seuils décrits en [05 § 6.1](05-authentification-securite.md#61-limitation-de-débit) | [rateLimit.ts](../packages/backend/src/features/rateLimit.ts) |
 | Photos d'un courriel d'alerte | jointes jusqu'à 15 Mo au total, sinon liens de 90 jours | [alertPhotos.ts](../packages/backend/src/features/mail/alertPhotos.ts) |
 | Tâche d'envoi des alertes | toutes les 15 min, 5 essais au plus, attente de 24 h des photos d'une alerte de fiche | [alertDelivery.ts](../packages/backend/src/features/alertDelivery.ts) |
 | Politique de mot de passe | 8 caractères, une majuscule, une minuscule, un chiffre, un caractère spécial | [passwordPolicy.ts](../packages/backend/src/features/passwordPolicy.ts) |
-| Validité des liens de pièces jointes envoyés par courriel | 90 jours | [attachmentRedirectRoutes.ts#L30](../packages/backend/src/routes/attachmentRedirectRoutes.ts#L30) |
-| Validité d'un lien de réinitialisation de mot de passe | 1 jour (stocké en SHA-256) | [userService.ts#L68](../packages/backend/src/services/userService.ts#L68) |
-| Audience attendue des jetons | `account` | [authService.ts#L34](../packages/backend/src/services/authService.ts#L34) |
+| Validité des liens de pièces jointes envoyés par courriel | 90 jours | [attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts) |
+| Validité d'un lien de réinitialisation de mot de passe | 1 jour (stocké en SHA-256) | [userService.ts](../packages/backend/src/services/userService.ts) |
+| Audience attendue des jetons | `account` | [authService.ts](../packages/backend/src/services/authService.ts) |
 | Sources POP | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv`, `…/palissy.csv` | [pop.ts](../packages/backend/src/features/data/pop.ts) |
-| Fonds de carte | `tiles.openfreemap.org`, `openmaptiles.geo.data.gouv.fr` (cadastre), `data.geopf.fr` (orthophotos IGN) | [MapLibre.tsx#L15-L27](../packages/frontend/src/features/map/MapLibre.tsx#L15-L27) |
+| Fonds de carte | `tiles.openfreemap.org`, `openmaptiles.geo.data.gouv.fr` (cadastre), `data.geopf.fr` (orthophotos IGN) | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
 | Géocodage | `https://api-adresse.data.gouv.fr/search/` (autocomplétion), `https://data.geopf.fr/geocodage/search` (cartes) | [address.tsx](../packages/frontend/src/features/address.tsx), [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
 | Adresse de contact | `contact@patrinotes.beta.gouv.fr` | message d'erreur de liste blanche, pages légales |
-| Service technique créé au démarrage | `no-service` | [index.ts#L42-L47](../packages/backend/src/index.ts#L42-L47) |
+| Service technique créé au démarrage | `no-service` | [index.ts](../packages/backend/src/index.ts) |
 | Taux d'échantillonnage Sentry | `0.1` (10 %) | [sentry.ts](../packages/backend/src/features/sentry.ts) (backend et frontend) |
 | API des unités patrimoniales | délai 5 s, une nouvelle tentative, lots de 50 identifiants, 10 niveaux et 1 000 UP au plus | [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts) |
 

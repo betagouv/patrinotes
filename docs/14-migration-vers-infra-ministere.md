@@ -100,10 +100,10 @@ La CI actuelle ([main.yml](../.github/workflows/main.yml)) lance les tests unita
 | **Épingler** l'image PowerSync (aujourd'hui `latest`). | Rendre la cible identique à la répétition. | [10](10-infrastructure-et-deploiement.md) |
 | Reprendre la configuration PowerSync du dépôt, dont la télémétrie désactivée (`disable_telemetry_sharing: true`, à la racine). | Flux sortant non nécessaire. | [powersync-config.yaml](../powersync/powersync-config.yaml) |
 | Externaliser les valeurs en dur de la configuration PowerSync (URI MongoDB, `jwks_uri`, `issuer`). | Elles pointent sur les noms de service Compose. | [11](11-configuration.md) |
-| Ajouter tout nouveau domaine (recette ministère) à `preview.allowedHosts` **et reconstruire l'image**. | Sinon le frontend répond 403. | [vite.config.ts](../packages/frontend/vite.config.ts#L74-L81) |
+| Ajouter tout nouveau domaine (recette ministère) à `preview.allowedHosts` **et reconstruire l'image**. | Sinon le frontend répond 403. | [vite.config.ts](../packages/frontend/vite.config.ts) |
 | Activer TLS vers PostgreSQL, **si le ministère l'impose** : `DATABASE_SSL=true` (backend, migrations) et `sslmode` dans `powersync-config.yaml`. | TLS désactivé par défaut. | [11](11-configuration.md) |
 | Mettre `FRONTEND_URL` (et au besoin `CORS_ORIGINS`) au domaine du frontend, et `TRUST_PROXY_HOPS` au nombre de proxys devant le backend. | CORS et limitation de débit par IP. | [11](11-configuration.md) |
-| Rendre le `siteId` Matomo configurable, si l'instance change. | Valeur en dur. | [main.tsx#L142-L145](../packages/frontend/src/main.tsx#L142-L145) |
+| Rendre le `siteId` Matomo configurable, si l'instance change. | Valeur en dur. | [main.tsx](../packages/frontend/src/main.tsx) |
 | Corriger les risques critiques et élevés exigés par l'homologation. | Chantier transverse. | [16](16-risques-et-dette-technique.md) |
 
 ### 3.3 Identité : Keycloak ou SSO du ministère ?
@@ -140,7 +140,7 @@ Conséquences pour la migration : **Keycloak et sa base ne sont plus transféré
 
 #### 3.3.3 Scénario B — Keycloak transféré tel quel
 
-À retenir si la sortie de Keycloak n'est pas terminée (étape 3 du scénario A) avant la date de bascule. **Ne pas** mener les deux chantiers en même temps.
+À retenir si la sortie de Keycloak n'est pas terminée (étape 3 du scénario A) avant la date de bascule. Mener les deux chantiers en même temps cumulerait les risques.
 
 - Déployer Keycloak **26.7.2** (version de production) en mode **`start`** (et non `start-dev` comme en Compose), derrière TLS ou sur réseau interne, avec `KC_HOSTNAME` fixé.
 - Restaurer la base `keycloak` (comptes, hachés de mots de passe, clés de signature du realm, sessions *offline*) : voir § 5.4.
@@ -155,7 +155,7 @@ ProConnect (ex-AgentConnect) est une fédération OIDC pour les agents publics ;
 
 | Sujet | Détail |
 | --- | --- |
-| Connexion | Redirection OIDC (*authorization code* + PKCE) et route `auth-callback` côté frontend, à la place du formulaire et du *password grant*. |
+| Connexion | Redirection OIDC (*authorization code* + PKCE) à la place du formulaire et du *password grant*. |
 | Inscription / mot de passe oublié | Supprimés (gérés par le fournisseur). Conserver la **liste blanche** et le rattachement au service à la première connexion. |
 | Jeton pour PowerSync | Les jetons du fournisseur ne sont pas émis pour l'audience `account` ni forcément vérifiables par PowerSync : le backend émet **son propre JWT** contenant `email`, que PowerSync valide par JWKS. |
 | Fonctionnement hors ligne | La session doit survivre à des jours hors réseau : elle est portée par le jeton de rafraîchissement du backend, pas par celui du fournisseur. |
@@ -202,8 +202,8 @@ Ne **pas** déployer : Adminer, Mailpit, `mongo-rs-init`/`minio-init` en tant qu
 
 | Exigence | Valeur | Source |
 | --- | --- | --- |
-| Version | ≥ 14 (testée en 14 par la CI E2E, développée en 17). **17.8 en production** : à **conserver ou monter**, jamais descendre (un dump d'une version supérieure peut ne pas se restaurer sur une version inférieure). | [docker-compose.test.yaml](../docker-compose.test.yaml), [docker-compose.yaml](../docker-compose.yaml) |
-| `wal_level` | `logical` | Compose, [README](../README.md#L84-L97) |
+| Version | ≥ 14 (tests e2e sur PostgreSQL 14, lancés à la main ; développement en 17). **17.8 en production** : à **conserver ou monter**, jamais descendre (un dump d'une version supérieure peut ne pas se restaurer sur une version inférieure). | [docker-compose.test.yaml](../docker-compose.test.yaml), [docker-compose.yaml](../docker-compose.yaml) |
+| `wal_level` | `logical` | Compose, [README](../README.md) |
 | `max_replication_slots`, `max_wal_senders` | ≥ 1 libre pour PowerSync (≥ 2 conseillé : migration et bascule) | Exigence PowerSync |
 | Rôle de réplication | Attribut `REPLICATION` + `SELECT` sur les tables publiées (utilisé par `PS_DATABASE_URL`) | Exigence PowerSync |
 | Publication | `powersync` doit exister **avant** les migrations ; le rôle des migrations doit pouvoir faire `ALTER PUBLICATION powersync ADD TABLE` (propriétaire des tables et de la publication) | [db/init/0_create-publication.sql](../db/init/0_create-publication.sql), migrations dans [db/](../db/) |
@@ -238,7 +238,7 @@ Dans les deux cas, ce stockage est **reconstructible** : il n'est pas nécessair
 
 ### 4.6 Relais SMTP
 
-- Actuellement **Scaleway Transactional Email** (confirmé). Si le ministère impose son relais, le domaine d'envoi doit être reconfiguré (SPF, DKIM, DMARC).
+- Actuellement **Scaleway Transactional Email**. Si le ministère impose son relais, le domaine d'envoi doit être reconfiguré (SPF, DKIM, DMARC).
 - Authentification par identifiant/mot de passe (toujours envoyée par le code).
 - Port : 465 (défaut du code) ou 587. Le mode TLS de Nodemailer n'est pas forcé : **tester** sur le relais cible.
 - Adresse `EMAIL_EMITTER` autorisée (SPF, DKIM, DMARC du domaine expéditeur).
@@ -254,7 +254,7 @@ Dans les deux cas, ce stockage est **reconstructible** : il n'est pas nécessair
 | TLS | Terminé par le reverse proxy ; certificats valides (pas de certificat interne non reconnu par les terminaux mobiles des agents). |
 | WebSocket | *Upgrade* `Connection`/`Upgrade` vers PowerSync, délai d'inactivité ≥ 5 min (ou désactivé), pas de mise en mémoire tampon des réponses en flux continu (le client PowerSync peut aussi utiliser du HTTP en *streaming*). |
 | Taille des requêtes | Les fichiers ne passent pas par le backend (limite par défaut de 1 Mio pour le JSON) ; vers S3, autoriser des PDF de 50 Mo. |
-| En-têtes | `X-Forwarded-For` transmis : le backend en tire l'adresse du client en faisant confiance à `TRUST_PROXY_HOPS` proxys (1 par défaut). CORS : l'API n'accepte que `FRONTEND_URL` et `CORS_ORIGINS` ; ne pas ajouter de politique contradictoire au proxy. |
+| En-têtes | `X-Forwarded-For` transmis : le backend en tire l'adresse du client selon `TRUST_PROXY_HOPS`. CORS est géré par l'API (`FRONTEND_URL`, `CORS_ORIGINS`) ; le proxy n'ajoute pas de politique contradictoire. Détail des variables dans [11](11-configuration.md). |
 | Cache | Ne pas mettre en cache `env.js`, `version.js`, `sw.js`, `index.html` au niveau du proxy ou d'un CDN. |
 | Sécurité | L'API envoie déjà `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` et HSTS. Ajouter au proxy, pour le frontend servi par `vite preview`, HSTS, `X-Content-Type-Options` et une CSP à construire en tenant compte des domaines du § 4.8. |
 
@@ -301,10 +301,10 @@ Cette matrice sert à la fois à l'ouverture des flux par l'hébergement et au d
 | Destination | Usage | Source dans le code |
 | --- | --- | --- |
 | `api-adresse.data.gouv.fr` | Autocomplétion et géocodage d'adresses | [address.tsx](../packages/frontend/src/features/address.tsx), [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
-| `tiles.openfreemap.org` | Fond de carte vectoriel et polices | [MapLibre.tsx#L15-L22](../packages/frontend/src/features/map/MapLibre.tsx#L15-L22) |
-| `openmaptiles.geo.data.gouv.fr` | Parcelles cadastrales | [MapLibre.tsx#L17](../packages/frontend/src/features/map/MapLibre.tsx#L18) |
-| `data.geopf.fr` | Orthophotos IGN (WMTS) | [MapLibre.tsx#L26](../packages/frontend/src/features/map/MapLibre.tsx#L27) |
-| `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx#L142-L145](../packages/frontend/src/main.tsx#L142-L145) |
+| `tiles.openfreemap.org` | Fond de carte vectoriel et polices | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
+| `openmaptiles.geo.data.gouv.fr` | Parcelles cadastrales | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
+| `data.geopf.fr` | Orthophotos IGN (WMTS) | [MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx) |
+| `stats.beta.gouv.fr` | Matomo (site 123) | [main.tsx](../packages/frontend/src/main.tsx) |
 | Sentry | Erreurs du navigateur, si `VITE_SENTRY_DSN` | [sentry.ts](../packages/frontend/src/features/sentry.ts) |
 
 Liens simples (navigation, pas d'appel automatique) : `patrinotes.beta.gouv.fr` (FAQ), `pop.culture.gouv.fr`, `culture.gouv.fr`, `legifrance.gouv.fr`, Typeform (questionnaire).
@@ -334,7 +334,7 @@ pg_restore --no-owner --role=<proprietaire_kc>  -d keycloak  keycloak.dump
 Points d'attention :
 
 - `pg_dump` **inclut la publication `powersync`** et ses tables. Si le rôle de restauration n'a pas le droit de la créer, restaurer avec `--no-publications`, puis recréer la publication manuellement **avec la liste relevée en phase 1** (§ 2.1, point 3).
-- **`constat_validation` n'est pas dans la publication de production** (confirmé par l'équipe). Ce n'est pas bloquant : le frontend n'utilise pas cette table et ne la déclare pas dans son schéma local. La requête correspondante de [sync-config.yaml](../powersync/sync-config.yaml) est traitée en phase 2 (§ 3.2).
+- **`constat_validation` n'est pas dans la publication**, et c'est voulu : le jeton de validation ne quitte pas le serveur, et ni le frontend ni [sync-config.yaml](../powersync/sync-config.yaml) ne lisent cette table.
 - Les **slots de réplication ne sont pas transférés** : PowerSync en créera un nouveau sur la cible. Sur l'ancienne base, le slot de PowerSync doit être supprimé (`pg_drop_replication_slot`) après la bascule définitive (phase 6), sinon l'ancien serveur accumule du WAL.
 - Le schéma `drizzle` (table `__drizzle_migrations`) fait partie du dump : au premier démarrage, le backend ne rejouera que les migrations postérieures. **Ne pas** recréer la base vide puis lancer les migrations pour ensuite charger les données.
 - Comparer le nombre de lignes des principales tables (`user`, `report`, `state_report`, `*_attachment`, `pop_immeubles`, `pop_objets`) entre source et cible.
@@ -359,7 +359,7 @@ mc mirror --preserve old/<bucket> new/<bucket>      # pré-copie à chaud, puis 
 - Les clés d'objets (`attachment/…`) sont relatives : le nom du bucket et l'hôte peuvent changer sans modifier la base (`attachment_redirection.s3_key` ne contient pas l'hôte).
 - Reporter la configuration **CORS** du bucket.
 - Comparer le nombre d'objets et le volume total.
-- Les URL présignées déjà envoyées (7 jours) pointent sur l'hôte Scaleway : conserver l'ancien bucket en lecture au moins 7 jours après la bascule, et 90 jours si l'hôte du backend change aussi (phase 6).
+- Les URL présignées durent 1 h. Les courriels contiennent des liens courts du backend (`/attachment/:id`), qui présignent à chaque ouverture sur le bucket configuré : après la bascule, l'ancien bucket n'est plus lu. Il reste une copie de retour arrière (phase 6).
 
 ### 5.4 Keycloak (scénario B uniquement)
 
@@ -439,7 +439,7 @@ Pendant la répétition, accéder à la cible en forçant la résolution DNS (fi
 4. [ ] Dumps PostgreSQL (§ 5.1) et restauration sur la cible.
 5. [ ] Passe finale `mc mirror` (§ 5.3).
 6. [ ] Vérifier/compléter la publication `powersync`.
-7. [ ] Démarrer Keycloak (scénario B), puis le backend (contrôler les journaux de migration si elles sont encore jouées au démarrage : le `;` du `CMD` masque les échecs), puis PowerSync ; attendre la fin de la réplication initiale.
+7. [ ] Démarrer Keycloak (scénario B), puis le backend (contrôler les journaux de migration ; si elles sont jouées au démarrage, un échec arrête le conteneur), puis PowerSync ; attendre la fin de la réplication initiale.
 8. [ ] Démarrer le frontend ; contrôler `https://<frontend>/env.js`.
 9. [ ] Tests de fumée sur la cible en forçant la résolution DNS (fichier `hosts`) : connexion, synchronisation, création d'un constat avec photo, génération et envoi de PDF.
 10. [ ] Basculer les enregistrements DNS (frontend, backend, PowerSync, S3).
@@ -472,7 +472,7 @@ Critères de décision du retour arrière (à valider en phase 4) : impossibilit
 
 - [ ] Premier test de restauration d'une sauvegarde de la cible.
 - [ ] Après la période de garantie : supprimer le slot de réplication et les données de l'ancien hôte.
-- [ ] Ancien bucket : le conserver en lecture au moins 7 jours, 90 jours si l'hôte du backend a changé (liens des courriels), puis le supprimer.
+- [ ] Ancien bucket : le conserver jusqu'à la fin de la période de retour arrière, puis le supprimer. Si le nom d'hôte du backend a changé, garder l'ancien nom en redirection 90 jours (durée des liens envoyés par courriel).
 - [ ] Révoquer les anciens secrets (S3, SMTP, clients Keycloak) et supprimer les services Coolify.
 - [ ] Mettre à jour ce dossier ([10](10-infrastructure-et-deploiement.md), [11](11-configuration.md), [12](12-exploitation-et-supervision.md)) avec la topologie réelle de la cible.
 

@@ -15,7 +15,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **CAOA** | Conservateur des antiquités et objets d'art. Suit les objets mobiliers protégés. |
 | **Clause** (`clause_v2`) | Texte type réutilisable dans les comptes-rendus (décision, contacts utiles, bonnes pratiques, type d'espace). `ALL` = clause nationale, sinon propre au service. |
 | **Compte-rendu, CR** (`report`) | Document remis à un demandeur après un rendez-vous ou un conseil de l'UDAP : projet, décision, suites à donner. |
-| **Compte-rendu VIF, CR VIF** | Ancien nom du produit, avant Patrinotes. Il survit dans les clés `crvif` et dans [crvif-redirection](../crvif-redirection). « Compte-rendu VIF » était simplement le nom du produit ; ce n'est pas un sigle à développer. |
+| **Compte-rendu VIF, CR VIF** | Ancien nom du produit, avant Patrinotes. Il survit dans les clés `crvif` et dans [crvif-redirection](../crvif-redirection). |
 | **Constat d'état, CE** (`state_report`) | Rapport de visite sur l'état de conservation d'un monument historique, partie par partie, dans le cadre du contrôle scientifique et technique. |
 | **Courriels obligatoires / additionnels** | Destinataires imposés d'une alerte (services compétents) et destinataires ajoutés librement. |
 | **CRMH** | Conservation régionale des monuments historiques, service de la DRAC. |
@@ -28,6 +28,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Envoi sous-couvert, validation** (`constat_validation`) | Envoi d'un constat soumis à l'accord préalable d'une personne désignée (le **validateur**), qui n'a pas besoin de compte. |
 | **Fiche MH, fiche UP, fiche objet** | Pages d'un monument, d'une unité patrimoniale ou d'un objet mobilier : informations, constats, alertes, objets, ensemble patrimonial. |
 | **Liste blanche** (`whitelist`) | Adresses e-mail autorisées à créer un compte. |
+| **Localisation (d'une partie visitée)** (`visited_section.localisation_*`) | Extrait de carte annoté (repères numérotés, traits) qui situe une partie de l'édifice dans le constat détaillé. |
 | **MH complexe** | Monument découpé en unités patrimoniales. |
 | **Mérimée** (`pop_immeubles`) | Base nationale des immeubles protégés au titre des monuments historiques. |
 | **MH classé / inscrit** | Les deux niveaux de protection au titre des monuments historiques. |
@@ -45,6 +46,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **SRA** | Service régional de l'archéologie. |
 | **UDAP** | Unité départementale de l'architecture et du patrimoine. Service déconcentré où travaillent les ABF. |
 | **Unité patrimoniale, UP** (`state_report.up_*`) | Partie d'un MH complexe (bâtiment, aile, décor…), organisée en arbre et lue dans l'API Dataspace du ministère. |
+| **Validateur** | Personne, sans compte, qui accepte ou refuse l'envoi d'un constat soumis à validation (envoi sous couvert). |
 
 ## 2. Technique
 
@@ -65,6 +67,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **File CRUD** (`ps_crud`) | Écritures locales en attente d'envoi au backend. |
 | **GHCR** | Registre d'images de conteneurs de GitHub (`ghcr.io`). |
 | **Géoplateforme IGN** | Service cartographique national (`data.geopf.fr`) qui fournit l'imagerie aérienne. |
+| **Instantané de mise en page** (`pdf_snapshot`) | HTML du compte-rendu retouché par l'agent dans l'éditeur riche, réutilisé tant que le compte-rendu n'est pas modifié. |
 | **JWKS** | Jeu de clés publiques publié par le fournisseur d'identité pour vérifier les jetons. |
 | **JWT** | Jeton signé contenant l'identité de l'utilisateur (ici émis par Keycloak). |
 | **Keycloak** | Fournisseur d'identité open source (OIDC) qui gère les comptes. |

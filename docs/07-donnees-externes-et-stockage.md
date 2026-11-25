@@ -4,7 +4,7 @@ Ce document décrit les données que Patrinotes **récupère à l'extérieur** (
 
 Voir aussi : [06 — Modèle de données](06-modele-de-donnees.md) pour les tables citées.
 
-> Tout ce qui suit vient de la lecture du code. Les points non vérifiables depuis le dépôt sont signalés « *à confirmer* ».
+> Les informations ci-dessous viennent de la lecture du code et du relevé de production du 17/11/2026. Les points non vérifiés sont signalés « *à confirmer* ».
 
 ---
 
@@ -15,8 +15,9 @@ flowchart LR
     subgraph Ext["Services externes"]
         DG["ministere-culture.s3.sbg.io.cloud.ovh.net<br/>merimee.csv et palissy.csv"]
         POP["pop.culture.gouv.fr<br/>notices"]
-        BAN["api-adresse.data.gouv.fr<br/>géocodage"]
-        IGN["data.geopf.fr<br/>orthophotos IGN"]
+        BAN["api-adresse.data.gouv.fr<br/>recherche d'adresse"]
+        GEO["data.geopf.fr/geocodage<br/>géocodage du monument"]
+        IGN["data.geopf.fr/wmts<br/>orthophotos IGN"]
         CAD["openmaptiles.geo.data.gouv.fr<br/>cadastre"]
         OFM["tiles.openfreemap.org<br/>fond de carte"]
         DS["API Dataspace du ministère<br/>unités patrimoniales"]
@@ -30,10 +31,11 @@ flowchart LR
 
     NAV["Navigateur de l'agent"]
 
-    DG -->|"téléchargement CSV, au démarrage si FORCE_REFETCH_POP ou script manuel"| BE
+    DG -->|"téléchargement CSV, au démarrage si FORCE_REFETCH_POP ou commande manuelle"| BE
     BE -->|"upsert pop_immeubles, pop_objets"| PG
     DS -->|"arbre des UP, à la demande, cache up_cache"| BE
-    NAV -->|"recherche d'adresse"| BAN
+    NAV -->|"saisie d'adresse"| BAN
+    NAV -->|"centrage de la carte"| GEO
     NAV -->|"tuiles"| IGN
     NAV -->|"tuiles"| CAD
     NAV -->|"tuiles et polices"| OFM
@@ -44,11 +46,14 @@ flowchart LR
 
 | Source | Appelée par | Quand | Données | Authentification |
 | --- | --- | --- | --- | --- |
-| `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv` | backend | au démarrage si `FORCE_REFETCH_POP=true`, ou par `pnpm backend import-pop` | notices Mérimée (immeubles protégés) | aucune |
+| `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/merimee.csv` | backend | au démarrage si `FORCE_REFETCH_POP=true`, ou par la commande d'import | notices Mérimée (immeubles protégés) | aucune |
 | `https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/palissy.csv` | backend | idem, **seulement si `pop_objets` est vide** | notices Palissy (objets mobiliers) | aucune |
-| `https://api-adresse.data.gouv.fr/search/` | **navigateur** | saisie d'adresse (CR, CE), centrage de carte | adresses de la Base adresse nationale | aucune |
+| `https://api-adresse.data.gouv.fr/search/` | **navigateur** | saisie d'adresse avec suggestions (CR, CE) | adresses de la Base adresse nationale | aucune |
+| `https://data.geopf.fr/geocodage/search` | **navigateur** | centrage de la carte du plan de situation sur l'adresse du monument | coordonnées (Géoplateforme de l'IGN) | aucune |
 | `https://data.geopf.fr/wmts` (orthophotos IGN), `openmaptiles.geo.data.gouv.fr` (cadastre), `tiles.openfreemap.org` (fond et polices) | **navigateur** | carte du plan de situation et localisation des désordres | tuiles | aucune |
 | `UP_API_URL` (par défaut `https://api-ext.stg.cloud.culture.fr/dataspace/patrinote/up`) | backend | ouverture d'un MH complexe (constat ou fiche), si `UP_API_MODE=live` | unités patrimoniales d'un monument | en-tête `apiKey` (`UP_API_KEY`) |
+
+Seule la requête de l'agent (adresse ou référence) est envoyée à ces services ; aucune donnée personnelle n'en sort, hors l'adresse d'un monument ou d'un projet saisie pour le géocodage.
 
 ### 1.1 API Dataspace des unités patrimoniales
 
@@ -57,12 +62,10 @@ Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upSe
 - L'API reçoit en `POST` un filtre de type MongoDB (`{UPI_REFERENCE_MERIMEE: "PA…"}` pour la racine, `{$or: [{_id: {$in: […]}}]}` pour les enfants, par lots de 50). Elle ne connaît que le lien parent → enfants : l'arbre est lu **niveau par niveau** (10 niveaux et 1 000 UP au plus).
 - Elle répond **404 au lieu d'une liste vide** quand rien ne correspond : le backend le traite comme « aucune UP ».
 - Délai de 5 s, une nouvelle tentative. Les réponses sont gardées dans `up_cache` pendant `UP_CACHE_TTL_HOURS` (24 h) ; si l'API ne répond pas, le cache périmé est servi.
-- Elle n'est **joignable que depuis le réseau de production** (filtrage d'adresse IP, *à confirmer pour l'hébergement cible*). En développement et en test, `UP_API_MODE=mock` lit [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json), qui contient des réponses réelles allégées et le monument de test `TEST00003` (hiérarchie profonde).
+- Elle n'est **joignable que depuis le réseau de production** (filtrage d'adresse IP, *à confirmer pour l'hébergement cible*). En développement et en test, `UP_API_MODE=mock` lit des réponses enregistrées ([up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json)).
 - Seule la référence Mérimée est envoyée : aucune donnée personnelle ne sort.
 
-> Le [README](../README.md) parle de fichiers `monuments.csv` et `mobilier.csv` et d'un appel à l'API adresse **par le backend**. Le code est différent : les fichiers s'appellent `merimee.csv` et `palissy.csv`, et l'API adresse est appelée **directement par le navigateur**.
-
-La variable `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts#L33) mais **aucun code ne la lit**. Il faut quand même la renseigner, sinon le backend refuse de démarrer.
+La variable `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts) mais **aucun code ne la lit**. Il faut quand même la renseigner, sinon le backend refuse de démarrer.
 
 ---
 
@@ -74,15 +77,14 @@ Code : [pop.ts](../packages/backend/src/features/data/pop.ts) et [KyselyBatchWri
 
 | Mode | Commande | Ce qui est fait |
 | --- | --- | --- |
-| Au démarrage du backend | variable `FORCE_REFETCH_POP=true` ([index.ts#L19](../packages/backend/src/index.ts#L19)) | `initPopImmeubles()` puis `initPopObjets()`. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. |
-| Manuel, complet | `pnpm backend import-pop` (= `vite-node ./src/features/data/pop.ts --standalone`) | immeubles, objets, puis `process.exit(0)`. |
+| Au démarrage du backend | variable `FORCE_REFETCH_POP=true` | Import des immeubles puis des objets. **Bloquant** : le serveur HTTP ne démarre qu'à la fin de l'import. |
+| Manuel, complet | `pnpm backend import-pop` | Immeubles, objets, puis fin du processus. |
 | Planifié | **aucun** | Il n'y a ni cron ni tâche planifiée, ni dans le dépôt ni dans Coolify (relevé du 17/11/2026). Le dernier import des immeubles est postérieur au 06/05/2026 ; celui des objets ne peut pas être daté. |
 
-Règles cachées :
+Points d'attention :
 
-- **Les immeubles sont toujours réimportés** (upsert complet). **Les objets ne le sont que si la table `pop_objets` est vide** ([pop.ts#L57](../packages/backend/src/features/data/pop.ts#L57)). Pour rafraîchir Palissy, il faut vider `pop_objets` avant le lancement.
+- **Les immeubles sont toujours réimportés** (upsert complet). **Les objets ne le sont que si la table `pop_objets` est vide**. Pour rafraîchir Palissy, il faut vider `pop_objets` avant le lancement.
 - Si `FORCE_REFETCH_POP` reste à `true`, **chaque redémarrage** retélécharge Mérimée et retarde la mise en service.
-- `FORCE_REFETCH_POP` accepte `true` (insensible à la casse) ; toute autre chaîne vaut `false`.
 
 ### 2.2 Traitement
 
@@ -103,9 +105,9 @@ sequenceDiagram
     BE->>FS: supprime le fichier
 ```
 
-1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`). Le chemin est relatif au répertoire courant, en pratique `packages/backend/data/` ([pop.ts#L81](../packages/backend/src/features/data/pop.ts#L81)). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (plusieurs centaines de Mo pour Palissy, *à confirmer*).
-2. **Analyse CSV** (`csv-parser`) avec le séparateur `|`. Les en-têtes sont mis en minuscules et débarrassés des espaces. **Les noms de colonnes de la table doivent correspondre exactement aux en-têtes du fichier** (d'où les colonnes `région`, `département`, `emplacement__forme_et_structure_de_l_escalier`, `vocable___pour_les_edifices_cultuels`).
-3. **Écriture par lots de 500** ([KyselyBatchWriter.ts](../packages/backend/src/features/data/KyselyBatchWriter.ts)) :
+1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`), relatif au répertoire courant (en pratique `packages/backend/data/`). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (les tables occupent 231 Mo pour Mérimée et 326 Mo pour Palissy en production ; taille des fichiers CSV *à confirmer*).
+2. **Analyse CSV** avec le séparateur `|`. Les en-têtes sont mis en minuscules et débarrassés des espaces. **Les noms de colonnes de la table doivent correspondre exactement aux en-têtes du fichier** (d'où les colonnes `région`, `département`, etc.).
+3. **Écriture par lots de 500** :
    - les lignes sans `reference` sont ignorées ;
    - `id` reçoit la valeur de `reference` (PowerSync exige une colonne `id`) ;
    - les doublons de `reference` dans un même lot sont éliminés (la première occurrence est gardée) ;
@@ -120,29 +122,13 @@ Limites :
 
 ### 2.3 Lien entre immeubles et objets
 
-Aucune clé ne relie `pop_objets` à `pop_immeubles`. Le navigateur cherche les objets d'un monument avec `reference_a_une_notice_merimee_mh LIKE '%<référence Mérimée>'` ([MonumentHistorique.tsx#L351](../packages/frontend/src/features/state-report/steps/MonumentHistorique.tsx#L351)). Dans le formulaire d'alerte, la recherche porte sur `'%<réf>%'` ([StateReportAlertObjetSectionForm.tsx#L57](../packages/frontend/src/features/state-report/alerts/StateReportAlertObjetSectionForm.tsx#L57)). Ces deux filtres diffèrent et peuvent donner des résultats différents.
+Aucune clé ne relie `pop_objets` à `pop_immeubles`. Le navigateur cherche les objets d'un monument par une recherche textuelle (`LIKE`) de la référence Mérimée dans `reference_a_une_notice_merimee_mh`, avec deux filtres légèrement différents selon l'écran, qui peuvent donner des résultats différents.
 
-Quand l'agent choisit un monument, certains champs POP sont **copiés** dans le constat (correspondance dans [ImmeubleAutocomplete.tsx#L30](../packages/frontend/src/features/ImmeubleAutocomplete.tsx#L30)) :
-
-| POP (`pop_immeubles`) | Constat (`state_report`) |
-| --- | --- |
-| `reference` | `reference_pop` |
-| `titre_editorial_de_la_notice` | `titre_edifice` |
-| `denomination_de_l_edifice` | `nature_edifice` |
-| `adresse_forme_index` | `adresse` |
-| `commune_forme_editoriale` / `commune_forme_index` | `commune` / `commune_historique` |
-| `cadastre` | `reference_cadastrale` |
-| `siecle_de_la_campagne_principale_de_construction` | `periode_construction` |
-| `typologie_de_la_protection` / `precision_de_la_protection` | `nature_protection` / `parties_protegees` |
-| `description_de_l_edifice` | `description` |
+Quand l'agent choisit un monument, les champs utiles de la notice POP sont **copiés** dans le constat (copie figée, voir [06](06-modele-de-donnees.md) § 5.5).
 
 ### 2.4 Photos POP (`pop_images`)
 
-La table `pop_images` contient des URL de photos POP (`url`, `label`, `copyright`, `dept_number`). Elle est lue par les fiches objet, la galerie et l'étape « Monument historique » du constat via `GET /api/state-report/objets-images?references=a,b,c` ([stateReportRoutes.ts](../packages/backend/src/routes/stateReportRoutes.ts)). Elle n'est pas synchronisée : hors ligne, pas d'image, et une vignette par défaut `/objet-sans-image.png` s'affiche. Elle est vide ; l'affichage des images POP passera par le protocole IIIF.
-
-### 2.5 Code mort lié à POP
-
-- `initPopDatasette` et `fetchPopDatasetteCSV` (table `merimee_to_memoire`, supprimée en migration 0008) sont commentés ou inutilisés.
+La table `pop_images` est prévue pour des URL de photos POP (`url`, `label`, `copyright`, `dept_number`). Elle est lue par les fiches objet, la galerie et le constat via `GET /api/state-report/objets-images`, mais n'est pas synchronisée. Elle est vide en production : les images POP ne sont pas affichées, une vignette par défaut s'affiche à la place.
 
 ---
 
@@ -154,18 +140,20 @@ Code : [uploadService.ts](../packages/backend/src/services/uploadService.ts), [u
 
 | Variable | Rôle |
 | --- | --- |
-| `MINIO_URL` | Point d'accès S3 (ex. `https://s3.exemple.fr`). **Doit être joignable depuis les navigateurs des agents**, car ils y envoient directement les fichiers par URL présignée. |
-| `MINIO_PUBLIC_URL` (facultatif) | Point d'accès utilisé pour **signer** les URL présignées, quand les navigateurs joignent le stockage par une autre adresse que le backend (reverse proxy). |
+| `MINIO_URL` | Point d'accès S3 utilisé par le backend (ex. `https://s3.exemple.fr`). Sert aussi à signer les URL présignées si `MINIO_PUBLIC_URL` est vide : il doit alors être **joignable depuis les navigateurs des agents**, qui y envoient directement les fichiers. |
+| `MINIO_PUBLIC_URL` (facultatif) | Point d'accès utilisé pour **signer** les URL présignées, quand les navigateurs joignent le stockage par une autre adresse que le backend (reverse proxy, réseau interne). |
 | `MINIO_BUCKET` | Nom du bucket unique. |
 | `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_KEY` | Identifiants applicatifs (droit `readwrite` en développement). |
 | `MINIO_USER`, `MINIO_PASSWORD` | Compte administrateur MinIO (docker-compose seulement). |
 
-Particularités du client S3 ([uploadService.ts#L19-L26](../packages/backend/src/services/uploadService.ts#L19-L26)) : `region: "us-east-1"` en dur, `forcePathStyle: true` et `bucketEndpoint: true`. Le paramètre `Bucket` reçoit l'**URL complète** `${MINIO_URL}/${MINIO_BUCKET}`. Toute solution S3 compatible (MinIO, Scaleway, OVH, Outscale…) doit accepter l'adressage en chemin (*path-style*) et la région `us-east-1` (ou l'ignorer).
+Particularités du client S3 : région `us-east-1` en dur, adressage en chemin (*path-style*), et paramètre `Bucket` qui reçoit l'**URL complète** `${MINIO_URL}/${MINIO_BUCKET}`. Toute solution S3 compatible (MinIO, Scaleway, OVH, Outscale…) doit accepter l'adressage en chemin et la région `us-east-1` (ou l'ignorer).
 
-**Prérequis hors code** (*à confirmer sur la plateforme actuelle*) :
+**Prérequis hors code** :
 
 - une **politique CORS** sur le bucket autorisant `PUT` et `GET` depuis l'origine du frontend. Sans elle, l'envoi des photos et des PDF échoue ;
 - le bucket ne doit **pas** être public : tous les accès passent par le backend ou par une URL présignée. Le code ne pose aucune ACL.
+
+En production, ces deux conditions sont remplies (voir [05](05-authentification-securite.md) § 7.1).
 
 ### 3.2 Organisation des clés
 
@@ -191,12 +179,11 @@ Bucket unique, **un seul préfixe racine `attachment/`**, puis l'identifiant du 
 
 Le **premier segment** de la clé désigne le document : c'est lui qui décide de l'accès (service du document, [attachmentAccess.ts](../packages/backend/src/features/attachmentAccess.ts)). Ce format ne doit pas changer.
 
-- Les colonnes `attachment_id` des tables `*_attachment`, `report.attachment_id`, `state_report.attachment_id` et `constat_validation.pdf_path` contiennent la clé **sans** le préfixe `attachment/`. Le backend l'ajoute ([uploadService.ts#L38](../packages/backend/src/services/uploadService.ts#L38)). `attachment_redirection.s3_key` contient la clé **avec** le préfixe.
+- Les colonnes `attachment_id` des tables `*_attachment`, `report.attachment_id`, `state_report.attachment_id` et `constat_validation.pdf_path` contiennent la clé **sans** le préfixe `attachment/`, que le backend ajoute. `attachment_redirection.s3_key` contient la clé **avec** le préfixe.
 - `<epoch>` est en secondes. Chaque envoi produit un **nouveau PDF**. Les anciens restent dans le stockage, et `attachment_id` du document pointe sur le dernier.
-- Le segment `/localisation/` est **porteur de sens** : c'est lui qui identifie une carte de localisation ([localisationAttachment.ts#L7](../packages/frontend/src/features/state-report/localisationAttachment.ts#L7)). Il ne faut pas changer ce format.
-- Tout est en `.jpg` (ou `.pdf`) : les photos sont **recompressées dans le navigateur** (1 Mo et 1920 px maximum, **métadonnées EXIF supprimées**, donc pas de coordonnées GPS des photos) ([UploadReportImage.tsx#L276-L279](../packages/frontend/src/features/upload/UploadReportImage.tsx#L276-L279)).
+- Le segment `/localisation/` est **porteur de sens** : c'est lui qui identifie une carte de localisation. Il ne faut pas changer ce format.
+- Les photos sont **recompressées dans le navigateur** en JPEG (1 Mo et 1920 px maximum, **métadonnées EXIF supprimées**, donc pas de coordonnées GPS des photos).
 - **Pas d'audio, pas de vidéo** : le code ne stocke que des images et des PDF.
-- Fonctions mortes : `getPDFName` (`<id>/compte_rendu.pdf`), `getPictureName`, `uploadAttachment`, `addPDFToReport` (qui construit une URL `https://http…` erronée) ne sont pas appelées.
 
 ### 3.3 Flux d'écriture et de lecture
 
@@ -236,34 +223,32 @@ sequenceDiagram
 
 Points d'attention :
 
-- **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes ([db.ts#L107](../packages/frontend/src/db/db.ts#L107)). `deleteFile` n'est pas implémenté : **rien n'est jamais supprimé du stockage**.
-- **Type et taille contrôlés et signés** dans l'URL de dépôt : photos JPEG, PNG, WebP ou HEIC/HEIF de 20 Mo au plus, PDF de 50 Mo au plus ([uploadLimits.ts](../packages/backend/src/features/uploadLimits.ts)). S3 refuse un fichier d'un autre type ou d'une autre taille. Les fichiers ne transitent pas par le backend (envoi direct par URL présignée).
+- **La file de pièces jointes du navigateur** (PowerSync `AttachmentQueue`) surveille les 5 tables `*_attachment` (`is_deprecated = 0`). Elle **téléverse** les fichiers locaux et **télécharge** ceux qui manquent, toutes les 30 secondes. La suppression n'est pas implémentée : **rien n'est jamais supprimé du stockage**.
+- **Type et taille contrôlés et signés** dans l'URL de dépôt (voir [05](05-authentification-securite.md) § 7.2). Les fichiers ne transitent pas par le backend (envoi direct par URL présignée).
 - **Contrôle d'appartenance** : lecture et écriture limitées au service du document désigné par le premier segment de la clé. Exception : une URL d'écriture est délivrée pour un document **pas encore en base**, car les photos peuvent partir avant la ligne.
-- `getReportPDF` prend le **plus récent** des `report_attachment` en `.pdf` rangés sous `<reportId>/` ([uploadService.ts](../packages/backend/src/services/uploadService.ts#L140)).
-- Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit (`getAttachment`), ce qui échoue s'il est absent.
-- Les URL présignées de lecture (`generatePresignedUrl`) ré-encodent chaque segment du chemin après signature ([uploadService.ts#L190](../packages/backend/src/services/uploadService.ts#L190)) pour gérer les noms avec caractères spéciaux.
+- Pour les CE, le backend ne vérifie pas que le PDF a bien été téléversé avant d'envoyer les courriels. Pour les CR, il le relit, ce qui échoue s'il est absent.
 
 ### 3.4 Cycle de vie et volumétrie
 
 - **Aucune règle de cycle de vie** dans le code : photos remplacées (`is_deprecated`), PDF successifs, pièces jointes de documents désactivés et anciens plans de situation sont **conservés indéfiniment**. La durée de conservation doit être définie avec le ministère (archivage, RGPD) puis mise en œuvre par une règle de cycle de vie S3 ou un script de purge.
-- **Volumétrie estimée** (*à confirmer*) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (vides pour les documents envoyés avant la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, utiliser `mc du` sur le bucket.
-- **Migration du stockage** : copier le bucket en conservant **exactement les clés** (par exemple `mc mirror` ou `rclone sync`). Les clés sont référencées en base et dans les liens courts déjà envoyés. Seules `MINIO_URL` et `MINIO_BUCKET` changent.
+- **Volumétrie estimée** (*à confirmer*) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (vides pour les documents envoyés avant la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, mesurer le bucket (`mc du`).
+- **Migration du stockage** : copier le bucket en conservant **exactement les clés** (par exemple `mc mirror` ou `rclone sync`). Les clés sont référencées en base et dans les liens courts déjà envoyés. Seules `MINIO_URL` (et `MINIO_PUBLIC_URL`) et `MINIO_BUCKET` changent.
 
 ---
 
 ## 4. Liens courts vers les PDF (`attachment_redirection`)
 
-Les courriels d'envoi de CR et de CE ne contiennent pas de pièce jointe, mais un **lien court** servi par le backend **à la racine** (hors préfixe `/api`, **sans authentification**) : `GET {BACKEND_URL}/attachment/:id/:filename?` ([attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts), monté dans [router.ts](../packages/backend/src/router.ts)).
+Les courriels d'envoi de CR et de CE ne contiennent pas de pièce jointe, mais un **lien court** servi par le backend **à la racine** (hors préfixe `/api`, **sans authentification**) : `GET {BACKEND_URL}/attachment/:id/:filename?` ([attachmentRedirectRoutes.ts](../packages/backend/src/routes/attachmentRedirectRoutes.ts)). Il est soumis à la limitation de débit des routes publiques ([05](05-authentification-securite.md) § 6.1).
 
 ### 4.1 Création
 
-`createAttachmentRedirection` ([attachmentRedirection.ts#L7](../packages/backend/src/features/attachmentRedirection.ts#L7)) :
+`createAttachmentRedirection` ([attachmentRedirection.ts](../packages/backend/src/features/attachmentRedirection.ts)) :
 
 - `id` = entier aléatoire cryptographique entre 1 et 2⁴⁸ − 1, encodé en **base62** (environ 8 caractères) ;
 - `s3_key` = `attachment/<pdfPath>` ; `created_by` ; `sent_to` (CSV des destinataires 🔒) ;
 - `name` = nom de fichier affiché :
-  - CR : `CR_<commune>_<nom du pétitionnaire>_<jj-MM-aaaa>.pdf` ([report.tsx#L12](../packages/pdf/src/report.tsx#L12)). ⚠ Le **nom du pétitionnaire** (donnée personnelle) figure donc **dans l'URL** et dans les journaux du serveur ;
-  - CE : `constat-d-etat-<titre-normalisé>_<jjMMaaaa>.pdf` ([stateReport.tsx#L449](../packages/pdf/src/stateReport.tsx#L449)).
+  - CR : `CR_<commune>_<nom du pétitionnaire>_<jj-MM-aaaa>.pdf`. ⚠ Le **nom du pétitionnaire** (donnée personnelle) figure donc **dans l'URL** et dans les journaux du serveur ;
+  - CE : `constat-d-etat-<titre-normalisé>_<jjMMaaaa>.pdf`.
 - URL renvoyée : `{BACKEND_URL}/attachment/<id>/<name>`.
 
 Lors de l'envoi d'un CE, **plusieurs lignes** sont créées pour un même PDF : une pour le courriel, une autre renvoyée à l'interface, une pour le valideur si la validation est demandée, puis une nouvelle pour le courriel aux destinataires après acceptation.
@@ -281,34 +266,21 @@ flowchart TD
     D -- non --> G["302 vers une URL S3 présignée valable 1 h"]
 ```
 
-Règles vérifiées par [tests/attachment-redirect.spec.ts](../tests/attachment-redirect.spec.ts) :
-
-- un lien **inconnu** donne **404** ;
-- un lien de **91 jours** donne **410** ; un lien d'**exactement 90 jours** est encore valide (`differenceInDays > 90`, en jours entiers) ;
-- un lien **sans `name`** donne une **redirection 302** vers une URL contenant `X-Amz-Signature`.
-
-Le cas avec `name` (le seul cas produit par le code actuel) n'est pas couvert par ce test. Le segment `:filename` de l'URL est **ignoré** : seul `id` compte, le nom servi est celui de la base.
+Un lien est valable **90 jours** (comptés en jours entiers : au 90ᵉ jour il fonctionne encore, au 91ᵉ il renvoie 410). Le segment `:filename` de l'URL est **ignoré** : seul `id` compte, le nom servi est celui de la base. Ces règles sont couvertes par des tests de bout en bout.
 
 Conséquences pour le transfert :
 
 - `BACKEND_URL` est inscrit **en dur dans les courriels déjà envoyés**. Si le domaine du backend change, l'ancien domaine doit continuer à répondre (ou rediriger `/attachment/*`) **pendant 90 jours** après la bascule.
 - La table n'est jamais purgée. Les lignes expirées peuvent être supprimées sans risque.
-- Pour une validation acceptée, le courriel aux destinataires contient lui aussi un lien court de 90 jours, comme un envoi direct ([validationRoutes.ts#L179](../packages/backend/src/routes/validationRoutes.ts#L179)). Seule la page de validation (`GET /api/constat-validation/:token`) donne au valideur une URL S3 présignée valable 1 h.
+- Pour une validation acceptée, le courriel aux destinataires contient lui aussi un lien court de 90 jours, comme un envoi direct. Seule la page de validation (`GET /api/constat-validation/:token`) donne au valideur une URL S3 présignée valable 1 h.
 
 ---
 
 ## 5. Redirection de l'ancien domaine (`crvif-redirection`)
 
-Le dossier [crvif-redirection](../crvif-redirection) contient un **mini-site statique** à déployer sur l'**ancien domaine** de l'application, lorsqu'elle s'appelait « Compte-rendu VIF » (CR-VIF). Ancien domaine probable : `app.compte-rendu-vif.beta.gouv.fr` et `*.compte-rendu-vif.incubateur.net`, encore listés dans `preview.allowedHosts` de [vite.config.ts](../packages/frontend/vite.config.ts#L74).
+L'ancien domaine de l'application, `app.compte-rendu-vif.beta.gouv.fr`, est servi en production par le service Coolify `migration-proxy`, qui renvoie les agents vers `https://app.patrinotes.beta.gouv.fr/inscription` et remplace le *service worker* de l'ancienne PWA. Le dossier [crvif-redirection](../crvif-redirection) contient une version différente de ces fichiers. Le détail est dans [10](10-infrastructure-et-deploiement.md) § 5.2.
 
-| Fichier | Rôle |
-| --- | --- |
-| [index.html](../crvif-redirection/index.html) | Redirection immédiate (`meta refresh` + JavaScript) vers `https://app.patrinotes.beta.gouv.fr`, après désinscription des *service workers* existants. |
-| [sw.js](../crvif-redirection/sw.js) | **Remplace le service worker de l'ancienne PWA** (même nom de fichier `sw.js`, généré depuis `src/service-worker/sw.ts`). À son activation, il se désinscrit puis renvoie tous les onglets ouverts vers le nouveau domaine. Sans ce fichier, les PWA installées sur l'ancien domaine continueraient d'afficher l'ancienne application en cache. |
-
-**La version servie en production est différente** (relevé de production du 17/11/2026, service Coolify `migration-proxy`) : délai de 3 s, puis un script envoie vers `https://app.patrinotes.beta.gouv.fr/inscription?from=crvif` ; le service worker renvoie vers `…?from=crvif`. Le paramètre `?from=crvif` n'est lu par **aucun** code du frontend : il ne sert que de marqueur dans les statistiques. C'est le renvoi direct vers `/inscription` qui fait recréer un compte aux anciens utilisateurs. Les liens profonds de l'ancien domaine (`/constat/…`) répondent 404. Les fichiers de production sont à reverser dans le dépôt.
-
-Les clés de stockage local du navigateur gardent l'ancien préfixe (`crvif/auth`, `crvif-sync.db`, `crvif-attachments`). Il ne faut **pas** les renommer, sinon les données locales non synchronisées des agents seraient perdues.
+Les données locales des navigateurs sont stockées sous des noms hérités de l'ancien produit ; les renommer ferait perdre aux agents leurs données non synchronisées.
 
 Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et prévoir le même mécanisme (`index.html` + `sw.js`) pour le domaine **actuel** `app.patrinotes.beta.gouv.fr` si l'application change de domaine sur l'infrastructure du ministère.
 
@@ -316,10 +288,7 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 
 ## 6. Dossier `packages/backend/data`
 
-| Élément | Statut |
-| --- | --- |
-| `data/` (répertoire) | Répertoire de travail **temporaire** de l'import POP (`merimee.csv`, `palissy.csv`, supprimés après import). Doit être inscriptible. |
-| [data/udap.json](../packages/backend/data/udap.json) | 96 entrées (une par département : `id`, `department`, autres champs vides). **Lu par aucun code**. |
+Répertoire de travail **temporaire** de l'import POP (`merimee.csv`, `palissy.csv`, supprimés après import). Il doit être inscriptible.
 
 ---
 
@@ -328,9 +297,8 @@ Pour le transfert : décider si l'ancien domaine reste servi (et par qui), et pr
 | Sujet | Action |
 | --- | --- |
 | Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` et l'API Dataspace des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Dataspace filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
-| Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
-| API Adresse | Le service `api-adresse.data.gouv.fr` redirige déjà vers la Géoplateforme de l'IGN (`data.geopf.fr/geocodage`). Le géocodage du plan de situation ([MapLibre.tsx](../packages/frontend/src/features/map/MapLibre.tsx)) l'interroge directement ; reste à migrer [address.tsx](../packages/frontend/src/features/address.tsx), qui n'encode pas la requête dans l'URL (`encodeURIComponent` manquant). |
-| Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées et vider `pop_objets` si Palissy doit être rafraîchi. L'affichage des images POP passera par le protocole IIIF (voir § 2.4). |
+| Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr` (tuiles et géocodage), `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
+| Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées et vider `pop_objets` si Palissy doit être rafraîchi. |
 | Stockage | Copier le bucket à l'identique, configurer le CORS, définir une durée de conservation, garder le bucket privé. |
 | Liens courts | Maintenir l'ancien `BACKEND_URL` au moins 90 jours après la bascule. |
-| Ancien domaine | Garder ou retirer `crvif-redirection` en connaissance de cause. |
+| Ancien domaine | Garder ou retirer `migration-proxy` en connaissance de cause. |
