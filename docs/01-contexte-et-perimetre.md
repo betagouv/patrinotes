@@ -65,7 +65,7 @@ Le constat d'état est une fiche de **veille sanitaire** d'un **immeuble protég
 
 Il comprend :
 
-1. **le monument** : choisi par recherche ou sur une carte, prérempli depuis Mérimée et les corrections du service. Pour un **MH complexe**, l'agent choisit l'ensemble du monument ou une **unité patrimoniale** (UP), lue dans l'API Dataspace du ministère. Un monument absent de la base peut être saisi librement ;
+1. **le monument** : choisi par recherche ou sur une carte, prérempli depuis Mérimée et les corrections du service. Pour un **MH complexe**, l'agent choisit l'ensemble du monument ou une **unité patrimoniale** (UP), lue dans l'API Agrégée. Un monument absent de la base peut être saisi librement ;
 2. **le contexte de la visite** : nature, date, rédacteur, personnes présentes, propriétaire et représentant avec leurs courriels ;
 3. **le constat détaillé** : une fiche par **partie visitée** (huit parties proposées, plus des parties libres), avec état, préconisations, photos et localisation sur carte ;
 4. **le constat général** : état général, dégradation, plan de l'édifice, vues générales, préconisations ;
@@ -204,12 +204,12 @@ Les pages légales sont **intégrées au code** de l'application (pas de CMS), d
 
 - le monorepo `patrinotes` : `packages/frontend` (PWA), `packages/backend` (API Node/Fastify, envoi des documents), `packages/pdf` (gabarits partagés) ;
 - la synchronisation PowerSync ([`powersync/`](../powersync)), la base PostgreSQL et ses migrations ([`db/`](../db)), l'authentification Keycloak ;
-- les dépendances externes appelées (stockage objet, SMTP, données POP, API Dataspace des unités patrimoniales du ministère, cartographie, Sentry, Matomo) ;
+- les dépendances externes appelées (stockage objet, SMTP, données POP, API Agrégée des unités patrimoniales du ministère, cartographie, Sentry, Matomo) ;
 - le déploiement actuel (VPS + Coolify, [Dockerfile](../Dockerfile), [docker-compose.yaml](../docker-compose.yaml)) et les besoins pour le transfert vers l'infrastructure du ministère ;
 - les éléments utiles à l'homologation de sécurité (données personnelles, flux, comptes, journalisation).
 
 **Hors périmètre :**
 
 - le site vitrine et la FAQ `patrinotes.beta.gouv.fr` (guides d'utilisation), qui sont un autre site ;
-- les applications métier du ministère avec lesquelles Patrinotes ne s'interface pas directement, par exemple AgrÉgée ;
+- les applications métier du ministère avec lesquelles Patrinotes ne s'interface pas, en dehors de la lecture des unités patrimoniales dans l'API Agrégée ;
 - le contenu éditorial des clauses nationales et des données POP.

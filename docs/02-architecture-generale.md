@@ -37,7 +37,7 @@ flowchart LR
     end
 
     SMTP["Relais SMTP"]
-    EXT["Services externes<br/>POP, API Dataspace des UP, Sentry, Matomo, fonds de carte"]
+    EXT["Services externes<br/>POP, API Agrégée des UP, Sentry, Matomo, fonds de carte"]
 
     UI -->|HTTPS| RP
     RP --> FE
@@ -129,7 +129,7 @@ sequenceDiagram
 
 ### 3.4 Données patrimoniales
 
-Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images`, prévue pour les URL de photos POP, est vide : les images POP ne sont pas affichées. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import n'est pas planifié : il se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou à la main. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Dataspace du ministère (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
+Le backend importe les exports Mérimée (immeubles) et Palissy (objets mobiliers) de la base POP, publiés sur `ministere-culture.s3.sbg.io.cloud.ovh.net` (`merimee.csv`, `palissy.csv`). La table `pop_images`, prévue pour les URL de photos POP, est vide : les images POP ne sont pas affichées. Les données Mérimée et Palissy alimentent `pop_immeubles` et `pop_objets`, diffusées aux clients selon leurs départements. L'API Adresse et les fonds de carte (IGN Géoplateforme, cadastre, OpenFreeMap) sont appelés **directement par le navigateur**. L'import n'est pas planifié : il se lance au démarrage si `FORCE_REFETCH_POP` est vrai, ou à la main. Pour les MH complexes, le backend lit à la demande les **unités patrimoniales** dans l'API Agrégée (joignable seulement depuis le réseau de production) et les garde en cache. Voir [07](07-donnees-externes-et-stockage.md).
 
 ## 4. Organisation du dépôt
 

@@ -20,7 +20,7 @@ Ce dossier décrit l'architecture technique du service tel qu'il est dans le dé
 | 04 | [Backend et API](04-backend-api.md) | Fastify, toutes les routes, services, erreurs, journaux | Développeurs |
 | 05 | [Authentification et sécurité](05-authentification-securite.md) | Keycloak, jetons, liste blanche, rôles, cloisonnement, données personnelles, synthèse pour l'homologation | Sécurité, développeurs |
 | 06 | [Modèle de données](06-modele-de-donnees.md) | Toutes les tables, diagrammes entité-relation, conventions, migrations | Développeurs, exploitation |
-| 07 | [Données externes et stockage](07-donnees-externes-et-stockage.md) | Imports POP, API Dataspace des unités patrimoniales, photos, API Adresse, stockage S3, liens courts, redirection de l'ancien domaine | Développeurs, exploitation |
+| 07 | [Données externes et stockage](07-donnees-externes-et-stockage.md) | Imports POP, API Agrégée des unités patrimoniales, photos, API Adresse, stockage S3, liens courts, redirection de l'ancien domaine | Développeurs, exploitation |
 | 08 | [Synchronisation et hors ligne](08-synchronisation-hors-ligne.md) | PowerSync, règles de synchronisation, écriture, pièces jointes, changements de schéma | Développeurs, exploitation |
 | 09 | [Documents PDF, cartes et e-mails](09-documents-pdf-cartes-emails.md) | Gabarits PDF, plan de situation, cartes, e-mails, alertes, validation, dictée, flux sortants | Développeurs |
 | 10 | [Infrastructure et déploiement](10-infrastructure-et-deploiement.md) | Images Docker, CI, Compose, topologie de production, environnements, livraison | Exploitation |

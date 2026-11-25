@@ -20,7 +20,7 @@ flowchart LR
         IGN["data.geopf.fr/wmts<br/>orthophotos IGN"]
         CAD["openmaptiles.geo.data.gouv.fr<br/>cadastre"]
         OFM["tiles.openfreemap.org<br/>fond de carte"]
-        DS["API Dataspace du ministère<br/>unités patrimoniales"]
+        DS["API Agrégée<br/>unités patrimoniales"]
     end
 
     subgraph Srv["Hébergement Patrinotes"]
@@ -55,7 +55,9 @@ flowchart LR
 
 Seule la requête de l'agent (adresse ou référence) est envoyée à ces services ; aucune donnée personnelle n'en sort, hors l'adresse d'un monument ou d'un projet saisie pour le géocodage.
 
-### 1.1 API Dataspace des unités patrimoniales
+### 1.1 API Agrégée des unités patrimoniales
+
+Les unités patrimoniales viennent d'**Agrégée**, l'application ministérielle de suivi des monuments historiques. Son API est exposée par la plateforme Dataspace du ministère (`api-ext.stg.cloud.culture.fr/dataspace/patrinote/up`).
 
 Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upService.ts](../packages/backend/src/services/upService.ts). Route : `GET /api/up/monument` ([04 §4.9](04-backend-api.md)).
 
@@ -296,7 +298,7 @@ Répertoire de travail **temporaire** de l'import POP (`merimee.csv`, `palissy.c
 
 | Sujet | Action |
 | --- | --- |
-| Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` et l'API Dataspace des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Dataspace filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
+| Accès sortants du backend | `ministere-culture.s3.sbg.io.cloud.ovh.net` et l'API Agrégée des UP (`UP_API_URL`) en HTTPS ; à ouvrir sur le pare-feu de l'hébergement cible. L'API Agrégée filtre les adresses IP : l'adresse de sortie de la cible doit y être autorisée. |
 | Accès sortants des navigateurs | `api-adresse.data.gouv.fr`, `data.geopf.fr` (tuiles et géocodage), `openmaptiles.geo.data.gouv.fr`, `tiles.openfreemap.org`, point d'accès S3. À autoriser dans la **politique de sécurité de contenu (CSP)** si elle est durcie. |
 | Rafraîchissement POP | Définir une tâche planifiée (`pnpm backend import-pop`) en dehors des heures ouvrées et vider `pop_objets` si Palissy doit être rafraîchi. |
 | Stockage | Copier le bucket à l'identique, configurer le CORS, définir une durée de conservation, garder le bucket privé. |

@@ -1007,7 +1007,7 @@ Modèle du compte-rendu ([report.tsx](packages/pdf/src/report.tsx)) :
 - `KyselyBatchWriter` relit le catalogue des colonnes de la table à chaque lot de 500 lignes.
 - Sans image POP, la vignette `/objet-sans-image.png` s'affiche.
 - [up-mock.json](packages/backend/src/features/up/fixtures/up-mock.json) contient des réponses réelles allégées de
-  l'API Dataspace des unités patrimoniales et le monument de test `TEST00003` (hiérarchie profonde).
+  l'API Agrégée des unités patrimoniales et le monument de test `TEST00003` (hiérarchie profonde).
 
 Champs copiés de POP dans le constat ([ImmeubleAutocomplete.tsx](packages/frontend/src/features/ImmeubleAutocomplete.tsx)) :
 

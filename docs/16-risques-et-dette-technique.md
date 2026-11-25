@@ -42,7 +42,7 @@ quadrantChart
 | SEC-07 | Dépendances : audit non bloquant, image PowerSync non épinglée | Moyen | §2 |
 | RGPD-02 | Sous-traitants non déclarés | Moyen | §4 |
 | SEC-04 | Rattachement libre à un service (journalisé) | Moyen | §2 |
-| OPS-10 | API Dataspace des UP filtrée par adresse IP, mode `mock` par défaut | Moyen | §5 |
+| OPS-10 | API Agrégée des UP filtrée par adresse IP, mode `mock` par défaut | Moyen | §5 |
 | SEC-08 | Liens publics de 90 jours, nom du demandeur dans le nom du PDF | Moyen | §2 |
 | SEC-11 | MongoDB sans authentification, pas de rôle de réplication dédié, TLS non activé | Moyen | §2 |
 | SEC-15 | Dictée vocale traitée par Google sur Chrome | Moyen | §2 |
@@ -131,7 +131,7 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 | OPS-03 | Frontend servi par `vite preview`, domaines autorisés codés en dur. | Serveur statique (nginx, Caddy) avec génération de `env.js` au démarrage. |
 | OPS-05 | Les images de production contiennent les dépendances de développement (`drizzle-kit`, `vite` et `vite-node` servent au démarrage). | Étape d'exécution allégée, migrations dans une tâche séparée. |
 | OPS-07 | Le backend n'a qu'une tâche périodique (reprise des alertes). Aucune tâche planifiée, ni dans le code ni dans Coolify, pour les imports POP (dernier import des immeubles après le 06/05/2026), la purge (RGPD-01) ou la compaction PowerSync. | Planificateur (cron, tâche Kubernetes). |
-| OPS-10 | L'API Dataspace des unités patrimoniales n'est joignable que depuis le réseau de production (filtrage IP) ; `UP_API_MODE` vaut `mock` par défaut. | Faire autoriser l'adresse de sortie de l'hébergement cible ; vérifier `UP_API_MODE=live` après la bascule. Le cache `up_cache` sert de secours. |
+| OPS-10 | L'API Agrégée des unités patrimoniales n'est joignable que depuis le réseau de production (filtrage IP) ; `UP_API_MODE` vaut `mock` par défaut. | Faire autoriser l'adresse de sortie de l'hébergement cible ; vérifier `UP_API_MODE=live` après la bascule. Le cache `up_cache` sert de secours. |
 | OPS-11 | Sauvegardes (relevé du 17/11/2026) : base de production sauvegardée chaque jour (7 jours en local, 90 jours sur S3) ; **aucune restauration testée** ; bucket de fichiers `patrinotes-prod` sans sauvegarde visible ; sauvegardes stockées dans le **même compte et la même région Scaleway** que les données ; thème et configurations PowerSync hors sauvegarde. | Tester une restauration complète, sauvegarder ou versionner le bucket, copier les sauvegardes hors du compte. |
 | OPS-12 | Déploiements lancés à la main dans Coolify sur l'étiquette mobile (`:backend`, `:frontend`) ; `sync-config.yaml` et `powersync-config.yaml` déposés à la main sur le serveur ; image PowerSync en `latest`. La version déployée se lit dans le label `revision` de l'image et des étiquettes `-<sha>` existent. | Déployer par étiquette `-<sha>`, déploiement déclenché par la CI, configuration PowerSync versionnée et déployée avec l'application. |
 | OPS-13 | 4 541 objets POP avec un champ date invalide (colonnes décalées ou encodage) ; `pop_images` vide (les images POP ne sont pas affichées) ; `shared_buffers` à 128 Mo (défaut) sur un serveur de 31 Go ; empreinte de la migration 0000 différente du fichier du dépôt. | Contrôler l'import, régler PostgreSQL, ne plus modifier une migration appliquée. |
@@ -162,7 +162,7 @@ Inventaire détaillé dans [05](05-authentification-securite.md) et [06](06-mode
 | Avant homologation | Keycloak dédié à la préproduction, DMARC en `reject` | SEC-20, SEC-22 |
 | Avant homologation | Désactiver le compte Keycloak au retrait de la liste blanche ; nom de fichier neutre pour le PDF de CR ; décider du moment d'envoi des alertes ; suivre les alertes envoyées avant la synchronisation de leur ligne | SEC-24, SEC-08, DAT-11, DAT-12 |
 | Avant homologation | Faire valider par le ministère le changement de service libre et la dictée vocale | SEC-04, SEC-15 |
-| Pendant le transfert | `max_slot_wal_keep_size`, supervision du slot et de `/health/ready`, TLS PostgreSQL, MongoDB authentifié, versions épinglées ; ouverture de l'API Dataspace à la nouvelle adresse de sortie | OPS-01, SEC-11, OPS-10, SEC-07 |
+| Pendant le transfert | `max_slot_wal_keep_size`, supervision du slot et de `/health/ready`, TLS PostgreSQL, MongoDB authentifié, versions épinglées ; ouverture de l'API Agrégée à la nouvelle adresse de sortie | OPS-01, SEC-11, OPS-10, SEC-07 |
 | Pendant le transfert | Serveur statique pour le frontend avec CSP, migrations séparées du démarrage, images allégées, déploiement par étiquette `-<sha>` avec la configuration PowerSync | OPS-03, OPS-05, OPS-12, SEC-12 |
 | Après le transfert | Identité par `sub` Keycloak ; purges RGPD (base, S3, sauvegardes) et planificateur ; mise à jour des mentions | SEC-23, RGPD-01, RGPD-02, RGPD-05, OPS-07 |
 | Continu | Retrait de `bilan_quinquennal` et du repli MD5, nettoyage du code mort, tests de cloisonnement et hors ligne | §6, DAT-13 |

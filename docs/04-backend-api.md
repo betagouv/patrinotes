@@ -90,7 +90,7 @@ Les migrations **ne sont pas** lancées par le backend lui-même : l'image Docke
 
 ### 3.3 Variables d'environnement
 
-La référence des variables du backend (base, SMTP, stockage objet, Keycloak, CORS, `TRUST_PROXY_HOPS`, API Dataspace, Sentry) est en [11 — Configuration](11-configuration.md). Deux points concernent le démarrage :
+La référence des variables du backend (base, SMTP, stockage objet, Keycloak, CORS, `TRUST_PROXY_HOPS`, API Agrégée, Sentry) est en [11 — Configuration](11-configuration.md). Deux points concernent le démarrage :
 
 - `JWT_SECRET`, `JWT_REFRESH_SECRET` et `DATAGOUV_API` ne sont **jamais lues** mais restent **obligatoires** : sans elles (valeur quelconque), le démarrage échoue ;
 - `DEBUG` vaut `cr-vif:*` par défaut : les journaux applicatifs sont actifs en production (§7.2).
@@ -203,7 +203,7 @@ Il n'existe **aucune route** pour promouvoir un administrateur, supprimer un uti
 
 | Méthode | Chemin | Auth | Rôle et logique notable |
 | --- | --- | --- | --- |
-| GET | `/api/up/monument` | Jeton | Query `reference` (Mérimée). Arbre des **unités patrimoniales** du monument, ou `null` s'il n'est pas découpé. Lu dans l'API Dataspace (une requête pour la racine, puis une par niveau), mis en cache dans `up_cache` (`UP_CACHE_TTL_HOURS`). Si l'API ne répond pas, le cache périmé est servi ; sans cache, **502** « service des unités patrimoniales indisponible ». En mode `mock`, les données viennent de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json) |
+| GET | `/api/up/monument` | Jeton | Query `reference` (Mérimée). Arbre des **unités patrimoniales** du monument, ou `null` s'il n'est pas découpé. Lu dans l'API Agrégée (une requête pour la racine, puis une par niveau), mis en cache dans `up_cache` (`UP_CACHE_TTL_HOURS`). Si l'API ne répond pas, le cache périmé est servi ; sans cache, **502** « service des unités patrimoniales indisponible ». En mode `mock`, les données viennent de [up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json) |
 | POST | `/api/monument-alert/send` | Jeton | Corps `{id}`. Envoie par courriel une alerte ou une annotation saisie depuis une fiche (`monument_alert`), si le serveur ne l'a pas déjà fait (§6.6). Renvoie `pending` tant que la ligne ou ses photos ne sont pas arrivées, `not_sent` si l'envoi n'est pas demandé, `sent` sinon. `sent_at` est posé **avant** l'envoi (et effacé en cas d'échec SMTP) : une alerte n'est jamais envoyée deux fois. 403 si l'alerte est d'un autre service ; 400 au-delà de 20 destinataires |
 
 ### 4.10 Statistiques — [statsRoutes.ts](../packages/backend/src/routes/statsRoutes.ts)
@@ -234,7 +234,7 @@ Les services sont des **singletons** créés au premier appel de `getServices()`
 | `UploadService` | [uploadService.ts](../packages/backend/src/services/uploadService.ts) | URL présignées (type et taille signés), lecture d'objets, taille, contrôle du bucket pour `/health/ready` |
 | `StaticDataService` | [staticDataService.ts](../packages/backend/src/services/staticDataService.ts) | Liste des services visibles |
 | `StateReportService` | [stateReportService.ts](../packages/backend/src/services/stateReportService.ts) | Images POP par référence, constats d'un monument tous services confondus, accès d'un service à un monument (par département) |
-| `UpService` | [upService.ts](../packages/backend/src/services/upService.ts) | Arbre des unités patrimoniales (API Dataspace ou données de test, cache `up_cache`) |
+| `UpService` | [upService.ts](../packages/backend/src/services/upService.ts) | Arbre des unités patrimoniales (API Agrégée ou données de test, cache `up_cache`) |
 
 ---
 

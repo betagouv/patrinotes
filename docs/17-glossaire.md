@@ -7,7 +7,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | Terme | Définition |
 | --- | --- |
 | **ABF** | Architecte des bâtiments de France. Agent d'UDAP qui donne des avis sur les travaux en espaces protégés et rédige des comptes-rendus et des constats. |
-| **Agrégée** | Application ministérielle de suivi sanitaire des monuments historiques, citée dans l'application. |
+| **Agrégée** | Application ministérielle de suivi sanitaire des monuments historiques. Patrinotes lit dans son API les unités patrimoniales des MH complexes (`UP_API_URL`, exposée par la plateforme Dataspace du ministère). |
 | **Alerte** (`state_report_alert`) | Signalement issu d'un constat d'état, adressé au service compétent : édifice en péril, abords, objets mobiliers, archéologie, site classé ou inscrit, biodiversité, sécurité. |
 | **Alerte de fiche, annotation** (`monument_alert`) | Alerte saisie depuis une fiche (MH, UP, objet) hors constat, ou annotation de visite d'un objet mobilier (présence, état, sécurité). |
 | **Bilan quinquennal** | Bilan sanitaire d'un monument historique, prévu tous les cinq ans. |
@@ -45,7 +45,7 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Service instructeur** (`service_instructeurs`) | Mairie ou intercommunalité qui instruit les autorisations d'urbanisme mentionnées dans un compte-rendu. |
 | **SRA** | Service régional de l'archéologie. |
 | **UDAP** | Unité départementale de l'architecture et du patrimoine. Service déconcentré où travaillent les ABF. |
-| **Unité patrimoniale, UP** (`state_report.up_*`) | Partie d'un MH complexe (bâtiment, aile, décor…), organisée en arbre et lue dans l'API Dataspace du ministère. |
+| **Unité patrimoniale, UP** (`state_report.up_*`) | Partie d'un MH complexe (bâtiment, aile, décor…), organisée en arbre et lue dans l'API Agrégée. |
 | **Validateur** | Personne, sans compte, qui accepte ou refuse l'envoi d'un constat soumis à validation (envoi sous couvert). |
 
 ## 2. Technique
@@ -60,7 +60,6 @@ Termes métier, administratifs et techniques employés dans le code et dans ce d
 | **Checkpoint** | Point de cohérence que le client PowerSync applique d'un seul bloc. |
 | **Coolify** | PaaS auto-hébergé qui pilote les conteneurs du VPS actuel. |
 | **CORS** | Règles qui autorisent un site web à appeler un autre domaine (ici le navigateur vers S3 et vers l'API). |
-| **Dataspace (API)** | API du ministère qui fournit les unités patrimoniales d'un monument, interrogée par le backend (`UP_API_URL`). |
 | **DSFR** | Système de design de l'État. Police **Marianne**. |
 | **Drizzle** | Outil de définition du schéma et de génération des migrations SQL. |
 | **Émetteur** (`iss`) | Champ d'un jeton qui identifie le fournisseur d'identité qui l'a signé. |
