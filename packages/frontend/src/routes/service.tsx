@@ -611,7 +611,8 @@ const Activity = () => {
       .where("createdBy", "=", user.id)
       .where("createdAt", ">=", startDate.toISOString())
       .where("createdAt", "<=", endDate.toISOString())
-      .where("pdf", "is not", null)
+      // a sent CR has its PDF in attachment_id (the pdf column is no longer written)
+      .where("attachment_id", "is not", null)
       .select((eb) => [eb.fn.count("id").as("count")]),
   );
 
@@ -632,7 +633,8 @@ const Activity = () => {
       .where("service_id", "=", user.service.id)
       .where("createdAt", ">=", startDate.toISOString())
       .where("createdAt", "<=", endDate.toISOString())
-      .where("pdf", "is not", null)
+      // a sent CR has its PDF in attachment_id (the pdf column is no longer written)
+      .where("attachment_id", "is not", null)
       .select((eb) => [eb.fn.count("id").as("count")]),
   );
 

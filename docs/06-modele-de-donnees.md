@@ -501,9 +501,9 @@ Un service est une UDAP (unité départementale de l'architecture et du patrimoi
 | Visite | `meetDate`, `redactedBy` 🔒, `redactedById`, `personnes_presentes` 🔒 (une personne par ligne, séparateur `\n`), `serviceInstructeur` |
 | Pétitionnaire | `applicantName` 🔒, `applicantAddress` 🔒, `applicantEmail` 🔒, `city`, `zipCode`, `projectCadastralRef` |
 | Contenu | `projectDescription`, `projectSpaceType`, `decision`, `precisions`, `contacts`, `furtherInformation` (texte riche HTML, alimenté par les clauses) |
-| Envoi | `attachment_id` (chemin du dernier PDF envoyé), `pdf_size` (octets), `pdf` (colonne historique, plus écrite depuis novembre 2025) |
+| Envoi | `attachment_id` (chemin du dernier PDF envoyé), `pdf_size` (octets), `pdf` (colonne historique, plus écrite ; renseignée seulement sur des CR envoyés jusqu'en avril 2026) |
 
-Le backend renseigne `attachment_id` et `pdf_size` à l'envoi, jamais `pdf`. Le frontend ne la remet à `null` que lors de la duplication d'un CR, et la règle de synchronisation l'accepte encore en écriture depuis le client ([syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts)). ⚠ Deux compteurs filtrent encore sur `pdf` : les « CR envoyés » de la page Service ([service.tsx](../packages/frontend/src/routes/service.tsx)) ignorent les CR envoyés depuis novembre 2025, et les « CR abandonnés » des statistiques d'administration ([statsRoutes.ts](../packages/backend/src/routes/statsRoutes.ts)) comptent ces CR comme abandonnés.
+Le backend renseigne `attachment_id` et `pdf_size` à l'envoi, jamais `pdf`. Un CR est donc envoyé si et seulement si `attachment_id` est renseigné : c'est le critère des compteurs (page Service, statistiques). Le frontend ne remet `pdf` à `null` que lors de la duplication d'un CR, et la règle de synchronisation l'accepte encore en écriture depuis le client ([syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts)).
 
 `pdf_snapshot` contient le **brouillon HTML** du PDF modifié par l'utilisateur (`html`) et une copie JSON du CR (`report`). Il y a une ligne par couple (CR, utilisateur).
 

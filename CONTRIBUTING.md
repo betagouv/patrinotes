@@ -1047,8 +1047,8 @@ Champs copiés de POP dans le constat ([ImmeubleAutocomplete.tsx](packages/front
   [StatsCharts.tsx](packages/frontend/src/components/StatsCharts.tsx). Toute mise à jour doit refaire le patch.
 - `/stats` : constantes écrites en dur (1 102 agents, 46 000 immeubles, libellés « créés en 2026 », 181 états
   sanitaires dans AgrÉgée en 2024 pour un objectif de 8 000 par an).
-- Statistiques : un document « abandonné » se calcule sur la colonne `pdf` pour un CR et sur `attachment_id` pour un
-  constat. C'est la même notion : la pièce jointe d'un constat est le PDF envoyé.
+- Statistiques : un document est « envoyé » si `attachment_id` est renseigné, pour un CR comme pour un constat. La colonne
+  `pdf` des CR n'est plus écrite : ne pas s'en servir comme critère.
 - Page d'administration ([admin.lazy.tsx](packages/frontend/src/routes/admin.lazy.tsx)) : onglet liste blanche (liste
   paginée, triable et filtrable par courriel, date, compte créé, dernier constat créé ou finalisé ; ajout,
   suppression, export CSV : `GET/POST/DELETE /api/admin/whitelist`, `GET /api/admin/whitelist/export`) et onglet

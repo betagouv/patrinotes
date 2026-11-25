@@ -484,7 +484,8 @@ export const statsPlugin: FastifyPluginAsyncTypebox = async (fastify) => {
           .selectFrom("report")
           .where("disabled", "is not", true)
           .where(sql`report."createdAt"`, "<", sql<string>`NOW() - INTERVAL '21 days'`)
-          .where("pdf", "is", null)
+          // never sent: attachment_id is set on sending (the pdf column is no longer written)
+          .where("attachment_id", "is", null)
           .select(db.fn.countAll<number>().as("count"))
           .executeTakeFirst(),
 
