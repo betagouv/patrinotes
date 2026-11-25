@@ -166,6 +166,6 @@ Taille indicative : environ 35 000 lignes de TypeScript et TSX, hors code géné
 | Préproduction | `push` sur la branche `development` | `ghcr.io/<dépôt>-development:backend` et `:frontend` |
 | Production | `push` sur la branche `main` | `ghcr.io/<dépôt>-main:backend` et `:frontend` |
 
-À chaque `push` sur ces branches, le workflow [main.yml](../.github/workflows/main.yml) lance les **tests unitaires du backend**, qui conditionnent la publication des images, et un **audit des dépendances de production** (`pnpm audit --prod`), dont le résultat est seulement signalé et ne bloque pas la publication. Les tests de bout en bout ([tests.yml](../.github/workflows/tests.yml)) se lancent à la main. Le workflow construit aussi les images d'une branche historique `compte-rendu-vif` (usage à confirmer).
+À chaque `push` sur ces branches, le workflow [main.yml](../.github/workflows/main.yml) lance les **tests unitaires du backend**, qui conditionnent la publication des images, et un **audit des dépendances de production** (`pnpm audit --prod`), dont le résultat est seulement signalé et ne bloque pas la publication. Les tests de bout en bout ([tests.yml](../.github/workflows/tests.yml)) se lancent à la main. Le workflow construit aussi les images d'une branche historique `compte-rendu-vif`, qu'aucun environnement actuel n'utilise ([10](10-infrastructure-et-deploiement.md) § 3.1).
 
 Le déploiement actuel (VPS avec Coolify) récupère ces images ; il est manuel. Le détail est dans [10 — Infrastructure](10-infrastructure-et-deploiement.md).

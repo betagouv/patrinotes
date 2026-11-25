@@ -66,7 +66,7 @@ Le code métier est rangé par domaine dans `src/features/` (constat d'état, fi
 
 Au chargement, [main.tsx](../packages/frontend/src/main.tsx) initialise Sentry (en production, si `VITE_SENTRY_DSN` est défini), enregistre le *service worker*, installe la reprise sur *chunk* périmé (§ 9.3), force le thème clair, puis monte l'application : gestion des erreurs, authentification, connexion PowerSync, choix obligatoire du service pour les comptes qui n'en ont pas, et routeur.
 
-`setupPowersync()` est appelé **même sans utilisateur connecté** : la connexion échoue alors faute de jeton, et PowerSync réessaie (à confirmer : bruit dans les journaux Sentry).
+`setupPowersync()` est appelé **même sans utilisateur connecté**. Le connecteur lève alors une erreur (« No token found ») avant toute requête : PowerSync ne contacte pas le serveur et réessaie toutes les 5 secondes, jusqu'à ce qu'un jeton soit disponible. Ces erreurs n'atteignent pas Sentry : PowerSync les intercepte et les écrit au plus dans la console (celle du *worker* de synchronisation), que Sentry ne collecte pas.
 
 ## 5. Configuration d'exécution (env.js)
 
@@ -287,7 +287,7 @@ Pour un CE, le **plan de situation** (image satellite au 1/5 000) est généré 
 
 La dictée utilise la **Web Speech API** du navigateur, en français ([SpeechRecorder.machine.tsx](../packages/frontend/src/features/audio-record/SpeechRecorder.machine.tsx)).
 
-> Point d'attention (homologation) : sous Chrome, la reconnaissance vocale est réalisée **par un service distant de Google**. La dictée ne fonctionne donc pas hors ligne et transmet la voix à un tiers (à confirmer et à mentionner dans la politique de confidentialité). Sur les navigateurs sans cette API, le bouton n'est pas utilisable.
+> Point d'attention (homologation) : sous Chrome, la reconnaissance vocale est réalisée **par un service distant de Google**. La dictée ne fonctionne donc pas hors ligne et transmet la voix à un tiers ; ce flux est à mentionner dans la politique de confidentialité (voir [09](09-documents-pdf-cartes-emails.md) § 10). Sur les navigateurs sans cette API, le bouton n'est pas utilisable.
 
 ### 11.5 Exports
 
@@ -305,7 +305,7 @@ En production, l'étape `frontend` du [Dockerfile](../Dockerfile) construit l'ap
 > Pour le transfert :
 > - Un **nouveau nom de domaine** doit être ajouté à `allowedHosts`, sinon `vite preview` refuse les requêtes. La meilleure option est de servir `dist/` par un serveur statique (nginx…) qui génère `env.js` au démarrage.
 > - Prévoir les en-têtes `Cache-Control` : pas de cache pour `index.html`, `sw.js`, `env.js`, `version.js` et `manifest.webmanifest` ; cache long pour `assets/*` (fichiers hachés).
-> - Une **politique CSP** devra autoriser : le backend, le WebSocket PowerSync, le bucket S3 (PUT et GET signés), `api-adresse.data.gouv.fr`, `tiles.openfreemap.org`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `stats.beta.gouv.fr`, l'ingestion Sentry, `blob:` (images et PDF), `wasm-unsafe-eval` (wa-sqlite) et les *workers* (`worker-src blob: 'self'`). Aucune CSP n'est définie côté frontend (à confirmer au niveau du proxy).
+> - Une **politique CSP** devra autoriser : le backend, le WebSocket PowerSync, le bucket S3 (PUT et GET signés), `api-adresse.data.gouv.fr`, `tiles.openfreemap.org`, `data.geopf.fr`, `openmaptiles.geo.data.gouv.fr`, `stats.beta.gouv.fr`, l'ingestion Sentry, `blob:` (images et PDF), `wasm-unsafe-eval` (wa-sqlite) et les *workers* (`worker-src blob: 'self'`). Aucune CSP n'est définie, ni dans le frontend ni par le proxy de production (aucun en-tête `Content-Security-Policy` sur `app.patrinotes.beta.gouv.fr` le 25/11/2026).
 > - Le bucket S3 doit accepter le **CORS** pour les `PUT` depuis l'origine du frontend.
 > - Le domaine du frontend ne doit pas changer sans plan de migration : les données locales des agents y sont attachées (§ 10).
 

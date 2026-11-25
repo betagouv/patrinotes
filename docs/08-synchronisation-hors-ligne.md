@@ -161,8 +161,8 @@ les métadonnées reçues, ces écrans lancent aussitôt le téléchargement des
   SQL). Les cinq tables de pièces jointes ont donc la valeur par défaut `false` (voir [06](06-modele-de-donnees.md)).
 - **Les photos d'un constat/compte-rendu ne sont disponibles hors ligne que si l'écran a été ouvert en ligne** : les
   métadonnées des pièces jointes passent par des streams à la demande. Après fermeture de l'écran, PowerSync conserve
-  l'abonnement pendant une durée de rétention (TTL, 24 h par défaut dans le SDK — **à confirmer** selon la version),
-  puis les lignes sont retirées et les fichiers locaux deviennent « archivés » (cf. § 5).
+  l'abonnement pendant une durée de rétention (TTL) de **24 h** : l'application ne précise pas de `ttl` à l'abonnement,
+  c'est donc la valeur par défaut du SDK qui s'applique. Les lignes sont ensuite retirées et les fichiers locaux deviennent « archivés » (cf. § 5).
 - **Contrôle d'appartenance sur les paramètres d'abonnement** : `state_report_id` / `report_id` sont fournis par le
   client ; les requêtes vérifient que le **document** appartient au service de l'utilisateur (le contrôle passe par le
   document, car des pièces jointes anciennes n'ont pas de `service_id`).
@@ -176,9 +176,15 @@ les métadonnées reçues, ces écrans lancent aussitôt le téléchargement des
 - **Compte sans service** (`service_id = 'no-service'`, service technique créé au démarrage du backend, invisible,
   sans département) : l'inscription affecte un service, mais un compte rattaché à `no-service` ne reçoit que
   `global_stream`, ses propres données utilisateur et le service `no-service`.
-- **Départements POP** : le rapprochement `departement_format_numerique IN my_depts` est une égalité de chaînes ; le
-  format de `dept_numbers` (ex. `01` vs `1`, `2A`) doit correspondre exactement à celui du CSV POP (**à confirmer** par
-  un contrôle de données).
+- **Départements POP** : le rapprochement `departement_format_numerique IN my_depts` est une égalité de chaînes, et le
+  code ne normalise aucun des deux côtés. L'import POP ([pop.ts](../packages/backend/src/features/data/pop.ts)) copie
+  la colonne `Departement_format_numerique` du CSV telle quelle (texte) : `01`…`95` sur deux chiffres, `2A`, `2B`,
+  `971`…`976`. Le changement de service ne fait que découper `dept_numbers` sur les virgules et retirer les espaces.
+  `dept_numbers` n'est pas modifiable par la synchronisation : il est saisi directement en base (le seul exemple du
+  dépôt, [service.sql](../scripts/db/service.sql), contient `75`). Rien ne garantit donc le format : un service saisi
+  avec `1` au lieu de `01`, ou `2a` au lieu de `2A`, ne reçoit aucun monument de ce département, sans erreur. Il faut
+  contrôler en production que chaque valeur de `service.dept_numbers` figure parmi les
+  `departement_format_numerique` de `pop_immeubles`.
 - `user_dept` n'est utilisé qu'en paramètre (pas d'`id`, clé primaire composite) et n'est pas synchronisé vers le
   client.
 
@@ -208,8 +214,8 @@ Créée dans [db.ts](../packages/frontend/src/db/db.ts) :
 
 - SDK `@powersync/web` (≈ 1.37), `@powersync/common` 1.50.0 (épinglé), requêtes typées Kysely ; moteur **wa-sqlite**
   (SQLite compilé en WebAssembly).
-- Fichier `crvif-sync.db`. Aucun VFS n'est précisé : le SDK utilise son VFS par défaut, adossé à **IndexedDB**
-  (**à confirmer** selon la version ; l'OPFS n'est pas explicitement activé).
+- Fichier `crvif-sync.db`. Aucun VFS n'est précisé : le SDK (`@powersync/web` 1.37.0) utilise son VFS par défaut,
+  `IDBBatchAtomicVFS`, adossé à **IndexedDB**. L'OPFS n'est pas utilisé.
 - Le partage de la base entre onglets n'est activé que si le navigateur fournit `SharedWorker` (**donc jamais sur
   iOS**, où chaque onglet a sa propre connexion).
 - La connexion à PowerSync est lancée au démarrage, **même si l'utilisateur n'est pas connecté** : le SDK réessaie
@@ -244,7 +250,8 @@ pièces jointes.
    la file et ajoutée à la liste des écritures refusées (motif « erreur serveur répétée »). Elle ne bloque donc plus
    les suivantes. Le compteur est en mémoire : un rechargement le remet à zéro.
 5. **Erreur passagère** (réseau, 5xx, 401, 403, 408, 425, 429) : l'opération reste dans la file et le SDK la renvoie
-   plus tard (délai par défaut ≈ 5 s — **à confirmer**), sans limite.
+   **5 s** plus tard (`retryDelayMs`, valeur par défaut du SDK, que l'application ne modifie pas), sans limite du
+   nombre d'essais.
 
 **Ordre et transactions** : l'ordre de la file locale est respecté (une requête à la fois), mais il n'y a **pas
 d'atomicité serveur** : chaque opération est appliquée dans sa propre requête/transaction ; `tx_id` est enregistré
@@ -520,7 +527,7 @@ synchronisation.
 | **« Supprimer les données locales »** (menu Aide, [resetLocalData.ts](../packages/frontend/src/features/menu/resetLocalData.ts)) | Refusé hors ligne (l'application ne pourrait ni recharger ni retélécharger les données). La confirmation indique le nombre d'écritures et de photos non envoyées. Puis : vidage de la base PowerSync, des fichiers locaux, des jetons, des autres bases IndexedDB, du `localStorage` (sauf la version et le thème) et des caches, désinscription des service workers et rechargement des onglets. **Les écritures non synchronisées sont perdues.** |
 | **Modification juste après l'inscription** | La ligne `service` ou `user` peut ne pas être encore arrivée : le client attend la première synchronisation (30 s au plus) avant l'écriture locale et affiche une erreur si la ligne manque toujours. |
 | **Modification d'`AppSchema`** | Pas de migration locale : PowerSync recrée les vues à partir du nouveau schéma au démarrage. Ajouter une colonne déjà présente dans `SELECT *` la rend visible immédiatement ; supprimer une colonne la masque. Renommer une table ou une colonne côté serveur nécessite que les lignes soient renvoyées sous le nouveau nom (cf. § 9.2). |
-| **Modification de `sync-config.yaml`** | Au redémarrage, PowerSync détecte une nouvelle version des règles, retraite toutes les données en parallèle de l'ancienne version, puis bascule ; les clients re-téléchargent les buckets modifiés (**à confirmer** : fenêtre et coût selon le volume POP). |
+| **Modification de `sync-config.yaml`** | Au redémarrage, PowerSync charge la nouvelle version des règles et retraite **toutes** les données qu'elle sélectionne (réplication initiale complète, référentiel POP compris) pendant que l'ancienne version continue de servir les clients ; il bascule quand ce retraitement est terminé. Avec une source PostgreSQL, le retraitement n'est pas incrémental : après la bascule, chaque client re-télécharge **toutes** ses données une fois, pas seulement les streams modifiés. La durée du retraitement dépend surtout du volume POP ; elle se mesure dans les journaux de PowerSync, entre le démarrage et la fin de la réplication initiale de la nouvelle version. |
 
 ---
 
@@ -600,10 +607,13 @@ CPU et mémoire du seul service PowerSync n'a pas été mesurée (ordre de grand
    reconnectent à `VITE_POWERSYNC_URL` ; si l'URL change, l'ancienne PWA en cache doit récupérer le nouvel `env.js`
    (servi en `NetworkFirst` par le service worker). **Avant la bascule, demander aux agents de se connecter en ligne
    pour vider leur file d'écritures**, ou maintenir l'ancien backend joignable le temps de la transition.
-6. Garder **la même URL backend** pour `/api/upload-data` ou s'assurer que `apiStore.url` (persisté en IndexedDB au
-   premier lancement, [ApiStore.ts](../packages/frontend/src/ApiStore.ts)) est bien mis à jour : l'URL du backend est
-   **mémorisée côté client** et n'est relue de `VITE_BACKEND_URL` que si elle est absente (**à confirmer** l'impact
-   lors d'un changement de domaine).
+6. **L'URL du backend** : toutes les requêtes (`/api/upload-data` compris) utilisent `VITE_BACKEND_URL`, lu dans
+   `env.js` au chargement de la page ([api.ts](../packages/frontend/src/api.ts)). `apiStore.url`, enregistré en
+   IndexedDB au premier lancement ([ApiStore.ts](../packages/frontend/src/ApiStore.ts)), n'est jamais relu pour
+   envoyer une requête : une valeur ancienne est sans effet. Après un changement de domaine du backend, un appareil
+   utilise la nouvelle URL dès qu'il recharge l'application en ligne (nouvel `env.js`). Un appareil qui démarre hors
+   ligne garde l'`env.js` en cache, donc l'ancienne URL : l'ancien domaine doit rester joignable (ou rediriger) le temps
+   que tous les appareils se soient reconnectés, sinon leurs écritures restent en file.
 
 ### 10.4 Risques d'exploitation
 

@@ -252,7 +252,7 @@ Conséquences cachées :
 
 - Les courriels sont stockés en minuscules et sans espaces (`user`, `internal_user`, `whitelist`). La même normalisation s'applique à l'inscription, à la connexion, à la liste blanche (ajout par l'administration et contrôle à l'inscription) et à la demande de réinitialisation du mot de passe : la casse saisie n'a pas d'effet.
 - Un compte Keycloak sans ligne `user` correspondante ne peut pas se connecter (erreur 500).
-- `/api/refresh-token` peut renvoyer `user: null` si la ligne locale a disparu. Le schéma de réponse exige un objet : *comportement exact à confirmer (probable erreur 500)*.
+- `/api/refresh-token` peut recevoir `user: null` du service si la ligne locale a disparu. Le sérialiseur de Fastify (fast-json-stringify, schéma TypeBox) remplace ce `null` par un objet vide, sans contrôler les champs obligatoires : la route répond 200 avec `user: {}`. Le frontend n'utilise pas ce champ et enregistre les nouveaux jetons. Les appels authentifiés suivants échouent ensuite en erreur 500, car le middleware lit `user.id` sur `null` ([authMiddleware.ts](../packages/backend/src/routes/authMiddleware.ts)).
 
 ### 6.2 Point d'entrée PowerSync `/api/upload-data`
 
@@ -322,7 +322,7 @@ sequenceDiagram
 
 Règles cachées :
 
-- **Le compte Keycloak est créé avec `username = nom affiché`** (« Prénom Nom ») et `firstName = nom` ; `lastName` n'est pas renseigné. *À confirmer : avec `registrationEmailAsUsername` actif dans le realm, Keycloak peut remplacer le username par le courriel ; sinon deux homonymes produiraient un conflit 409.*
+- **Le compte Keycloak est créé avec `username = nom affiché`** (« Prénom Nom ») et `firstName = nom` ; `lastName` n'est pas renseigné. Le realm de production a `registrationEmailAsUsername` actif : Keycloak y remplace le `username` par le courriel, et deux homonymes ne se gênent pas. Sur un realm sans ce réglage, ils produiraient un conflit 409 (règle A8 du [chapitre 15](15-regles-cachees-et-pieges.md)).
 - Si une ligne `user` existe déjà pour ce courriel (compte ancien), elle est **mise à jour** et son `id` est conservé.
 - Si l'étape locale échoue après la création Keycloak, le compte Keycloak reste orphelin (pas de compensation).
 - Le mot de passe est **validé par le backend** avec les mêmes règles que le formulaire (8 caractères, majuscule, minuscule, chiffre, caractère spécial) avant tout appel à Keycloak ([passwordPolicy.ts](../packages/backend/src/features/passwordPolicy.ts)).

@@ -87,7 +87,7 @@ flowchart LR
 - Le backend fournit une URL présignée **PUT valable 1 h** ([uploadService.ts](../packages/backend/src/services/uploadService.ts)), où le type (`application/pdf`) et la taille déclarée par le navigateur (50 Mo au plus) sont signés :
   - CR : clé `attachment/<reportId>/compte_rendu_<epoch_s>.pdf`
   - constat : clé `attachment/<stateReportId>/constat_d_etat_<epoch_s>.pdf`
-- **Le navigateur dépose le fichier directement sur S3.** L'endpoint S3 (`MINIO_URL`) doit donc être joignable **depuis les postes et tablettes des agents**, et pas seulement depuis le backend. C'est un point important pour l'ouverture des flux. La configuration CORS du bucket doit aussi autoriser `PUT` depuis l'origine du frontend (à confirmer : aucune configuration CORS de bucket n'est présente dans le dépôt).
+- **Le navigateur dépose le fichier directement sur S3.** L'endpoint S3 (`MINIO_URL`) doit donc être joignable **depuis les postes et tablettes des agents**, et pas seulement depuis le backend. C'est un point important pour l'ouverture des flux. La configuration CORS du bucket doit aussi autoriser `PUT` depuis l'origine du frontend. Elle n'est pas dans le dépôt ; l'état de production est décrit au [chapitre 05](05-authentification-securite.md) § 7.1.
 - Le client S3 utilise `forcePathStyle`, `bucketEndpoint: true` et la région `us-east-1` (valeur fictive, compatible MinIO).
 - Le backend enregistre ensuite une ligne `report_attachment` / `state_report_attachment` (dont l'`id` est le `pdfPath`), puis met à jour `attachment_id` et `pdf_size` sur le document.
 - Chaque nouvel envoi crée un **nouveau fichier**. Les anciens PDF restent dans le bucket : aucune suppression n'est implémentée (`deleteFile` est un *no-op* dans [db.ts](../packages/frontend/src/db/db.ts)).
@@ -146,7 +146,7 @@ La cartographie utilise **MapLibre GL JS 6** ([MapLibre.tsx](../packages/fronten
 | Parcelles cadastrales (tuiles vectorielles) | `https://openmaptiles.geo.data.gouv.fr/data/cadastre.json`, puis les tuiles qu'il référence | Etalab, geo.data.gouv.fr |
 | Géocodage d'adresse | `https://data.geopf.fr/geocodage/search?q=…&limit=1` (cartes et plan de situation, adresse nettoyée et limitée à 200 caractères) et `https://api-adresse.data.gouv.fr/search/?q=…&limit=10` (autocomplétion, [address.tsx](../packages/frontend/src/features/address.tsx)) | Base Adresse Nationale, Géoplateforme IGN |
 
-Tous ces appels partent **du navigateur de l'agent**, jamais du backend. L'attribution MapLibre est masquée par CSS : il faut vérifier que ce masquage est conforme aux licences OpenFreeMap / OpenStreetMap (ODbL) et IGN (à confirmer). Le style `PLAN.IGN` de la Géoplateforme permettrait de ne plus dépendre d'OpenFreeMap.
+Tous ces appels partent **du navigateur de l'agent**, jamais du backend. L'attribution MapLibre est masquée par CSS : il faut vérifier que ce masquage est conforme aux licences OpenFreeMap / OpenStreetMap (ODbL) et IGN (point P15 du [chapitre 18](18-questions-ouvertes.md)). Le style `PLAN.IGN` de la Géoplateforme permettrait de ne plus dépendre d'OpenFreeMap.
 
 ### 6.2 Usages
 
@@ -266,7 +266,7 @@ Le transport est créé une seule fois avec Nodemailer 10 ([mail.ts](../packages
 
 - **Production** : Scaleway Transactional Email (TEM), `smtp.tem.scw.cloud:465`. Scaleway ne figure pas parmi les sous-traitants de la politique de confidentialité (voir [16](16-risques-et-dette-technique.md), RGPD-02).
 - **Développement** : Mailpit, qui capture les courriels.
-- ⚠️ Aucune option `secure`/`requireTLS` n'est passée à Nodemailer. Le chiffrement dépend de son comportement par défaut, qui varie selon le port (TLS implicite sur 465 ou STARTTLS opportuniste). Il faut **vérifier le chiffrement effectif** avec le relais SMTP du ministère (à confirmer).
+- ⚠️ Aucune option `secure`/`requireTLS` n'est passée à Nodemailer. Sur le port 465 (production actuelle), Nodemailer ouvre une connexion TLS dès le départ. Sur un autre port (587, 25), il passe en STARTTLS seulement si le serveur le propose, sans l'exiger : un relais qui ne l'annonce pas reçoit les courriels en clair. Avec un relais sur un autre port que 465, il faut ajouter `requireTLS`.
 - **Reprise des alertes seulement** : la tâche périodique du backend (toutes les 15 minutes) reprend les alertes de constat en échec (§ 7.3) et envoie les alertes de fiche que ni la synchronisation ni le navigateur n'ont pu envoyer (5 essais au plus). Pour les autres courriels, un échec SMTP fait échouer la requête HTTP, sans nouvelle tentative.
 - **20 destinataires distincts au plus** par envoi (compte-rendu, constat, chaque alerte de constat, alerte de fiche), contrôlés par le serveur avant tout effet ([recipients.ts](../packages/backend/src/features/recipients.ts)) et par les formulaires de saisie.
 - La **réputation du domaine d'envoi** (SPF, DKIM, DMARC de l'adresse `EMAIL_EMITTER`) est à reconfigurer lors du transfert (hors code).
@@ -305,7 +305,7 @@ Règles transverses :
 - Elle utilise **l'API Web Speech native du navigateur** (`SpeechRecognition`), en français ([SpeechRecorder.machine.tsx](../packages/frontend/src/features/audio-record/SpeechRecorder.machine.tsx)).
 - Elle sert à dicter dans les champs de notes du CR et dans les commentaires du constat.
 - **Aucun fichier audio n'est enregistré ni envoyé au backend Patrinotes.** Seul le texte transcrit est inséré dans le champ.
-- ⚠️ **Flux implicite vers un tiers** : dans Chrome/Android (et Edge), l'API Web Speech envoie l'audio aux **serveurs de reconnaissance vocale de Google** (Microsoft pour Edge, Apple pour Safari). Ce flux ne figure pas dans le code, mais il est réel. Il doit être déclaré dans l'analyse de risques et, si nécessaire, autorisé par le proxy (domaines Google, à confirmer selon les navigateurs déployés). Si le navigateur ne prend pas en charge l'API, la fonction est désactivée (état `unsupported`).
+- ⚠️ **Flux implicite vers un tiers** : dans Chrome/Android (et Edge), l'API Web Speech envoie l'audio aux **serveurs de reconnaissance vocale de Google** (Microsoft pour Edge, Apple pour Safari). Ce flux ne figure pas dans le code, mais il est réel. Il doit être déclaré dans l'analyse de risques et, si nécessaire, autorisé par le proxy (les domaines dépendent du navigateur : Google pour Chrome, Microsoft pour Edge, Apple pour Safari). Si le navigateur ne prend pas en charge l'API, la fonction est désactivée (état `unsupported`).
 
 ---
 

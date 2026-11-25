@@ -147,7 +147,7 @@ Le frontend et le package `pdf` n'ont aucun test unitaire.
 | --- | --- |
 | **TypeScript** | Mode `strict` dans les trois packages. Vérification possible par `pnpm backend check` et `pnpm frontend check`, **jamais lancée en CI** ; les builds (`tsup`, Vite) ne vérifient pas les types. Le package `pdf` n'a pas de script de vérification. |
 | **Prettier** 3 | Configuration dans [.prettierrc](../.prettierrc). Aucun script ni contrôle en CI : appliqué via l'éditeur. |
-| **ESLint** 8 (frontend) | Script `pnpm frontend lint`, jamais lancé en CI. Nombre d'avertissements actuel à confirmer. |
+| **ESLint** 8 (frontend) | Script `pnpm frontend lint` (ESLint 8.57, `--max-warnings 0`), jamais lancé en CI. Il échoue : 590 problèmes, dont 510 erreurs et 80 avertissements. Les erreurs sont surtout des variables inutilisées (267) et des `any` explicites (152) ; 13 relèvent de la règle `react-hooks/rules-of-hooks`. |
 | **Biome** 1.6.4 | Déclaré en dépendance, sans configuration ni script : doublon de Prettier et ESLint, choix à arbitrer. |
 | Hooks Git | Absents |
 

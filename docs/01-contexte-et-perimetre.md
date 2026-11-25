@@ -194,7 +194,7 @@ Les pages légales sont **intégrées au code** de l'application (pas de CMS), d
 | CGU | Mise à jour du 01/02/2026. Comptes soumis à validation. Rappel : ne pas saisir de données sensibles dans les champs libres ; l'agent informe les personnes dont il saisit les données (propriétaires, demandeurs) |
 
 > Écarts à traiter avant transfert ou homologation :
-> - L'hébergeur et les sous-traitants déclarés (OVH, Brevo) **ne correspondent pas** aux services réellement appelés : Sentry (suivi d'erreurs, s'il est configuré), Scaleway (stockage objet S3 et SMTP), Matomo (`stats.beta.gouv.fr`), la reconnaissance vocale du navigateur (sous Chrome, l'audio est traité par les serveurs de Google, à confirmer), les tuiles cartographiques **OpenFreeMap** (tiers non étatique), IGN Géoplateforme, `openmaptiles.geo.data.gouv.fr` et l'API Adresse. L'hébergement actuel est un VPS privé sous Coolify. Ces pages devront être mises à jour lors du transfert.
+> - L'hébergeur et les sous-traitants déclarés (OVH, Brevo) **ne correspondent pas** aux services réellement appelés : Sentry (suivi d'erreurs, s'il est configuré), Scaleway (stockage objet S3 et SMTP), Matomo (`stats.beta.gouv.fr`), la reconnaissance vocale du navigateur (sous Chrome, l'audio est traité par les serveurs de Google), les tuiles cartographiques **OpenFreeMap** (tiers non étatique), IGN Géoplateforme, `openmaptiles.geo.data.gouv.fr` et l'API Adresse. L'hébergement actuel est un VPS privé sous Coolify. Ces pages devront être mises à jour lors du transfert.
 > - La page « Mentions légales », rubrique Accessibilité, renvoie vers la déclaration d'accessibilité d'un autre produit (Collectif Objets).
 > - Le nom de la directrice de la publication est écrit en dur et doit être tenu à jour.
 

@@ -34,6 +34,7 @@ Elle est aujourd'hui hébergée sur un serveur privé géré avec Coolify. L'ét
 | M11 | Quelle **supervision** et quelle collecte des journaux ? Garde-t-on Sentry ? | Nous utilisons Sentry pour les erreurs du frontend (le backend est prêt, son DSN reste à définir). | Outil retenu et rétention. | Non |
 | M12 | Quelle politique de **sauvegarde** et quels objectifs de reprise (RPO, RTO) ? Qui teste les restaurations ? | Aujourd'hui : sauvegarde quotidienne de la base, 7 jours en local, 90 jours sur S3, sans test de restauration. Aucune sauvegarde des photos et PDF n'est visible côté serveur. | RPO, RTO, et qui porte la sauvegarde de la base et du stockage. | Non |
 | M13 | Quel coffre de **secrets** pour les variables de production ? | Une quinzaine de secrets (base, S3, SMTP, identité, Sentry). | Outil et procédure de saisie. | Non |
+| M25 | Les serveurs de l'hébergement cible pourront-ils appeler l'**API Dataspace** des unités patrimoniales (`api-ext.stg.cloud.culture.fr`) ? | Cette API n'accepte aujourd'hui que l'adresse IP du serveur de production ; sans elle, les constats de monuments complexes ne peuvent pas choisir leurs unités patrimoniales. | Ajout de l'adresse de sortie des serveurs cibles à la liste autorisée par l'équipe Dataspace. | **Oui** |
 
 ## 2. Identité (équipe d'infrastructure et RSSI)
 

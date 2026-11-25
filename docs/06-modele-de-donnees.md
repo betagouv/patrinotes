@@ -501,7 +501,9 @@ Un service est une UDAP (unité départementale de l'architecture et du patrimoi
 | Visite | `meetDate`, `redactedBy` 🔒, `redactedById`, `personnes_presentes` 🔒 (une personne par ligne, séparateur `\n`), `serviceInstructeur` |
 | Pétitionnaire | `applicantName` 🔒, `applicantAddress` 🔒, `applicantEmail` 🔒, `city`, `zipCode`, `projectCadastralRef` |
 | Contenu | `projectDescription`, `projectSpaceType`, `decision`, `precisions`, `contacts`, `furtherInformation` (texte riche HTML, alimenté par les clauses) |
-| Envoi | `attachment_id` (chemin du dernier PDF envoyé), `pdf_size` (octets), `pdf` (colonne historique, *à confirmer* : plus écrite) |
+| Envoi | `attachment_id` (chemin du dernier PDF envoyé), `pdf_size` (octets), `pdf` (colonne historique, plus écrite depuis novembre 2025) |
+
+Le backend renseigne `attachment_id` et `pdf_size` à l'envoi, jamais `pdf`. Le frontend ne la remet à `null` que lors de la duplication d'un CR, et la règle de synchronisation l'accepte encore en écriture depuis le client ([syncPolicy.ts](../packages/backend/src/features/sync/syncPolicy.ts)). ⚠ Deux compteurs filtrent encore sur `pdf` : les « CR envoyés » de la page Service ([service.tsx](../packages/frontend/src/routes/service.tsx)) ignorent les CR envoyés depuis novembre 2025, et les « CR abandonnés » des statistiques d'administration ([statsRoutes.ts](../packages/backend/src/routes/statsRoutes.ts)) comptent ces CR comme abandonnés.
 
 `pdf_snapshot` contient le **brouillon HTML** du PDF modifié par l'utilisateur (`html`) et une copie JSON du CR (`report`). Il y a une ligne par couple (CR, utilisateur).
 
@@ -555,7 +557,7 @@ Le constat d'état décrit l'état sanitaire d'un monument historique protégé,
 | `visited_section.localisation_zone` | JSON `{sw:[lng,lat], ne:[lng,lat]}` | idem |
 | `*_attachment.attachment_id` | chemin relatif dans le stockage, **sans** le préfixe `attachment/` ([07](07-donnees-externes-et-stockage.md) § 3.2) ; peut contenir **plusieurs identifiants séparés par `;`** (lignes anciennes, encore gérées par la file de pièces jointes) | [db.ts](../packages/frontend/src/db/db.ts) |
 | `pdf_snapshot.report`, `transactions.data` | JSON | — |
-| `pop_immeubles.coordonnees_au_format_wgs84` | texte issu du CSV POP (*format exact à confirmer*) | — |
+| `pop_immeubles.coordonnees_au_format_wgs84` | texte issu du CSV POP, au format `"lat,lng"` (le frontend le découpe sur la virgule) | — |
 
 ### 6.1 Correspondance rubrique d'alerte → courriel du service
 
@@ -664,7 +666,7 @@ Le journal commence le 6 novembre 2025. Les migrations 0000 et 0001 forment une 
 | --- | --- | --- |
 | 0000 | 2025-11-06 | Ligne de base : `user`, `internal_user` (avec `password`), `delegation`, `whitelist`, `service_instructeurs`, `clause_v2`, `pdf_snapshot`, `tmp_pictures`, `picture_lines`, `pictures`, `transactions`, `report`, `sent_email`, `suggested_email`, **`udap`**, `user_settings` ; publication PowerSync. |
 | 0001 | 2025-11-07 | **Renommage `udap` → `service`** et `udap_id` → `service_id` partout ; création de `merimee`, `merimee_to_memoire`, `pop_immeubles`, `state_report`, `visited_section`, `user_dept` ; `user.email` unique. |
-| 0002 | 2025-11-07 | Suppression d'un index `pop_immeubles_departement` (*à confirmer : non recréé*). |
+| 0002 | 2025-11-07 | Suppression de l'index `pop_immeubles_departement` (sur `departement_format_numerique`). Aucune migration ultérieure ne le recrée et le schéma Drizzle ne déclare aucun index sur `pop_immeubles`. |
 | 0003 | 2025-11-08 | Tables `report_attachment` et `state_report_attachment` (nouveau modèle de pièces jointes) ; suppression de `tmp_pictures` et de `internal_user.password`. |
 | 0004 | 2025-11-09 | `visited_section_attachment` ; `picture_lines` adaptée au nouveau modèle. |
 | 0005 | 2025-11-11 | `state_report_sent_email` ; `state_report.attachment_id`. |

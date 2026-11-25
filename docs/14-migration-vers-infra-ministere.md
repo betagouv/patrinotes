@@ -124,7 +124,7 @@ Déduit de [authService.ts](../packages/backend/src/services/authService.ts), [k
 
 Le code de production n'a pas de flux *authorization code*.
 
-Le navigateur n'appelle jamais Keycloak (déduction à confirmer en relevant les journaux d'accès). Keycloak peut donc être déployé **sans exposition publique**, joignable uniquement par le backend et PowerSync. La console d'administration doit rester accessible aux administrateurs (VPN ou réseau d'administration).
+Le frontend n'appelle jamais Keycloak : la connexion, le rafraîchissement et la déconnexion passent par le backend. Keycloak peut donc être déployé **sans exposition publique**, joignable uniquement par le backend et PowerSync. Seul l'espace « mon compte », aujourd'hui actif, cesserait alors d'être accessible aux agents, ce que recommande le [chapitre 05](05-authentification-securite.md) § 12.2. La console d'administration doit rester accessible aux administrateurs (VPN ou réseau d'administration).
 
 #### 3.3.2 Scénario A (recommandé si le calendrier le permet) — sortir de Keycloak avant la migration
 
@@ -151,7 +151,7 @@ Conséquences pour la migration : **Keycloak et sa base ne sont plus transféré
 
 #### 3.3.4 Points communs aux scénarios SSO (ProConnect, Cerbère, autre)
 
-ProConnect (ex-AgentConnect) est une fédération OIDC pour les agents publics ; Cerbère est l'annuaire/SSO de certains ministères (périmètre Culture à confirmer). Les deux reposent sur le flux *authorization code* avec redirection navigateur. Points à traiter quel que soit le fournisseur (la PR #82 les couvre pour ProConnect) :
+ProConnect (ex-AgentConnect) est une fédération OIDC pour les agents publics ; Cerbère est l'annuaire/SSO de certains ministères (son usage au ministère de la Culture fait l'objet de la question M15 du [chapitre 19](19-questions-pour-le-ministere.md)). Les deux reposent sur le flux *authorization code* avec redirection navigateur. Points à traiter quel que soit le fournisseur (la PR #82 les couvre pour ProConnect) :
 
 | Sujet | Détail |
 | --- | --- |

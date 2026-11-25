@@ -62,7 +62,7 @@ Code : [upProvider.ts](../packages/backend/src/features/up/upProvider.ts), [upSe
 - L'API reçoit en `POST` un filtre de type MongoDB (`{UPI_REFERENCE_MERIMEE: "PA…"}` pour la racine, `{$or: [{_id: {$in: […]}}]}` pour les enfants, par lots de 50). Elle ne connaît que le lien parent → enfants : l'arbre est lu **niveau par niveau** (10 niveaux et 1 000 UP au plus).
 - Elle répond **404 au lieu d'une liste vide** quand rien ne correspond : le backend le traite comme « aucune UP ».
 - Délai de 5 s, une nouvelle tentative. Les réponses sont gardées dans `up_cache` pendant `UP_CACHE_TTL_HOURS` (24 h) ; si l'API ne répond pas, le cache périmé est servi.
-- Elle n'est **joignable que depuis le réseau de production** (filtrage d'adresse IP, *à confirmer pour l'hébergement cible*). En développement et en test, `UP_API_MODE=mock` lit des réponses enregistrées ([up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json)).
+- Elle n'est **joignable que depuis le réseau de production** (filtrage par adresse IP ; accès depuis l'hébergement cible : question M25 du [chapitre 19](19-questions-pour-le-ministere.md)). En développement et en test, `UP_API_MODE=mock` lit des réponses enregistrées ([up-mock.json](../packages/backend/src/features/up/fixtures/up-mock.json)).
 - Seule la référence Mérimée est envoyée : aucune donnée personnelle ne sort.
 
 La variable `DATAGOUV_API` est **obligatoire** dans [envVars.ts](../packages/backend/src/envVars.ts) mais **aucun code ne la lit**. Il faut quand même la renseigner, sinon le backend refuse de démarrer.
@@ -105,7 +105,7 @@ sequenceDiagram
     BE->>FS: supprime le fichier
 ```
 
-1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`), relatif au répertoire courant (en pratique `packages/backend/data/`). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (les tables occupent 231 Mo pour Mérimée et 326 Mo pour Palissy en production ; taille des fichiers CSV *à confirmer*).
+1. **Téléchargement en flux** vers `./data/merimee.csv` (ou `palissy.csv`), relatif au répertoire courant (en pratique `packages/backend/data/`). Le conteneur doit donc disposer d'un **disque inscriptible** et de l'espace nécessaire (les tables occupent 231 Mo pour Mérimée et 326 Mo pour Palissy en production ; fichiers CSV d'environ 100 Mo et 365 Mo le 25/11/2026).
 2. **Analyse CSV** avec le séparateur `|`. Les en-têtes sont mis en minuscules et débarrassés des espaces. **Les noms de colonnes de la table doivent correspondre exactement aux en-têtes du fichier** (d'où les colonnes `région`, `département`, etc.).
 3. **Écriture par lots de 500** :
    - les lignes sans `reference` sont ignorées ;
@@ -231,7 +231,7 @@ Points d'attention :
 ### 3.4 Cycle de vie et volumétrie
 
 - **Aucune règle de cycle de vie** dans le code : photos remplacées (`is_deprecated`), PDF successifs, pièces jointes de documents désactivés et anciens plans de situation sont **conservés indéfiniment**. La durée de conservation doit être définie avec le ministère (archivage, RGPD) puis mise en œuvre par une règle de cycle de vie S3 ou un script de purge.
-- **Volumétrie estimée** (*à confirmer*) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (vides pour les documents envoyés avant la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, mesurer le bucket (`mc du`).
+- **Volumétrie estimée** (taille réelle du bucket à relever : point P7 du [chapitre 18](18-questions-ouvertes.md)) : environ 1 Mo par photo au maximum. Taille des PDF : colonnes `report.pdf_size` et `state_report.pdf_size` (vides pour les documents envoyés avant la migration 0034). Une requête `SUM(pdf_size)` sur ces colonnes donne la taille des derniers PDF. Pour le total réel, mesurer le bucket (`mc du`).
 - **Migration du stockage** : copier le bucket en conservant **exactement les clés** (par exemple `mc mirror` ou `rclone sync`). Les clés sont référencées en base et dans les liens courts déjà envoyés. Seules `MINIO_URL` (et `MINIO_PUBLIC_URL`) et `MINIO_BUCKET` changent.
 
 ---
