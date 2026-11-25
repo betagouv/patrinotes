@@ -252,7 +252,7 @@ Conséquences cachées :
 
 - Les courriels sont stockés en minuscules et sans espaces (`user`, `internal_user`, `whitelist`). La même normalisation s'applique à l'inscription, à la connexion, à la liste blanche (ajout par l'administration et contrôle à l'inscription) et à la demande de réinitialisation du mot de passe : la casse saisie n'a pas d'effet.
 - Un compte Keycloak sans ligne `user` correspondante ne peut pas se connecter (erreur 500).
-- `/api/refresh-token` peut recevoir `user: null` du service si la ligne locale a disparu. Le sérialiseur de Fastify (fast-json-stringify, schéma TypeBox) remplace ce `null` par un objet vide, sans contrôler les champs obligatoires : la route répond 200 avec `user: {}`. Le frontend n'utilise pas ce champ et enregistre les nouveaux jetons. Les appels authentifiés suivants échouent ensuite en erreur 500, car le middleware lit `user.id` sur `null` ([authMiddleware.ts](../packages/backend/src/routes/authMiddleware.ts)).
+- Un compte supprimé de la base mais encore valide dans Keycloak est refusé partout : `/api/login-user` répond 403 (« Aucun compte Patrinotes n'est associé à cette adresse »), `/api/refresh-token` répond 401, ce qui déconnecte l'appareil, et les routes authentifiées répondent 403, comme pour un jeton invalide ([authMiddleware.ts](../packages/backend/src/routes/authMiddleware.ts)).
 
 ### 6.2 Point d'entrée PowerSync `/api/upload-data`
 

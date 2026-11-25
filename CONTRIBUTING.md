@@ -380,7 +380,6 @@ packages/backend/
 - Le paquet backend déclare `exports: "./src/router.ts"` : les tests importent directement ses modules
   (`deleteUserByEmail`, `db`…).
 - `AppError` ([errors.ts](packages/backend/src/features/errors.ts)) n'hérite pas d'`Error`.
-- `/api/login-user` avec un compte Keycloak sans ligne `user` échoue sur `populateService(undefined)`.
 
 ### Package `pdf`
 

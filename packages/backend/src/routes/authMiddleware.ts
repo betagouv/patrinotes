@@ -12,12 +12,14 @@ export const authenticate = async (request: FastifyRequest) => {
   let user;
   try {
     user = await request.services.auth.getUserFromToken(token ?? "");
-    request.user = user!;
   } catch (e) {
     throw new AppError(403, "Unauthorized");
   }
-  await assertUserRateLimit(request, user!.id);
-  return user!;
+  // a valid token whose account has no row in the database (account deleted): refused like a bad token
+  if (!user) throw new AppError(403, "Unauthorized");
+  request.user = user;
+  await assertUserRateLimit(request, user.id);
+  return user;
 };
 
 export type AuthUser = Awaited<ReturnType<typeof authenticate>>;

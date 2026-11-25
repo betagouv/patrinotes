@@ -60,12 +60,14 @@ export class AuthService {
     }
 
     const user = await this.getUserFromToken(keycloakTokens.access_token);
+    // the Keycloak session is valid but the account no longer exists here: 401 logs the device out
+    if (!user) throw new AppError(401, "Session expirée, veuillez vous reconnecter");
 
     return {
       accessToken: keycloakTokens.access_token,
       refreshToken: keycloakTokens.refresh_token,
       expiresAt: get80PercentOfTokenLifespan(Number(keycloakTokens.expires_in)).toString(),
-      user: user!,
+      user,
     };
   }
 
@@ -137,11 +139,13 @@ export class AuthService {
       );
 
       const user = await db.selectFrom("user").where("email", "=", userData.email).selectAll().executeTakeFirst();
+      // Keycloak accepted the password but the account has no row here
+      if (!user) throw new AppError(403, "Aucun compte Patrinotes n'est associé à cette adresse");
       return {
         accessToken: keycloakTokens.access_token,
         refreshToken: keycloakTokens.refresh_token,
         expiresAt: get80PercentOfTokenLifespan(Number(keycloakTokens.expires_in)).toString(),
-        user: await populateService(user!),
+        user: await populateService(user),
       };
     } catch (error) {
       if (error instanceof FetchError) {
